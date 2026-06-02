@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "framework_step": "Design · Step 2 of 9: Establish the Unified Data Asset Inventory & Entity-Relationship Model",
+  "document_type": "Internal Data Schemas / Storage Specs",
+  "storage_environment": "Local App Runtime Environment (mishugarg-macbookpro4 / PostgreSQL Instance)",
+  "internal_tables": {
+    "session_telemetry_log": {
+      "type": "object",
+      "description": "Parent Table. Authoritative internal tracking store mapping real-time telecom network ingress states and session lifecycles.",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Primary Key (PK). Unique tracking identifier generated instantly at the Step 1 network entry gateway."
+        },
+        "source_phone_number": {
+          "type": "string",
+          "pattern": "^\\+91[6-9]\\d{9}$",
+          "description": "Ingested telecom ANI phone identifier used to route and group carrier traffic."
+        },
+        "ingress_channel": {
+          "type": "string",
+          "enum": ["IVR_VOICE", "WHATSAPP", "USSD"],
+          "description": "The inbound channel pathway chosen by the citizen."
+        },
+        "session_active": {
+          "type": "boolean",
+          "description": "True if the user session is actively processing or waiting for carrier signaling inputs."
+        },
+        "session_status": {
+          "type": "string",
+          "enum": ["ACTIVE", "COMPLETED_SUCCESSFULLY", "FAILED_GATEWAY_TIMEOUT", "USER_HANGUP"],
+          "description": "State machine identifier mapping the exact termination path of the communication channel."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the incoming SIP INVITE or messenger webhook first registered."
+        },
+        "completed_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp when the communication session permanently terminated, enabling precise latency auditing."
+        }
+      },
+      "required": ["session_id", "source_phone_number", "ingress_channel", "session_active", "session_status", "created_at"]
+    },
+    "session_extraction_details": {
+      "type": "object",
+      "description": "Child Table. Granular tracking store mapping sequential network payload packets, user correction attempts, and conversational AI extraction metrics.",
+      "properties": {
+        "payload_id": {
+          "type": "string",
+          "description": "Primary Key (PK). Unique message token tracking the specific network text packet or raw audio transmission stream chunk received."
+        },
+        "session_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Foreign Key (FK). Explicit relational link anchoring this transaction record directly back to its parent session_telemetry_log.session_id."
+        },
+        "attempt_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Sequential loop counter tracking the user's conversational transaction submissions within this specific session loop."
+        },
+        "raw_unstructured_text": {
+          "type": "string",
+          "description": "Ingested text string captured from BHASHINI ASR or the native WhatsApp Webhook payload text."
+        },
+        "standardized_english_text": {
+          "type": ["string", "null"],
+          "description": "Normalized administrative translation generated downstream by the BHASHINI NMT layer."
+        },
+        "extraction_confidence": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Mathematical log-likelihood model score evaluating structured parsing precision."
+        },
+        "farmer_id_cleartext": {
+          "type": ["string", "null"],
+          "description": "Masked Identity String. Meticulously stripped from storage structures post-tokenization hash processing at the Step 5 verification perimeter."
+        },
+        "extracted_district": {
+          "type": ["string", "null"],
+          "description": "Extracted regional district administrative geographical zone boundary entity."
+        },
+        "extracted_crop_type": {
+          "type": ["string", "null"],
+          "description": "Normalized agricultural crop matching foundational core data registry categories."
+        },
+        "extracted_reported_anomaly": {
+          "type": ["string", "null"],
+          "description": "Extracted damage classification or target biological pest vector reported by the citizen."
+        },
+        "processing_state": {
+          "type": "string",
+          "enum": ["STAGED", "SUPERSEDED", "COMMITTED"],
+          "description": "Operational tracking flag indicating whether this specific record pass has been overridden by a subsequent user correction or successfully committed down the pipeline."
+        }
+      },
+      "required": ["payload_id", "session_id", "attempt_id", "raw_unstructured_text", "processing_state"]
+    }
+  }
+}
