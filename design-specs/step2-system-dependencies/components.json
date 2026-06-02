@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "framework_step": "Design · Step 2 of 9: Establish the Unified Data Asset Inventory & Entity-Relationship Model",
+  "document_type": "Component Inventory & Systemic Dependencies Map",
+  "component_catalog": {
+    "foundational_ai_blocks": {
+      "speech_to_text_block": {
+        "functional_name": "speech_to_text()",
+        "classification": "Foundational Multimodal Primitive",
+        "underlying_engine": "Digital India BHASHINI ASR Model Cluster",
+        "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
+        "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
+        "mcp_interface_enabled": true,
+        "##_rationale": "Processes regional acoustic phone waves into raw vernacular scripts directly at the state telecom perimeter."
+      },
+      "text_translation_block": {
+        "functional_name": "translate()",
+        "classification": "Foundational Multimodal Primitive",
+        "underlying_engine": "Digital India BHASHINI NMT Model Cluster",
+        "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
+        "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
+        "mcp_interface_enabled": true,
+        "##_rationale": "Translates unstructured regional agricultural dialects into standardized administrative English strings."
+      },
+      "text_to_speech_block": {
+        "functional_name": "text_to_speech()",
+        "classification": "Foundational Multimodal Primitive",
+        "underlying_engine": "Digital India BHASHINI TTS Model Cluster",
+        "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
+        "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
+        "mcp_interface_enabled": true,
+        "##_rationale": "Converts outbound confirmation strings back into vernacular human speech for the IVR voice response gateway."
+      }
+    },
+    "sector_specific_blocks": {
+      "entity_extraction_block": {
+        "functional_name": "structured_extract()",
+        "classification": "Task-Focused Small Language Model (SLM)",
+        "underlying_engine": "Local Fine-Tuned SLM via Ollama Framework Core",
+        "hosting_provenance": "Sovereign Local Hardware Instance (MacBook Pro Silicon Pool)",
+        "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
+        "mcp_interface_enabled": false,
+        "##_governance_rationale": "Running a localized SLM keeps citizen text processing completely within sovereign physical compute boundaries, preventing cloud PII leakage vectors."
+      }
+    },
+    "digital_public_infrastructure_dependencies": {
+      "identity_registry_rail": {
+        "system_name": "Sovereign Digital Identity Engine (Aadhaar / MOSIP Pattern Core)",
+        "classification": "Authoritative Source Registry",
+        "source_of_truth_for": "Citizen Identity Verification & Tokenized String Extraction Validation",
+        "deployment_status": "LIVE_AND_OPERATIONAL",
+        "##_security_note": "Enforces the cryptographic boundary where cleartext identifiers convert into irreversible tokenized hashes."
+      },
+      "agricultural_data_rail": {
+        "system_name": "Federated AgriStack Core Registry Platform",
+        "classification": "Authoritative Source Registry",
+        "source_of_truth_for": "Cadastral land boundaries, geofenced plots, and seasonal crop sown records",
+        "deployment_status": "LIVE_AND_OPERATIONAL",
+        "##_architecture_note": "AI outputs only inform eligibility decisions; this registry remains the sole authoritative source of truth for updating benefit balances."
+      },
+      "social_protection_registry_dpg": {
+        "system_name": "OpenSPP Core Engine APIs",
+        "classification": "Digital Public Good (DPG) Workflow Core",
+        "source_of_truth_for": "Subsidy claim case lifecycle management, status states, and human-in-the-loop fallback routing logs",
+        "deployment_status": "LIVE_AND_OPERATIONAL"
+      },
+      "payment_disbursement_rail": {
+        "system_name": "NPCI Aadhaar Payment Bridge System (APBS) / Mojaloop Ledger Rail",
+        "classification": "Disbursement Payments Rail",
+        "source_of_truth_for": "Direct Benefit Transfer (DBT) execution clearing numbers",
+        "deployment_status": "LIVE_AND_OPERATIONAL"
+      }
+    }
+  }
+}
