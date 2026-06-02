@@ -1,0 +1,366 @@
+{
+  "framework_step": "Design · Step 1 of 9: Identify the use case, user journey, and access channels",
+  "use_case_definition": {
+    "service_name": "Autonomous Multi-Channel Farmer Subsidy Application, Review, & Payment System",
+    "bounded_scope": "Processing localized seasonal crop-loss relief subsidy claims and executing Direct Benefit Transfer payouts via state ledgers.",
+    "citizen_persona": "Smallholder rural cultivator experiencing severe crop damage, needing to apply for financial relief without physical travel or digital literacy barriers.",
+    "government_mandate": "Verify the citizen's identity, validate geofenced plot boundaries, confirm seasonal crop records, evaluate claim legitimacy using confidence metrics, and execute secure treasury payouts.",
+    "interaction_termination": "Vocal, visual, or textual transmission of an official PM-KISAN Ledger Payment Transaction ID (for successful passes) or an encrypted Caseworker Escalation Case ID (for threshold fallbacks)."
+  },
+  "channel_inclusion_architecture": {
+    "channel_01_ivr_voice": {
+      "channel_type": "IVR (Interactive Voice Response) Telephony Gateway",
+      "target_segment": "Non-literate citizens, elderly farmers, and feature phone users in low-connectivity areas.",
+      "technical_implication": "Requires active probabilistic processing layers (BHASHINI ASR and NMT) to convert voice sounds into standardized administrative data strings.",
+      "security_profile": "Voice-prompt tokenization using automated telephone routing identifiers."
+    },
+    "channel_02_whatsapp": {
+      "channel_type": "WhatsApp Business Messaging Interface",
+      "target_segment": "Smartphone users in regions with active mobile internet connectivity.",
+      "technical_implication": "Bypasses acoustic speech-to-text layers. Conversational text inputs route directly to local LLM entity-parsing systems.",
+      "security_profile": "Meta-verified messaging session keys paired with opt-in consent menus."
+    },
+    "channel_03_ussd": {
+      "channel_type": "USSD Network Signaling (*147# System Menu)",
+      "target_segment": "Feature phone users with near-zero data connectivity or lower text-literacy rates.",
+      "technical_implication": "Zero AI blocks required. Runs entirely on a deterministic, server-side numerical menu tree.",
+      "security_profile": "Direct SIM-card cryptographic routing over cellular communication signals."
+    },
+    "channel_04_sms_notification": {
+      "channel_type": "Short Message Service (SMS) Broadcast Outbound Rail",
+      "target_segment": "Asynchronous, network-wide transaction receipt distribution across all mobile devices.",
+      "technical_implication": "Zero inbound processing. Restricted strictly to transactional template delivery engines.",
+      "security_profile": "One-way secure telco masking headers."
+    }
+  },
+  "step_by_step_data_journey": {
+    "step_01_initiation_and_channel_entry": {
+      "action": "Citizen initiates contact based on device and connectivity access.",
+      "infrastructure_dependencies": {
+        "telephony_trunk_rail": "State NIC/BSNL Cloud SIP Gateway Exchange Core (Interconnected with All National Operators: Jio, Airtel, Vi)",
+        "messaging_broker_rail": "Meta Business API Cloud Ingestion Framework",
+        "signaling_network_rail": "Cellular Carrier USSD Core Network Infrastructure Nodes (Cross-Operator SS7/SIGTRAN Routing Gates)"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "telecom_signaling_payload": {
+            "type": "object",
+            "description": "Incoming raw network signaling event data envelope containing SIP trunk audio bytes, Meta HTTP POST webhook payload, or USSD telecom signaling context string."
+          }
+        },
+        "required": ["telecom_signaling_payload"]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "session_id": { "type": "string" },
+          "source_phone_number": { "type": "string" },
+          "ingress_channel": { "type": "string", "enum": ["IVR_VOICE", "WHATSAPP", "USSD"] },
+          "session_active": { "type": "boolean" },
+          "whatsapp_cleartext_string": { 
+            "type": "string", 
+            "description": "Populated strictly if ingress_channel == WHATSAPP. Contains the cleartext incoming message payload." 
+          },
+          "ussd_collected_payload": {
+            "type": "object",
+            "description": "Populated strictly if ingress_channel == USSD via network menu entry steps.",
+            "properties": {
+              "farmer_id_cleartext": { "type": "string" },
+              "district_code": { "type": "string" },
+              "crop_selection_code": { "type": "string" }
+            },
+            "required": ["farmer_id_cleartext", "district_code", "crop_selection_code"]
+          }
+        },
+        "required": ["session_id", "source_phone_number", "ingress_channel", "session_active"]
+      },
+      "branching_logic": {
+        "if_ivr_voice": "Farmer dials toll-free gateway; system initializes real-time acoustic audio stream buffer.",
+        "if_whatsapp": "Farmer texts 'Muavza' to official number; chatbot initializes menu interface.",
+        "if_ussd": "Farmer dials *147#; telco cell routes sequential numerical menu arrays to capture farmer inputs into ussd_collected_payload."
+      }
+    },
+    "step_02_speech_to_text_transcription": {
+      "action": "Convert raw vernacular acoustic speech waves into written characters.",
+      "execution_scope": "Triggered exclusively for IVR Voice channel. BHASHINI ASR filters background agricultural noise.",
+      "infrastructure_dependencies": {
+        "speech_intelligence_engine": "Digital India BHASHINI Framework National ASR Inference Cluster"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "mime_type": { "type": "string", "enum": ["audio/wav"] },
+          "audio_profile": {
+            "type": "object",
+            "properties": {
+              "sample_rate_hz": {
+                "type": "integer",
+                "enum": [16000],
+                "##_rationale": "16kHz wideband matches BHASHINI ASR native deep-learning training vectors, preserving regional phonetic variations without doubling transit size."
+              },
+              "channels": {
+                "type": "integer",
+                "enum": [1],
+                "##_rationale": "Forcing mono (1 channel) drops cellular network bandwidth payload overhead in half compared to stereo since there is only a single caller source."
+              },
+              "bit_depth": {
+                "type": "integer",
+                "enum": [16],
+                "##_rationale": "16-bit linear PCM provides a 96dB dynamic range, allowing background acoustic noise filtering layers to cleanly isolate rural human speech."
+              },
+              "codec": {
+                "type": "string",
+                "enum": ["pcm"],
+                "##_rationale": "Uncompressed linear PCM bypasses CPU transcoding latency cycles and avoids lossy cellular compression degradation of regional dialects."
+              }
+            },
+            "required": ["sample_rate_hz", "channels", "bit_depth", "codec"]
+          }
+        },
+        "required": ["mime_type", "audio_profile"],
+        "source": "step_01_initiation_and_channel_entry.output_contract.properties.session_id"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "unstructured_vernacular_string": {
+            "type": "string",
+            "description": "Raw unstructured text payload generated in regional vernacular script characters.",
+            "example": "सिरसा में इस बार मेरी नरमा कपास की फसल गुलाबी सुंडी से खराब हो गई..."
+          }
+        },
+        "required": ["unstructured_vernacular_string"]
+      }
+    },
+    "step_03_text_translation_and_normalization": {
+      "action": "Normalize regional terminology and dialects into standard administrative terms.",
+      "execution_scope": "Applies to IVR Voice and WhatsApp text inputs. BHASHINI NMT translates regional agricultural idioms.",
+      "infrastructure_dependencies": {
+        "translation_intelligence_engine": "Digital India BHASHINI Framework National NMT Translation Hub"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "unstructured_text_input": { "type": "string", "description": "Raw string containing regional dialect or vernacular characters." }
+        },
+        "required": ["unstructured_text_input"],
+        "sources": [
+          "step_01_initiation_and_channel_entry.output_contract.properties.whatsapp_cleartext_string",
+          "step_02_speech_to_text_transcription.output_contract.properties.unstructured_vernacular_string"
+        ]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "standardized_english_string": { "type": "string", "description": "Unified administrative language string with localized crop anomalies normalized." }
+        },
+        "required": ["standardized_english_string"],
+        "example": "In Sirsa district, this time my cotton crop has been destroyed by pink bollworm infestation..."
+      }
+    },
+    "step_04_structured_field_entity_extraction": {
+      "action": "Parse the standardized input text into clean system variables via local LLM parsing.",
+      "execution_scope": "Applies to IVR Voice and WhatsApp tracks. Bypassed completely for USSD channel.",
+      "infrastructure_dependencies": {
+        "local_inference_runtime": "LLM Local Background Execution Engine Instance",
+        "hardware_allocation_profile": "MacBook Pro Unified Memory Architecture Unified Silicon Pool"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "target_text": { "type": "string" }
+        },
+        "required": ["target_text"],
+        "source": "step_03_text_translation_and_normalization.output_contract.properties.standardized_english_string"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "extraction_confidence": { "type": "number", "description": "Mathematical log-likelihood model extraction score evaluating payload structured extraction accuracy." },
+          "extracted_entities": {
+            "type": "object",
+            "properties": {
+              "farmer_id_cleartext": { "type": "string", "description": "Raw account or national identification unique numeric string parsed from conversation dialogue." },
+              "district": { "type": "string", "description": "Extracted regional district administrative geographical zone boundary." },
+              "crop_type": { "type": "string", "description": "Normalized agricultural crop matching foundational core data registry categories." },
+              "reported_anomaly": { "type": "string", "description": "Extracted damage classification or target biological pest vector." }
+            },
+            "required": ["farmer_id_cleartext", "district", "crop_type", "reported_anomaly"]
+          }
+        },
+        "required": ["extraction_confidence", "extracted_entities"]
+      }
+    },
+    "step_05_identity_and_agricultural_registry_verification": {
+      "action": "Enforce perimeter tokenization and validate application fields against official sovereign records.",
+      "execution_scope": "All channels converge here. Enforces strict privacy transformations before registry calls.",
+      "infrastructure_dependencies": {
+        "privacy_perimeter_engine": "DPG Privacy-by-Design Local Hashing Middleware (MOSIP/GovStack Pattern)",
+        "identity_verification_rail": "UIDAI Aadhaar-Seeded National Identity Verification Interface",
+        "core_agricultural_registry": "Federated AgriStack Ecosystem (Farmer Registry, Farmland Plot Registry, Crop Sown Registry)"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "target_payload": { "type": "object", "description": "Structured payload arguments from either the probabilistic AI layer or the deterministic USSD signaling array." }
+        },
+        "required": ["target_payload"],
+        "sources": [
+          "step_01_initiation_and_channel_entry.output_contract.properties.ussd_collected_payload",
+          "step_04_structured_field_entity_extraction.output_contract.properties.extracted_entities"
+        ]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "tokenized_identity_hash": { 
+            "type": "string", 
+            "description": "Irreversible 64-character SHA-256 system token hash replacing cleartext identification numbers at the perimeter.",
+            "##_rationale": "Guarantees complete legal alignment with India DPDP Act 2023 compliance profiles by eliminating cleartext identity propagation down backend log aggregates."
+          },
+          "registry_match_flag": { "type": "boolean", "description": "True if farmer record, geofenced land parcel ownership, and seasonal crop verification cross-checks align perfectly across AgriStack ledger tables." },
+          "agristack_eligibility_status": { "type": "string", "enum": ["VERIFIED_MATCH", "MISMATCH_DETECTED", "RECORD_NOT_FOUND"] },
+          "cadastral_plot_id": { "type": "string", "description": "Verified state boundary georeferenced land registry plot map index token pointer." }
+        },
+        "required": ["tokenized_identity_hash", "registry_match_flag", "agristack_eligibility_status", "cadastral_plot_id"]
+      }
+    },
+    "step_06_social_benefits_registry_submission": {
+      "action": "Stage and register the validated application within the central benefits framework.",
+      "execution_scope": "All channels.",
+      "infrastructure_dependencies": {
+        "benefits_orchestration_platform": "OpenSPP Social Protection Platform Core Registry Architecture APIs"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "verification_result": { 
+            "type": "boolean",
+            "description": "Consumes the successful registry alignment flag passed down from the prior verification step."
+          }
+        },
+        "required": ["verification_result"],
+        "source": "step_05_identity_and_agricultural_registry_verification.output_contract.properties.registry_match_flag"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "openspp_case_id": { "type": "string" },
+          "registration_status": { "type": "string", "enum": ["STAGED_SUCCESSFULLY", "SUBMISSION_REJECTED"] }
+        },
+        "required": ["openspp_case_id", "registration_status"]
+      }
+    },
+    "step_07_governance_threshold_evaluation_and_routing": {
+      "action": "Evaluate extraction confidence parameters and execution criteria to select processing branch.",
+      "execution_scope": "Central system gateway orchestration rail.",
+      "infrastructure_dependencies": {
+        "automated_payment_rail": "NPCI Aadhaar Payment Bridge System (APBS) / National DBT Treasury Gateway",
+        "human_review_portal": "State IFMS (Integrated Financial Management System) District Officer Dashboard Queue"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "llm_confidence_score": { 
+            "type": "number", 
+            "minimum": 0.0, 
+            "maximum": 1.0, 
+            "description": "Evaluated model extraction value passed down directly from the step_04 output payload.",
+            "##_rationale": "Defaults to 1.0 for deterministic USSD sessions because menu inputs run on a strict fixed numeric system tree with zero translation or voice acoustic risks."
+          },
+          "registry_match_flag": { 
+            "type": "boolean", 
+            "description": "Sovereign data matching verification flag passed down directly from the step_05 output database contract." 
+          }
+        },
+        "required": ["llm_confidence_score", "registry_match_flag"],
+        "sources": [
+          "step_04_structured_field_entity_extraction.output_contract.properties.extraction_confidence",
+          "step_05_identity_and_agricultural_registry_verification.output_contract.properties.registry_match_flag"
+        ]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "routing_decision": { "type": "string", "enum": ["AUTOMATED_PAYMENT_TRACK", "HUMAN_IN_THE_LOOP_FALLBACK"] }
+        },
+        "required": ["routing_decision"],
+        "conditional_branches": {
+          "passing_track": {
+            "condition": "llm_confidence_score >= 0.85 AND registry_match_flag == true",
+            "action": "EXECUTE_IMMEDIATE_PAYMENT_DISBURSEMENT",
+            "target_rail": "PM-KISAN Ledger Core via APBS API",
+            "emitted_variable": "payment_transaction_id"
+          },
+          "fallback_track": {
+            "condition": "llm_confidence_score < 0.85 OR registry_match_flag == false",
+            "action": "SUSPEND_PROCESSING_AND_ROUTE_TO_HUMAN_HITL",
+            "target_queue": "District Agricultural Officer Ledger Queue",
+            "emitted_variable": "escalation_case_id"
+          }
+        }
+      }
+    },
+    "step_08_adaptive_multichannel_confirmation_delivery": {
+      "action": "Return the final transaction receipt token back to the user across their source entry channel.",
+      "execution_scope": "System termination execution rail.",
+      "infrastructure_dependencies": {
+        "voice_synthesis_engine": "Digital India BHASHINI Framework National TTS Execution Hub",
+        "sms_gateway_infrastructure": "National CDAC Mobile Seva Gateway Core (NIC-Authorized Headers)"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "payment_transaction_id": { "type": "string" },
+          "escalation_case_id": { "type": "string" }
+        },
+        "source": "step_07_governance_threshold_evaluation_and_routing.output_contract.conditional_branches"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "channel_delivery_outputs": {
+            "type": "object",
+            "properties": {
+              "ivr_voice_output": {
+                "type": "object",
+                "properties": {
+                  "action": { "type": "string", "enum": ["SYNTHESIZE_AND_PLAY_AUDIO"] },
+                  "mime_type": { "type": "string", "enum": ["audio/wav"] }
+                },
+                "required": ["action", "mime_type"]
+              },
+              "whatsapp_output": {
+                "type": "object",
+                "properties": {
+                  "action": { "type": "string", "enum": ["TRANSMIT_RICH_MEDIA_CARD"] },
+                  "payload_type": { "type": "string", "enum": ["application/json"] }
+                },
+                "required": ["action", "payload_type"]
+              },
+              "ussd_output": {
+                "type": "object",
+                "properties": {
+                  "action": { "type": "string", "enum": ["PUSH_SIGNALING_STRING"] },
+                  "payload_type": { "type": "string" }
+                },
+                "required": ["action", "payload_type"]
+              },
+              "sms_output": {
+                "type": "object",
+                "properties": {
+                  "action": { "type": "string", "enum": ["BROADCAST_TRANSACTIONAL_SMS"] },
+                  "payload_type": { "type": "string" }
+                },
+                "required": ["action", "payload_type"]
+              }
+            },
+            "required": ["ivr_voice_output", "whatsapp_output", "ussd_output", "sms_output"]
+          }
+        },
+        "required": ["channel_delivery_outputs"]
+      }
+    }
+  }
+}
