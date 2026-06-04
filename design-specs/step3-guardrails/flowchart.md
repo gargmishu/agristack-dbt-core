@@ -79,7 +79,7 @@
                                             │
                                             ▼
                 ┌──────────────────────────────────────────────────────────────────┐
-                │ [Guardrail 2] Algorithmic Model Extraction Confidence Check      │
+                │[Guardrail 2] Algorithmic Model Extraction Confidence Check       │
                 │  - Is extraction_confidence >= 0.85?                             │
                 │  - (USSD always passes; static 1.0)                              │
                 └──────────────────────────┬───────────────────────────────────────┘
