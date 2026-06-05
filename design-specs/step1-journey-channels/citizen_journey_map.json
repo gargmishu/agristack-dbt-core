@@ -58,6 +58,10 @@
           "source_phone_number": { "type": "string" },
           "ingress_channel": { "type": "string", "enum": ["IVR_VOICE", "WHATSAPP", "USSD"] },
           "session_active": { "type": "boolean" },
+          "ivr_audio_stream_uri": {
+            "type": "string",
+            "description": "Populated strictly if ingress_channel == IVR_VOICE. Contains the persistent real-time streaming protocol endpoint (e.g., rtp:// URI) capturing live acoustic telephony bytes for downstream ASR consumption."
+          },
           "whatsapp_cleartext_string": { 
             "type": "string", 
             "description": "Populated strictly if ingress_channel == WHATSAPP. Contains the cleartext incoming message payload." 
@@ -126,11 +130,22 @@
         "properties": {
           "unstructured_vernacular_string": {
             "type": "string",
-            "description": "Raw unstructured text payload generated in regional vernacular script characters.",
-            "example": "सिरसा में इस बार मेरी नरमा कपास की फसल गुलाबी सुंडी से खराब हो गई..."
+            "description": "Populated strictly if ingress_channel == IVR_VOICE. Contains the raw unstructured text payload transcribed from the voice session script characters."
           }
         },
         "required": ["unstructured_vernacular_string"]
+      },
+      "example_input": {
+        "mime_type": "audio/wav",
+        "audio_profile": {
+          "sample_rate_hz": 16000,
+          "channels": 1,
+          "bit_depth": 16,
+          "codec": "pcm"
+        }
+      },
+      "example_output": {
+        "unstructured_vernacular_string": "सिरसा में इस बार मेरी नरमा कपास की फसल गुलाबी सुंडी से खराब हो गई..."
       }
     },
     "step_03_text_translation_and_normalization": {
@@ -142,7 +157,10 @@
       "input_contract": {
         "type": "object",
         "properties": {
-          "unstructured_text_input": { "type": "string", "description": "Raw string containing regional dialect or vernacular characters." }
+          "unstructured_text_input": {
+            "type": "string",
+            "description": "Raw string containing regional dialect or vernacular characters."
+          }
         },
         "required": ["unstructured_text_input"],
         "sources": [
@@ -153,10 +171,18 @@
       "output_contract": {
         "type": "object",
         "properties": {
-          "standardized_english_string": { "type": "string", "description": "Unified administrative language string with localized crop anomalies normalized." }
+          "standardized_english_string": {
+            "type": "string",
+            "description": "Unified administrative language string with localized crop anomalies normalized."
+          }
         },
-        "required": ["standardized_english_string"],
-        "example": "In Sirsa district, this time my cotton crop has been destroyed by pink bollworm infestation..."
+        "required": ["standardized_english_string"]
+      },
+      "example_input": {
+        "unstructured_text_input": "सिरसा में इस बार मेरी नरमा कपास की फसल गुलाबी सुंडी से खराब हो गई..."
+      },
+      "example_output": {
+        "standardized_english_string": "In Sirsa district, this time my cotton crop has been destroyed by pink bollworm infestation..."
       }
     },
     "step_04_structured_field_entity_extraction": {
@@ -177,7 +203,10 @@
       "output_contract": {
         "type": "object",
         "properties": {
-          "extraction_confidence": { "type": "number", "description": "Mathematical log-likelihood model extraction score evaluating payload structured extraction accuracy." },
+          "extraction_confidence": {
+            "type": "number",
+            "description": "Mathematical model extraction score. This score is generated dynamically for IVR_VOICE and WHATSAPP, but is hardcoded upstream to 1.0 for USSD."
+          },
           "extracted_entities": {
             "type": "object",
             "properties": {
@@ -190,6 +219,18 @@
           }
         },
         "required": ["extraction_confidence", "extracted_entities"]
+      },
+      "example_input": {
+        "target_text": "In Sirsa district, this time my cotton crop has been destroyed by pink bollworm infestation..."
+      },
+      "example_output": {
+        "extraction_confidence": 0.94,
+        "extracted_entities": {
+          "farmer_id_cleartext": "123456789012",
+          "district": "Sirsa",
+          "crop_type": "Cotton",
+          "reported_anomaly": "Pink Bollworm Infestation"
+        }
       }
     },
     "step_05_identity_and_agricultural_registry_verification": {
@@ -224,6 +265,20 @@
           "cadastral_plot_id": { "type": "string", "description": "Verified state boundary georeferenced land registry plot map index token pointer." }
         },
         "required": ["tokenized_identity_hash", "registry_match_flag", "agristack_eligibility_status", "cadastral_plot_id"]
+      },
+      "example_input": {
+        "target_payload": {
+          "farmer_id_cleartext": "123456789012",
+          "district": "Sirsa",
+          "crop_type": "Cotton",
+          "reported_anomaly": "Pink Bollworm Infestation"
+        }
+      },
+      "example_output": {
+        "tokenized_identity_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "registry_match_flag": true,
+        "agristack_eligibility_status": "VERIFIED_MATCH",
+        "cadastral_plot_id": "HR-SIR-SRSA-004-P12"
       }
     },
     "step_06_social_benefits_registry_submission": {
@@ -250,6 +305,13 @@
           "registration_status": { "type": "string", "enum": ["STAGED_SUCCESSFULLY", "SUBMISSION_REJECTED"] }
         },
         "required": ["openspp_case_id", "registration_status"]
+      },
+      "example_input": {
+        "verification_result": true
+      },
+      "example_output": {
+        "openspp_case_id": "SPP-CASE-2026-883019",
+        "registration_status": "STAGED_SUCCESSFULLY"
       }
     },
     "step_07_governance_threshold_evaluation_and_routing": {
@@ -300,6 +362,13 @@
             "emitted_variable": "escalation_case_id"
           }
         }
+      },
+      "example_input": {
+        "llm_confidence_score": 0.94,
+        "registry_match_flag": true
+      },
+      "example_output": {
+        "routing_decision": "AUTOMATED_PAYMENT_TRACK"
       }
     },
     "step_08_adaptive_multichannel_confirmation_delivery": {
@@ -360,6 +429,30 @@
           }
         },
         "required": ["channel_delivery_outputs"]
+      },
+      "example_input": {
+        "payment_transaction_id": "TXN-NPCI-APBS-2026-994382104",
+        "escalation_case_id": "null"
+      },
+      "example_output": {
+        "channel_delivery_outputs": {
+          "ivr_voice_output": {
+            "action": "SYNTHESIZE_AND_PLAY_AUDIO",
+            "mime_type": "audio/wav"
+          },
+          "whatsapp_output": {
+            "action": "TRANSMIT_RICH_MEDIA_CARD",
+            "payload_type": "application/json"
+          },
+          "ussd_output": {
+            "action": "PUSH_SIGNALING_STRING",
+            "payload_type": "text/plain"
+          },
+          "sms_output": {
+            "action": "BROADCAST_TRANSACTIONAL_SMS",
+            "payload_type": "text/plain"
+          }
+        }
       }
     }
   }
