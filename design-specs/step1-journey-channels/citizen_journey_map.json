@@ -70,11 +70,11 @@
             "type": "object",
             "description": "Populated strictly if ingress_channel == USSD via network menu entry steps.",
             "properties": {
-              "farmer_id_cleartext": { "type": "string" },
-              "district_code": { "type": "string" },
-              "crop_selection_code": { "type": "string" }
+              "farmer_id_cleartext": { "type": "string", "description": "Raw account or national identification unique numeric string captured via USSD digit entry arrays." },
+              "district_name": { "type": "string", "description": "Standardized regional district name translated from the captured USSD menu digit choice (e.g., 'Sirsa')." },
+              "crop_type": { "type": "string", "description": "Normalized agricultural crop matching foundational core categories, translated from the captured USSD menu digit choice (e.g., 'Cotton')." }
             },
-            "required": ["farmer_id_cleartext", "district_code", "crop_selection_code"]
+            "required": ["farmer_id_cleartext", "district_name", "crop_type"]
           }
         },
         "required": ["session_id", "source_phone_number", "ingress_channel", "session_active"]
@@ -83,6 +83,70 @@
         "if_ivr_voice": "Farmer dials toll-free gateway; system initializes real-time acoustic audio stream buffer.",
         "if_whatsapp": "Farmer texts 'Muavza' to official number; chatbot initializes menu interface.",
         "if_ussd": "Farmer dials *147#; telco cell routes sequential numerical menu arrays to capture farmer inputs into ussd_collected_payload."
+      },
+      "example_inputs_by_channel": {
+        "ivr_voice": {
+          "telecom_signaling_payload": {
+            "sip_trunk_id": "SIP_TRUNK_BSNL_HAR_08",
+            "call_control_id": "CALL_CC_98234-A712",
+            "carrier_origin": "BSNL_HARYANA",
+            "ingress_timestamp": "2026-06-05T09:50:00Z",
+            "audio_stream_endpoint": "rtp://10.240.12.84:16384",
+            "source_ani": "+919876543210"
+          }
+        },
+        "whatsapp": {
+          "telecom_signaling_payload": {
+            "messaging_platform": "META_WHATSAPP_BUSINESS",
+            "webhook_event_id": "WH_EVT_88327491293",
+            "phone_number_id": "109328471023948",
+            "message_metadata": {
+              "message_id": "wamid.HBgLzk4NzY1NDMyMTAVAhgGGEU0M0RDM0RE",
+              "timestamp": "1772790600",
+              "type": "text"
+            },
+            "payload_data": {
+              "text": {
+                "body": "सरसा में मेरी कपास फसल गुलाबी सुंडी ने नष्ट कर दी"
+              }
+            }
+          }
+        },
+        "ussd": {
+          "telecom_signaling_payload": {
+            "signaling_protocol": "SS7_SIGTRAN",
+            "hlr_msc_pointer": "MSC_HR_NOD_02",
+            "ussd_string_raw": "*147*1*[Identity Identifier Redacted]*14*03#",
+            "ussd_session_token": "USS_SESS_77329481_2026"
+          }
+        }
+      },
+      "example_outputs_by_channel": {
+        "ivr_voice": {
+          "session_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+          "source_phone_number": "+919876543210",
+          "ingress_channel": "IVR_VOICE",
+          "session_active": true,
+          "ivr_audio_stream_uri": "rtp://10.240.12.84:16384"
+        },
+        "whatsapp": {
+          "session_id": "4c2aeb8f-1a2c-4e83-bc2d-5b3a8f2d1e0a",
+          "source_phone_number": "+919876543210",
+          "ingress_channel": "WHATSAPP",
+          "session_active": true,
+          "whatsapp_cleartext_string": "सरसा में मेरी कपास फसल गुलाबी सुंडी ने नष्ट कर दी"
+        },
+        "ussd": {
+          "session_id": "8f3b2c1a-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+          "source_phone_number": "+919876543210",
+          "ingress_channel": "USSD",
+          "session_active": true,
+          "ussd_collected_payload": {
+            "farmer_id_cleartext": "[Cleartext Identity Token Masked]",
+            "district_name": "Sirsa",
+            "crop_type": "Cotton"
+          }
+        }
       }
     },
     "step_02_speech_to_text_transcription": {
@@ -226,27 +290,33 @@
       "example_output": {
         "extraction_confidence": 0.94,
         "extracted_entities": {
-          "farmer_id_cleartext": "123456789012",
+          "farmer_id_cleartext": "[Cleartext Identity Token Masked]",
           "district": "Sirsa",
           "crop_type": "Cotton",
           "reported_anomaly": "Pink Bollworm Infestation"
         }
       }
     },
-    "step_05_identity_and_agricultural_registry_verification": {
-      "action": "Enforce perimeter tokenization and validate application fields against official sovereign records.",
-      "execution_scope": "All channels converge here. Enforces strict privacy transformations before registry calls.",
+    "step_05_identity_perimeter_tokenization": {
+      "action": "Enforce absolute perimeter data masking and validate core citizen identity against sovereign records.",
+      "execution_scope": "All channels converge here. Executes strictly inside volatile RAM to satisfy zero-trust privacy mandates.",
       "infrastructure_dependencies": {
         "privacy_perimeter_engine": "DPG Privacy-by-Design Local Hashing Middleware (MOSIP/GovStack Pattern)",
-        "identity_verification_rail": "UIDAI Aadhaar-Seeded National Identity Verification Interface",
-        "core_agricultural_registry": "Federated AgriStack Ecosystem (Farmer Registry, Farmland Plot Registry, Crop Sown Registry)"
+        "identity_verification_rail": "National Identity Verification Protocol Hub Interconnect"
       },
       "input_contract": {
         "type": "object",
         "properties": {
-          "target_payload": { "type": "object", "description": "Structured payload arguments from either the probabilistic AI layer or the deterministic USSD signaling array." }
+          "raw_identity_payload": {
+            "type": "object",
+            "description": "Contains the raw farmer identity numbers extracted from conversational text fields or direct USSD signaling digits.",
+            "properties": {
+              "farmer_id_cleartext": { "type": "string" }
+            },
+            "required": ["farmer_id_cleartext"]
+          }
         },
-        "required": ["target_payload"],
+        "required": ["raw_identity_payload"],
         "sources": [
           "step_01_initiation_and_channel_entry.output_contract.properties.ussd_collected_payload",
           "step_04_structured_field_entity_extraction.output_contract.properties.extracted_entities"
@@ -255,33 +325,75 @@
       "output_contract": {
         "type": "object",
         "properties": {
+          "identity_verified": { "type": "boolean", "description": "True if the national identity provider authenticates the citizen record successfully." },
           "tokenized_identity_hash": { 
             "type": "string", 
-            "description": "Irreversible 64-character SHA-256 system token hash replacing cleartext identification numbers at the perimeter.",
-            "##_rationale": "Guarantees complete legal alignment with India DPDP Act 2023 compliance profiles by eliminating cleartext identity propagation down backend log aggregates."
-          },
-          "registry_match_flag": { "type": "boolean", "description": "True if farmer record, geofenced land parcel ownership, and seasonal crop verification cross-checks align perfectly across AgriStack ledger tables." },
-          "agristack_eligibility_status": { "type": "string", "enum": ["VERIFIED_MATCH", "MISMATCH_DETECTED", "RECORD_NOT_FOUND"] },
-          "cadastral_plot_id": { "type": "string", "description": "Verified state boundary georeferenced land registry plot map index token pointer." }
+            "description": "Irreversible 64-character SHA-256 system token hash substituting the cleartext identification numbers at the edge perimeter.",
+            "##_rationale": "Guarantees complete legal alignment with global data protection laws and the India DPDP Act 2023 by preventing cleartext identity leakages down backend tables."
+          }
         },
-        "required": ["tokenized_identity_hash", "registry_match_flag", "agristack_eligibility_status", "cadastral_plot_id"]
+        "required": ["identity_verified", "tokenized_identity_hash"]
       },
       "example_input": {
-        "target_payload": {
-          "farmer_id_cleartext": "123456789012",
-          "district": "Sirsa",
-          "crop_type": "Cotton",
-          "reported_anomaly": "Pink Bollworm Infestation"
+        "raw_identity_payload": {
+          "farmer_id_cleartext": "[Identity Identifier Redacted]"
         }
       },
       "example_output": {
+        "identity_verified": true,
+        "tokenized_identity_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "step_06_agricultural_registry_crossmatch": {
+      "action": "Cross-examine land parcel records, ownership parameters, and seasonal crop sown claims using masked tokens.",
+      "execution_scope": "All channels. Completely insulated from cleartext PII identity strings.",
+      "infrastructure_dependencies": {
+        "core_agricultural_registry": "Federated AgriStack Ecosystem (Farmer Registry, Farmland Plot Registry, Crop Sown Registry)"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "tokenized_identity_hash": { "type": "string" },
+          "agricultural_assertions": {
+            "type": "object",
+            "description": "Unified payload configuration container. Binds structured conversational strings (district/crop_type from step_04) or matches carrier menu digits (district_code/crop_selection_code from step_01).",
+            "properties": {
+              "district": { "type": "string", "description": "Populated via step_04 extracted entity string or mapped via step_01 state district code lookup tables." },
+              "crop_type": { "type": "string", "description": "Populated via step_04 extracted entity string or mapped via step_01 state crop variant matrix indices." }
+            },
+            "required": ["district", "crop_type"]
+          }
+        },
+        "required": ["tokenized_identity_hash", "agricultural_assertions"],
+        "sources": [
+          "step_05_identity_perimeter_tokenization.output_contract.properties.tokenized_identity_hash",
+          "step_01_initiation_and_channel_entry.output_contract.properties.ussd_collected_payload",
+          "step_04_structured_field_entity_extraction.output_contract.properties.extracted_entities"
+        ]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "registry_match_flag": { "type": "boolean", "description": "True if geofenced land parcel ownership and state seasonal crop verification cross-checks align perfectly across AgriStack ledger tables." },
+          "agristack_eligibility_status": { "type": "string", "enum": ["VERIFIED_MATCH", "MISMATCH_DETECTED", "RECORD_NOT_FOUND"] },
+          "cadastral_plot_id": { "type": "string", "description": "Verified state boundary georeferenced land registry plot map index token pointer." }
+        },
+        "required": ["registry_match_flag", "agristack_eligibility_status", "cadastral_plot_id"]
+      },
+      "example_input": {
         "tokenized_identity_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "agricultural_assertions": {
+          "district": "Sirsa",
+          "crop_type": "Cotton"
+        }
+      },
+      "example_output": {
         "registry_match_flag": true,
         "agristack_eligibility_status": "VERIFIED_MATCH",
         "cadastral_plot_id": "HR-SIR-SRSA-004-P12"
       }
     },
-    "step_06_social_benefits_registry_submission": {
+    "step_07_social_benefits_registry_submission": {
       "action": "Stage and register the validated application within the central benefits framework.",
       "execution_scope": "All channels.",
       "infrastructure_dependencies": {
@@ -296,7 +408,7 @@
           }
         },
         "required": ["verification_result"],
-        "source": "step_05_identity_and_agricultural_registry_verification.output_contract.properties.registry_match_flag"
+        "source": "step_06_agricultural_registry_crossmatch.output_contract.properties.registry_match_flag"
       },
       "output_contract": {
         "type": "object",
@@ -314,7 +426,7 @@
         "registration_status": "STAGED_SUCCESSFULLY"
       }
     },
-    "step_07_governance_threshold_evaluation_and_routing": {
+    "step_08_governance_threshold_evaluation_and_routing": {
       "action": "Evaluate extraction confidence parameters and execution criteria to select processing branch.",
       "execution_scope": "Central system gateway orchestration rail.",
       "infrastructure_dependencies": {
@@ -333,13 +445,14 @@
           },
           "registry_match_flag": { 
             "type": "boolean", 
-            "description": "Sovereign data matching verification flag passed down directly from the step_05 output database contract." 
+            "description": "Sovereign data matching verification flag passed down directly from the step_06 output database contract." 
           }
         },
         "required": ["llm_confidence_score", "registry_match_flag"],
         "sources": [
+          "step_01_initiation_and_channel_entry.output_contract.properties.ussd_collected_payload",
           "step_04_structured_field_entity_extraction.output_contract.properties.extraction_confidence",
-          "step_05_identity_and_agricultural_registry_verification.output_contract.properties.registry_match_flag"
+          "step_06_agricultural_registry_crossmatch.output_contract.properties.registry_match_flag"
         ]
       },
       "output_contract": {
@@ -371,7 +484,7 @@
         "routing_decision": "AUTOMATED_PAYMENT_TRACK"
       }
     },
-    "step_08_adaptive_multichannel_confirmation_delivery": {
+    "step_09_adaptive_multichannel_confirmation_delivery": {
       "action": "Return the final transaction receipt token back to the user across their source entry channel.",
       "execution_scope": "System termination execution rail.",
       "infrastructure_dependencies": {
@@ -381,10 +494,10 @@
       "input_contract": {
         "type": "object",
         "properties": {
-          "payment_transaction_id": { "type": "string" },
-          "escalation_case_id": { "type": "string" }
+          "payment_transaction_id": { "type": ["string", "null"] },
+          "escalation_case_id": { "type": ["string", "null"] }
         },
-        "source": "step_07_governance_threshold_evaluation_and_routing.output_contract.conditional_branches"
+        "source": "step_08_governance_threshold_evaluation_and_routing.output_contract.conditional_branches"
       },
       "output_contract": {
         "type": "object",
@@ -432,7 +545,7 @@
       },
       "example_input": {
         "payment_transaction_id": "TXN-NPCI-APBS-2026-994382104",
-        "escalation_case_id": "null"
+        "escalation_case_id": null
       },
       "example_output": {
         "channel_delivery_outputs": {
