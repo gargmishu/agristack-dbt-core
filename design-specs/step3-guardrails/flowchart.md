@@ -5,8 +5,8 @@
                         ▼                               ▼                        │
           ┌───────────────────────────┐   ┌───────────────────────────┐       ┌──────────────────────────────────────────────────┐   
           │ IVR Ingress  Node         │   │ Whatsapp Ingress Node     │       │ USSD Ingress Node                                │   
-          │  - Generates session_id   │   │   - Generates session_id  │       │    -  Bypasses entire AI stack                   │
-          └─────────────┬─────────────┘   └─────────────┬─────────────┘       │    - Maps cellular signaling digits to fields    │
+          │  - Generates session_id   │   │   - Generates session_id  │       │   - Bypasses entire AI stack                   │
+          └─────────────┬─────────────┘   └─────────────┬─────────────┘       │   - Maps cellular signaling digits to fields    │
                         │                               │                     │   - Hardcodes extraction_confidence = 1.0        │
                         ▼                               │                     └──────────────────┬───────────────────────────────┘  
           ┌───────────────────────────────────┐         │                                        │
