@@ -29,7 +29,7 @@
         │ step_04_structured_field_entity_extraction             │                                                │
         │   - [RE-ENTRY POINT FOR UPSTREAM CONVERSATIONAL LOOPS] │                                                │
         │   - Local SLM Entity Extraction                        │                                                │
-        │   - Parses district, crop_type, reported_anomaly       │                                                │
+        │   - Parses district_name, crop_type, reported_anomaly  │                                                │
         │   - Emits probabilistic AI Confidence Score metrics    │                                                │
         └─────────────────────────────┬──────────────────────────┘                                                │
                                       │                                                                           │
@@ -65,24 +65,25 @@
                                             ├──────────────────────────────────────────────────────┐
                                             │ [PASS: Secure Hash Generated]                        │ [CRITICAL FAIL: Malformed String]
                                             ▼                                                      ▼
-┌────────────────────────────────────────────────────────────────────────────────────────┐  ┌─────────────────────────────────────┐
-│ PHASE C: DETAILED PAYLOAD PERSISTENCE                                                  │  │ step_05_identity_and_agri_...       │
-│    step_05_identity_perimeter_tokenization (Extraction Payload Target)                 │  │          (Abort Ingress)            │     
-│ 1. Commits payload_id (PK), relational session_id (FK), and current loop attempt_id    │  │ 1. Updates existing parent row in   │
-│ 2. Stores irreversible tokenized identifier token into farmer_id_cleartext column      │  │    session_telemetry_log to         │
-│ 3. Saves extracted entities (district, crop, anomaly descriptions)                     │  │    status = 'REJECTED'.             │
-│ 4. Enforces operational tracking flags by updating processing_state to 'STAGED'        │  │ 2. Termines session instantly to    │
-└───────────────────────────────────────────┬────────────────────────────────────────────┘  │    prevent dirty DB downstream.     │
-                                            │                                               └─────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐  ┌─────────────────────────────────────────┐
+│ PHASE C: DETAILED PAYLOAD PERSISTENCE                                                  │  │ step_05_identity_perimeter_tokenization │
+│    step_05_identity_perimeter_tokenization (Extraction Payload Target)                 │  │          (Abort Ingress)                │ 
+│ 1. Commits payload_id (PK), relational session_id (FK), and current loop attempt_id    │  │ 1. Updates existing parent row in       │
+│ 2. Stores irreversible tokenized identifier token into farmer_id_cleartext column      │  │    session_telemetry_log to             │
+│ 3. Saves extracted entities (district_name, crop_type, reported_anomaly)               │  │    status = 'REJECTED'.                 │
+│ 4. Enforces operational tracking flags by updating processing_state to 'STAGED'        │  │ 2. Terminates session instantly to      │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘  │    prevent dirty DB downstream.         │
+                                            │                                               └─────────────────────────────────────────┘
                                             ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│ PHASE D: DOWNSTREAM DATA TRANSFORMATION:                                                 │
-│   step_04_structured_field_entity_extraction (dbt-core Analytical Transformation)        │
-│ 1. Compiles local model staging views (`stg_session_extraction_details`)                 │
-│ 2. Executes window partitions (`QUALIFY ROW_NUMBER() OVER (PARTITION BY session_id...)`) │
-│ 3. Dedupes multi-attempt correction entries to isolate active payload lines              │
-│ 4. Materializes refined clean tables, preparing variables for registry integration arrays│
-└───────────────────────────────────────────┬──────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────────────────┐
+│ PHASE D: DOWNSTREAM DATA TRANSFORMATION:                                                      │
+│   ANALYTICAL DATA TRANSFORMATION LAYER via dbt-core                                           │
+│      (stg_session_extraction via step_05)                                             │
+│ 1. Compiles local model staging views (`stg_session_extraction_details`)                      │
+│ 2. Executes window partitions (`QUALIFY ROW_NUMBER() OVER (PARTITION BY session_id...)`)      │
+│ 3. Dedupes multi-attempt correction entries to isolate active payload lines                   │
+│ 4. Materializes refined clean tables, preparing variables for registry integration arrays     │
+└───────────────────────────────────────────┬───────────────────────────────────────────────────┘
                                             │
                                             ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
@@ -136,6 +137,6 @@
                                                                      │   Human In The Loop Fallback Gate              │
                                                                      │ 1. Updates DB processing state to 'REFERRED'   │
                                                                      │ 2. Routes payload to manual caseworker queue   │
-                                                                     │ 3. step_09_adaptive_multichannel_delivery      │
+                                                                     │ 3. step_09_adaptive_multichannel_...           │
                                                                      │    returns encrypted Escalation Case ID        │
                                                                      └────────────────────────────────────────────────┘
