@@ -1,0 +1,250 @@
+apiVersion: dpi-ai/v1
+kind: DPIWorkflow
+metadata:
+  id: "wf-crop-loss-subsidy-2026"
+  name: "autonomous_multi_channel_farmer_subsidy_system"
+  version: "1.0.0"
+  sector: "Agriculture"
+  governing_body: "State Department of Agriculture & Farmer Welfare"
+  legal_mandate: "Sovereign Seasonal Relief & DBT Payment Authorization Order, 2023"
+
+environmental_rails:
+  identity_infrastructure: "MOSIP Decentralized Core Identity Provider Platform"
+  data_exchange_infrastructure: "Federated AgriStack Unified Registry System"
+  social_protection_infrastructure: "OpenSPP Social Protection Platform Core Registry Engine"
+  payment_clearing_infrastructure: "NPCI Aadhaar Payment Bridge System (APBS) / Mojaloop Hub"
+
+ingress_triggers:
+  channels:
+    - type: "IVR_VOICE"
+      interface_id: "SIP_TRUNK_BSNL_HAR_08"
+      audio_profile: "mono_16khz_16bit_pcm"
+    - type: "WHATSAPP"
+      interface_id: "META_WHATSAPP_BUSINESS_API"
+    - type: "USSD"
+      interface_id: "SS7_SIGTRAN_CARRIER_GATEWAY"
+
+workflow_orchestration:
+  steps:
+    - step_id: "step_01"
+      step_name: "step_01_initiation_and_channel_entry"
+      block: "consent_verify"
+      type: "governance_gate"
+      description: "Capture explicit channel-native citizen opt-in prior to initializing processing"
+      inputs:
+        session_id: "$.payload.session_id"
+        source_identifier: "$.payload.source_phone_number"
+        channel_type: "$.payload.ingress_channel"
+        ussd_collected_payload: "$.payload.ussd_collected_payload"
+      outputs:
+        session_id: "string"
+        channel_type: "string"
+        consent_granted: "boolean"
+        ussd_collected_payload: "object"
+      parameters:
+        blocking_gate: true
+        ivr_dtmf_accept_digit: "1"
+        whatsapp_optin_payload: "I Accept and Authorize Check"
+        ussd_optin_digit: "1"
+      on_success: "proceed"
+      on_failure: "abort_session"
+
+    - step_id: "step_02"
+      step_name: "step_02_speech_to_text_transcription"
+      block: "speech_to_text"
+      type: "ai_block"
+      description: "Convert incoming raw vernacular acoustic streams into written script strings"
+      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE'"
+      inputs:
+        audio_stream_uri: "$.payload.ivr_audio_stream_uri"
+      outputs:
+        unstructured_vernacular_string: "string"
+      parameters:
+        model_adapter: "BHASHINI_ASR_INFERENCE_CLUSTER"
+        native_language: "hi-IN"
+        filtering_profile: "agricultural_background_noise_attenuation"
+        fallback_path: "human_escalate"
+      on_success: "proceed"
+      on_failure: "step_08"
+
+    - step_id: "step_03"
+      step_name: "step_03_text_translation_and_normalization"
+      block: "translate"
+      type: "ai_block"
+      description: "Normalize local idioms, terminology, and dialects into standard administrative text"
+      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
+      inputs:
+        unstructured_text:
+          selector:
+            ivr_source: "$.step_02.output.unstructured_vernacular_string"
+            whatsapp_source: "$.payload.whatsapp_cleartext_string"
+      outputs:
+        standardized_english_string: "string"
+      parameters:
+        model_adapter: "BHASHINI_NMT_TRANSLATION_HUB"
+        source_dialect: "regional_haryanvi_hindi"
+        target_language: "en-IN"
+      on_success: "proceed"
+      on_failure: "step_08"
+
+    - step_id: "step_04"
+      step_name: "step_04_structured_field_entity_extraction"
+      block: "structured_extract"
+      type: "ai_block"
+      description: "Parse standardized dialogue strings into structured system configurations via localized SLM execution"
+      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
+      inputs:
+        target_text: "$.step_03.output.standardized_english_string"
+      outputs:
+        extracted_entities: "object"
+        extraction_confidence: "float"
+      parameters:
+        model_runtime: "ON_PREM_LOCAL_SLM_INFERENCE_INSTANCE"
+        response_schema:
+          type: "object"
+          required: ["farmer_id_cleartext", "district_name", "crop_type", "reported_anomaly"]
+          properties:
+            farmer_id_cleartext: "string"
+            district_name: "string"
+            crop_type: "string"
+            reported_anomaly: "string"
+      on_success: "proceed"
+      on_failure: "step_08"
+
+    - step_id: "step_05"
+      step_name: "step_05_identity_perimeter_tokenization"
+      block: "identity_verify"
+      type: "dpi_rail"
+      description: "Enforce zero-disk RAM masking by tokenizing identifiers against national database engines"
+      inputs:
+        raw_national_id:
+          selector:
+            ussd_source: "$.step_01.output.ussd_collected_payload.farmer_id_cleartext"
+            conversational_source: "$.step_04.output.extracted_entities.farmer_id_cleartext"
+      outputs:
+        tokenized_identity_hash: "string"
+      parameters:
+        hashing_algorithm: "SHA-256"
+        salt_pepper_injection: "ENV_INJECTED_SYSTEM_PEPPER_KEY"
+        mosip_interconnect_profile: "volatile_ram_match_only"
+      on_success: "proceed"
+      on_failure: "abort_with_rejection_log"
+
+    - step_id: "step_06"
+      step_name: "step_06_agricultural_registry_crossmatch"
+      block: "registry_search"
+      type: "dpi_rail"
+      description: "Cross-examine parcel boundaries, property ownership, and seasonal crop records"
+      inputs:
+        tokenized_identity_hash: "$.step_05.output.tokenized_identity_hash"
+        assertions:
+          district_name:
+            selector:
+              ussd_path: "$.step_01.output.ussd_collected_payload.district_name"
+              ai_path: "$.step_04.output.extracted_entities.district_name"
+          crop_type:
+            selector:
+              ussd_path: "$.step_01.output.ussd_collected_payload.crop_type"
+              ai_path: "$.step_04.output.extracted_entities.crop_type"
+      outputs:
+        registry_match_flag: "boolean"
+        cadastral_plot_id: "string"
+      parameters:
+        target_registry: "FEDERATED_AGRISTACK_CORE_GATEWAY"
+        matching_logic: "strict_geographic_boundary_intersection"
+      on_success: "proceed"
+      on_failure: "step_08"
+
+    - step_id: "step_07"
+      step_name: "step_07_social_benefits_registry_submission"
+      block: "submit_application"
+      type: "dpi_rail"
+      description: "Stage the verified application parameters inside the central social benefits framework"
+      inputs:
+        verification_provenance_flag: "$.step_06.output.registry_match_flag"
+        cadastral_plot_reference: "$.step_06.output.cadastral_plot_id"
+      outputs:
+        payment_transaction_id: "string"
+        application_status: "string"
+      parameters:
+        target_api_endpoint: "OPENSPP_SOCIAL_PROTECTION_PLATFORM_APIS"
+        submission_mode: "staged_pending_clearance"
+      on_success: "proceed"
+      on_failure: "suspend_with_infrastructure_alert"
+
+    - step_id: "step_08"
+      step_name: "step_08_governance_threshold_evaluation_and_routing"
+      block: "human_review"
+      type: "governance_gate"
+      description: "Centralized routing gate evaluating extraction metrics and data validation check flags"
+      inputs:
+        llm_confidence_score:
+          selector:
+            ussd_static: 1.00
+            conversational_probabilistic: "$.step_04.output.extraction_confidence"
+        registry_match_flag: "$.step_06.output.registry_match_flag"
+        loop_counter: "$.payload.loop_attempt_id"
+      outputs:
+        routing_decision: "string"
+        escalation_case_id: "string"
+      parameters:
+        minimum_confidence_threshold: 0.85
+        maximum_retry_limit: 3
+      routing_branches:
+        passing_track:
+          condition: "$.llm_confidence_score >= 0.85 && $.registry_match_flag == true"
+          target_action: "EXECUTE_IMMEDIATE_AUTOMATED_CLEARING"
+          next_step: "step_09"
+        fallback_track:
+          condition: "$.llm_confidence_score < 0.85 || $.registry_match_flag == false || $.loop_counter > 3"
+          target_action: "SUSPEND_PROCESSING_AND_GENERATE_INCIDENT_TOKEN"
+          state_flag: "REFERRED"
+          caseworker_queue: "District Agricultural Officer Review Ledger Dashboard"
+          incident_token_config:
+            prefix: "SPP-CASE-"
+            generation_mechanism: "prefix_plus_year_plus_random_index"
+          next_step: "step_09"
+
+    - step_id: "step_09"
+      step_name: "step_09_adaptive_multichannel_confirmation_delivery"
+      block: "payment_disburse"
+      type: "dpi_rail"
+      description: "Finalize pipeline actions, execute treasury transfers for passing lines, and emit channel receipts"
+      inputs:
+        routing_decision: "$.step_08.output.routing_decision"
+        payment_context: "$.step_07.output.payment_transaction_id"
+        fallback_context: "$.step_08.output.escalation_case_id"
+      outputs:
+        delivery_status: "string"
+      parameters:
+        treasury_rail: "NPCI_Aadhaar_Payment_Bridge_System"
+        notification_engine: "CDAC_Mobile_Seva_Gateway"
+        voice_synthesis_engine: "BHASHINI_TTS_EXECUTION_HUB"
+      channel_payloads:
+        ivr_voice_output:
+          action: "SYNTHESIZE_AND_PLAY_AUDIO"
+          format: "audio/wav"
+        whatsapp_output:
+          action: "TRANSMIT_RICH_MEDIA_CARD"
+          format: "application/json"
+        ussd_output:
+          action: "PUSH_SIGNALING_STRING"
+          format: "text/plain"
+        sms_output:
+          action: "BROADCAST_TRANSACTIONAL_SMS"
+          format: "text/plain"
+      on_termination: "commit_session_audit_and_close"
+
+system_telemetry_finalization:
+  audit_logger_block: "audit_log"
+  parameters:
+    target_storage: "local_postgres_telemetry_log_table"
+    enforce_anti_tampering: true
+    row_signature_checksum: "SHA-256"
+    required_metadata_tokens:
+      - "log_entry_id"
+      - "session_id"
+      - "actor_id"
+      - "timestamp_utc"
+      - "action_executed"
+      - "state_delta_checksum"
