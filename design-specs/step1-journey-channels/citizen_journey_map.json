@@ -1,5 +1,5 @@
 {
-  "framework_step": "Design · Step 1 of 9: Identify the use case, user journey, and access channels",
+  "framework_step": "Design · Step 1 of 12: Identify the use case, user journey, and access channels",
   "use_case_definition": {
     "service_name": "Autonomous Multi-Channel Farmer Subsidy Application, Review, & Payment System",
     "bounded_scope": "Processing localized seasonal crop-loss relief subsidy claims and executing Direct Benefit Transfer payouts via state ledgers.",
@@ -275,11 +275,11 @@
             "type": "object",
             "properties": {
               "farmer_id_cleartext": { "type": "string", "description": "Raw account or national identification unique numeric string parsed from conversation dialogue." },
-              "district": { "type": "string", "description": "Extracted regional district administrative geographical zone boundary." },
+              "district_name": { "type": "string", "description": "Extracted regional district administrative geographical zone boundary normalized to system mapping layouts." },
               "crop_type": { "type": "string", "description": "Normalized agricultural crop matching foundational core data registry categories." },
               "reported_anomaly": { "type": "string", "description": "Extracted damage classification or target biological pest vector." }
             },
-            "required": ["farmer_id_cleartext", "district", "crop_type", "reported_anomaly"]
+            "required": ["farmer_id_cleartext", "district_name", "crop_type", "reported_anomaly"]
           }
         },
         "required": ["extraction_confidence", "extracted_entities"]
@@ -291,7 +291,7 @@
         "extraction_confidence": 0.94,
         "extracted_entities": {
           "farmer_id_cleartext": "[Cleartext Identity Token Masked]",
-          "district": "Sirsa",
+          "district_name": "Sirsa",
           "crop_type": "Cotton",
           "reported_anomaly": "Pink Bollworm Infestation"
         }
@@ -356,12 +356,12 @@
           "tokenized_identity_hash": { "type": "string" },
           "agricultural_assertions": {
             "type": "object",
-            "description": "Unified payload configuration container. Binds structured conversational strings (district/crop_type from step_04) or matches carrier menu digits (district_code/crop_selection_code from step_01).",
+            "description": "Unified payload configuration container. Binds structured conversational strings or matches carrier menu digits.",
             "properties": {
-              "district": { "type": "string", "description": "Populated via step_04 extracted entity string or mapped via step_01 state district code lookup tables." },
-              "crop_type": { "type": "string", "description": "Populated via step_04 extracted entity string or mapped via step_01 state crop variant matrix indices." }
+              "district_name": { "type": "string", "description": "Populated via step_04 extracted entity string or mapped via step_01 state district code lookup tables." },
+              "crop_type": { "type": "string" }
             },
-            "required": ["district", "crop_type"]
+            "required": ["district_name", "crop_type"]
           }
         },
         "required": ["tokenized_identity_hash", "agricultural_assertions"],
@@ -383,7 +383,7 @@
       "example_input": {
         "tokenized_identity_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "agricultural_assertions": {
-          "district": "Sirsa",
+          "district_name": "Sirsa",
           "crop_type": "Cotton"
         }
       },
@@ -426,12 +426,11 @@
         "registration_status": "STAGED_SUCCESSFULLY"
       }
     },
-    "step_08_governance_threshold_evaluation_and_routing": {
-      "action": "Evaluate extraction confidence parameters and execution criteria to select processing branch.",
-      "execution_scope": "Central system gateway orchestration rail.",
+    "step_08_governance_threshold_evaluation": {
+      "action": "Evaluate model extraction metrics and registry match flags against sovereign thresholds to verify processing readiness.",
+      "execution_scope": "Central system evaluation gateway rail.",
       "infrastructure_dependencies": {
-        "automated_payment_rail": "NPCI Aadhaar Payment Bridge System (APBS) / National DBT Treasury Gateway",
-        "human_review_portal": "State IFMS (Integrated Financial Management System) District Officer Dashboard Queue"
+        "rules_engine_cluster": "State Department of Agriculture & Farmer Welfare Business Rules Core Engine"
       },
       "input_contract": {
         "type": "object",
@@ -458,33 +457,132 @@
       "output_contract": {
         "type": "object",
         "properties": {
-          "routing_decision": { "type": "string", "enum": ["AUTOMATED_PAYMENT_TRACK", "HUMAN_IN_THE_LOOP_FALLBACK"] }
-        },
-        "required": ["routing_decision"],
-        "conditional_branches": {
-          "passing_track": {
-            "condition": "llm_confidence_score >= 0.85 AND registry_match_flag == true",
-            "action": "EXECUTE_IMMEDIATE_PAYMENT_DISBURSEMENT",
-            "target_rail": "PM-KISAN Ledger Core via APBS API",
-            "emitted_variable": "payment_transaction_id"
-          },
-          "fallback_track": {
-            "condition": "llm_confidence_score < 0.85 OR registry_match_flag == false",
-            "action": "SUSPEND_PROCESSING_AND_ROUTE_TO_HUMAN_HITL",
-            "target_queue": "District Agricultural Officer Ledger Queue",
-            "emitted_variable": "escalation_case_id"
+          "evaluation_passed": {
+            "type": "boolean",
+            "description": "Deterministic boolean flag asserting if all algorithmic validation boundaries and threshold rules are successfully met."
           }
-        }
+        },
+        "required": ["evaluation_passed"]
       },
       "example_input": {
         "llm_confidence_score": 0.94,
         "registry_match_flag": true
       },
       "example_output": {
+        "evaluation_passed": true
+      }
+    },
+    "step_09_governance_routing_engine": {
+      "action": "Parse business rules evaluation flags to split the workflow path into immediate automated clearing or dedicated caseworker incident ticket creation.",
+      "execution_scope": "Central system workflow structural router rail.",
+      "infrastructure_dependencies": {
+        "routing_switch_core": "State Department of Agriculture & Farmer Welfare Orchestration Router Layer"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "evaluation_passed": { "type": "boolean" }
+        },
+        "required": ["evaluation_passed"],
+        "source": "step_08_governance_threshold_evaluation.output_contract.properties.evaluation_passed"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "routing_decision": { "type": "string", "enum": ["AUTOMATED_PAYMENT_TRACK", "HUMAN_IN_THE_LOOP_FALLBACK"] }
+        },
+        "required": ["routing_decision"],
+        "conditional_branches": {
+          "passing_track": {
+            "condition": "evaluation_passed == true",
+            "action": "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT",
+            "next_step": "step_10_automated_payout_disbursement"
+          },
+          "fallback_track": {
+            "condition": "evaluation_passed == false",
+            "action": "FORWARD_TO_INCIDENT_TICKET_STAGING",
+            "next_step": "step_11_caseworker_incident_staging"
+          }
+        }
+      },
+      "example_input": {
+        "evaluation_passed": true
+      },
+      "example_output": {
         "routing_decision": "AUTOMATED_PAYMENT_TRACK"
       }
     },
-    "step_09_adaptive_multichannel_confirmation_delivery": {
+    "step_10_automated_payout_disbursement": {
+      "action": "Trigger direct treasury direct benefit transfer (DBT) transfer sequences over national payment clearing networks.",
+      "execution_scope": "Triggered exclusively for sessions where routing_decision == AUTOMATED_PAYMENT_TRACK.",
+      "infrastructure_dependencies": {
+        "automated_payment_rail": "NPCI Aadhaar Payment Bridge System (APBS) / National DBT Treasury Gateway"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "routing_decision": { "type": "string", "enum": ["AUTOMATED_PAYMENT_TRACK"] },
+          "openspp_case_id": { "type": "string" }
+        },
+        "required": ["routing_decision", "openspp_case_id"],
+        "sources": [
+          "step_07_social_benefits_registry_submission.output_contract.properties.openspp_case_id",
+          "step_09_governance_routing_engine.output_contract.properties.routing_decision"
+        ]
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "payment_transaction_id": { "type": "string", "description": "Official sovereign treasury direct clearing identifier token generated on successful settlement clearance." },
+          "payout_clearance_status": { "type": "string", "enum": ["SETTLED_SUCCESSFULLY", "CLEARING_DELAYED", "TREASURY_REJECTED"] }
+        },
+        "required": ["payment_transaction_id", "payout_clearance_status"]
+      },
+      "example_input": {
+        "routing_decision": "AUTOMATED_PAYMENT_TRACK",
+        "openspp_case_id": "SPP-CASE-2026-883019"
+      },
+      "example_output": {
+        "payment_transaction_id": "TXN-NPCI-APBS-2026-994382104",
+        "payout_clearance_status": "SETTLED_SUCCESSFULLY"
+      }
+    },
+    "step_11_caseworker_incident_staging": {
+      "action": "Generate a unique state incident tracking token and push the session data to the manual review ledger dashboard.",
+      "execution_scope": "Triggered exclusively for sessions where routing_decision == HUMAN_IN_THE_LOOP_FALLBACK.",
+      "infrastructure_dependencies": {
+        "human_review_portal": "State IFMS (Integrated Financial Management System) District Officer Dashboard Queue Engine"
+      },
+      "input_contract": {
+        "type": "object",
+        "properties": {
+          "routing_decision": { "type": "string", "enum": ["HUMAN_IN_THE_LOOP_FALLBACK"] },
+          "loop_counter": { "type": "integer" }
+        },
+        "required": ["routing_decision", "loop_counter"],
+        "source": "step_09_governance_routing_engine.output_contract.properties.routing_decision"
+      },
+      "output_contract": {
+        "type": "object",
+        "properties": {
+          "escalation_case_id": { 
+            "type": "string", 
+            "description": "Cryptographically signed state tracking index token mapping to the open manual case record." 
+          },
+          "caseworker_assignment_status": { "type": "string", "enum": ["TICKET_QUEUED", "STAGING_FAILED"] }
+        },
+        "required": ["escalation_case_id", "caseworker_assignment_status"]
+      },
+      "example_input": {
+        "routing_decision": "HUMAN_IN_THE_LOOP_FALLBACK",
+        "loop_counter": 1
+      },
+      "example_output": {
+        "escalation_case_id": "SPP-CASE-2026-X77491",
+        "caseworker_assignment_status": "TICKET_QUEUED"
+      }
+    },
+    "step_12_adaptive_multichannel_confirmation_delivery": {
       "action": "Return the final transaction receipt token back to the user across their source entry channel.",
       "execution_scope": "System termination execution rail.",
       "infrastructure_dependencies": {
@@ -494,10 +592,13 @@
       "input_contract": {
         "type": "object",
         "properties": {
-          "payment_transaction_id": { "type": ["string", "null"] },
-          "escalation_case_id": { "type": ["string", "null"] }
+          "payment_transaction_id": { "type": ["string", "null"], "description": "Consumed if routing_decision == AUTOMATED_PAYMENT_TRACK" },
+          "escalation_case_id": { "type": ["string", "null"], "description": "Consumes the ticket identifier generated by step_11" }
         },
-        "source": "step_08_governance_threshold_evaluation_and_routing.output_contract.conditional_branches"
+        "sources": [
+          "step_10_automated_payout_disbursement.output_contract.properties.payment_transaction_id",
+          "step_11_caseworker_incident_staging.output_contract.properties.escalation_case_id"
+        ]
       },
       "output_contract": {
         "type": "object",
