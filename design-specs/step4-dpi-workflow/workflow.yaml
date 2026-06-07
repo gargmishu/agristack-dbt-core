@@ -164,7 +164,7 @@ workflow_orchestration:
         verification_provenance_flag: "$.step_06.output.registry_match_flag"
         cadastral_plot_reference: "$.step_06.output.cadastral_plot_id"
       outputs:
-        payment_transaction_id: "string"
+        openspp_case_id: "string"
         application_status: "string"
       parameters:
         target_api_endpoint: "OPENSPP_SOCIAL_PROTECTION_PLATFORM_APIS"
@@ -173,51 +173,98 @@ workflow_orchestration:
       on_failure: "suspend_with_infrastructure_alert"
 
     - step_id: "step_08"
-      step_name: "step_08_governance_threshold_evaluation_and_routing"
-      block: "human_review"
+      step_name: "step_08_governance_threshold_evaluation"
+      block: "business_rules_gate"
       type: "governance_gate"
-      description: "Centralized routing gate evaluating extraction metrics and data validation check flags"
+      description: "Deterministic evaluation gate verifying extracted AI metrics and registry match assertions against state policies"
       inputs:
         llm_confidence_score:
           selector:
             ussd_static: 1.00
             conversational_probabilistic: "$.step_04.output.extraction_confidence"
-        registry_match_flag: "$.step_06.output.registry_match_flag"
+            default_fallback: 0.00
+        registry_match_flag:
+          selector:
+            registry_path: "$.step_06.output.registry_match_flag"
+            default_fallback: false
         loop_counter: "$.payload.loop_attempt_id"
       outputs:
-        routing_decision: "string"
-        escalation_case_id: "string"
+        evaluation_passed: "boolean"
       parameters:
         minimum_confidence_threshold: 0.85
         maximum_retry_limit: 3
-      routing_branches:
-        passing_track:
-          condition: "$.llm_confidence_score >= 0.85 && $.registry_match_flag == true"
-          target_action: "EXECUTE_IMMEDIATE_AUTOMATED_CLEARING"
-          next_step: "step_09"
-        fallback_track:
-          condition: "$.llm_confidence_score < 0.85 || $.registry_match_flag == false || $.loop_counter > 3"
-          target_action: "SUSPEND_PROCESSING_AND_GENERATE_INCIDENT_TOKEN"
-          state_flag: "REFERRED"
-          caseworker_queue: "District Agricultural Officer Review Ledger Dashboard"
-          incident_token_config:
-            prefix: "SPP-CASE-"
-            generation_mechanism: "prefix_plus_year_plus_random_index"
-          next_step: "step_09"
+      on_success: "step_09"
+      on_failure: "step_09"
 
     - step_id: "step_09"
-      step_name: "step_09_adaptive_multichannel_confirmation_delivery"
+      step_name: "step_09_governance_routing_engine"
+      block: "orchestration_router"
+      type: "governance_gate"
+      description: "Structural workflow router splitting traffic pathways based on evaluation check flags"
+      inputs:
+        evaluation_passed: "$.step_08.output.evaluation_passed"
+      outputs:
+        routing_decision: "string"
+      routing_branches:
+        passing_track:
+          condition: "$.evaluation_passed == true"
+          target_action: "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT"
+          next_step: "step_10"
+        fallback_track:
+          condition: "$.evaluation_passed == false"
+          target_action: "FORWARD_TO_INCIDENT_TICKET_STAGING"
+          next_step: "step_11"
+
+    - step_id: "step_10"
+      step_name: "step_10_automated_payout_disbursement"
       block: "payment_disburse"
       type: "dpi_rail"
-      description: "Finalize pipeline actions, execute treasury transfers for passing lines, and emit channel receipts"
+      description: "Trigger direct treasury direct benefit transfer (DBT) transfer sequences over national payment clearing networks"
       inputs:
-        routing_decision: "$.step_08.output.routing_decision"
-        payment_context: "$.step_07.output.payment_transaction_id"
-        fallback_context: "$.step_08.output.escalation_case_id"
+        routing_decision: "$.step_09.output.routing_decision"
+        openspp_case_id: "$.step_07.output.openspp_case_id"
       outputs:
-        delivery_status: "string"
+        payment_transaction_id: "string"
+        payout_clearance_status: "string"
       parameters:
         treasury_rail: "NPCI_Aadhaar_Payment_Bridge_System"
+      on_success: "step_12"
+      on_failure: "step_11"
+
+    - step_id: "step_11"
+      step_name: "step_11_caseworker_incident_staging"
+      block: "human_review"
+      type: "governance_gate"
+      description: "Generate a unique state incident tracking token and stage context parameters inside manual review officer ledgers"
+      inputs:
+        routing_decision: "$.step_09.output.routing_decision"
+        loop_counter: "$.payload.loop_attempt_id"
+      outputs:
+        escalation_case_id: "string"
+        caseworker_assignment_status: "string"
+      parameters:
+        caseworker_queue: "District Agricultural Officer Review Ledger Dashboard"
+        incident_token_config:
+          prefix: "SPP-CASE-"
+          generation_mechanism: "prefix_plus_year_plus_random_index"
+      on_success: "step_12"
+      on_failure: "step_12"
+
+    - step_id: "step_12"
+      step_name: "step_12_adaptive_multichannel_confirmation_delivery"
+      block: "notification_emit"
+      type: "dpi_rail"
+      description: "Finalize pipeline actions and transmit channel-native receipts back to the citizen edge channel"
+      inputs:
+        payment_context:
+          selector:
+            success_path: "$.step_10.output.payment_transaction_id"
+            default_fallback: "null"
+        fallback_context:
+          selector:
+            review_path: "$.step_11.output.escalation_case_id"
+            default_fallback: "null"
+      parameters:
         notification_engine: "CDAC_Mobile_Seva_Gateway"
         voice_synthesis_engine: "BHASHINI_TTS_EXECUTION_HUB"
       channel_payloads:
