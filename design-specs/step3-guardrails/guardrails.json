@@ -1,4 +1,5 @@
-"governance_safeguards_architecture": {
+{
+  "governance_safeguards_architecture": {
     "citizen_consent_mechanism": {
       "applied_at_step": "step_01_initiation_and_channel_entry",
       "implementation_protocol": "Enforce explicit channel-native opt-in boundaries before any data elements hit transient memory hooks.",
@@ -9,20 +10,21 @@
       }
     },
     "confidence_threshold_matrix": {
-      "applied_at_step": "step_08_governance_threshold_evaluation_and_routing",
+      "applied_at_step": "step_08_governance_threshold_evaluation",
       "evaluation_source_step": "step_04_structured_field_entity_extraction",
       "baseline_metrics": {
         "minimum_permissible_confidence": 0.85,
         "default_ussd_score": 1.00
       },
       "low_confidence_fallback_routing": {
-        "action": "SUSPEND_AUTOMATED_PAYMENT_DISBURSEMENT",
-        "target_queue": "District Agricultural Officer Review Ledger Queue"
+        "action": "FORWARD_TO_ROUTING_ENGINE",
+        "target_switch_step": "step_09_governance_routing_engine",
+        "safeguard_assertion": "Enforce strict automated payout suspension on any evaluation score dropping below baseline rules thresholds by explicitly asserting a false evaluation_passed token value."
       }
     },
     "human_escalation_pathway": {
-      "applied_at_step": "step_08_governance_threshold_evaluation_and_routing",
-      "termination_handover_step": "step_09_adaptive_multichannel_confirmation_delivery",
+      "applied_at_step": "step_11_caseworker_incident_staging",
+      "termination_handover_step": "step_12_adaptive_multichannel_confirmation_delivery",
       "escalation_trigger_conditions": [
         "LLM entity extraction confidence score falls strictly below the 0.85 threshold boundary",
         "Authoritative AgriStack state registry crossmatch returns an explicit MISMATCH_DETECTED or RECORD_NOT_FOUND payload token",
@@ -42,9 +44,21 @@
         "redaction_transform_logic": "Intercept raw strings within step_05, append an environment-injected cryptographic pepper salt configuration code, compute an irreversible SHA-256 hash token, and instantly purge the unmasked parameters from RAM."
       }
     },
+    "adversarial_ingestion_safeguard": {
+      "applied_at_steps": [
+        "step_02_speech_to_text_transcription",
+        "step_03_text_translation_and_normalization",
+        "step_04_structured_field_entity_extraction"
+      ],
+      "implementation_protocol": "Filter text parameters and acoustic sound vectors through heuristic validation filters at the ingestion perimeter.",
+      "safeguard_execution_rules": {
+        "injection_filtering": "Scan cleartext strings for system instruction override characters or procedural escape strings before routing parameters to downstream SLM entity parsers.",
+        "malicious_anomaly_mitigation": "Force immediate degradation of the active step extraction confidence metric to 0.00 upon detection of adversarial token-stuffing behavior, triggering a clean routing bypass to the fallback evaluation path."
+      }
+    },
     "immutable_audit_trail_engine": {
       "initialized_at_step": "step_01_initiation_and_channel_entry",
-      "finalized_at_step": "step_09_adaptive_multichannel_confirmation_delivery",
+      "finalized_at_step": "step_12_adaptive_multichannel_confirmation_delivery",
       "telemetry_storage_materialization": "Local public schema append-only operational databases (PostgreSQL telemetry log components).",
       "immutable_log_schema": {
         "type": "object",
@@ -52,11 +66,23 @@
         "properties": {
           "log_entry_id": { "type": "string", "description": "Unique UUID primary tracking key generated for every system mutation event." },
           "session_id": { "type": "string" },
-          "actor_id": { "type": "string", "enum": ["SYSTEM_CORE", "AI_INFERENCE_ENGINE", "AGRISTACK_API_GATEWAY", "DISTRICT_OFFICER_HITL"] },
+          "actor_id": { 
+            "type": "string", 
+            "enum": ["SYSTEM_CORE", "AI_INFERENCE_ENGINE", "AGRISTACK_API_GATEWAY", "BENEFITS_REGISTRY_SYSTEM", "TREASURY_PAYMENT_RAIL", "DISTRICT_OFFICER_HITL"] 
+          },
           "timestamp_utc": { "type": "string" },
           "action_executed": { "type": "string" },
           "state_delta_checksum": { "type": "string", "description": "Cryptographic SHA-256 check token of the current data state row to enforce tampered-record detection algorithms." }
         }
       }
+    },
+    "treasury_disbursement_safeguard": {
+      "applied_at_step": "step_10_automated_payout_disbursement",
+      "implementation_protocol": "Enforce strict transaction idempotency checking at the API gateway layer before emitting outbound treasury requests.",
+      "safeguard_execution_rules": {
+        "idempotency_key_generation": "Binds the unique openspp_case_id token directly to the clearing rail dispatch token.",
+        "state_permanence_check": "Query backend ledger indices to verify that no prior settled payment transaction ID exists for the active case before authorizing clearing settlement handshakes."
+      }
     }
   }
+}
