@@ -46,7 +46,7 @@ workflow_orchestration:
         ivr_dtmf_accept_digit: "1"
         whatsapp_optin_payload: "I Accept and Authorize Check"
         ussd_optin_digit: "1"
-      on_success: "proceed"
+      on_success: "step_02"
       on_failure: "abort_session"
 
     - step_id: "step_02"
@@ -67,7 +67,7 @@ workflow_orchestration:
         security_interceptors:
           - guardrail_type: "adversarial_ingestion_safeguard"
             action_on_acoustic_anomaly: "FORCE_CONFIDENCE_TO_ZERO"
-      on_success: "proceed"
+      on_success: "step_03"
       on_failure: "step_08"
 
     - step_id: "step_03"
@@ -90,7 +90,7 @@ workflow_orchestration:
         security_interceptors:
           - guardrail_type: "adversarial_ingestion_safeguard"
             action_on_text_injection: "FORCE_CONFIDENCE_TO_ZERO"
-      on_success: "proceed"
+      on_success: "step_04"
       on_failure: "step_08"
 
     - step_id: "step_04"
@@ -117,7 +117,7 @@ workflow_orchestration:
             district_name: "string"
             crop_type: "string"
             reported_anomaly: "string"
-      on_success: "proceed"
+      on_success: "step_05"
       on_failure: "step_08"
 
     - step_id: "step_05"
@@ -136,8 +136,26 @@ workflow_orchestration:
         hashing_algorithm: "SHA-256"
         salt_pepper_injection: "ENV_INJECTED_SYSTEM_PEPPER_KEY"
         mosip_interconnect_profile: "volatile_ram_match_only"
-      on_success: "proceed"
+      on_success: "step_05_b"
       on_failure: "abort_with_rejection_log"
+
+    - step_id: "step_05_b"
+      step_name: "step_05_b_analytical_dbt_transformation_compaction"
+      block: "dbt_run_operator"
+      type: "dpi_rail"
+      description: "Trigger downstream dbt-core compilation layer to deduplicate multi-attempt conversational loop mutations before registry matching"
+      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
+      inputs:
+        parent_session_id: "$.step_01.output.session_id"
+        tokenization_state: "$.step_05.output.tokenized_identity_hash"
+      outputs:
+        analytical_materialization_cleared: "boolean"
+      parameters:
+        target_dbt_project: "agristack_dbt_core"
+        execution_model_select: "stg_session_extraction_details"
+        orchestration_profile: "blocking_warehouse_compile"
+      on_success: "step_06"
+      on_failure: "step_11"
 
     - step_id: "step_06"
       step_name: "step_06_agricultural_registry_crossmatch"
@@ -161,7 +179,7 @@ workflow_orchestration:
       parameters:
         target_registry: "FEDERATED_AGRISTACK_CORE_GATEWAY"
         matching_logic: "strict_geographic_boundary_intersection"
-      on_success: "proceed"
+      on_success: "step_07"
       on_failure: "step_08"
 
     - step_id: "step_07"
@@ -169,6 +187,7 @@ workflow_orchestration:
       block: "submit_application"
       type: "dpi_rail"
       description: "Stage the verified application parameters inside the central social benefits framework"
+      execution_condition: "$.step_06.output.registry_match_flag == true"
       inputs:
         verification_provenance_flag: "$.step_06.output.registry_match_flag"
         cadastral_plot_reference: "$.step_06.output.cadastral_plot_id"
@@ -178,8 +197,8 @@ workflow_orchestration:
       parameters:
         target_api_endpoint: "OPENSPP_SOCIAL_PROTECTION_PLATFORM_APIS"
         submission_mode: "staged_pending_clearance"
-      on_success: "proceed"
-      on_failure: "suspend_with_infrastructure_alert"
+      on_success: "step_08"
+      on_failure: "step_11"
 
     - step_id: "step_08"
       step_name: "step_08_governance_threshold_evaluation"
@@ -196,12 +215,19 @@ workflow_orchestration:
           selector:
             registry_path: "$.step_06.output.registry_match_flag"
             default_fallback: false
-        loop_counter: "$.payload.loop_attempt_id"
+        current_attempt:
+          selector:
+            payload_path: "$.payload.loop_attempt_id"
+            default_fallback: 1
       outputs:
         evaluation_passed: "boolean"
+        active_attempt_id: "integer"
       parameters:
         minimum_confidence_threshold: 0.85
         maximum_retry_limit: 3
+        engine_evaluation_rules:
+          evaluation_passed: "$.inputs.llm_confidence_score >= $.parameters.minimum_confidence_threshold && $.inputs.registry_match_flag == true"
+          active_attempt_id: "$.inputs.current_attempt"
       on_success: "step_09"
       on_failure: "step_09"
 
@@ -209,18 +235,24 @@ workflow_orchestration:
       step_name: "step_09_governance_routing_engine"
       block: "orchestration_router"
       type: "governance_gate"
-      description: "Structural workflow router splitting traffic pathways based on evaluation check flags"
+      description: "Structural router parsing evaluation flags to trigger direct DBT payouts, edge-channel conversational re-prompts for fresh user inputs, or caseworker staging"
       inputs:
         evaluation_passed: "$.step_08.output.evaluation_passed"
+        active_attempt_id: "$.step_08.output.active_attempt_id"
+        channel_type: "$.step_01.output.channel_type"
       outputs:
         routing_decision: "string"
       routing_branches:
         passing_track:
-          condition: "$.evaluation_passed == true"
+          condition: "$.inputs.evaluation_passed == true"
           target_action: "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT"
           next_step: "step_10"
+        reprompt_loop_track:
+          condition: "$.inputs.evaluation_passed == false && $.inputs.active_attempt_id < 3 && $.inputs.channel_type != 'USSD'"
+          target_action: "TRIGGER_CHANNEL_REPROMPT_INGRESS"
+          next_step: "step_12"
         fallback_track:
-          condition: "$.evaluation_passed == false"
+          condition: "$.inputs.evaluation_passed == false && ($.inputs.active_attempt_id >= 3 || $.inputs.channel_type == 'USSD')"
           target_action: "FORWARD_TO_INCIDENT_TICKET_STAGING"
           next_step: "step_11"
 
@@ -230,8 +262,14 @@ workflow_orchestration:
       type: "dpi_rail"
       description: "Trigger direct treasury direct benefit transfer (DBT) transfer sequences over national payment clearing networks"
       inputs:
-        routing_decision: "$.step_09.output.routing_decision"
-        openspp_case_id: "$.step_07.output.openspp_case_id"
+        routing_decision:
+          selector:
+            router_path: "$.step_09.output.routing_decision"
+            default_fallback: "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT"
+        openspp_case_id:
+          selector:
+            registry_path: "$.step_07.output.openspp_case_id"
+            default_fallback: "CASE_ID_NOT_FOUND"
       outputs:
         payment_transaction_id: "string"
         payout_clearance_status: "string"
@@ -246,8 +284,14 @@ workflow_orchestration:
       type: "governance_gate"
       description: "Generate a unique state incident tracking token and stage context parameters inside manual review officer ledgers"
       inputs:
-        routing_decision: "$.step_09.output.routing_decision"
-        loop_counter: "$.payload.loop_attempt_id"
+        routing_decision:
+          selector:
+            router_path: "$.step_09.output.routing_decision"
+            default_fallback: "INFRASTRUCTURE_FAULT_ESCALATION"
+        loop_counter:
+          selector:
+            evaluation_path: "$.step_08.output.active_attempt_id"
+            default_fallback: 1
       outputs:
         escalation_case_id: "string"
         caseworker_assignment_status: "string"
@@ -263,8 +307,16 @@ workflow_orchestration:
       step_name: "step_12_adaptive_multichannel_confirmation_delivery"
       block: "notification_emit"
       type: "dpi_rail"
-      description: "Finalize pipeline actions and transmit channel-native receipts back to the citizen edge channel"
+      description: "Finalize pipeline actions, translating status flags into user confirmations or channel-native re-prompt loops"
       inputs:
+        routing_decision:
+          selector:
+            router_path: "$.step_09.output.routing_decision"
+            default_fallback: "FORWARD_TO_INCIDENT_TICKET_STAGING"
+        active_attempt_id:
+          selector:
+            evaluation_path: "$.step_08.output.active_attempt_id"
+            default_fallback: 1
         payment_context:
           selector:
             success_path: "$.step_10.output.payment_transaction_id"
@@ -276,19 +328,39 @@ workflow_orchestration:
       parameters:
         notification_engine: "CDAC_Mobile_Seva_Gateway"
         voice_synthesis_engine: "BHASHINI_TTS_EXECUTION_HUB"
+        runtime_template_bindings:
+          payment_transaction_id: "$.inputs.payment_context"
+          escalation_case_id: "$.inputs.fallback_context"
+          current_retry_iteration: "$.inputs.active_attempt_id"
       channel_payloads:
         ivr_voice_output:
           action: "SYNTHESIZE_AND_PLAY_AUDIO"
           format: "audio/wav"
+          templates:
+            success_template: "AUDIO_DISBURSEMENT_SUCCESS_V1"
+            reprompt_template: "AUDIO_CLARIFICATION_PROMPT_V3"
+            escalation_template: "AUDIO_CASEWORKER_TRANSFER_NOTICE_PHONETIC"
         whatsapp_output:
           action: "TRANSMIT_RICH_MEDIA_CARD"
           format: "application/json"
+          templates:
+            success_template: "TEXT_DISBURSEMENT_SUCCESS_CARD"
+            reprompt_template: "TEXT_CLARIFICATION_MESSAGE_CARD"
+            escalation_template: "TEXT_CASEWORKER_ESCALATION_MARKDOWN_CARD"
         ussd_output:
           action: "PUSH_SIGNALING_STRING"
           format: "text/plain"
+          templates:
+            success_template: "USSD_SUCCESS_STRING"
+            reprompt_template: "null"
+            escalation_template: "USSD_SHORT_160CHAR_FAIL_STRING"
         sms_output:
           action: "BROADCAST_TRANSACTIONAL_SMS"
           format: "text/plain"
+          templates:
+            success_template: "SMS_PAYMENT_TXN_RECEIPT"
+            reprompt_template: "SMS_REPROMPT_ALERT"
+            escalation_template: "SMS_CASEWORKER_ASSIGNED_TICKET"
       on_termination: "commit_session_audit_and_close"
 
 system_telemetry_finalization:
