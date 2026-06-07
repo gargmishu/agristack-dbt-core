@@ -151,7 +151,7 @@
     },
     "step_02_speech_to_text_transcription": {
       "action": "Convert raw vernacular acoustic speech waves into written characters.",
-      "execution_scope": "Triggered exclusively for IVR Voice channel. BHASHINI ASR filters background agricultural noise.",
+      "execution_scope": "Triggered exclusively for IVR Voice channel. BHASHINI ASR filters background agricultural noise and runs perimeter sanitization.",
       "infrastructure_dependencies": {
         "speech_intelligence_engine": "Digital India BHASHINI Framework National ASR Inference Cluster"
       },
@@ -214,7 +214,7 @@
     },
     "step_03_text_translation_and_normalization": {
       "action": "Normalize regional terminology and dialects into standard administrative terms.",
-      "execution_scope": "Applies to IVR Voice and WhatsApp text inputs. BHASHINI NMT translates regional agricultural idioms.",
+      "execution_scope": "Applies to IVR Voice and WhatsApp text inputs. BHASHINI NMT translates regional agricultural idioms while clearing adversarial text strings.",
       "infrastructure_dependencies": {
         "translation_intelligence_engine": "Digital India BHASHINI Framework National NMT Translation Hub"
       },
@@ -251,7 +251,7 @@
     },
     "step_04_structured_field_entity_extraction": {
       "action": "Parse the standardized input text into clean system variables via local LLM parsing.",
-      "execution_scope": "Applies to IVR Voice and WhatsApp tracks. Bypassed completely for USSD channel.",
+      "execution_scope": "Applies to IVR Voice and WhatsApp tracks. Bypassed completely for USSD channel. Integrates runtime adversarial ingestion firewall analysis.",
       "infrastructure_dependencies": {
         "local_inference_runtime": "LLM Local Background Execution Engine Instance",
         "hardware_allocation_profile": "MacBook Pro Unified Memory Architecture Unified Silicon Pool"
@@ -269,7 +269,7 @@
         "properties": {
           "extraction_confidence": {
             "type": "number",
-            "description": "Mathematical model extraction score. This score is generated dynamically for IVR_VOICE and WHATSAPP, but is hardcoded upstream to 1.0 for USSD."
+            "description": "Mathematical model extraction score. Automatically zeroed down to 0.00 if adversarial intent or instruction overrides are flagged."
           },
           "extracted_entities": {
             "type": "object",
@@ -533,7 +533,7 @@
       "output_contract": {
         "type": "object",
         "properties": {
-          "payment_transaction_id": { "type": "string", "description": "Official sovereign treasury direct clearing identifier token generated on successful settlement clearance." },
+          "payment_transaction_id": { "type": "string", "description": "Official sovereign treasury direct clearing identifier token generated on successful settlement clearance with built-in idempotency key verification." },
           "payout_clearance_status": { "type": "string", "enum": ["SETTLED_SUCCESSFULLY", "CLEARING_DELAYED", "TREASURY_REJECTED"] }
         },
         "required": ["payment_transaction_id", "payout_clearance_status"]

@@ -64,6 +64,9 @@ workflow_orchestration:
         native_language: "hi-IN"
         filtering_profile: "agricultural_background_noise_attenuation"
         fallback_path: "human_escalate"
+        security_interceptors:
+          - guardrail_type: "adversarial_ingestion_safeguard"
+            action_on_acoustic_anomaly: "FORCE_CONFIDENCE_TO_ZERO"
       on_success: "proceed"
       on_failure: "step_08"
 
@@ -84,6 +87,9 @@ workflow_orchestration:
         model_adapter: "BHASHINI_NMT_TRANSLATION_HUB"
         source_dialect: "regional_haryanvi_hindi"
         target_language: "en-IN"
+        security_interceptors:
+          - guardrail_type: "adversarial_ingestion_safeguard"
+            action_on_text_injection: "FORCE_CONFIDENCE_TO_ZERO"
       on_success: "proceed"
       on_failure: "step_08"
 
@@ -100,6 +106,9 @@ workflow_orchestration:
         extraction_confidence: "float"
       parameters:
         model_runtime: "ON_PREM_LOCAL_SLM_INFERENCE_INSTANCE"
+        security_interceptors:
+          - guardrail_type: "adversarial_ingestion_safeguard"
+            action_on_override_attempt: "FORCE_CONFIDENCE_TO_ZERO"
         response_schema:
           type: "object"
           required: ["farmer_id_cleartext", "district_name", "crop_type", "reported_anomaly"]
