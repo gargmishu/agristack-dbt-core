@@ -12,6 +12,7 @@
           ┌───────────────────────────────────────┐               │                                               │
           │ step_02_speech_to_text_transcription  │               │                                               │
           │   - Audio -> Raw Text String          │               │                                               │
+          │   - [ADVERSARIAL INGESTION FIREWALL]  │               │                                               │
           └─────────────┬─────────────────────────┘               │                                               │
                         │                                         │                                               │
                         └────────┬────────────────────────────────┘                                               │
@@ -19,8 +20,9 @@
                                  │(Raw Text Strings)                                                              │
                                  ▼                                                                                │
               ┌────────────────────────────────────────────────────────────┐                                      │
-              │ step_03_text_translation_and_normalization                 │                                      │                     
+              │ step_03_text_translation_and_normalization                 │                                      │   
               │   - Converts regional agricultural dialect text -> English │                                      │
+              │   - [HEURISTIC PROMPT INJECTION FILTERING]                 │                                      │
               └──────────────────┬─────────────────────────────────────────┘                                      │
                                  │ (English Text Strings)                                                         │
                                  │                                                                                │
@@ -31,6 +33,7 @@
         │   - Local SLM Entity Extraction                        │                                                │
         │   - Parses district_name, crop_type, reported_anomaly  │                                                │
         │   - Emits probabilistic AI Confidence Score metrics    │                                                │
+        │   - [FORCE CONFIDENCE TO ZERO ON ADVERSARIAL OVERRIDE] │                                                │
         └─────────────────────────────┬──────────────────────────┘                                                │
                                       │                                                                           │
                                       └───────────────────┬───────────────────────────────────────────────────────┘
@@ -67,9 +70,9 @@
                                             ▼                                                      ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐  ┌─────────────────────────────────────────┐
 │ PHASE C: DETAILED PAYLOAD PERSISTENCE                                                  │  │ step_05_identity_perimeter_tokenization │
-│    step_05_identity_perimeter_tokenization (Extraction Payload Target)                 │  │          (Abort Ingress)                │ 
+│    step_05_identity_perimeter_tokenization (Extraction Payload Target)                 │  │          (abort_with_rejection_log )    │ 
 │ 1. Commits payload_id (PK), relational session_id (FK), and current loop attempt_id    │  │ 1. Updates existing parent row in       │
-│ 2. Stores irreversible tokenized identifier token into farmer_id_cleartext column      │  │    session_telemetry_log to             │
+│ 2. Stores irreversible tokenized identifier token into tokenized_identity_hash column  │  │    session_telemetry_log to             │
 │ 3. Saves extracted entities (district_name, crop_type, reported_anomaly)               │  │    status = 'REJECTED'.                 │
 │ 4. Enforces operational tracking flags by updating processing_state to 'STAGED'        │  │ 2. Terminates session instantly to      │
 └───────────────────────────────────────────┬────────────────────────────────────────────┘  │    prevent dirty DB downstream.         │
@@ -78,7 +81,7 @@
 ┌───────────────────────────────────────────────────────────────────────────────────────────────┐
 │ PHASE D: DOWNSTREAM DATA TRANSFORMATION:                                                      │
 │   ANALYTICAL DATA TRANSFORMATION LAYER via dbt-core                                           │
-│      (stg_session_extraction via step_05)                                             │
+│      (stg_session_extraction via step_05_identity_perimeter_tokenization)                     │
 │ 1. Compiles local model staging views (`stg_session_extraction_details`)                      │
 │ 2. Executes window partitions (`QUALIFY ROW_NUMBER() OVER (PARTITION BY session_id...)`)      │
 │ 3. Dedupes multi-attempt correction entries to isolate active payload lines                   │
@@ -105,38 +108,37 @@
                                             │
                                             ▼
                 ┌────────────────────────────────────────────────────────────────────┐
-                │ step_08_governance_threshold_evaluation_and_routing                │
+                │ step_08_governance_threshold_evaluation                            │
                 │   [Guardrail 2] Extraction Confidence Check                        │
                 │ 1. Evaluates confidence parameters and registry matching flags     │
                 │ 2. Sourced via step_01 (USSD static 1.0) or step_04 (Probabilistic)│
                 └───────────────────────┬────────────────────────────────────────────┘
                                         │
-                                        ├─────────────────────────────────────┐
-                                        │ [PASS: confidence >= 0.85]          │ [FAIL]
-                                        ▼                                     ▼
-                    ┌──────────────────────────────────────────┐     ┌──────────────┐
-                    │ [PASSING TRACK RETRIEVAL BRANCH]         │     │ loop_count++ │
-                    │ - Routes processing straight to core DBT │     │ attempt_id>3?│
-                    │ - Clears NPCI Treasury clearing systems  │     │              │ 
-                    └──────────────────────┬───────────────────┘     └──────┬───────┘
-                                           │                                │
-                                           ▼                                ├─────────────┐
-                    ┌─────────────────────────────────────────────┐         │[YES]        │[NO] 
-                    │ step_09_adaptive_multichannel_...           │         │             ▼
-                    │   [AUTOMATED CASH CLEARING]                 │         │      ┌──────────────────────────┐
-                    │ - Dispatches passing SMS template headers   │         │      │ step_04_ (Retry loop)    │
-                    │ - Delivers automated PM-KISAN Ledger        │         │      │  - re-entry at step_04   │
-                    │     Payment Transaction ID to citizen rail  │         │      │                          │
-                    └─────────────────────────────────────────────┘         │      └──────────────────────────┘ 
-                                                                            │                
-                                                                            │
-                                                                            │
-                                                                     ┌────────────────────────────────────────────────┐
-                                                                     │ [FALLBACK TRACK ESCALATION BRANCH]             │
-                                                                     │ step_08_governance_threshold_eval_routing      │
-                                                                     │   Human In The Loop Fallback Gate              │
-                                                                     │ 1. Updates DB processing state to 'REFERRED'   │
-                                                                     │ 2. Routes payload to manual caseworker queue   │
-                                                                     │ 3. step_09_adaptive_multichannel_...           │
-                                                                     │    returns encrypted Escalation Case ID        │
-                                                                     └────────────────────────────────────────────────┘
+                                        ▼
+                ┌───────────────────────────────────────────────────────────────────────────────┐
+                │ step_09_governance_routing_engine                                             │
+                │   [Deterministic Rule Matrix Switch]                                          │
+                │ 1. Evaluates state policy: ($.step_08.output.evaluation_passed == true)       │
+                │ 2. Splits workflow traffic array cleanly into passing or fallback             │
+                └───────────────────────┬───────────────────────────────────────────────────────┘
+                                        │
+                    ┌───────────────────┴─────────────────────────────────────┐
+                    │ [PASS: evaluation_passed == true]                       │ [FAIL: evaluation_passed == false]
+                    ▼                                                         ▼
+┌──────────────────────────────────────────────┐          ┌──────────────────────────────────────────────┐
+│ step_10_automated_payout_disbursement        │          │ step_11_caseworker_incident_staging          │
+│   [AUTOMATED CASH CLEARING RAIL]             │          │   [HUMAN-IN-THE-LOOP FALLBACK GATE]          │
+│ 1. Clears NPCI Treasury clearing systems     │          │ 1. Consumes failed routing evaluation state  │
+│ 2. Generates unique payment_transaction_id   │          │ 2. Stages payload parameters in manual queue │
+│ 3. Materializes state ledger row mutation    │          │ 3. Emits cryptographically signed case ID    │
+└───────────────────┬──────────────────────────┘          └───────────────────┬──────────────────────────┘
+                    │                                                         │
+                    └───────────────────────────┬─────────────────────────────┘
+                                                │
+                                                ▼
+                ┌────────────────────────────────────────────────────────────────────┐
+                │ step_12_adaptive_multichannel_confirmation_delivery                │
+                │   [ADAPTIVE NOTIFICATION ENGINE]                                   │
+                │ 1. Dispatches template receipts natively back to ingress channel   │
+                │ 2. Transmits PM-KISAN Ledger Txn ID or Caseworker Escalation ID    │
+                └────────────────────────────────────────────────────────────────────┘
