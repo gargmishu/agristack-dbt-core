@@ -8,6 +8,27 @@ metadata:
   governing_body: "State Department of Agriculture & Farmer Welfare"
   legal_mandate: "Sovereign Seasonal Relief & DBT Payment Authorization Order, 2023"
 
+# 🌟 Structural Layer: System Roles and Handshakes
+actors:
+  public_agent:
+    id: "pa-farmer-subsidy-gateway-2026"
+    channels: ["whatsapp", "ussd", "voice"]
+    languages: ["hi", "en"]
+  human_agent:
+    id: "caseworker"
+    role: "District Agricultural Officer"
+
+# 🌟 Structural Layer: The Governance Block from the Spec
+governance:
+    owner_agency: "<Ministry of Social Welfare>"
+    legal_basis: "<Social Protection Act § 12.3>"
+    audit_logging: true
+    human_oversight:
+      required: true
+      escalation_to: "caseworker_supervisor"
+      retention_policy: "5y"
+    accountability_note: "Public Agents orchestrate steps; institutional authority remains with government."
+
 environmental_rails:
   identity_infrastructure: "MOSIP Decentralized Core Identity Provider Platform"
   data_exchange_infrastructure: "Federated AgriStack Unified Registry System"
@@ -193,7 +214,7 @@ workflow_orchestration:
         cadastral_plot_reference: "$.step_06.output.cadastral_plot_id"
       outputs:
         openspp_case_id: "string"
-        application_status: "string"
+        registration_status: "string"
       parameters:
         target_api_endpoint: "OPENSPP_SOCIAL_PROTECTION_PLATFORM_APIS"
         submission_mode: "staged_pending_clearance"
@@ -363,7 +384,10 @@ workflow_orchestration:
             escalation_template: "SMS_CASEWORKER_ASSIGNED_TICKET"
       on_termination: "commit_session_audit_and_close"
 
-system_telemetry_finalization:
+audit:
+  log_all_steps: true
+  pii_redaction: true
+  immutable: true
   audit_logger_block: "audit_log"
   parameters:
     target_storage: "local_postgres_telemetry_log_table"
