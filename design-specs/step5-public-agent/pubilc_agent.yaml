@@ -1,0 +1,38 @@
+public_agent:
+  id: "pa-farmer-subsidy-gateway-2026"
+  description: "Guides citizens through seasonal crop loss relief subsidy applications in regional languages"
+  channels: ["whatsapp", "ussd", "voice"]
+  languages: ["hi", "en"]  # Hindi (covering regional Haryanvi inputs via Bhashini), English
+  version: "1.0.0"
+
+  ai_model:
+    # Plug-and-play: swap the adapter to change providers
+    adapter: "vllm"          # openai | anthropic | google | ollama | vllm | bedrock | custom
+    runtime: "on_prem"       # sovereign_cloud | on_prem | external_api
+    endpoint: "http://localhost:8000/v1"  # Default local loopback address for vLLM
+    model: "on-prem-local-slm-v1"
+    auth_ref: "vault://ai-gateway/token"
+    timeout_ms: 30000
+
+  scope:
+    allowed_workflows: ["wf-crop-loss-subsidy-2026"]
+    allowed_ai_blocks: ["speech_to_text", "translate", "structured_extract"]
+    data_access: "consent_required"
+    escalation_target: "human_review"  # Router landing target for unmapped edge-traffic failures
+
+  constraints:
+    can_modify_records: false
+    can_initiate_payments: false   # Only via explicit workflow payment_disburse steps
+    can_access_data_without_consent: false
+    human_escalation: always_available
+    session_timeout: "30m"
+
+  governance:
+    owner_agency: "State Department of Agriculture & Farmer Welfare"
+    legal_basis: "Sovereign Seasonal Relief & DBT Payment Authorization Order, 2023"
+    audit_logging: true
+    pii_handling: "tokenise_in_logs"
+    human_recourse:
+      enabled: true
+      channel: "any"
+      response_sla: "48h"
