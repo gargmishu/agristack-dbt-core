@@ -1,0 +1,96 @@
+public_agent:
+  name: "PublicAgent"
+  channels: ["WhatsApp", "USSD", "Voice/IVR"]
+  escalation:
+    method: human_caseworker
+    label: "Human caseworker"
+    always_available: true
+  constraints:
+    consent_before_data_access: true
+    human_recourse_always_offered: true
+    approved_workflows_only: true
+    full_audit_trail: true
+
+workflow: custom_service
+version: "1.0"
+governance:
+  audit: true
+  human_escalation: required
+  confidence_threshold: 0.85
+  pii_redaction: true
+workflow_steps:
+  - step_1:
+      block: consent_verify
+      inputs: [session_id, data_types]
+      outputs: [consent_valid, scope, timestamp]
+      dpi_system: Safeguard
+  - step_2:
+      block: speech_to_text
+      inputs: [voice_note, lang]
+      outputs: [text, confidence]
+      dpi_system: AI Block
+  - step_3:
+      block: translate
+      inputs: [text, source_lang, target_lang]
+      outputs: [translated_text]
+      dpi_system: AI Block
+  - step_4:
+      block: structured_extract
+      inputs: [text, schema]
+      outputs: [fields, confidence]
+      dpi_system: AI Block
+  - step_5:
+      block: bias_check
+      inputs: [decision_output, demographic_attrs]
+      outputs: [bias_score, flagged, explanation]
+      dpi_system: Safeguard
+  - step_6:
+      block: identity_verify
+      inputs: [national_id]
+      outputs: [verified_name, dob, photo]
+      dpi_system: MOSIP
+  - step_7:
+      block: bias_check
+      inputs: [decision_output, demographic_attrs]
+      outputs: [bias_score, flagged, explanation]
+      dpi_system: Safeguard
+  - step_8:
+      block: submit_application
+      inputs: [applicant_id, program_ref]
+      outputs: [application_ref, status]
+      dpi_system: OpenSPP
+  - step_9:
+      block: duplicate_detect
+      inputs: [applicant_data]
+      outputs: [is_duplicate, match_score]
+      dpi_system: AI Block
+  - step_10:
+      block: bias_check
+      inputs: [decision_output, demographic_attrs]
+      outputs: [bias_score, flagged, explanation]
+      dpi_system: Safeguard
+  - step_11:
+      block: eligibility_verify
+      inputs: [national_id, program_id]
+      outputs: [eligible, criteria]
+      dpi_system: OpenSPP
+  - step_12:
+      block: bias_check
+      inputs: [decision_output, demographic_attrs]
+      outputs: [bias_score, flagged, explanation]
+      dpi_system: Safeguard
+  - step_13:
+      block: payment_disburse
+      inputs: [amount, msisdn]
+      outputs: [transfer_ref, status]
+      dpi_system: Mojaloop
+  - step_14:
+      block: human_review
+      inputs: [decision_context, confidence_score, citizen_id]
+      outputs: [case_id, review_status, reviewer_decision]
+      dpi_system: Safeguard
+  - step_15:
+      block: notify
+      inputs: [user_id, message, channel]
+      outputs: [delivery_status]
+      dpi_system: AI Block
