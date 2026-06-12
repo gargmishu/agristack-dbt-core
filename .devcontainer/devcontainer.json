@@ -1,0 +1,11 @@
+{
+  "name": "AgriStack DBT & n8n Core Workspace",
+  "forwardPorts": [5678],
+  "portsAttributes": {
+    "5678": {
+      "label": "n8n Web UI & Ingress Gateway",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    }
+  }
+}
