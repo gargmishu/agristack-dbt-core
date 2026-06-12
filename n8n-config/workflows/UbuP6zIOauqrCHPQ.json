@@ -1,0 +1,82 @@
+{
+  "updatedAt": "2026-06-12T06:01:14.393Z",
+  "createdAt": "2026-06-11T09:42:41.916Z",
+  "id": "UbuP6zIOauqrCHPQ",
+  "name": "Agristack",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/flows/wf-crop-loss-subsidy/ingress",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "66bb24ef-469d-41c0-a101-8c46857d4218",
+      "name": "Webhook",
+      "webhookId": "c6c6e9f1-d4f2-4d04-ac84-da3fb95bbdc2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "pythonNative",
+        "pythonCode": "# Add a new field called 'my_new_field' to the JSON of the item\n_item[\"json\"][\"my_new_field\"] = 1\nreturn _item"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        0
+      ],
+      "id": "93511c15-3200-4a8b-b113-845feb7e9c69",
+      "name": "Code in Python"
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "dfa7dbc2-6ecd-4130-b765-1e4a6ba47506",
+  "activeVersionId": "dfa7dbc2-6ecd-4130-b765-1e4a6ba47506",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-06-11T09:42:41.918Z",
+      "createdAt": "2026-06-11T09:42:41.918Z",
+      "role": "workflow:owner",
+      "workflowId": "UbuP6zIOauqrCHPQ",
+      "projectId": "HGw5zWgPS0Yg21GC",
+      "project": {
+        "updatedAt": "2026-06-11T09:40:21.312Z",
+        "createdAt": "2026-06-11T09:34:17.821Z",
+        "id": "HGw5zWgPS0Yg21GC",
+        "name": "Mishu Garg <mishu.garg09@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "0b6111ce-dc13-4b97-b0ee-53323e185a8d"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version dfa7dbc2",
+    "description": ""
+  }
+}
