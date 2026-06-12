@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-12T06:01:14.393Z",
+  "updatedAt": "2026-06-12T12:00:17.073Z",
   "createdAt": "2026-06-11T09:42:41.916Z",
   "id": "UbuP6zIOauqrCHPQ",
   "name": "Agristack",
@@ -10,7 +10,8 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "v1/flows/wf-crop-loss-subsidy/ingress",
+        "path": "api/v1/webhooks/v1/dpi-ingress",
+        "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -26,20 +27,57 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "language": "pythonNative",
-        "pythonCode": "# Add a new field called 'my_new_field' to the JSON of the item\n_item[\"json\"][\"my_new_field\"] = 1\nreturn _item"
+        "jsCode": "// 📑 Step 01: Universal Multi-Channel Ingress Normalizer & Consent Verification\nconst payload = $input.item.json.body || $input.item.json;\n\n\nconst session_id = payload.session_id || `sess_${Math.random().toString(36).substring(2, 9)}`;\nconst channel_type = payload.ingress_channel || \"IVR_VOICE\";\nconst source_phone_number = payload.source_phone_number || \"\";\n\n// Evaluate channel-specific consent indicators per specification\nlet consent_granted = false;\nif (channel_type === \"IVR_VOICE\" && payload.ivr_dtmf === \"1\") consent_granted = true;\nif (channel_type === \"WHATSAPP\" && payload.whatsapp_optin === \"I Accept and Authorize Check\") consent_granted = true;\nif (channel_type === \"USSD\" && payload.ussd_optin === \"1\") consent_granted = true;\n\nif (!consent_granted) {\n  throw new Error(`Session Aborted: Citizen explicit opt-in consent rejected on channel ${channel_type}`);\n}\n\n// 📦 Extracted Data Payload Schema (PII Scrubbed at Edge)\nconst structuredUssdData = channel_type === \"USSD\" ? {\n  farmer_id_cleartext: \"[Aadhaar Redacted]\", \n  district_name: payload.district_name || \"\",\n  crop_type: payload.crop_type || \"\"\n} : null;\n\nreturn {\n  json: {\n      session_id: session_id,\n      channel_type: channel_type,\n      source_phone_number: source_phone_number,\n      consent_granted: consent_granted,\n    ussd_collected_payload: structuredUssdData,\n    ivr_audio_stream_uri: payload.ivr_audio_stream_uri || null,\n    whatsapp_cleartext_string: payload.whatsapp_cleartext_string || null\n    }\n};\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        176,
+        320,
         0
       ],
-      "id": "93511c15-3200-4a8b-b113-845feb7e9c69",
-      "name": "Code in Python"
+      "id": "8cbc5fc0-97ed-4096-af84-415e388e5b64",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        528,
+        0
+      ],
+      "id": "68906d45-69ae-4573-bd36-c7b914c1392f",
+      "name": "Respond to Webhook"
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
@@ -49,9 +87,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "dfa7dbc2-6ecd-4130-b765-1e4a6ba47506",
-  "activeVersionId": "dfa7dbc2-6ecd-4130-b765-1e4a6ba47506",
-  "versionCounter": 34,
+  "versionId": "1438b503-22fa-48ae-955c-5f543620601b",
+  "activeVersionId": "1438b503-22fa-48ae-955c-5f543620601b",
+  "versionCounter": 82,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
@@ -76,7 +114,7 @@
     }
   ],
   "versionMetadata": {
-    "name": "Version dfa7dbc2",
+    "name": "Version 2",
     "description": ""
   }
 }
