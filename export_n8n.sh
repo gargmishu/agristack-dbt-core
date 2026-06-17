@@ -15,25 +15,28 @@ USER_FOLDER="/home/codespace/.n8n"
 
 # 1. Standard structural metadata dump out of matching database path
 npx n8n export:workflow --backup --output="$WORKFLOW_DIR/" --user-folder="$USER_FOLDER"
-npx n8n export:credentials --backup --output="$CREDENTIAL_DIR/" --user-folder="$USER_FOLDER"
 
-# 2. Parse JSON manifests, extract code blocks, and normalize layout parameters
+# 🟢 Append "|| true" to prevent a blank credential database from killing the script
+npx n8n export:credentials --backup --output="$CREDENTIAL_DIR/" --user-folder="$USER_FOLDER" 2>/dev/null || true
+
+# 2. Parse manifests and extract clean code blocks
 for file in "$WORKFLOW_DIR"/*.json; do
     if [ -f "$file" ]; then
         echo "✂️  Extracting inline code blocks from $(basename "$file")..."
-        
-        # Locate all Code Nodes and dump their jsCode payloads into unescaped .js files
-        jq -c '.nodes[] | select(.type == "n8n-nodes-base.code" and .parameters.jsCode != null) | {name: .name, code: .parameters.jsCode}' "$file" | while read -r row; do
+       
+        jq -c '.nodes[] | select(.type | startswith("n8n-nodes-base.code")) | {name: .name, code: (.parameters.jsCode // .parameters.code // .parameters.pythonCode)} | select(.code != null)' "$file" | while read -r row; do
             node_name=$(echo "$row" | jq -r '.name')
-            # Normalize filename: replace spaces/special chars with underscores
-            safe_name=$(echo "$node_name" | tr '[:space:]' '_')
-            echo "$row" | jq -r '.code' > "$SRC_DIR/${safe_name}.js"
-            echo "   💾 Saved clean module: $SRC_DIR/${safe_name}.js"
+
+            # Trim only  accidental leading/trailing spaces so the filesystem doesn't break.
+            safe_filename=$(echo "$node_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            
+            echo "$row" | jq -r '.code' > "$SRC_DIR/${safe_filename}"
+            echo "   💾 Saved clean module: $SRC_DIR/${safe_filename}"
         done
 
-        # Strip dynamic instance metrics to keep git diffs completely clean and green
-        jq 'walk(if type == "object" then del(.id, .createdAt, .updatedAt) else . end)' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        # Strip ONLY the top-level root metadata properties, keeping your node internal structures perfect
+        jq 'del(.id, .createdAt, .updatedAt)' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
     fi
 done
 
-echo "✅ Export complete. Run 'git status' to inspect your clean code tracking layout."
+echo "✅ Export complete. Check your updated ./src/ tree structure!"
