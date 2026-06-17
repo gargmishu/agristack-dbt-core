@@ -1,5 +1,5 @@
 {
-  "name": "My workflow",
+  "name": "crop_subsidy_workflow",
   "description": null,
   "active": false,
   "isArchived": false,
@@ -23,7 +23,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// 📑 Step 01: Universal Multi-Channel Ingress Normalizer & Consent Verification\nconst payload = $input.item.json.body || $input.item.json;\n\n\nconst session_id = payload.session_id || `session_generated_${Date.now()}`;\nconst channel_type = payload.ingress_channel || \"IVR_VOICE\";\nconst source_phone_number = payload.source_phone_number || \"\";\n\n// Evaluate channel-specific consent indicators per specification\nlet consent_granted = false;\nif (channel_type === \"IVR_VOICE\" && payload.ivr_dtmf === \"1\") consent_granted = true;\nif (channel_type === \"WHATSAPP\" && payload.whatsapp_optin === \"I Accept and Authorize Check\") consent_granted = true;\nif (channel_type === \"USSD\" && payload.ussd_optin === \"1\") consent_granted = true;\n\nif (!consent_granted) {\n  throw new Error(`Session Aborted: Citizen explicit opt-in consent rejected on channel ${channel_type}`);\n}\n\n// 📦 Extracted Data Payload Schema (PII Scrubbed at Edge)\nconst structuredUssdData = channel_type === \"USSD\" ? {\n  farmer_id_cleartext: \"[Aadhaar Redacted]\", \n  district_name: payload.district_name || \"\",\n  crop_type: payload.crop_type || \"\"\n} : null;\n\nreturn {\n  json: {\n    session_id: session_id,\n    channel_type: channel_type,\n    source_phone_number: source_phone_number,\n    consent_granted: consent_granted,\n    ussd_collected_payload: structuredUssdData,\n    ivr_audio_stream_uri: payload.ivr_audio_stream_uri || null,\n    whatsapp_cleartext_string: payload.whatsapp_cleartext_string || null\n    }\n};\n\n\n\n"
+        "jsCode": "// 📑 Step 01: Universal Multi-Channel Ingress Normalizer & Consent Verification\nconst payload = $input.item.json.body || $input.item.json;\n\n\nconst session_id = payload.session_id || `session_generated_${Date.now()}`;\nconst channel_type = payload.ingress_channel || \"IVR_VOICE\";\nconst source_phone_number = payload.source_phone_number || \"\";\n\n// Evaluate channel-specific consent indicators per specification\nlet consent_granted = false;\nif (channel_type === \"IVR_VOICE\" && payload.ivr_dtmf === \"1\") consent_granted = true;\nif (channel_type === \"WHATSAPP\" && payload.whatsapp_optin === \"I Accept and Authorize Check\") consent_granted = true;\nif (channel_type === \"USSD\" && payload.ussd_optin === \"1\") consent_granted = true;\n\nif (!consent_granted) {\n  throw new Error(`Session Aborted: Citizen explicit opt-in consent rejected on channel ${channel_type}`);\n}\n\n// 📦 Extracted Data Payload Schema (PII Scrubbed at Edge)\nconst structuredUssdData = channel_type === \"USSD\" ? {\n  farmer_id_cleartext: \"[Aadhaar Redacted]\", \n  district_name: payload.district_name || \"\",\n  crop_type: payload.crop_type || \"\"\n} : null;\n\nreturn {\n  json: {\n    session_id: session_id,\n    channel_type: channel_type,\n    source_phone_number: source_phone_number,\n    consent_granted: consent_granted,\n    ussd_collected_payload: structuredUssdData,\n    ivr_audio_stream_uri: payload.ivr_audio_stream_uri || null,\n    whatsapp_cleartext_string: payload.whatsapp_cleartext_string || null\n    }\n};\n\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -94,9 +94,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "fd2ec018-d8ca-4eb9-92df-440298776794",
+  "versionId": "099c2af2-abb3-4a62-823c-8b32bf9abcd6",
   "activeVersionId": null,
-  "versionCounter": 23,
+  "versionCounter": 25,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
