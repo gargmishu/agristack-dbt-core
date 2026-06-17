@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Standard endpoints
-TEST_URL="http://localhost:5678/webhook-test/api/v1/webhooks/v1/dpi-ingress"
-PROD_URL="http://localhost:5678/webhook/api/v1/webhooks/v1/dpi-ingress"
+TEST_URL="http://localhost:5678/webhook-test/v1/wf-crop-loss-subsidy/ingress"
+PROD_URL="http://localhost:5678/webhook/v1/wf-crop-loss-subsidy/ingress"
 
 print_header() {
     echo -e "\n========================================================"
