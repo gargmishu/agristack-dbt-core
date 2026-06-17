@@ -19,11 +19,17 @@ npx n8n export:workflow --backup --output="$WORKFLOW_DIR/" --user-folder="$USER_
 # 🟢 Append "|| true" to prevent a blank credential database from killing the script
 npx n8n export:credentials --backup --output="$CREDENTIAL_DIR/" --user-folder="$USER_FOLDER" 2>/dev/null || true
 
-# 2. Parse manifests and extract clean code blocks
+# 2. Parse manifests, normalize naming trees, and extract clean code blocks
 for file in "$WORKFLOW_DIR"/*.json; do
     if [ -f "$file" ]; then
-        echo "✂️  Extracting inline code blocks from $(basename "$file")..."
-       
+        # Pull the actual, human-readable name of the workflow canvas
+        workflow_name=$(jq -r '.name' "$file")
+        # Clean up the name for the filesystem (convert spaces to underscores)
+        safe_workflow_name=$(echo "$workflow_name" | tr '[:space:]' '_')
+        
+        echo "✂️  Extracting modules from workflow: [$workflow_name]..."
+        
+        # Pull code node logic cleanly
         jq -c '.nodes[] | select(.type | startswith("n8n-nodes-base.code")) | {name: .name, code: (.parameters.jsCode // .parameters.code // .parameters.pythonCode)} | select(.code != null)' "$file" | while read -r row; do
             node_name=$(echo "$row" | jq -r '.name')
 
@@ -34,8 +40,16 @@ for file in "$WORKFLOW_DIR"/*.json; do
             echo "   💾 Saved clean module: $SRC_DIR/${safe_filename}"
         done
 
-        # Strip ONLY the top-level root metadata properties, keeping your node internal structures perfect
-        jq 'del(.id, .createdAt, .updatedAt)' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
+        # Strip dynamic root properties
+        jq 'del(.id, .createdAt, .updatedAt)' "$file" > "${file}.tmp"
+        
+        # 🟢 Save the file under its readable name instead of the alpha-numeric ID hash
+        mv "${file}.tmp" "$WORKFLOW_DIR/${safe_workflow_name}.json"
+
+        # Remove the original hashed backup file if its name was different
+        if [ "$(basename "$file" .json)" != "$safe_workflow_name" ]; then
+            rm -f "$file"
+        fi
     fi
 done
 
