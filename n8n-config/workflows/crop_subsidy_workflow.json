@@ -1,5 +1,160 @@
 {
-  "name": "crop_subsidy_workflow3",
+  "name": "crop_subsidy_workflow",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+"nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/wf-crop-loss-subsidy/ingress",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "name": "Webhook",
+      "webhookId": "3fde7212-e7ff-4728-8262-8a8422fe9607",
+      "id": "668171c4-102e-4cd3-8bbd-9b88309aac6e"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 📑 Step 01: Universal Multi-Channel Ingress Normalizer & Consent Verification\nconst payload = $input.item.json.body || $input.item.json.query || $input.item.json;\n\n// 1. Initial sniffing to determine the incoming communication platform\nconst channel_type = payload.CallSid ? \"IVR_VOICE\" : (payload.ingress_channel || \"IVR_VOICE\");\nconst session_id = payload.CallSid || payload.session_id || `sess_${Math.random().toString(36).substring(2, 9)}`;\n\n// 2. Declare normalizer destination variables\nlet source_phone_number = \"\";\nlet consent_granted = false;\nlet custom_channel_payload = null;\n\n// 3. Channel-Specific Extraction Engine\nswitch (channel_type) {\n  case \"IVR_VOICE\":\n    source_phone_number = payload.From || payload.source_phone_number || \"\";\n    const dtmf_input = payload.Digits || payload.ivr_dtmf || \"\";\n    if (dtmf_input === \"1\") consent_granted = true;\n    \n    custom_channel_payload = {\n      ivr_dtmf_captured: dtmf_input,\n      ivr_audio_stream_uri: payload.ivr_audio_stream_uri || `s3://production-carrier-audio-streams/${session_id}.wav`\n    };\n    break;\n\n  case \"WHATSAPP\":\n    source_phone_number = payload.from || payload.chatId || payload.source_phone_number || \"\";\n    const incoming_text = (payload.text?.body || payload.body || payload.whatsapp_cleartext_string || \"\").trim();\n    if (incoming_text === \"I Accept and Authorize Check\" || payload.whatsapp_optin === \"I Accept and Authorize Check\") {\n      consent_granted = true;\n    }\n    \n    custom_channel_payload = {\n      whatsapp_cleartext_string: incoming_text\n    };\n    break;\n\n  case \"USSD\":\n    source_phone_number = payload.source_phone_number || \"\";\n    if (payload.ussd_optin === \"1\" || payload.ussd_input === \"1\") consent_granted = true;\n    \n    custom_channel_payload = {\n      ussd_collected_payload: {\n        farmer_id_cleartext: \"[Aadhaar Redacted]\", \n        district_name: payload.district_name || \"\",\n        crop_type: payload.crop_type || \"\"\n      }\n    };\n    break;\n\n  default:\n    throw new Error(`Security Violation: Unrecognized or unmapped ingress channel encountered: ${channel_type}`);\n}\n\n// 4. Enforce the Consent Gate\nif (!consent_granted) {\n  throw new Error(`Session Aborted: Explicit opt-in consent verification failed for channel type [${channel_type}]`);\n}\n\n// 5. Return Normalized Structure directly to downstream DBT ingestion staging nodes\nreturn {\n  json: {\n    session_id: session_id,\n    channel_type: channel_type,\n    source_phone_number: source_phone_number.replace(\"@c.us\", \"\"), // Clean up carrier tracking text if any\n    consent_granted: consent_granted,\n    ...custom_channel_payload\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "name": "verify_user_consent.js",
+      "id": "da8d9b16-0132-48bc-826b-c5446dfb0274"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://httpbin.org/post",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "raw_data",
+              "value": "={{ $json }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "name": "HTTP Request",
+      "id": "578b10bb-3dbc-4478-9f7a-c80de7db9505",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://dhruva-api.bhashini.gov.in/services/inference/asr",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "eab5a4ac-98b7-477c-aa95-c0298008ca1c",
+      "name": "HTTP Request1"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "verify_user_consent.js",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "verify_user_consent.js": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "5545fb45-9376-4b63-962b-967d4de36fd5",
+  "activeVersionId": null,
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-06-17T04:38:22.657Z",
+      "createdAt": "2026-06-17T04:38:22.657Z",
+      "role": "workflow:owner",
+      "workflowId": "7g5NwzE5ByAlyPqU",
+      "projectId": "kQgI5mp4cWcT0J6E",
+      "project": {
+        "updatedAt": "2026-06-17T04:36:22.762Z",
+        "createdAt": "2026-06-16T05:16:31.185Z",
+        "id": "kQgI5mp4cWcT0J6E",
+        "name": "Mishu Garg <mishu.garg09@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "61acc4d9-3237-4850-ad7a-d4a9e5646f39"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}
+{
+  "name": "crop_subsidy_workflow",
   "description": null,
   "active": true,
   "isArchived": false,
@@ -8,6 +163,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "v1/wf-crop-loss-subsidy/ingress",
+        "responseMode": "responseNode",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
@@ -71,7 +227,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{ $env.GROQ_API_KEY }}"
+              "value": "Bearer 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"
             }
           ]
         },
@@ -104,6 +260,21 @@
       ],
       "id": "9c147c86-bde9-4da7-9059-c2874b9bdc47",
       "name": "bhashini_asr_ai_block_proxy"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"session_id\": \"{{ $json.session_id }}\",\n  \"channel_type\": \"{{ $json.channel_type }}\",\n  \"source_phone_number\": \"{{ $json.source_phone_number }}\",\n  \"transcript\": \"{{ $json.unstructured_vernacular_string }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "8119fca8-f4fb-4c12-8147-3120a4e9d64f",
+      "name": "Respond to Webhook"
     }
   ],
   "connections": {
@@ -150,6 +321,17 @@
           }
         ]
       ]
+    },
+    "parse_groq_response.js": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -161,9 +343,9 @@
   "meta": null,
   "nodeGroups": [],
   "pinData": {},
-  "versionId": "a5baa99e-669f-4273-92da-3b68fb3187e6",
-  "activeVersionId": "a5baa99e-669f-4273-92da-3b68fb3187e6",
-  "versionCounter": 26,
+  "versionId": "95145711-0f2a-4e5c-8263-b9bd8d2fb911",
+  "activeVersionId": "3eeabf8b-9eb6-4c58-a8eb-1299a6196ce0",
+  "versionCounter": 34,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "tags": [],
@@ -188,7 +370,7 @@
     }
   ],
   "versionMetadata": {
-    "name": "Version a5baa99e",
-    "description": ""
+    "name": null,
+    "description": null
   }
 }
