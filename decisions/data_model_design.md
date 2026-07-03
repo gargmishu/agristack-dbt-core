@@ -50,7 +50,7 @@ Tracks carrier ingress boundaries, ANI identification, and session state transit
 | Attribute Name | Data Type / Format | Primary / Foreign Key | Description & Architectural Mapping |
 | :--- | :--- | :--- | :--- |
 | `session_id` | `UUID` | **Primary Key (PK)** | Unique tracking identifier generated instantly upon network entry (Step 1 Initiation). |
-| `source_phone_number` | `VARCHAR(15)` | — | Ingested telecom ANI phone identifier used to route and group carrier traffic. |
+| `tokenized_phone_hash` | `VARCHAR(64)` | — | SHA-256 hash of the ingested telecom ANI phone identifier, used to group carrier traffic analytically without storing PII on disk. |
 | `ingress_channel` | `VARCHAR(20)` | — | The inbound channel pathway chosen by the citizen (`WHATSAPP`, `IVR_VOICE`, `USSD`). |
 | `session_active` | `BOOLEAN` | — | `TRUE` if the session is actively processing or awaiting citizen correction inputs. |
 | `session_status` | `VARCHAR(30)` | — | State machine termination flag (`ACTIVE`, `COMPLETED_SUCCESSFULLY`, `FAILED_GATEWAY_TIMEOUT`, `USER_HANGUP`, `ABORTED_INCOMPLETE`, `ROUTED_AWAY_GRIEVANCE`). |
@@ -85,6 +85,7 @@ Tracks authoritative business claim filings, registry eligibility checks, govern
 | `claim_id` | `UUID` | **Primary Key (PK)** | Unique authoritative business record token generated only when an application payload successfully passes the Intake Validation Gate with all required entities present. |
 | `session_id` | `UUID` | **Foreign Key (FK)** | Relational link back to `session_telemetry_log.session_id` (`ON DELETE CASCADE`). |
 | `payload_id` | `UUID` | **Foreign Key (FK)** | Relational link back to the winning/committed attempt in `session_extraction_details.payload_id`. |
+| `tokenized_identity_hash` | `VARCHAR(64)` | — | The SHA-256 hex digest of the citizen's identity number, generated in-memory. |
 | `application_status` | `VARCHAR(30)` | — | Authoritative business claim lifecycle status (`FILED`, `APPROVED`, `REJECTED`, `UNDER_REVIEW`, `APPEALED`, `CLOSED`). |
 | `openspp_case_id` | `VARCHAR(50)` (Nullable) | — | Social protection case tracking number generated when logging the claim in OpenSPP via `submit_application()`. |
 | `eligibility_status` | `VARCHAR(30)` | — | Outcome of `eligibility_verify()` against KISAN cadastral records (`ELIGIBLE`, `INELIGIBLE`, `FUZZY_MATCH`). |
