@@ -10,7 +10,7 @@
 
 ## 1. Goal
 
-Establish the strict zero-trust data privacy boundaries required for citizen PII. Specifically, identify the ingress points of cleartext PII (such as Aadhaar numbers or ANI phone numbers), define the in-memory tokenization protocol (`SHA-256(raw_id + pepper_salt)`), and set non-negotiable architectural mandates to ensure cleartext PII never touches persistent disk storage.
+Establish the strict zero-trust data privacy boundaries required for citizen PII. Specifically, identify the ingress points of cleartext PII (such as Aadhaar numbers or ANI phone numbers), define the in-memory tokenization protocol (HMAC-SHA256), and set non-negotiable architectural mandates to ensure cleartext PII never touches persistent disk storage.
 
 ---
 
@@ -32,16 +32,16 @@ Based on our multi-channel architecture, cleartext Personally Identifiable Infor
 To interact with downstream systems and maintain transactional consistency without violating privacy mandates, we will apply a one-way hashing protocol in volatile RAM.
 
 ### 3.1. Hashing Algorithm
-All highly sensitive identifiers (e.g., Aadhaar) must be hashed immediately upon extraction. We have evaluated several alternatives and selected SHA-256; see [hashing_algorithm_evaluation.md](./hashing_algorithm_evaluation.md) for the complete rationale.
-- **Function:** `SHA-256`
-- **Salt Strategy:** Use a secure, environment-injected cryptographic pepper/salt (`pepper_salt`) that is never stored in the database but rather managed via environment variables/secrets manager.
+All highly sensitive identifiers (e.g., Aadhaar) must be hashed immediately upon extraction. We have objectively evaluated several alternatives and selected **HMAC-SHA256**; see [hashing_algorithm_evaluation.md](./hashing_algorithm_evaluation.md) for the complete rationale.
+- **Function:** `HMAC-SHA256`
+- **Key Strategy:** Use a secure, environment-injected cryptographic pepper/salt (`pepper_salt`) that is never stored in the database but rather managed via environment variables/secrets manager.
 - **Implementation (Concept):**
   ```javascript
   const crypto = require('crypto');
   
   function tokenizePII(rawId, pepperSalt) {
-      return crypto.createHash('sha256')
-                   .update(rawId + pepperSalt)
+      return crypto.createHmac('sha256', pepperSalt)
+                   .update(rawId)
                    .digest('hex');
   }
   ```
@@ -108,5 +108,5 @@ If a human caseworker needs to contact the citizen, or an asynchronous payout re
 | :--- | :--- | :--- |
 | Analyze privacy mandates | Established strict ban on persistent cleartext PII storage. | ✅ Validated |
 | Identify PII ingress points | Identified channels (ANI) and conversational extraction (Aadhaar). | ✅ Validated |
-| Define in-memory tokenization | Established `SHA-256(raw_id + pepper_salt)` protocol. | ✅ Validated |
+| Define in-memory tokenization | Established HMAC-SHA256 cryptographic protocol. | ✅ Validated |
 | Establish memory purge rule | Mandated volatile RAM-only existence with explicit nullification before DB write. | ✅ Validated |
