@@ -10,43 +10,41 @@
 
 ## 1. Goal
 
-Identify, evaluate, and select a production-grade, authoritative cloud database provider to
-
-a. Support citizen data ingestion (ex: whatsapp texts, voice transcriptions, etc.)
-b. Persist system actions (ex: language translations, speech to text conversion etc.) and decisions (ex: claim denied, etc.)
-c. Tokenized identity hashes via in-memory hashing protocols ([roadmap.md:L11](../roadmap.md#L11))
-d. Structured agricultural claims
-e. Support data ingestion from multi-channel entry points (WhatsApp, IVR Voice, USSD).
-f. Scale to support millions of users in production (while operating within a 100% free tier during Phase 0–4 prototyping and verification).
+Identify, evaluate, and select a production‑grade, authoritative cloud database that can securely store tokenized citizen data, support multi‑channel ingestion, and scale to millions of users while remaining within a permanent free tier.
 
 ---
 
-## 2. Constraints
+## 2. Requirements
 
 > [!WARNING]
-> **Strict Operational & Architectural Boundaries**
-> The selected database infrastructure must adhere strictly to four non-negotiable operational boundaries established in our design specifications:
+> **Non‑Negotiable Operational Boundaries**
+> The selected database must satisfy all of the following requirements. Any candidate that violates one is disqualified.
 
-1. **Strict Cost Constraint (100% Permanent Free Tier):**
-   - Zero financial overhead permitted for development & intital testing.
-2. **Zero-Trust Security & Tokenization Ingress:**
-   - [roadmap.md:L11](../roadmap.md#L11) (Step 0.3) mandates in-memory PII tokenization (`SHA-256(raw_id + pepper_salt)` in volatile RAM).
-   - Must handle rapid transactional write bursts to persist irreversible identity hashes generated in RAM without cleartext PII ever touching disk storage.
-3. **Relational Integrity & Schema Enforcement:**
-   - While detailed DDL schemas are not yet defined at this initial stage (Step 0.1), [roadmap.md:L10](../roadmap.md#L10) (Step 0.2) requires the database platform to natively support relational modeling with declarative foreign keys to enforce 1-to-Many cardinality between parent session lifecycle tracking and child transactional extraction logs as schemas are designed in Step 0.4.
-4. **Analytical Data Transformation (`dbt-core` Compatibility):**
-   - Must natively support standard SQL windowing functions (e.g., `ROW_NUMBER() OVER`) and CTEs to execute analytical deduplication of multi-attempt conversational loops required by [roadmap.md:L12](../roadmap.md#L12) (Step 0.4).
+1. **Free Tier (Zero Cost):** All storage, compute, and ancillary services must remain within a 100 % permanent free tier throughout Phase 0‑4.
+
+2. **No Clear‑Text PII on Disk:** The database must accept and durably persist only pre‑tokenized data. Cleartext personally‑identifiable information must never reach persistent storage (see [roadmap.md](../roadmap.md) Step 0.3).
+
+3. **ACID Transactions:** Every write must be atomic, consistent, isolated, and durable. Partial or uncommitted writes are not acceptable for identity‑hash ingestion.
+
+4. **UUID Primary Keys:** All tables must use UUID‑based primary keys to prevent sequence enumeration and support distributed ingestion from multiple entry channels.
+
+5. **Relational Integrity:** The database must natively enforce declarative foreign keys to maintain 1‑to‑Many cardinality between session records and their child event logs (see [roadmap.md](../roadmap.md) Step 0.2).
+
+6. **SQL Analytical Compatibility:** Must support standard SQL window functions (e.g., `ROW_NUMBER() OVER`) and CTEs (Common Table Expressions — named temporary result sets defined with a `WITH` clause that let you chain multi‑step queries in a single readable SQL statement) required by analytical deduplication models (see [roadmap.md](../roadmap.md) Step 0.4). This capability is exercised by `dbt-core` transformation models.
+
+7. **Horizontal Scale:** Must handle concurrent multi‑channel ingestion (WhatsApp, IVR, USSD) and scale toward millions of users without architectural changes.
+
+8. **Row‑Level Security (RLS):** Must support fine‑grained access control at the row or column level so that only the tokenization service can read or write identity‑hash columns. For example: an analytics role querying `citizen_sessions` automatically receives `NULL` for the `token_hash` column — the DB enforces this via policy, so a misconfigured query or rogue service cannot accidentally expose tokens even if it has SELECT access to the table.
+
+9. **Encryption‑at‑Rest:** All data stored on disk (token hashes, session metadata, WAL logs, backups) must be encrypted at the storage layer. This is distinct from PII tokenization — tokenization prevents cleartext PII from entering the DB, while encryption‑at‑rest protects whatever *is* stored (including tokens and metadata) from physical disk access or stolen backups. Even opaque tokens are sensitive: they can be cross‑referenced with external datasets for re‑identification, and unencrypted metadata (timestamps, channel, session duration) can reveal behaviour patterns. A clear key‑management model must be documented — the DB choice directly determines who holds the at‑rest encryption key (provider‑managed KMS vs. customer‑controlled KMS), which affects data‑sovereignty compliance.
+
+10. **Extension / Stored‑Procedure Support:** Must allow server‑side extensions or functions (e.g., `pgcrypto`) to validate token format at write time. This provides defense‑in‑depth: even if an application‑layer bug sends cleartext PII instead of a token, the DB rejects the write before it ever touches disk — the application layer alone cannot guarantee this because bugs, misconfigured middleware, or a compromised service could bypass it.
 
 ---
 
 ## 3. Executive Summary
 
-To support the multi-channel citizen intake pipeline (WhatsApp, IVR Voice, USSD) defined in the AgriStack DPI architecture, we evaluated cloud database providers offering a **permanent free tier**.
-
-> [!IMPORTANT]
-> **Selection Verdict:** **Supabase (Managed Cloud PostgreSQL)** is selected as the primary authoritative database. **Neon (Serverless PostgreSQL)** is recommended as a secondary serverless alternative.
-
-Selection criteria were derived directly from [roadmap.md](../roadmap.md) (Step 0.1–0.4) and [flowchart.md](../design-specs/step3-guardrails/flowchart.md), requiring ACID relational integrity, UUID primary keys, rapid transactional write bursts, and full compatibility with `dbt-core` SQL window functions.
+ **Supabase (Managed Cloud PostgreSQL)** is selected as the primary authoritative database. **Neon (Serverless PostgreSQL)** is recommended as a secondary serverless alternative.
 
 ---
 
