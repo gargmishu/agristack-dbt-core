@@ -22,7 +22,8 @@
 
 * **Step 2.1: Initialize Package Manager & Dependencies:** Generate the root dependency configuration file ([package.json](file:///usr/local/google/home/mishugarg/github/agristack-dbt-core/package.json) or equivalent) and establish test framework runners.  
 * **Step 2.2: Scaffold 4-Layer Architecture Structure:** Reference the master flowchart and generate skeleton files mapped strictly to the system layers:  
-  * **Layer 1 & 2: Channel Connectors** (Voice stream gateways, chat webhooks, USSD menu signaling).  
+  * **Layer 1: Channel Edge Connectors** (Voice stream gateways, chat webhooks, USSD menu signaling) — e.g., IVR SIP gateway, WhatsApp webhook receiver, USSD session handler.
+  * **Layer 2: API Access & Transport** (Auth, rate-limiting, schema validation, and canonicalization) — e.g., API gateway enforcing mTLS/JWT, ingress proxy with quotas, message-broker shim that validates and forwards canonical payloads to Layer 3.
   * **Layer 3: Public Agent Intake Gateway** — the API surface and intake layer that normalizes incoming events, performs intent validation, and forwards structured payloads to the brain.  
   * **Layer 4: Orchestrator Brain** (State machine and governance decision routing engines).  
   * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, agricultural land registries, social protection case staging, and payment rails).
