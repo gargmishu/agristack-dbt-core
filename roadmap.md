@@ -23,7 +23,7 @@
 * **Step 2.1: Initialize Package Manager & Dependencies:** Generate the root dependency configuration file ([package.json](file:///usr/local/google/home/mishugarg/github/agristack-dbt-core/package.json) or equivalent) and establish test framework runners.  
 * **Step 2.2: Scaffold 4-Layer Architecture Structure:** Reference the master flowchart and generate skeleton files mapped strictly to the system layers:  
   * **Layer 1 & 2: Channel Connectors** (Voice stream gateways, chat webhooks, USSD menu signaling).  
-  * **Layer 3: Public Agent Intake Gateway** & Intent Validation Gates.  
+  * **Layer 3: Public Agent Intake Gateway** — the API surface and intake layer that normalizes incoming events, performs intent validation, and forwards structured payloads to the brain.  
   * **Layer 4: Orchestrator Brain** (State machine and governance decision routing engines).  
   * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, agricultural land registries, social protection case staging, and payment rails).
 
@@ -71,6 +71,7 @@
   2. *Intake Validation Gate:* Evaluating extracted intents and missing entities, routing away non-claims, and triggering multi-attempt conversational correction loops when entities are missing.  
   3. *Deterministic Governance Routing Matrix:* Evaluating AI confidence scores and registry eligibility status to switch between Automated Payout ($>95\%$ + eligible), Human Caseworker Review ($60\text{--}94\%$ or fuzzy match), and Auto-Reject ($<60\%$ or ineligible).  
 * **Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors:** Build the public intake API and implement channel-specific webhooks (WhatsApp, IVR voice, USSD) that normalize disparate carrier payloads into a unified, standardized JSON schema before submitting to Layer 3.  
+* **Step 3.4.1: Decide API Access Layer Architecture:** Choose between a thin application-layer service and database-native endpoints, with the recommendation to prioritize a thin service for security, validation, and long-term maintainability.  
 * **Step 3.5: Adaptive Multichannel Confirmation Delivery:** Implement the outbound dispatch engine that formats final transaction receipts (e.g., payment clearing numbers or caseworker escalation IDs) and transmits them natively back via the citizen's originating channel.  
 * **Step 3.6: Live Service Integration:** Swap out Phase 3.1 deterministic mocks for live endpoints and sovereign cloud/local model connections.
 
