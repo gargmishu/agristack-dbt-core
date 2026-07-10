@@ -97,6 +97,11 @@
           "type": "string",
           "enum": ["STAGED", "SUPERSEDED", "COMMITTED"],
           "description": "Operational tracking flag indicating whether this specific record pass has been overridden by a subsequent user correction or successfully committed down the pipeline."
+        },
+        "committed_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Timestamp when this extraction attempt was finalized as committed for downstream processing."
         }
       },
       "required": ["payload_id", "session_id", "attempt_id", "raw_unstructured_text", "processing_state"]
