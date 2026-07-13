@@ -221,31 +221,39 @@ We elected to store core routing state fields (`governance_decision`, `applicati
 *   **Context Accumulation Across State Transitions:** Claims are not static. An application might enter `UNDER_REVIEW` (logging a `reviewer_id`) and later be `REJECTED` (logging a `rejection_reason`). A unified JSONB acts as an accumulating document that preserves the entire lifecycle context without overwriting or jumping between columns.
 *   **Constraint Enforcement:** We ensure database-level safety (e.g., ensuring an approved claim *must* have an amount) via Postgres `CHECK` constraints (e.g., `CHECK (governance_decision != 'AUTO_APPROVE' OR (governance_metadata ? 'approval_amount'))`), granting strict safety without the structural downsides of split columns.
 
-### Decision 5.3: Enforcing Types within JSONB
+### Decision 5.3: Boundary Definitions for JSONB vs. Top-Level Columns
+**Context:** With the adoption of the Hybrid JSONB approach (Decision 5.1), we needed a strict framework to determine which new fields belong inside the flexible `governance_metadata` JSONB blob, and which must be promoted to standard, top-level relational columns (like `disbursement_status` or `application_status`).
+**Decision:** We enforce a strict "State vs. Context" boundary rule. If a field dictates *what happens next* in the system architecture (routing, payments, queues), it must be a top-level native ENUM. If the field provides *contextual information* about what happened (notes, transaction IDs, monetary amounts, rejection reasons), it goes into the JSONB.
+**Rationale:**
+*   **Query Performance & Polling:** Backend microservices (like a payment cron job) constantly poll the database for actionable states (e.g., `WHERE disbursement_status = 'PENDING'`). Top-level columns allow for highly efficient B-tree partial indexes. Forcing the database to scan millions of rows to evaluate `WHERE governance_metadata->>'disbursement_status' = 'PENDING'` would cripple system performance.
+*   **Absolute Type Safety:** Financial clearing states and application routing cannot tolerate typos. By enforcing them as top-level native Postgres ENUMs, the database natively rejects invalid states. If these lived inside a JSONB blob, a typo (e.g., `"FAILED_RETRY"`) could save successfully and silently break downstream processing.
+*   **Trigger-Based Auditability:** Our SLA tracking relies on PostgreSQL triggers firing when states change. It is vastly more reliable and performant to trigger a history log based on a standard column change (`OLD.disbursement_status IS DISTINCT FROM NEW.disbursement_status`) than attempting to calculate diffs inside nested JSONB payloads.
+
+### Decision 5.4: Enforcing Types within JSONB
 **Context:** `JSONB` accepts any valid JSON structure, meaning a developer could accidentally insert a string into a field expecting an integer.
 **Decision:** While application-layer validation (Pydantic/Zod) is the primary defense, we added lightweight SQL `CHECK` constraints (e.g., `jsonb_typeof(governance_metadata->'approval_amount') = 'number'`) directly to the `schema.sql` definition as an un-bypassable database safety net.
 
-### Decision 5.4: Storing Core Routing Logic as Native Enums vs. VARCHARs
+### Decision 5.5: Storing Core Routing Logic as Native Enums vs. VARCHARs
 **Context:** The system needs strict guarantees around valid states for routing (`governance_decision`), application lifecycle (`application_status`), telemetry phases (`session_status`), and financial clearing (`disbursement_status`).
 **Decision:** We chose to implement all state-machine fields as native Postgres `ENUM` types rather than `VARCHAR` columns with `CHECK` constraints. 
 **Rationale:** While `VARCHAR` is more portable across different SQL dialects, native Postgres `ENUM`s provide superior type safety, occupy far less disk space (4 bytes vs text length), and ensure clean application-layer integration by mapping perfectly to strict Pydantic or SQLAlchemy enum classes.
 
-### Decision 5.5: Leaving `rejection_reason` as a Flexible String
+### Decision 5.6: Leaving `rejection_reason` as a Flexible String
 **Context:** We evaluated whether `rejection_reason` (inside the `JSONB`) should be restricted to a strict database `ENUM`.
 **Decision:** We left it as a flexible string check (`jsonb_typeof = 'string'`). Rejection policies and fraud patterns change rapidly. Hardcoding them in the DB would force engineering to run migrations every time a new policy is created. The exact list of valid reasons will be maintained in the application codebase instead, preserving operational agility.
 
-### Decision 5.6: Naming `session_extraction_details` vs. `payload_extraction_details`
+### Decision 5.7: Naming `session_extraction_details` vs. `payload_extraction_details`
 **Context:** Because this table tracks information extracted from individual message payloads, `payload_extraction_details` was initially considered.
 **Decision:** We chose `session_extraction_details` to prioritize domain grouping. In our analytical context, payloads are rarely queried in isolation; they are evaluated as steps within a citizen's overarching session. Prefixing with `session_` groups the primary telemetry and its child extraction table together alphabetically in the data warehouse, making the schema hierarchy immediately obvious to downstream analytics engineers.
 
-### Decision 5.7: Tracking Ledger History via Postgres Triggers vs. Application Layer
+### Decision 5.8: Tracking Ledger History via Postgres Triggers vs. Application Layer
 **Context:** The governance ledger is highly mutable. We need an immutable audit trail of how claims move through the state machine over time to track SLAs and bottlenecks. We evaluated whether the Python/Node application layer should manually write to a history table, or if the database should handle it natively.
 **Decision:** We chose to enforce the `application_governance_ledger_history` via **PostgreSQL Triggers**.
 **Rationale:**
 *   **Guaranteed Auditability:** If a developer manually updates a claim state via a SQL GUI to fix a bug, or if an API route forgets to call the history insertion function, the audit trail is broken. A database-level `AFTER UPDATE` trigger guarantees 100% compliance; it is physically impossible to change the ledger without generating a history row.
 *   **Decoupling:** The application layer only has to care about updating the current state of the claim. The database silently and automatically builds the temporal history in the background, keeping API code clean and reducing transactional overhead.
 
-### Decision 5.8: Application-Side UUID Generation vs. Database Defaults
+### Decision 5.9: Application-Side UUID Generation vs. Database Defaults
 **Context:** For primary keys (`session_id`, `payload_id`, `claim_id`), we evaluated whether the PostgreSQL database should generate the UUID automatically upon insertion (e.g., using `DEFAULT gen_random_uuid()`) or if the backend application (API) should generate the UUID before inserting the record.
 
 **Decision:** We mandate **Application-Side UUID Generation** for all core business entities. The database is intentionally stripped of default ID generators for these tables.
