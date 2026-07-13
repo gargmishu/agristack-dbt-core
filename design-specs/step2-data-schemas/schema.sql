@@ -1,115 +1,230 @@
--- Step 0.4 implementation: schema DDL and staging deduplication SQL
--- Conforms to the data model defined in decisions/data_model_design.md
--- and the zero-retention rules from roadmap.md Step 0.3.
+-- ==============================================================================
+-- 1. TYPE DEFINITIONS (ENUMS)
+-- ==============================================================================
 
-BEGIN;
+CREATE TYPE ingress_channel_type AS ENUM (
+    'WHATSAPP', 'IVR_VOICE', 'USSD'
+);
 
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE TYPE IF NOT EXISTS ingress_channel_type AS ENUM ('WHATSAPP', 'IVR_VOICE', 'USSD');
+CREATE TYPE session_status_enum AS ENUM (
+    'ACTIVE', 'PENDING', 'COMPLETED', 'ABANDONED', 'TIMEOUT'
+);
 
--- Parent table: session lifecycle and channel ingress telemetry.
-CREATE TABLE IF NOT EXISTS session_telemetry_log (
-    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+CREATE TYPE processing_state_enum AS ENUM (
+    'STAGED', 'SUPERSEDED', 'COMMITTED'
+);
+
+CREATE TYPE application_status_enum AS ENUM (
+    'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'FINALIZED', 'REJECTED', 'APPEALED'
+);
+
+CREATE TYPE eligibility_status_enum AS ENUM (
+    'PENDING_VERIFICATION', 'ELIGIBLE', 'INELIGIBLE'
+);
+
+CREATE TYPE governance_decision_enum AS ENUM (
+    'AUTO_APPROVE', 'AUTO_REJECT', 'ROUTE_FOR_MANUAL_REVIEW', 'REQUEST_MORE_INFO', 'MANUAL_APPROVE', 'MANUAL_REJECT'
+);
+
+CREATE TYPE disbursement_status_enum AS ENUM (
+    'PENDING', 'INITIATED', 'SUCCESS', 'FAILED', 'RETURNED'
+);
+
+-- ==============================================================================
+-- 2. TABLE DEFINITIONS
+-- ==============================================================================
+
+-- Parent Entity
+CREATE TABLE session_telemetry_log (
+    session_id UUID PRIMARY KEY,
     tokenized_phone_hash VARCHAR(64) NOT NULL,
     ingress_channel ingress_channel_type NOT NULL,
-    session_status VARCHAR(30) NOT NULL CHECK (
-        session_status IN (
-            'ACTIVE',
-            'COMPLETED_SUCCESSFULLY',
-            'FAILED_GATEWAY_TIMEOUT',
-            'USER_HANGUP',
-            'ABORTED_INCOMPLETE',
-            'ROUTED_AWAY_GRIEVANCE'
-        )
-    ),
+    session_status session_status_enum NOT NULL,
     session_active BOOLEAN GENERATED ALWAYS AS (session_status = 'ACTIVE') STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_session_resume_lookup
-    ON session_telemetry_log (tokenized_phone_hash, session_status, created_at DESC);
-
--- Child table: sequential extraction attempts and AI retry loops.
-CREATE TABLE IF NOT EXISTS session_extraction_details (
-    payload_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- Child of session_telemetry_log
+CREATE TABLE session_extraction_details (
+    payload_id UUID PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES session_telemetry_log(session_id) ON DELETE CASCADE,
     attempt_id INTEGER NOT NULL CHECK (attempt_id > 0),
-    raw_unstructured_text TEXT,
+    raw_unstructured_text TEXT NOT NULL,
     standardized_english_text TEXT,
-    extraction_confidence DECIMAL(4, 3) CHECK (extraction_confidence BETWEEN 0.000 AND 1.000),
+    extraction_confidence DECIMAL(4, 3) CHECK (extraction_confidence >= 0.000 AND extraction_confidence <= 1.000),
     extracted_district VARCHAR(100),
     extracted_crop_type VARCHAR(100),
-    extracted_reported_anomaly VARCHAR(200),
-    processing_state VARCHAR(20) NOT NULL CHECK (processing_state IN ('STAGED', 'SUPERSEDED', 'COMMITTED')),
+    anomaly VARCHAR(200),
+    processing_state processing_state_enum NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    committed_at TIMESTAMPTZ,
-    UNIQUE (session_id, attempt_id)
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_session_attempt UNIQUE (session_id, attempt_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_session_extraction_session_attempt
-    ON session_extraction_details (session_id, attempt_id DESC);
-
--- Child table: business claim outcomes and governance decisions.
-CREATE TABLE IF NOT EXISTS application_governance_ledger (
-    claim_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    session_id UUID NOT NULL REFERENCES session_telemetry_log(session_id) ON DELETE CASCADE,
-    payload_id UUID REFERENCES session_extraction_details(payload_id) ON DELETE SET NULL,
+-- Child of session_extraction_details & session_telemetry_log
+CREATE TABLE application_governance_ledger (
+    claim_id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES session_telemetry_log(session_id),
+    payload_id UUID NOT NULL REFERENCES session_extraction_details(payload_id),
     tokenized_identity_hash VARCHAR(64) NOT NULL,
-    application_status VARCHAR(30) NOT NULL CHECK (
-        application_status IN ('FILED', 'APPROVED', 'REJECTED', 'UNDER_REVIEW', 'APPEALED', 'CLOSED')
+    application_status application_status_enum NOT NULL,
+    claimant_eligibility_status eligibility_status_enum NOT NULL,
+    governance_decision governance_decision_enum,
+    decided_at TIMESTAMPTZ,
+    disbursement_status disbursement_status_enum,
+    governance_metadata JSONB DEFAULT '{}'::jsonb,
+    
+    -- Safety Nets: JSONB Type Constraints
+    CONSTRAINT chk_approval_amount_type CHECK (
+        governance_metadata->'approval_amount' IS NULL OR jsonb_typeof(governance_metadata->'approval_amount') = 'number'
     ),
-    openspp_case_id VARCHAR(50),
-    eligibility_status VARCHAR(30) NOT NULL CHECK (
-        eligibility_status IN ('ELIGIBLE', 'INELIGIBLE', 'FUZZY_MATCH')
+    CONSTRAINT chk_rejection_reason_type CHECK (
+        governance_metadata->'rejection_reason' IS NULL OR jsonb_typeof(governance_metadata->'rejection_reason') = 'string'
     ),
-    governance_decision VARCHAR(30) NOT NULL CHECK (
-        governance_decision IN ('AUTOMATED_PAYOUT', 'CASEWORKER_REVIEW', 'AUTO_REJECTED')
+    
+    -- Business Logic: Terminal Decision Constraints
+    CONSTRAINT chk_approval_requires_amount CHECK (
+        governance_decision NOT IN ('AUTO_APPROVE', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
     ),
-    rejection_reason VARCHAR(255),
-    approval_amount DECIMAL(10, 2),
-    disbursement_transaction_id VARCHAR(100),
-    caseworker_notes TEXT,
-    decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    CONSTRAINT chk_rejection_requires_reason CHECK (
+        governance_decision NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
+    )
 );
 
-CREATE INDEX IF NOT EXISTS idx_application_governance_session
-    ON application_governance_ledger (session_id, decided_at DESC);
+-- Audit Entity
+CREATE TABLE application_governance_ledger_history (
+    history_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    claim_id UUID NOT NULL REFERENCES application_governance_ledger(claim_id) ON DELETE CASCADE,
+    previous_application_status application_status_enum NULL,
+    new_application_status application_status_enum NOT NULL,
+    governance_decision governance_decision_enum,
+    actor_id VARCHAR(100) NOT NULL,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- Staging view for deduplication of repeated correction loops.
--- This keeps the latest committed extraction event per session for downstream analytics.
-CREATE OR REPLACE VIEW staging_latest_extraction_attempts AS
-WITH ranked_attempts AS (
-    SELECT
-        sed.payload_id,
-        sed.session_id,
-        sed.attempt_id,
-        sed.raw_unstructured_text,
-        sed.standardized_english_text,
-        sed.extraction_confidence,
-        sed.extracted_district,
-        sed.extracted_crop_type,
-        sed.extracted_reported_anomaly,
-        sed.processing_state,
-        ROW_NUMBER() OVER (
-            PARTITION BY sed.session_id
-            ORDER BY sed.attempt_id DESC, sed.created_at DESC, sed.payload_id DESC
-        ) AS rn
-    FROM session_extraction_details AS sed
-    WHERE sed.processing_state = 'COMMITTED'
-)
-SELECT
-    payload_id,
+-- ==============================================================================
+-- 3. INDEXES (Optimized for BI & Fast API Lookups)
+-- ==============================================================================
+
+-- Drop-off Prevention / Chatbot Session Resume (Partial Index)
+CREATE INDEX idx_active_session_resume 
+ON session_telemetry_log (tokenized_phone_hash, created_at DESC) 
+WHERE session_status = 'ACTIVE';
+
+-- Analytics Deduplication
+CREATE INDEX idx_session_extraction_session_attempt 
+ON session_extraction_details (session_id, attempt_id DESC);
+
+-- Operational Visibility / Funnel Joins
+CREATE INDEX idx_application_governance_session 
+ON application_governance_ledger (session_id, decided_at DESC);
+
+-- Double-Dipping Fraud Prevention / Status API
+CREATE INDEX idx_governance_identity_lookup 
+ON application_governance_ledger (tokenized_identity_hash, decided_at DESC);
+
+-- SLA Time-in-State Tracking
+CREATE INDEX idx_governance_history_claim_time 
+ON application_governance_ledger_history (claim_id, changed_at DESC);
+
+-- ==============================================================================
+-- 4. DATABASE TRIGGERS (Immutable Audit Trail)
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION log_governance_ledger_history()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO application_governance_ledger_history (
+        claim_id,
+        previous_application_status,
+        new_application_status,
+        governance_decision,
+        actor_id,
+        changed_at
+    ) VALUES (
+        NEW.claim_id,
+        OLD.application_status, 
+        NEW.application_status,
+        NEW.governance_decision,
+        COALESCE(NEW.governance_metadata->>'reviewer_id', 'SYSTEM:DEFAULT'),
+        COALESCE(NEW.decided_at, NOW())
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger captures state changes (AFTER UPDATE)
+CREATE TRIGGER trg_audit_governance_ledger_update
+AFTER UPDATE OF application_status, governance_decision ON application_governance_ledger
+FOR EACH ROW
+WHEN (OLD.application_status IS DISTINCT FROM NEW.application_status OR OLD.governance_decision IS DISTINCT FROM NEW.governance_decision)
+EXECUTE FUNCTION log_governance_ledger_history();
+
+-- Trigger captures initial claim creation (AFTER INSERT)
+CREATE TRIGGER trg_audit_governance_ledger_insert
+AFTER INSERT ON application_governance_ledger
+FOR EACH ROW
+EXECUTE FUNCTION log_governance_ledger_history();
+
+-- ==============================================================================
+-- 5. ANALYTICS VIEWS (Schema Contracts for DBT / BI)
+-- ==============================================================================
+
+-- 5.1 Deduplication Filter
+CREATE OR REPLACE VIEW staging_committed_extractions AS
+SELECT * 
+FROM session_extraction_details 
+WHERE processing_state = 'COMMITTED';
+
+-- 5.2 JSON Unpacking (Schema Contract)
+CREATE OR REPLACE VIEW staging_flattened_governance_ledger AS
+SELECT 
+    claim_id,
     session_id,
-    attempt_id,
-    raw_unstructured_text,
-    standardized_english_text,
-    extraction_confidence,
-    extracted_district,
-    extracted_crop_type,
-    extracted_reported_anomaly,
-    processing_state
-FROM ranked_attempts
-WHERE rn = 1;
+    payload_id,
+    tokenized_identity_hash,
+    application_status,
+    claimant_eligibility_status,
+    governance_decision,
+    decided_at,
+    disbursement_status,
+    (governance_metadata->>'approval_amount')::numeric AS approval_amount,
+    (governance_metadata->>'rejection_reason')::text AS rejection_reason,
+    (governance_metadata->>'reviewer_id')::text AS reviewer_id,
+    (governance_metadata->>'review_notes')::text AS review_notes,
+    (governance_metadata->>'fraud_flag_code')::text AS fraud_flag_code,
+    (governance_metadata->>'disbursement_txn_id')::text AS disbursement_txn_id,
+    ARRAY(SELECT jsonb_array_elements_text(governance_metadata->'missing_info_fields')) AS missing_info_fields
+FROM application_governance_ledger;
 
-COMMIT;
+-- 5.3 The Unified Dashboard View (OBT)
+CREATE OR REPLACE VIEW citizen_journey_funnel AS
+SELECT 
+    t.session_id,
+    t.tokenized_phone_hash,
+    t.ingress_channel,
+    t.session_status,
+    t.created_at AS session_started_at,
+    t.completed_at AS session_completed_at,
+    e.payload_id,
+    e.extracted_district,
+    e.crop_type,
+    e.anomaly,
+    e.extraction_confidence,
+    g.claim_id,
+    g.tokenized_identity_hash,
+    g.application_status,
+    g.claimant_eligibility_status,
+    g.governance_decision,
+    g.decided_at,
+    g.disbursement_status,
+    g.approval_amount,
+    g.rejection_reason,
+    g.fraud_flag_code,
+    g.disbursement_txn_id
+FROM session_telemetry_log t
+LEFT JOIN staging_committed_extractions e 
+    ON t.session_id = e.session_id
+LEFT JOIN staging_flattened_governance_ledger g 
+    ON e.payload_id = g.payload_id;
