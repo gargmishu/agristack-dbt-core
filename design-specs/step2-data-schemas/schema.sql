@@ -30,6 +30,22 @@ CREATE TYPE disbursement_status_enum AS ENUM (
     'PENDING', 'INITIATED', 'SUCCESS', 'FAILED', 'RETURNED'
 );
 
+-- Consent registry stores tokenized consent pointers (no raw PII)
+CREATE TYPE consent_status_enum AS ENUM (
+    'GRANTED', 'REVOKED'
+);
+
+CREATE TYPE revocation_reason_enum AS ENUM (
+    'EXPLICIT_USER_REVOCATION',
+    'EXPLICIT_SYSTEM_REVOCATION',
+    'NATURAL_EXPIRATION'
+);
+
+CREATE TYPE consent_scope_enum AS ENUM (
+    'IDENTITY_VERIFICATION',
+    'DATA_PROCESSING'
+);
+
 -- ==============================================================================
 -- 2. TABLE DEFINITIONS
 -- ==============================================================================
@@ -103,6 +119,70 @@ CREATE TABLE application_governance_ledger_history (
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Consent registry: links tokenized identifiers to consent records
+-- Tracks explicit consent for sensitive data access (e.g., identity verification)
+-- Consent lifetime is tied to session lifecycle: expires when session ends or immediately if revoked
+-- Provenance stores audit trail: consent method, form version, device info, consent timestamp, confirmation token
+CREATE TABLE consent_registry (
+    consent_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES session_telemetry_log(session_id) ON DELETE CASCADE,
+    tokenized_phone_hash VARCHAR(64),
+    tokenized_identity_hash VARCHAR(64),
+    consent_status consent_status_enum NOT NULL,
+    consent_scope consent_scope_enum[] NOT NULL,
+    granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    source ingress_channel_type NOT NULL,
+    consent_version TEXT,
+    provenance JSONB DEFAULT '{"consent_method": null, "form_version": null, "device_fingerprint": null, "confirmation_token": null}'::jsonb,
+    revoked_at TIMESTAMPTZ,
+    revocation_reason revocation_reason_enum,
+    -- Ensure exactly one token type is provided
+    CONSTRAINT chk_one_token_provided CHECK (
+        (tokenized_phone_hash IS NOT NULL AND tokenized_identity_hash IS NULL) 
+        OR (tokenized_phone_hash IS NULL AND tokenized_identity_hash IS NOT NULL)
+    ),
+    -- Revocation reason only valid if revoked_at is set
+    CONSTRAINT chk_revocation_consistency CHECK (
+        (revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) 
+        OR (revoked_at IS NULL AND revocation_reason IS NULL)
+    )
+);
+
+-- Type-specific indexes for fast lookups
+CREATE INDEX idx_consent_phone ON consent_registry (tokenized_phone_hash) 
+WHERE tokenized_phone_hash IS NOT NULL;
+
+CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
+WHERE tokenized_identity_hash IS NOT NULL;
+
+-- Index to support source-based filtering
+CREATE INDEX idx_consent_source ON consent_registry (source, consent_status);
+
+-- Index for checking active consent (not expired, not explicitly revoked)
+CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at) 
+WHERE revoked_at IS NULL AND expires_at > NOW();
+
+-- ==============================================================================
+-- PROVENANCE DOCUMENTATION (Consent Audit Trail)
+-- ==============================================================================
+-- Provenance JSONB structure captures regulatory-required consent metadata:
+--
+-- Example structure:
+-- {
+--   "consent_method": "WHATSAPP_BUTTON_CLICK",       -- How consent was given (button, voice confirmation, etc.)
+--   "form_version": "v1.2",                          -- Which consent form/policy version was shown
+--   "device_fingerprint": "abc123def456",            -- Anonymized device identifier
+--   "user_agent": "WhatsApp/2.26.1",                 -- Client application info
+--   "consent_timestamp_utc": "2026-07-14T10:30:15Z", -- Precise moment of consent
+--   "confirmation_token": "tok_xyz789",              -- Unique proof/receipt of consent
+--   "ip_address_country": "IN",                      -- Anonymized to country level only
+--   "consent_language": "HI"                         -- Language in which consent was presented
+-- }
+--
+-- Note: NO raw IP addresses, phone numbers, or Aadhaar hashes stored here.
+--       Sensitive fields are anonymized or omitted to prevent secondary exposure.
+
 -- ==============================================================================
 -- 3. INDEXES (Optimized for BI & Fast API Lookups)
 -- ==============================================================================
@@ -170,6 +250,21 @@ EXECUTE FUNCTION log_governance_ledger_history();
 -- ==============================================================================
 -- 5. ANALYTICS VIEWS (Schema Contracts for DBT / BI)
 -- ==============================================================================
+
+-- 5.0 Active Consent Status (Consent is valid if: granted, not revoked, and expires_at is in future or NULL while session active)
+CREATE OR REPLACE VIEW active_consent_registry AS
+SELECT 
+    cr.*,
+    st.session_status,
+    CASE 
+        WHEN cr.consent_status = 'GRANTED' 
+        AND cr.revoked_at IS NULL 
+        AND (cr.expires_at > NOW() OR (cr.expires_at IS NULL AND st.session_status = 'ACTIVE')) 
+        THEN TRUE
+        ELSE FALSE
+    END AS is_consent_active
+FROM consent_registry cr
+INNER JOIN session_telemetry_log st ON cr.session_id = st.session_id;
 
 -- 5.1 Deduplication Filter
 CREATE OR REPLACE VIEW staging_committed_extractions AS
