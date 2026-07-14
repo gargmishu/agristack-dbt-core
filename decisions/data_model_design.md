@@ -30,9 +30,9 @@ In [flowchart.md](../design-specs/step3-guardrails/flowchart.md), the citizen in
 
 ---
 
-## 3. Deduced Domain Entities (The 4-Table Relational Model)
+## 3. Deduced Domain Entities (The Relational Model)
 
-To eliminate redundancy, preserve complete transactional auditability, and strictly separate AI extraction retry logs from authoritative business claims, we deduce four distinct relational entities:
+To eliminate redundancy, preserve complete transactional auditability, and strictly separate AI extraction retry logs from authoritative business claims, we deduce the following relational entities:
 
 1. **`session_telemetry_log` (Root Parent Entity)**  
    An authoritative record representing the citizen's overall communication session from initial carrier signaling ingress to connection termination. All other entities are traceable back to this root record.
@@ -45,6 +45,9 @@ To eliminate redundancy, preserve complete transactional auditability, and stric
 
 4. **`application_governance_ledger_history` (Audit Entity, Child of `application_governance_ledger`)**  
    An append-only historical log tracking every state change a claim undergoes. Populated automatically via PostgreSQL triggers — the application layer never writes to this table directly. Preserves the chronological lifecycle for SLA tracking and regulatory auditability.
+
+5. **`consent_registry` (Policy / Consent Entity)**
+   Stores consent records linked to a tokenized identifier. This table captures consent decisions (granted/revoked), scope, timestamp, source, consent version, expiry, and provenance metadata. Consent records must reference only tokenized IDs (never raw PII) so L3/L4 can enforce per-type policy before any registry or ledger write.
 
 > [!IMPORTANT]
 > **Declarative Foreign Key Enforcement (1:N Cardinality)**
