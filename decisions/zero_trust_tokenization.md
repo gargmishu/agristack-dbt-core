@@ -18,6 +18,8 @@ Establish the strict zero-trust data privacy boundaries required for citizen PII
 
 Based on our multi-channel architecture, cleartext Personally Identifiable Information (PII) enters the system at specific ingress points (Layer 1 -> Layer 2 -> Layer 3):
 
+> **Note:** Layer 1 and Layer 2 must never write cleartext PII to persistent storage or disk logs; they may only forward cleartext in-memory to L3/L4. Edge layers may only use orchestrator-issued tokens or ephemeral, tightly TTL'd encrypted caches when absolutely necessary.
+
 1. **Source Phone Number (ANI):** Reaches the system through channel connectors (WhatsApp webhook, IVR SIP gateway, USSD signaling). This is required initially for session tracking but poses a privacy risk if stored long-term in cleartext.
 2. **Citizen Identity Numbers (Aadhaar / Farmer ID):** Captured explicitly as part of the conversational AI extraction or USSD input to perform `identity_verify()` against DPI registries (e.g., MOSIP / Aadhaar). 
 3. **Location / Cadastral Data:** Geographic coordinates, property parcel identifiers, or farm boundary data may appear less sensitive in isolation, but once linked to a specific identity token they can be used to infer a person’s exact residence, land ownership, and movements. In that combined form, the data is treated as protected because it materially increases re-identification risk and privacy impact.
@@ -46,15 +48,44 @@ All highly sensitive identifiers (e.g., Aadhaar) must be hashed immediately upon
   ```
 
 ### 3.2 Execution Boundary & Rationale
-Tokenization must occur inside the trusted intake/orchestrator boundary (Layer 3 or immediately after entity extraction in Layer 4) and always before any payload is marshaled for database persistence or passed to the `application_governance_ledger`.
+Tokenization must happen inside the trusted intake/orchestrator (Layer 3 or right after extraction in Layer 4) and always be done before anything is saved to the database or written to the `application_governance_ledger` This means Layer 1 and Layer 2 must never write cleartext PII to persistent storage or disk logs; they may only forward cleartext in-memory to L3/L4 or use orchestrator-issued tokens/ephemeral encrypted caches with strict TTLs.
 
-- **Trust boundary & KMS placement:** Edge connectors and transport proxies lack hardened key management and secure token services; cryptographic keys and token registries must remain inside the trusted intake/orchestrator environment.
-- **Insufficient context for correct tokenization:** Accurate tokenization requires entity typing and schema context (is this an ID, phone, or free text). That context is produced during normalization and SLM extraction in L3/L4.
-- **Expanded attack surface & exposure:** Tokenizing at the edge forces many more components to handle raw PII (logs, caches, brokers), increasing storage and exfiltration risk.
-- **Policy and consent coupling:** Consent checks, retention policies, and governance rules live in L3/L4 — tokenization must be co-located so it can honor consent before persistence or ledgering.
-- **Auditability & provenance:** The `application_governance_ledger` should record token identifiers and policy metadata; tokenizing before DB/ledger writes ensures persisted records never contain raw values.
-- **Consistency & lifecycle operations:** Central token registries simplify rotation, revocation, and mapping consistency; distributing token logic across edge nodes leads to sync and revocation complexity.
-- **Operational reliability & simplicity:** Centralized token services make telemetry, retries, and secure error handling easier; keep edge components minimal and latency-sensitive.
+- **Core rule:** Do the hashing/tokenization in the trusted orchestrator and never persist raw PII.
+  - Example: A webhook with `From: +919876543210` is hashed by the orchestrator; only the hash is stored.
+
+- **Keep keys inside the trusted zone:** Store cryptographic keys and token services in the orchestrator/KMS, not on edge connectors.
+  - Example: KMS lives with the orchestrator; the WhatsApp edge never receives the key.
+
+  - **Edge terminology:**
+    - **Edge / Layer 1:** Channel-specific ingress points (WhatsApp webhook endpoints, IVR SIP gateways, USSD gateways) that receive messages from providers.
+    - **Edge connector / Layer 2:** Protocol adapters and transport glue (API gateways, reverse proxies, message brokers) that normalize and forward payloads to the orchestrator.
+    - **Edge service:** Any service running in L1/L2 that performs routing, rate-limiting, or format normalization but is not the trusted orchestrator (e.g., webhook handler, protocol translator).
+    - **Guideline:** Treat edges as untrusted for key management — keep long-lived crypto keys and token registries in L3/L4 and have edges forward encrypted payloads or orchestrator-issued ephemeral tokens.
+
+- **You need context to tokenize correctly:** Tokenization requires knowing the data type (phone, Aadhaar, free text), which is produced by L3/L4 processing.
+  - Example: The orchestrator recognizes an Aadhaar number and applies the approved HMAC-SHA256 process.
+
+  - **Why this matters**: tokenization must follow classification because different types need different handling — normalize formats, validate inputs, and separate domains so tokens can't be cross-matched. For example:
+    - Normalize phone formats (`+91 98765 43210` -> `+919876543210`) so the same number always produces the same token.
+    - Validate structure (Aadhaar is 12 digits) to avoid hashing invalid or malformed values.
+    - Use type-specific keys or prefixes, so that a phone hash cannot equal an Aadhaar hash even if digits overlap.
+    - Apply per-type policy/consent and lookup rules (phone routing vs identity verification require different treatments).
+
+- **Avoid widening the attack surface:** If tokenization infrastructure (token services, KMS, caches, rotation logic) runs at the edge, you multiply the number of components responsible for managing secrets and token mappings. Each component becomes an attack vector.
+  - **Example — Distributed token services:** Suppose you have 3 API gateways, each running its own token service with its own Redis cache and pepper stored in environment variables. An attacker who compromises one gateway gains access to that gateway's pepper, token cache (raw phone → token mappings), and tokenization logs (which record both the raw value and its token). To properly rotate keys, you must coordinate across all 3 gateways—sync delays cause token mismatches and force debug logging that may expose raw values. A single compromised container, exposed Redis instance, or accidentally committed `.env` file exposes the entire mapping.
+  - **Contrast — Centralized token service:** If tokenization happens only in the orchestrator (Layer 4), there is one token service, one KMS, one cache, and one set of logs to secure. Edge gateways never handle secrets or token mappings; they only forward raw data in volatile RAM (which is garbage-collected after the request ends). An attacker who compromises a gateway has only transient in-memory data; they cannot forge tokens because the pepper and token logic are isolated in the orchestrator's secure network.
+
+- **Respect policy and consent where it lives:** Consent, retention, and governance checks run in L3/L4, so tokenization should be colocated to enforce those rules before persistence.
+  - Example: If consent is revoked, the orchestrator can stop storing or ledgering the token.
+
+- **Make auditing simple:** Tokenize before writing to the ledger so stored records contain only token identifiers and policy metadata, not raw values.
+  - Example: The ledger stores `tokenized_identity_hash` and `consent=true` instead of the actual Aadhaar number.
+
+- **Simplify rotation and revocation:** A central token registry/service makes key rotation and revocation straightforward; distributing token logic causes sync problems.
+  - Example: Rotate keys in a single token service rather than updating many edge nodes.
+
+- **Keep edges simple and reliable:** Central token services make retries, monitoring, and secure error handling easier while allowing edge components to stay fast and minimal.
+  - Example: The orchestrator handles token-service retries; the edge only forwards payloads.
 
 ```mermaid
 flowchart TB
@@ -83,6 +114,7 @@ To guarantee compliance, the architecture must enforce explicit data purging rul
 1. **Volatile RAM Only:** Variables containing cleartext PII must exist strictly within the lifecycle of the active application process memory.
 2. **Explicit Nullification:** Once tokenized and verified against the authoritative registry (via `identity_verify()`), the cleartext variable must be explicitly scoped to be cleaned up by the garbage collector immediately, and omitted from the DB model object.
 3. **Database Schema Constraints:** In Step 0.4 (Schema DDL), columns designed to store identity must be explicitly named to denote hashed data (e.g., `tokenized_identity_hash` instead of `aadhaar_number`). Explicit, token-specific column names prevent mistakes, make intent and auditability obvious, and enable precise DB-level constraints, indexing, and access controls so cleartext PII is never accidentally stored or queried.
+4. **Edge persistence restriction:** Layer 1 and Layer 2 must not persist cleartext PII to durable storage or disk logs; any temporary caches used by edge components must be encrypted, tightly TTL'd, access-controlled, and audited. Prefer keeping cleartext only in application RAM and using orchestrator-issued ephemeral tokens instead.
 
 ### 4.1. Update to the Relational Data Model
 
