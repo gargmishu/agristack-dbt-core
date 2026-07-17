@@ -149,14 +149,6 @@ CREATE TABLE consent_registry (
     )
 );
 
--- Index for checking active consent (not expired, not explicitly revoked)
-CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at) 
-WHERE revoked_at IS NULL AND expires_at > NOW();
-
--- Index for token-based consent lookups
-CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
-WHERE tokenized_identity_hash IS NOT NULL;
-
 -- ==============================================================================
 -- PROVENANCE DOCUMENTATION (Consent Audit Trail)
 -- ==============================================================================
@@ -202,6 +194,15 @@ ON application_governance_ledger (tokenized_identity_hash, decided_at DESC);
 CREATE INDEX idx_governance_history_claim_time 
 ON application_governance_ledger_history (claim_id, changed_at DESC);
 
+
+-- Index for checking active consent (not expired, not explicitly revoked)
+CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at) 
+WHERE revoked_at IS NULL AND expires_at > NOW();
+
+-- Index for token-based consent lookups
+CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
+WHERE tokenized_identity_hash IS NOT NULL;
+
 -- ==============================================================================
 -- 4. DATABASE TRIGGERS (Immutable Audit Trail)
 -- ==============================================================================
@@ -244,21 +245,6 @@ EXECUTE FUNCTION log_governance_ledger_history();
 -- ==============================================================================
 -- 5. ANALYTICS VIEWS (Schema Contracts for DBT / BI)
 -- ==============================================================================
-
--- 5.0 Active Consent Status (Consent is valid if: granted, not revoked, and expires_at is in future or NULL while session active)
-CREATE OR REPLACE VIEW active_consent_registry AS
-SELECT 
-    cr.*,
-    st.session_status,
-    CASE 
-        WHEN cr.consent_status = 'GRANTED' 
-        AND cr.revoked_at IS NULL 
-        AND (cr.expires_at > NOW() OR (cr.expires_at IS NULL AND st.session_status = 'ACTIVE')) 
-        THEN TRUE
-        ELSE FALSE
-    END AS is_consent_active
-FROM consent_registry cr
-INNER JOIN session_telemetry_log st ON cr.session_id = st.session_id;
 
 -- 5.1 Deduplication Filter
 CREATE OR REPLACE VIEW staging_committed_extractions AS
@@ -317,3 +303,18 @@ LEFT JOIN staging_committed_extractions e
     ON t.session_id = e.session_id
 LEFT JOIN staging_flattened_governance_ledger g 
     ON e.payload_id = g.payload_id;
+
+-- 5.4 Active Consent Status (Consent is valid if: granted, not revoked, and expires_at is in future or NULL while session active)
+CREATE OR REPLACE VIEW active_consent_registry AS
+SELECT 
+    cr.*,
+    st.session_status,
+    CASE 
+        WHEN cr.consent_status = 'GRANTED' 
+        AND cr.revoked_at IS NULL 
+        AND (cr.expires_at > NOW() OR (cr.expires_at IS NULL AND st.session_status = 'ACTIVE')) 
+        THEN TRUE
+        ELSE FALSE
+    END AS is_consent_active
+FROM consent_registry cr
+INNER JOIN session_telemetry_log st ON cr.session_id = st.session_id;
