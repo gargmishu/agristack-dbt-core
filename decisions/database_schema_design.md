@@ -87,6 +87,8 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `revoked_at` | `TIMESTAMPTZ` | Timestamp when consent was revoked, if applicable. |
 | `revocation_reason` | `revocation_reason_enum` | Required when consent is revoked. |
 
+**Integrity Rule:** A consent row must reference exactly one token type. The database enforces this with a check constraint ensuring that either `tokenized_phone_hash` or `tokenized_identity_hash` is populated, but not both. |
+
 ### 2.2. Enum Value Definitions Reference
 
 To ensure strict data integrity and predictable routing, the following native Postgres `ENUM` types have been defined with these exact possible values:
@@ -186,15 +188,12 @@ Indexes were designed based on expected query access patterns from real-time API
    - *Business Reason:* **SLA Tracking & Accountability.** Allows management to measure operational bottlenecks, such as exactly how many days a claim sits in the manual review queue before an agent touches it, ensuring the program meets legal disbursement timelines.
    - *Technical Rationale:* Optimizes window functions and chronological sorting for state-transition analysis.
    - *Analytics Impact:* Enables downstream analysts to calculate "Time-in-State" metrics (e.g., SLA tracking for how long claims sit in the `UNDER_REVIEW` queue before transitioning to `FINALIZED`) without bogging down the database.
-6. **`idx_consent_phone` (`tokenized_phone_hash`) `WHERE tokenized_phone_hash IS NOT NULL`**
+6. **`idx_consent_active` (`tokenized_phone_hash`, `tokenized_identity_hash`, `expires_at`, `revoked_at`) `WHERE revoked_at IS NULL AND expires_at > NOW()`**
    - *Table:* **consent_registry**
-   - *Business Reason:* **Efficient Consent Resolution.** Supports fast lookups for consent records associated with a channel-specific tokenized phone hash.
+   - *Business Reason:* **Active Consent Filtering.** Makes it inexpensive to resolve whether a consent record is currently valid and enforceable.
 7. **`idx_consent_identity` (`tokenized_identity_hash`) `WHERE tokenized_identity_hash IS NOT NULL`**
    - *Table:* **consent_registry**
    - *Business Reason:* **Identity Verification Consent Checks.** Enables rapid lookups for consent records that govern identity verification actions.
-8. **`idx_consent_active` (`tokenized_phone_hash`, `tokenized_identity_hash`, `expires_at`, `revoked_at`) `WHERE revoked_at IS NULL AND expires_at > NOW()`**
-   - *Table:* **consent_registry**
-   - *Business Reason:* **Active Consent Filtering.** Makes it inexpensive to resolve whether a consent record is currently valid and enforceable.
 
 ---
 

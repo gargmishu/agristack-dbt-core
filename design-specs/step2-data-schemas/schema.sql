@@ -149,19 +149,13 @@ CREATE TABLE consent_registry (
     )
 );
 
--- Type-specific indexes for fast lookups
-CREATE INDEX idx_consent_phone ON consent_registry (tokenized_phone_hash) 
-WHERE tokenized_phone_hash IS NOT NULL;
-
-CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
-WHERE tokenized_identity_hash IS NOT NULL;
-
--- Index to support source-based filtering
-CREATE INDEX idx_consent_source ON consent_registry (source, consent_status);
-
 -- Index for checking active consent (not expired, not explicitly revoked)
 CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at) 
 WHERE revoked_at IS NULL AND expires_at > NOW();
+
+-- Index for token-based consent lookups
+CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
+WHERE tokenized_identity_hash IS NOT NULL;
 
 -- ==============================================================================
 -- PROVENANCE DOCUMENTATION (Consent Audit Trail)
