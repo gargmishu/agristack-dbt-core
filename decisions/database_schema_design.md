@@ -6,12 +6,13 @@
 
 ## 1. Tables Overview
 
-To eliminate redundancy and separate session telemetry from business outcomes, the schema is normalized into three authoritative tables:
+To eliminate redundancy and separate session telemetry from business outcomes, the schema is normalized into five authoritative tables:
 
 1. **`session_telemetry_log` (Parent Entity):** Tracks the overall citizen communication session from ingress to termination.
 2. **`session_extraction_details` (Child of `session_telemetry_log`):** Tracks granular retry loops, NLP text extractions, and AI confidence scores for every payload submitted during a session.
 3. **`application_governance_ledger` (Child of `session_extraction_details` & `session_telemetry_log`):** Tracks the final business claim, eligibility status, routing decision, and financial payout lifecycle once an extraction is successfully committed.
 4. **`application_governance_ledger_history` (Audit Entity):** An append-only historical log tracking every state change a claim undergoes, preserving the chronological lifecycle for SLA tracking.
+5. **`consent_registry` (Policy / Consent Entity):** Stores consent records linked to tokenized identifiers so consent state can be enforced before any registry or ledger write.
 
 ---
 
@@ -69,6 +70,22 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `actor_id` | `VARCHAR(100)` | The entity responsible for the change (`SYSTEM:v1.2` or the human agent's UUID). |
 | `changed_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp of the exact moment the transition occurred. |
 
+#### `consent_registry`
+| Column | Data Type | Rationale / Constraint |
+| :--- | :--- | :--- |
+| `consent_id` | `UUID` | Primary Key. Defaults to `gen_random_uuid()`. |
+| `session_id` | `UUID` | Foreign Key referencing `session_telemetry_log` (`ON DELETE CASCADE`). |
+| `tokenized_phone_hash` | `VARCHAR(64)` | Optional tokenized phone identifier for consent records tied to channel routing. |
+| `tokenized_identity_hash` | `VARCHAR(64)` | Optional tokenized identity identifier for consent records tied to identity verification. |
+| `consent_status` | `consent_status_enum` | Tracks whether consent is currently `GRANTED` or `REVOKED`. |
+| `consent_scope` | `consent_scope_enum[]` | Array of consent scopes such as `IDENTITY_VERIFICATION` or `DATA_PROCESSING`. |
+| `granted_at` | `TIMESTAMPTZ` | Timestamp when consent was granted. |
+| `expires_at` | `TIMESTAMPTZ` | Optional expiration for the consent record. |
+| `source` | `ingress_channel_type` | Channel context (`WHATSAPP`, `IVR_VOICE`, `USSD`) for the consent event. |
+| `consent_version` | `TEXT` | Version of the consent form or policy presented to the user. |
+| `provenance` | `JSONB` | Stores audit metadata such as method, device fingerprint, and confirmation token. |
+| `revoked_at` | `TIMESTAMPTZ` | Timestamp when consent was revoked, if applicable. |
+| `revocation_reason` | `revocation_reason_enum` | Required when consent is revoked. |
 
 ### 2.2. Enum Value Definitions Reference
 
@@ -87,6 +104,11 @@ To ensure strict data integrity and predictable routing, the following native Po
 *   **`eligibility_status_enum`**: `PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`
 *   **`governance_decision_enum`**: `AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`
 *   **`disbursement_status_enum`**: `PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`
+
+#### Consent Enums
+*   **`consent_status_enum`**: `GRANTED`, `REVOKED`
+*   **`revocation_reason_enum`**: `EXPLICIT_USER_REVOCATION`, `EXPLICIT_SYSTEM_REVOCATION`, `NATURAL_EXPIRATION`
+*   **`consent_scope_enum`**: `IDENTITY_VERIFICATION`, `DATA_PROCESSING`
 
 ### 2.3 Governance Metadata JSONB Schema
 
@@ -164,6 +186,15 @@ Indexes were designed based on expected query access patterns from real-time API
    - *Business Reason:* **SLA Tracking & Accountability.** Allows management to measure operational bottlenecks, such as exactly how many days a claim sits in the manual review queue before an agent touches it, ensuring the program meets legal disbursement timelines.
    - *Technical Rationale:* Optimizes window functions and chronological sorting for state-transition analysis.
    - *Analytics Impact:* Enables downstream analysts to calculate "Time-in-State" metrics (e.g., SLA tracking for how long claims sit in the `UNDER_REVIEW` queue before transitioning to `FINALIZED`) without bogging down the database.
+6. **`idx_consent_phone` (`tokenized_phone_hash`) `WHERE tokenized_phone_hash IS NOT NULL`**
+   - *Table:* **consent_registry**
+   - *Business Reason:* **Efficient Consent Resolution.** Supports fast lookups for consent records associated with a channel-specific tokenized phone hash.
+7. **`idx_consent_identity` (`tokenized_identity_hash`) `WHERE tokenized_identity_hash IS NOT NULL`**
+   - *Table:* **consent_registry**
+   - *Business Reason:* **Identity Verification Consent Checks.** Enables rapid lookups for consent records that govern identity verification actions.
+8. **`idx_consent_active` (`tokenized_phone_hash`, `tokenized_identity_hash`, `expires_at`, `revoked_at`) `WHERE revoked_at IS NULL AND expires_at > NOW()`**
+   - *Table:* **consent_registry**
+   - *Business Reason:* **Active Consent Filtering.** Makes it inexpensive to resolve whether a consent record is currently valid and enforceable.
 
 ---
 

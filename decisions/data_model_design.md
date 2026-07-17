@@ -11,7 +11,7 @@
 
 ## 1. Goal
 
-Analyze the multi-channel Zero-Trust DPI Orchestrator architecture ([flowchart.md](../design-specs/step3-guardrails/flowchart.md)) to deduce core domain entities. Apply database normalization (1-to-Many cardinality) to establish a **4-Entity Relational Data Model** separating telecom session lifecycle tracking, AI extraction retry loops, authoritative business governance claim outcomes, and an immutable audit history, establishing standardized `snake_case` physical table names as the authoritative data model design for downstream DDL schema generation.
+Analyze the multi-channel Zero-Trust DPI Orchestrator architecture ([flowchart.md](../design-specs/step3-guardrails/flowchart.md)) to deduce core domain entities. Apply database normalization (1-to-Many cardinality) to establish a **Entity Relational Data Model** separating telecom session lifecycle tracking, AI extraction retry loops, authoritative business governance claim outcomes, consent governance, and an immutable audit history, establishing standardized `snake_case` physical table names as the authoritative data model design for downstream DDL schema generation.
 
 ---
 
@@ -70,5 +70,5 @@ The exact physical schema — including all column definitions, data types, ENUM
 | Analyze `flowchart.md` to deduce domain entities | Deduced Root Parent Session, Child AI Extraction, Business Governance Ledger, and Audit History entities. | ✅ Validated |
 | Apply database normalization (1-to-Many cardinality) | Established 1:N relational links via `session_id` and `payload_id` FKs to isolate retry loops from business claims. | ✅ Validated |
 | Separate parent lifecycle from child transactional logs | Separated `session_telemetry_log` (ingress) from `session_extraction_details` and `application_governance_ledger`. | ✅ Validated |
-| Define standardized `snake_case` table names | Configured immutable names: `session_telemetry_log`, `session_extraction_details`, `application_governance_ledger`, `application_governance_ledger_history`. | ✅ Validated |
+| Define standardized `snake_case` table names | Configured immutable names: `session_telemetry_log`, `session_extraction_details`, `application_governance_ledger`, `application_governance_ledger_history`, and `consent_registry`. | ✅ Validated |
 | Document as authoritative data model design for Step 0.4 | Conceptual entity model established here. Physical DDL details in [database_schema_design.md](./database_schema_design.md). | ✅ Validated |
