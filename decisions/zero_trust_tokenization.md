@@ -116,18 +116,6 @@ To guarantee compliance, the architecture must enforce explicit data purging rul
 3. **Database Schema Constraints:** In Step 0.4 (Schema DDL), columns designed to store identity must be explicitly named to denote hashed data (e.g., `tokenized_identity_hash` instead of `aadhaar_number`). Explicit, token-specific column names prevent mistakes, make intent and auditability obvious, and enable precise DB-level constraints, indexing, and access controls so cleartext PII is never accidentally stored or queried.
 4. **Edge persistence restriction:** Layer 1 and Layer 2 must not persist cleartext PII to durable storage or disk logs; any temporary caches used by edge components must be encrypted, tightly TTL'd, access-controlled, and audited. Prefer keeping cleartext only in application RAM and using orchestrator-issued ephemeral tokens instead.
 
-### 4.1. Update to the Relational Data Model
-
-As noted in [data_model_design.md](./data_model_design.md), both the session log and governance ledger are updated to use tokenized hashes:
-
-| Table | Attribute Name | Data Type | Description |
-| :--- | :--- | :--- | :--- |
-| `application_governance_ledger` | `tokenized_identity_hash` | `VARCHAR(64)` | SHA-256 hex digest of the citizen's Aadhaar/ID number. |
-| `session_telemetry_log` | `tokenized_phone_hash` | `VARCHAR(64)` | SHA-256 hex digest of the citizen's phone number. |
-
-> [!IMPORTANT]
-> **Active Session Routing:** Since the persistent database only stores the `tokenized_phone_hash`, any active session routing (e.g., needing the cleartext phone number to send an asynchronous WhatsApp reply) must be handled by keeping the cleartext phone number in volatile RAM (or a volatile cache like Redis with a strict TTL) for the duration of the active session only. It must never be written to PostgreSQL.
-
 ---
 
 ## 5. Stateless Multi-Turn Interaction Flow (Zero-Trust)
