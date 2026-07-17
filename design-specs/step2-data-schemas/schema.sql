@@ -131,7 +131,7 @@ CREATE TABLE consent_registry (
     consent_status consent_status_enum NOT NULL,
     consent_scope consent_scope_enum[] NOT NULL,
     granted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '10 minutes'),
     source ingress_channel_type NOT NULL,
     consent_version TEXT,
     provenance JSONB DEFAULT '{"consent_method": null, "form_version": null, "device_fingerprint": null, "confirmation_token": null}'::jsonb,

@@ -80,7 +80,7 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `consent_status` | `consent_status_enum` | Tracks whether consent is currently `GRANTED` or `REVOKED`. |
 | `consent_scope` | `consent_scope_enum[]` | Array of consent scopes such as `IDENTITY_VERIFICATION` or `DATA_PROCESSING`. |
 | `granted_at` | `TIMESTAMPTZ` | Timestamp when consent was granted. |
-| `expires_at` | `TIMESTAMPTZ` | Optional expiration for the consent record. |
+| `expires_at` | `TIMESTAMPTZ` | Defaults to `NOW() + INTERVAL '10 minutes'` and can be overridden or extended explicitly. |
 | `source` | `ingress_channel_type` | Channel context (`WHATSAPP`, `IVR_VOICE`, `USSD`) for the consent event. |
 | `consent_version` | `TEXT` | Version of the consent form or policy presented to the user. |
 | `provenance` | `JSONB` | Stores audit metadata such as method, device fingerprint, and confirmation token. |
