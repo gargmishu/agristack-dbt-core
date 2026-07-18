@@ -39,9 +39,13 @@ To establish code quality, runtime strictness, and zero-trust payload defense, f
 
 ### 2.2 Static Type Checker Selection: **MyPy**
 - **Alternatives Evaluated:**
-  1. *Pyright / Pylance (Microsoft):* Fast LSP integration for VS Code, but relies on Node.js / npm binaries in CI environments, introducing a non-Python runtime dependency.
-  2. *Pytype (Google) / Pyre (Meta):* Incomplete support for Python 3.11+ async syntax and Pydantic v2 plugin ecosystems.
-- **Decision Rationale:** **MyPy** is the reference static type checker for Python. It includes the official `pydantic.mypy` plugin for Pydantic v2, guaranteeing that complex schemas (`StrictBaseModel`, generic payloads, Enums) pass static analysis without false positives. Enabling `mypy --strict` guarantees 100% untyped function signature prohibition.
+  1. *Pyright / Pylance (Microsoft):* Extremely fast and excellent LSP for VS Code, but relies on Node.js / npm infrastructure or pyright npm binaries, introducing a non-Python runtime dependency into CI pipelines.
+  2. *Pytype (Google):* Developed by Google primarily for **type inference** across large legacy Python codebases without requiring upfront type annotations. Pytype runs an abstract bytecode interpreter to infer types from variable usage.
+  3. *Pyre (Meta):* High-performance type checker written in OCaml, tailored for Facebook's large monolithic repositories.
+- **Decision Rationale:** 
+  - **Explicit Annotations vs. Type Inference:** While **Pytype** excels at inferring types in legacy codebases (and is widely used across Google), this greenfield project enforces **100% explicit type annotations** (`mypy --strict` with `disallow_untyped_defs = true`). We explicitly want missing type hints to trigger CI failures rather than relying on type inference.
+  - **Pydantic v2 Plugin Ecosystem:** Pydantic v2 provides an official **`pydantic.mypy`** plugin that natively understands synthesized Pydantic model methods, field validation decorators, and `ConfigDict` options. Pytype lacks a native Pydantic v2 plugin, causing abstract interpreter type resolution mismatches on Pydantic models.
+  - **Python 3.11+ Support:** MyPy maintains first-class alignment with CPython typing standards and Python 3.11+ features (`Self`, `TypeVarTuple`, async task types). Therefore, **MyPy** was selected as the authoritative static type checker.
 
 ### 2.3 Test Framework Selection: **Pytest (+ pytest-asyncio + pytest-cov)**
 - **Alternatives Evaluated:**
