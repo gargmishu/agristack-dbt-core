@@ -75,8 +75,8 @@ To perform structured entity extraction (e.g., parsing `district` and `crop_type
 | :--- | :--- | :--- | :--- |
 | **Cloud APIs (Groq / OpenAI / Gemini)** | Off-device, managed LLM inference endpoints. | Fastest inference, highest quality models, and zero local hardware requirements. | Routes sensitive user queries to external cloud providers, directly violating DPDP Act sovereign data requirements for public infrastructure. |
 | **Hugging Face `transformers`** | Native Python library for loading and running models locally via PyTorch. | Deeply integrated with Python; maximal control over the generation loop and tokenization. | Extremely inefficient for concurrent inference. No built-in batching or REST API. High VRAM overhead. |
-| **vLLM** | High-throughput and memory-efficient local inference engine with PagedAttention. | Industry-leading performance for high-concurrency production deployments. | Heavy dependency footprint. Overkill for local development on consumer hardware (e.g., Apple Silicon). |
-| **Ollama** | Lightweight, container-like local inference engine for quantized models (GGUF). | Effortless to run locally on consumer hardware (e.g., ~5GB VRAM on Apple Silicon). Built-in REST API and excellent Python SDK. | Lower throughput than vLLM at massive scale, but sufficient for our anticipated concurrency. |
+| **vLLM** | High-throughput and memory-efficient local inference engine with PagedAttention. | Industry-leading performance for high-concurrency production deployments. | Massive dependency footprint (requires PyTorch, specific CUDA kernels, Ray). Hard to run on non-NVIDIA hardware. Overkill for local development on consumer hardware (e.g., Apple Silicon). |
+| **Ollama** | Lightweight, container-like local inference engine for quantized models (GGUF). | Effortless to run locally as a single, pre-compiled binary with zero Python dependencies. Built-in REST API and excellent Python SDK. | Lower throughput than vLLM at massive scale, but sufficient for our anticipated concurrency. |
 
 **Decision: Ollama (primary), Groq (dev/test only)**
 
