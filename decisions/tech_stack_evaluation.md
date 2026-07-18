@@ -3,59 +3,53 @@
 **Framework Step:** Phase 1 · Step 1.1: Choose Language, Runtime & AI Frameworks  
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
-- [readiness_profile.md](../design-specs/step0-env-readiness/readiness_profile.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 
 ---
 
 ## 1. Goal
 
-Select the core application runtime, orchestration engine, and AI framework stack for the Zero-Trust DPI Orchestrator. Choices must satisfy four non-negotiable constraints:
-1. **Sovereign compliance** — sensitive data must not leave Indian DPI boundaries during processing.
+Select the core application runtime, orchestration engine, and AI framework stack for the Zero-Trust DPI Orchestrator. Choices must satisfy 3 non-negotiable constraints:
+1. **Sovereign compliance** — Sensitive data must not leave Indian DPI boundaries during processing.
 2. **Real-time I/O** — WhatsApp webhooks, IVR SIP streams, and USSD sessions require low-latency, concurrent I/O handling.
-3. **AI integration** — structured entity extraction via local SLM and ASR via Bhashini/Groq proxy must integrate cleanly.
-4. **Consistency with existing code** — the `src/` directory already contains JavaScript files targeting an n8n workflow runtime.
+3. **AI integration** — Structured entity extraction via local SLM and ASR via Bhashini/Groq proxy must integrate cleanly.
 
 ---
 
 ## 2. Decision 1: Core Application Runtime
 
-### Constraint
-The existing codebase (`src/parse_groq_response.js`, `src/speech_to_text_transcription.js`, `n8n-config/`) already uses **JavaScript inside n8n function nodes** as the primary execution environment. The runtime is therefore partially committed.
+The orchestrator must handle high-concurrency webhook ingestion while simultaneously coordinating downstream AI models and database transactions.
 
-### Architecture: n8n (Workflow Orchestration) + Node.js (Custom Logic)
+### Options Evaluated
 
-| Layer | Technology | Rationale |
+| Option | Pros | Cons |
 | :--- | :--- | :--- |
-| **Workflow Orchestration** | **n8n (self-hosted)** | Existing workflows are already built in n8n. It provides a visual state machine for wiring connectors (WhatsApp webhooks, Twilio IVR, HTTP nodes) to custom JavaScript function nodes without reimplementing HTTP boilerplate. |
-| **Custom Business Logic** | **Node.js (JavaScript ES2022+)** | Already in use. Node's event loop handles high-concurrency I/O (simultaneous webhook callbacks) efficiently. Well-supported SDKs exist for Supabase, Twilio, Meta APIs, and Ollama. |
-| **Language** | **JavaScript (CommonJS / ES Modules)** | Consistent with all existing `src/` files. TypeScript is recommended as a future upgrade (Step 1.2) for strict runtime safety, but not mandated in Phase 1 to avoid blocking scaffold work. |
+| **Python (FastAPI)** | Undisputed leader for AI/ML integration. Native support for LangChain, LlamaIndex, and Ollama. FastAPI provides excellent async I/O. | GIL (Global Interpreter Lock) can bottleneck CPU-bound concurrent tasks, though less relevant for I/O bound webhooks. |
+| **Node.js (TypeScript)** | Best-in-class event loop for handling thousands of concurrent I/O requests (webhooks, DB calls). Strong ecosystem for state machines (XState). | AI/ML ecosystem is secondary to Python. Often requires bridging to Python for complex AI pipelines. |
+| **Go (Golang)** | Phenomenal concurrency (goroutines) and extremely low resource footprint. Great for strict API gateways. | Minimal native AI ecosystem. Writing complex state machines and handling unstructured JSON can be verbose. |
 
-> [!IMPORTANT]
-> **Why not Python (FastAPI)?**  
-> Python would be the natural choice for an AI-heavy pipeline in isolation. However, the existing codebase, n8n workflow exports, and all `src/` logic are already JavaScript. Switching to Python mid-project would require maintaining two separate runtimes with a bridge layer, increasing operational complexity without sufficient benefit at this stage.
+**Decision: Python (FastAPI + Pydantic)**
+
+While Node.js excels at raw I/O, this project is primarily an **AI orchestration pipeline**. Python offers the most mature ecosystem for interacting with local SLMs (Ollama) and building robust data pipelines. FastAPI's async capabilities are more than sufficient for the expected webhook load, and Pydantic provides the strict runtime validation required for DPI payloads.
 
 ---
 
 ## 3. Decision 2: Orchestration Engine for State Transitions
 
 ### The Problem
-The governance routing engine requires a strict, testable, deterministic state machine across 3 evaluation gates (Ingress Gate → Validation Gate → Governance Matrix). Ad-hoc `if/else` chains in JavaScript are fragile and untestable.
+The governance routing engine requires a strict, testable, deterministic state machine across 3 evaluation gates (Ingress Gate → Validation Gate → Governance Matrix). Ad-hoc `if/else` chains are fragile and untestable.
 
 ### Options Evaluated
 
-| Option | Pros | Cons |
-| :--- | :--- | :--- |
-| **XState v5** (JavaScript state machine library) | Fully deterministic, visualizable, testable in isolation, maps directly to the flowchart state diagram. First-class TypeScript support. | Requires explicit state/event/transition definitions (more upfront work). |
-| **n8n IF/Switch nodes** | No extra dependency, visual wiring. | Non-deterministic at scale; routing logic lives in the UI, not version-controlled code. Cannot be unit tested. |
-| **Custom if/else in Node.js** | Simplest. | Impossible to verify all state transitions are exhaustive. High risk of silent bugs in edge cases. |
+| Option | Description | Pros | Cons |
+| :--- | :--- | :--- | :--- |
+| **Temporal / Cadence** | A polyglot, standalone infrastructure platform for microservice orchestration and durable execution. | Enterprise-grade orchestration with guaranteed execution, built-in retries, and seamless handling of long-running processes. | High infrastructure overhead requiring a separate managed cluster. |
+| **Python `transitions` + Supabase** | Combining a native Python Finite State Machine (FSM) library with synchronous writes to our PostgreSQL database. | Explicit state definitions in code, easily testable, and leverages our existing database without adding new infrastructure. | Requires manual wiring to synchronize the in-memory FSM state with the database records. |
+| **Custom if/else logic** | Native control flow using standard Python conditional statements. | Simplest to implement initially for basic branching. | Impossible to verify all state transitions are exhaustive. High risk of silent bugs in edge cases. |
 
-**Decision: XState v5**
+**Decision: Python `transitions` library + Supabase State Tracking**
 
-XState's state machine model maps exactly to the flowchart's three evaluation gates. Each gate becomes an XState state, each routing outcome becomes a transition guarded by a condition function. This guarantees:
-- Every valid state transition is explicitly declared.
-- The machine rejects invalid state transitions (e.g., a `COMMITTED` payload cannot go back to `STAGED`).
-- Unit tests can assert the machine's behavior without hitting any network or database.
+We will use the Python `transitions` library to strictly define the valid routing gates in code. To handle persistence and retries (without the heavy overhead of Temporal), we will persist the state synchronously to our Supabase PostgreSQL database at each transition using the `session_telemetry_log`, `session_extraction_details`, and the newly added `consent_registry` tables defined in Phase 0.
 
 ---
 
@@ -68,22 +62,25 @@ The AI stack is split into two concerns: **Speech processing** (ASR + NMT + TTS)
 | Service | Role | Decision |
 | :--- | :--- | :--- |
 | **Bhashini API** | Production ASR, NMT (Hindi→English, regional languages→English), TTS | **Primary for production.** Sovereign India DPI boundary compliance. Data does not leave Indian infrastructure. |
-| **Groq Whisper v3 (proxy)** | Fast ASR for development and local testing | **Development/fallback only.** Already integrated in `src/speech_to_text_transcription.js`. Groq's inference is faster and requires no local VRAM during dev, but routes data outside India — not acceptable for production deployments. |
+| **Groq Whisper v3 (proxy)** | Fast ASR for development and local testing | **Development/fallback only.** Groq's inference is extremely fast for rapid prototyping, but routes data outside India — strictly prohibited for production deployments. |
 
 > [!WARNING]
-> **Production Rule:** The Groq Whisper proxy must be gated behind an environment flag (`NODE_ENV !== 'production'` or `BHASHINI_OVERRIDE=true`). Any production deployment must route exclusively through the Bhashini API to satisfy DPDP Act sovereign data requirements.
+> **Production Rule:** The Groq Whisper proxy must be gated behind an environment flag (`ENVIRONMENT != 'production'`). Any production deployment must route exclusively through the Bhashini API to satisfy DPDP Act sovereign data requirements.
 
-### 4.2 Structured Entity Extraction: Ollama (Local SLM)
+### 4.2 Structured Entity Extraction Framework
 
-| Option | Pros | Cons |
-| :--- | :--- | :--- |
-| **Ollama (LLaMA-3-8B / DeepSeek-R1-8B, 4-bit quantized)** | Fully local, sovereign, zero network latency after model load, already documented in `readiness_profile.md`. | Requires local GPU/CPU resources (~4.7 GB VRAM). |
-| **Groq API (cloud inference)** | Fastest inference, no local resources needed. | Routes data off-device to US infrastructure — violates DPDP Act for production. |
-| **OpenAI / Gemini API** | Best quality models. | Same sovereign data violation concern as Groq. |
+To perform structured entity extraction (e.g., parsing `district` and `crop_type` from text), we need an inference framework.
+
+| Option | Description | Pros | Cons |
+| :--- | :--- | :--- | :--- |
+| **Cloud APIs (Groq / OpenAI / Gemini)** | Off-device, managed LLM inference endpoints. | Fastest inference, highest quality models, and zero local hardware requirements. | Routes sensitive user queries to external cloud providers, directly violating DPDP Act sovereign data requirements for public infrastructure. |
+| **Hugging Face `transformers`** | Native Python library for loading and running models locally via PyTorch. | Deeply integrated with Python; maximal control over the generation loop and tokenization. | Extremely inefficient for concurrent inference. No built-in batching or REST API. High VRAM overhead. |
+| **vLLM** | High-throughput and memory-efficient local inference engine with PagedAttention. | Industry-leading performance for high-concurrency production deployments. | Heavy dependency footprint. Overkill for local development on consumer hardware (e.g., Apple Silicon). |
+| **Ollama** | Lightweight, container-like local inference engine for quantized models (GGUF). | Effortless to run locally on consumer hardware (e.g., ~5GB VRAM on Apple Silicon). Built-in REST API and excellent Python SDK. | Lower throughput than vLLM at massive scale, but sufficient for our anticipated concurrency. |
 
 **Decision: Ollama (primary), Groq (dev/test only)**
 
-Ollama runs the quantized SLM locally on the Apple Silicon MacBook (as documented in `readiness_profile.md`) and in production on a sovereign India-hosted VM. The `ollama` Node.js SDK provides a simple REST interface to call structured JSON extraction prompts.
+To guarantee that citizen data never leaves the sovereign boundary, we must use a local Small Language Model (SLM). We reject Cloud APIs for production due to data privacy constraints. Between the local options, **Ollama** running a quantized 8B parameter model (e.g., LLaMA-3-8B-Instruct-GGUF) strikes the ideal balance. It is lightweight enough to run economically on private infrastructure (or a developer's laptop) while providing a robust REST API out-of-the-box. We will use the official `ollama-python` library to integrate it into the FastAPI application.
 
 ---
 
@@ -91,17 +88,17 @@ Ollama runs the quantized SLM locally on the Apple Silicon MacBook (as documente
 
 | Concern | Technology | Environment |
 | :--- | :--- | :--- |
-| Workflow Orchestration | **n8n (self-hosted)** | Dev + Prod |
-| Custom Logic Runtime | **Node.js (JavaScript ES2022+)** | Dev + Prod |
-| State Machine Engine | **XState v5** | Dev + Prod |
+| Core Application Framework | **Python (FastAPI)** | Dev + Prod |
+| Data Validation | **Pydantic** | Dev + Prod |
+| State Machine Engine | **Python `transitions` library** | Dev + Prod |
 | ASR / NMT / TTS | **Bhashini API** | Prod only |
 | ASR Proxy (dev) | **Groq Whisper v3** | Dev / local testing only |
 | Structured Entity Extraction | **Ollama (LLaMA-3-8B, 4-bit)** | Prod (sovereign) |
 | SLM Proxy (dev) | **Groq (cloud inference)** | Dev / local testing only |
-| Database Client | **Supabase JS SDK (`@supabase/supabase-js`)** | Dev + Prod |
+| Database Client | **Supabase Python SDK** | Dev + Prod |
 
 ---
 
 ## 6. Next Step
 
-**Step 1.2: Enforce Runtime Strictness & Linting** — Configure ESLint with strict rules, enable JSON Schema validation via `ajv` for all inter-layer payloads, and define the canonical `StandardizedIntakePayload` schema that every connector must emit.
+**Step 1.2: Enforce Runtime Strictness & Linting** — Configure `ruff` for Python linting and formatting, define strict `Pydantic` schemas for all inter-layer payloads (e.g. `StandardizedIntakePayload`), and set up the local FastAPI project scaffolding.
