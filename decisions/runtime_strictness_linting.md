@@ -19,9 +19,54 @@ Additionally, static code quality and security boundaries are enforced using **R
 
 ---
 
-## 2. Tooling & Infrastructure Specifications
+## 2. Tooling Selection & Alternatives Evaluated
 
-### 2.1 Linter & Formatter (`ruff`)
+To establish code quality, runtime strictness, and zero-trust payload defense, five key tooling decisions were evaluated:
+
+| Concern | Chosen Tool | Alternatives Evaluated | Primary Decision Drivers |
+| :--- | :--- | :--- | :--- |
+| **Code Linter & Formatter** | **Ruff** | Black + Flake8 + Isort + Bandit + Pylint | 10x-100x speedup (written in Rust), single binary, unified `pyproject.toml` config. |
+| **Static Type Checker** | **MyPy** | Pyright, Pytype, Pyre | Official Python standard type checker, native `pydantic.mypy` plugin support, `strict` mode. |
+| **Test Runner & Framework** | **Pytest** | `unittest` (std lib), Nose2 | Standard `assert` syntax, rich fixture system, native async support (`pytest-asyncio`). |
+| **Runtime Data Validation** | **Pydantic v2** | Marshmallow, Cerberus/JSONSchema, Attrs+Cattrs | Rust core engine (`pydantic-core`), native FastAPI integration, `extra="forbid"` guardrails. |
+| **Git Pre-Commit Automation** | **pre-commit** | Shell `.git/hooks`, Husky | Version-controlled configuration (`.pre-commit-config.yaml`), isolated hook envs. |
+
+### 2.1 Linter & Formatter Selection: **Ruff**
+- **Alternatives Evaluated:**
+  1. *Traditional Multi-Tool Suite (Flake8 + Black + Isort + Bandit + Pyupgrade + Pylint):* Required 6 separate dependencies with fragmented config files (`.flake8`, `pyproject.toml`, `.isort.cfg`). Running these tools sequentially parses Python AST multiple times, causing high pre-commit latency (5–15 seconds per run).
+  2. *Autopep8 / Yapf:* Limited scope (only PEP8 styling); lacks security scanning (Bandit) or AST bug detection (Flake8-bugbear).
+- **Decision Rationale:** **Ruff** (written in Rust) replaces Flake8, Black, Isort, Bandit, Pyupgrade, and Pylint with a single binary. It parses AST once and runs in under 100ms (<1% of python linter execution time), providing instantaneous feedback in developer IDEs and pre-commit hooks while standardizing configurations into `pyproject.toml`.
+
+### 2.2 Static Type Checker Selection: **MyPy**
+- **Alternatives Evaluated:**
+  1. *Pyright / Pylance (Microsoft):* Fast LSP integration for VS Code, but relies on Node.js / npm binaries in CI environments, introducing a non-Python runtime dependency.
+  2. *Pytype (Google) / Pyre (Meta):* Incomplete support for Python 3.11+ async syntax and Pydantic v2 plugin ecosystems.
+- **Decision Rationale:** **MyPy** is the reference static type checker for Python. It includes the official `pydantic.mypy` plugin for Pydantic v2, guaranteeing that complex schemas (`StrictBaseModel`, generic payloads, Enums) pass static analysis without false positives. Enabling `mypy --strict` guarantees 100% untyped function signature prohibition.
+
+### 2.3 Test Framework Selection: **Pytest (+ pytest-asyncio + pytest-cov)**
+- **Alternatives Evaluated:**
+  1. *`unittest` (Built-in Standard Library):* Requires verbose OOP boilerplate (`unittest.TestCase`), awkward assertion methods (`self.assertEqual`), and clunky async test wrappers (`IsolatedAsyncioTestCase`).
+  2. *Nose2:* Legacy framework with declining community ecosystem.
+- **Decision Rationale:** **Pytest** provides clean `assert` syntax, robust fixture dependency injection for mocking carrier webhooks and DPI registries, native async test execution via `pytest-asyncio`, and automated test coverage reporting via `pytest-cov`.
+
+### 2.4 Data Validation Framework Selection: **Pydantic v2**
+- **Alternatives Evaluated:**
+  1. *Marshmallow:* Popular in Flask apps, but requires duplicating schema classes and dataclasses, running significantly slower in pure Python.
+  2. *Cerberus / JSONSchema:* Validates raw dicts against JSON schema dicts, but lacks IDE autocompletion, type hint integration, and automatic Python object instantiation.
+  3. *Attrs + Cattrs:* Strong object model, but requires separate serialization layers (`cattrs`) and lacks native FastAPI integration.
+- **Decision Rationale:** **Pydantic v2** features a core engine written in Rust (`pydantic-core`), delivering 5x–20x performance improvements over v1. It integrates directly with FastAPI for automatic OpenAPI generation, supports `ConfigDict(extra="forbid")` for zero-trust payload injection defense, and handles string stripping and enum coercion natively.
+
+### 2.5 Pre-Commit Automation: **pre-commit**
+- **Alternatives Evaluated:**
+  1. *Custom Bash Hooks (`.git/hooks/pre-commit`):* Fragile, platform-dependent, difficult to share across developer machines, and easily bypassed or lost during repo cloning.
+  2. *Husky (Node.js ecosystem):* Requires installing Node.js and `package.json` into a pure Python repository.
+- **Decision Rationale:** The **pre-commit** framework is version-controlled via `.pre-commit-config.yaml`, automatically manages isolated virtualenv environments for linters, and guarantees that every commit passes Ruff linting, MyPy static typing, and custom PII leak checks.
+
+---
+
+## 3. Tooling & Infrastructure Specifications
+
+### 3.1 Linter & Formatter (`ruff`)
 We adopt **Ruff** as the single unified engine for Python linting and formatting. Ruff is configured via `pyproject.toml` with the following rule suites:
 
 - `E` / `W`: Pycodestyle errors and warnings.
@@ -48,7 +93,7 @@ ignore = ["S101"] # Allow assert in tests
 known-first-party = ["src"]
 ```
 
-### 2.2 Static Type Checker (`mypy`)
+### 3.2 Static Type Checker (`mypy`)
 Static typing guarantees that inter-layer payloads match declared interfaces before execution.
 
 ```toml
@@ -66,7 +111,7 @@ warn_return_any = true
 plugins = ["pydantic.mypy"]
 ```
 
-### 2.3 Pre-Commit Hooks (`.pre-commit-config.yaml`)
+### 3.3 Pre-Commit Hooks (`.pre-commit-config.yaml`)
 To prevent non-compliant code from entering the repository, git pre-commit hooks enforce:
 1. `ruff check --fix` and `ruff format`
 2. `mypy` strict execution
@@ -74,11 +119,11 @@ To prevent non-compliant code from entering the repository, git pre-commit hooks
 
 ---
 
-## 3. Inter-Layer Data Validation Schemas (Pydantic v2)
+## 4. Inter-Layer Data Validation Schemas (Pydantic v2)
 
 All domain payloads inherit from a unified `StrictBaseModel` to enforce Zero-Trust security rules.
 
-### 3.1 Base Configuration (`StrictBaseModel`)
+### 4.1 Base Configuration (`StrictBaseModel`)
 
 ```python
 from pydantic import BaseModel, ConfigDict
@@ -102,7 +147,7 @@ class StrictBaseModel(BaseModel):
 
 ---
 
-### 3.2 Standardized Enums (`src/models/enums.py`)
+### 4.2 Standardized Enums (`src/models/enums.py`)
 
 ```python
 from enum import Enum
@@ -139,7 +184,7 @@ class GovernanceDecision(str, Enum):
 
 ---
 
-### 3.3 Layer 1 $\rightarrow$ Layer 2 Carrier Ingress Schemas (`src/models/ingress.py`)
+### 4.3 Layer 1 $\rightarrow$ Layer 2 Carrier Ingress Schemas (`src/models/ingress.py`)
 
 Channel-specific connectors receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1/2 and MUST be tokenized before passing into Layer 3.
 
@@ -182,7 +227,7 @@ class USSDIngressPayload(StrictBaseModel):
 
 ---
 
-### 3.4 Layer 2 $\rightarrow$ Layer 3 Standardized Intake Payload (`src/models/intake.py`)
+### 4.4 Layer 2 $\rightarrow$ Layer 3 Standardized Intake Payload (`src/models/intake.py`)
 
 This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Notice that cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present.
 
@@ -216,7 +261,7 @@ class StandardizedIntakePayload(StrictBaseModel):
 
 ---
 
-### 3.5 Layer 4 Intent & Governance Schemas (`src/models/governance.py`)
+### 4.5 Layer 4 Intent & Governance Schemas (`src/models/governance.py`)
 
 #### SLM Extracted Entity Payload
 ```python
@@ -261,7 +306,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
 
 ---
 
-## 4. API Exception Handling & Security Defense
+## 5. API Exception Handling & Security Defense
 
 To prevent schema details or stack traces from leaking to external callers, FastAPI exception handlers format validation errors into RFC 7807 problem details:
 
@@ -289,7 +334,7 @@ async def validation_exception_handler(request: Request, exc: ValidationError) -
 
 ---
 
-## 5. Physical File Scaffolding Plan
+## 6. Physical File Scaffolding Plan
 
 Execution of Step 1.2 requires establishing the following file structure:
 
@@ -322,7 +367,7 @@ agristack-dbt-core/
 
 ---
 
-## 6. Implementation Task Checklist
+## 7. Implementation Task Checklist
 
 | Task | Component | Key Output Files | Verification Metric |
 | :--- | :--- | :--- | :--- |
@@ -334,7 +379,7 @@ agristack-dbt-core/
 
 ---
 
-## 7. Next Steps & Phase Transition
+## 8. Next Steps & Phase Transition
 
 Upon approval of this design document and completion of the implementation tasks:
 - **Proceed to Phase 2 (Step 2.1 & 2.2):** Scaffold remaining 4-layer architecture directories (`src/intake/`, `src/connectors/`, `src/orchestrator/`, `src/services/`).
