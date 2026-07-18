@@ -387,3 +387,28 @@ agristack-dbt-core/
 
 Upon approval of this design document and completion of the implementation tasks:
 - **Proceed to Phase 2 (Step 2.1 & 2.2):** Scaffold remaining 4-layer architecture directories (`src/intake/`, `src/connectors/`, `src/orchestrator/`, `src/services/`).
+
+---
+
+## 9. Glossary of Acronyms & Technical Terms
+
+| Acronym / Term | Full Name / Expansion | Technical Context & Definition in This Project |
+| :--- | :--- | :--- |
+| **AST** | **Abstract Syntax Tree** | A tree representation of the abstract syntactic structure of source code created by a compiler or linter. Tools like Ruff, Flake8, and MyPy parse code into an AST to check rules and types. |
+| **LSP** | **Language Server Protocol** | An open protocol developed by Microsoft that enables code editors (e.g. VS Code, Neovim) to communicate with background language tools (e.g. Pyright, Ruff, MyPy) for real-time autocomplete, inline errors, and diagnostics. |
+| **DPI** | **Digital Public Infrastructure** | Sovereign digital core systems (such as identity registries, open payment rails, and agricultural registries) that enable public service delivery at national scale. |
+| **PII** | **Personally Identifiable Information** | Sensitive citizen identity data (e.g. phone numbers, Aadhaar IDs, names). Zero-Trust rules strictly forbid unencrypted cleartext PII in persistent storage. |
+| **SLM** | **Small Language Model** | Local, lightweight language models (e.g. LLaMA-3-8B) deployed on private infrastructure for sovereign structured entity extraction without sending data to public cloud APIs. |
+| **ASR** | **Automatic Speech Recognition** | Speech-to-text conversion service (e.g. Bhashini ASR API) that converts citizen audio notes/calls into raw text. |
+| **NMT** | **Neural Machine Translation** | AI translation service converting indicative regional languages (Hindi, Tamil, Telugu, etc.) into standardized English text. |
+| **TTS** | **Text-to-Speech** | Speech synthesis converting text response payloads into audio streams returned to citizen voice channels. |
+| **IVR** | **Interactive Voice Response** | Automated phone call telephony system that processes citizen voice calls via SIP/telephony gateways. |
+| **USSD** | **Unstructured Supplementary Service Data** | Telco menu protocol (`*147#`) used by basic feature phones to navigate menus without internet connectivity. |
+| **ANI** | **Automatic Number Identification** | Telephony system feature that passes the originating caller's phone number to IVR gateways. |
+| **MSISDN** | **Mobile Station International Subscriber Directory Number** | Standard international format for mobile phone numbers (e.g. `+91XXXXXXXXXX`). |
+| **HMAC** | **Hash-based Message Authentication Code** | A cryptographic hashing construction using a secret key and SHA-256 to tokenize sensitive PII. |
+| **SHA-256** | **Secure Hash Algorithm 256-bit** | Cryptographic hash function emitting fixed 64-character hex strings used for data tokenization. |
+| **RFC** | **Request for Comments** | Official internet engineering standards (e.g. RFC 7807 for standardized HTTP API problem details). |
+| **PEP** | **Python Enhancement Proposal** | Official design documents for Python language features (e.g. PEP 8 for style, PEP 484 for type hints). |
+| **PFMS / APBS** | **Public Financial Management System / Aadhaar Payment Bridge System** | Sovereign Indian banking disbursement rails used for automated benefit payouts. |
+
