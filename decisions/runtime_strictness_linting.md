@@ -13,8 +13,6 @@
 
 This document defines the implementation specifications for **Step 1.2 of the Master Roadmap**. Static code quality, security boundaries, developer workflow strictness, and automated linting/formatting are enforced using **Ruff** (linting and formatting), **MyPy** (strict static type checking), **pytest** (async test framework), and **pre-commit** hooks configured centrally via `pyproject.toml` and `.pre-commit-config.yaml`.
 
-*(Note: Data schemas, Pydantic v2 models, and domain enums for **Step 2.0** are documented separately in [canonical_domain_schemas.md](./canonical_domain_schemas.md).)*
-
 ---
 
 ## 2. Tooling Selection & Alternatives Evaluated
@@ -138,13 +136,7 @@ agristack-dbt-core/
 
 ---
 
-## 6. Next Step
-
-Upon completion of Step 1.2 tooling setup, proceed to **Step 2.0 (Define Canonical Domain Contracts & Standardized Schemas)** documented in [canonical_domain_schemas.md](./canonical_domain_schemas.md).
-
----
-
-## 7. Glossary of Acronyms & Technical Terms
+## 6. Glossary of Acronyms & Technical Terms
 
 | Acronym / Term | Full Name / Expansion | Technical Context & Definition in This Project |
 | :--- | :--- | :--- |
