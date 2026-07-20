@@ -96,10 +96,3 @@ To guarantee that citizen data never leaves the sovereign boundary, we must use 
 | Structured Entity Extraction | **Ollama (LLaMA-3-8B, 4-bit)** | Prod (sovereign) |
 | SLM Proxy (dev) | **Groq (cloud inference)** | Dev / local testing only |
 | Database Client | **Supabase Python SDK** | Dev + Prod |
-
----
-
-## 6. Next Steps
-
-- **Step 1.2: Configure Environment Strictness & Code Quality Tools** — Configure `ruff` for Python linting/formatting, `mypy` strict type checking, `pytest` framework, and git pre-commit hooks.
-- **Step 2.0: Define Canonical Domain Contracts & Standardized Schemas** — Define shared enums (`src/models/enums.py`), Pydantic `StrictBaseModel` (`src/models/base.py`), and canonical inter-layer payloads before directory scaffolding.
