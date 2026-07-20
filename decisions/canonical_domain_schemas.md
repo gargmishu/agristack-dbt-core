@@ -154,7 +154,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     whatsapp_sender_id: str = Field(..., description="Carrier WhatsApp user ID / phone number (E.164 standard)")
     message_id: str = Field(..., description="Meta unique message ID")
     payload_type: PayloadType
-    media_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
+    audio_media_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message")
     timestamp: datetime
 ```
@@ -162,7 +162,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
 #### IVR Telephony Ingress Payload
 ```python
 class IVRIngressPayload(StrictBaseModel):
-    call_sid: str = Field(..., description="Telephony Provider Call Session ID")
+    caller_session_sid: str = Field(..., description="Telephony Provider Call Session ID")
     caller_ani: str = Field(..., description="Originating ANI phone number")
     audio_wav_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: int = Field(..., ge=1, le=600)
@@ -174,8 +174,8 @@ class IVRIngressPayload(StrictBaseModel):
 class USSDIngressPayload(StrictBaseModel):
     session_id: str = Field(..., description="Telco network session ID")
     phone_number: str = Field(..., description="Originating MSISDN")
-    service_code: str = Field(..., example="*147#")
-    user_input: str = Field(..., max_length=50, description="Digit selection or menu string")
+    ussd_service_code: str = Field(..., example="*147#")
+    ussd_user_digit_selection: str = Field(..., max_length=50, description="Digit selection or menu string")
     timestamp: datetime
 ```
 
@@ -206,10 +206,10 @@ class StandardizedIntakePayload(StrictBaseModel):
 
     @field_validator("raw_content")
     @classmethod
-    def validate_content_not_empty(cls, v: str) -> str:
-        if not v.strip():
+    def validate_content_not_empty(cls, content_value: str) -> str:
+        if not content_value.strip():
             raise ValueError("raw_content cannot be empty or blank")
-        return v
+        return content_value
 ```
 
 ---
@@ -219,7 +219,7 @@ class StandardizedIntakePayload(StrictBaseModel):
 #### SLM Extracted Entity Payload
 ```python
 from typing import Any, Dict
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 from src.models.base import StrictBaseModel
 from src.models.enums import ApplicationIntent
 
@@ -232,10 +232,10 @@ class ExtractedEntityPayload(StrictBaseModel):
 
     @field_validator("ai_confidence_score")
     @classmethod
-    def enforce_adversarial_zero_score(cls, v: float, info) -> float:
-        if info.data.get("is_adversarial_attempt", False):
+    def enforce_adversarial_zero_score(cls, confidence_score: float, validation_info: ValidationInfo) -> float:
+        if validation_info.data.get("is_adversarial_attempt", False):
             return 0.0
-        return v
+        return confidence_score
 ```
 
 #### Governance Routing Decision Payload
@@ -251,9 +251,9 @@ class GovernanceRoutingPayload(StrictBaseModel):
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
     eligibility_status: EligibilityStatus
     governance_decision: GovernanceDecision
-    disbursement_ref: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
-    caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
-    rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
+    disbursement_reference_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
+    assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
+    rejection_reason_description: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
 ```
 
 ---
@@ -268,7 +268,7 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-async def validation_exception_handler(request: Request, exc: ValidationError) -> JSONResponse:
+async def validation_exception_handler(incoming_request: Request, validation_error: ValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -277,10 +277,13 @@ async def validation_exception_handler(request: Request, exc: ValidationError) -
             "status": 422,
             "detail": "The submitted payload violated inter-layer schema validation constraints.",
             "invalid_params": [
-                {"field": ".".join(str(loc) for loc in err["loc"]), "reason": err["msg"]}
-                for err in exc.errors()
-            ]
-        }
+                {
+                    "field": ".".join(str(location_segment) for location_segment in error_detail["loc"]),
+                    "reason": error_detail["msg"],
+                }
+                for error_detail in validation_error.errors()
+            ],
+        },
     )
 ```
 
