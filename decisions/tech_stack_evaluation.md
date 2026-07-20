@@ -99,6 +99,7 @@ To guarantee that citizen data never leaves the sovereign boundary, we must use 
 
 ---
 
-## 6. Next Step
+## 6. Next Steps
 
-**Step 1.2: Enforce Runtime Strictness & Linting** — Configure `ruff` for Python linting and formatting, define strict `Pydantic` schemas for all inter-layer payloads (e.g. `StandardizedIntakePayload`), and set up the local FastAPI project scaffolding.
+- **Step 1.2: Configure Environment Strictness & Code Quality Tools** — Configure `ruff` for Python linting/formatting, `mypy` strict type checking, `pytest` framework, and git pre-commit hooks.
+- **Step 2.0: Define Canonical Domain Contracts & Standardized Schemas** — Define shared enums (`src/models/enums.py`), Pydantic `StrictBaseModel` (`src/models/base.py`), and canonical inter-layer payloads before directory scaffolding.
