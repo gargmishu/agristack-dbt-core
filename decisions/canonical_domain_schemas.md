@@ -18,7 +18,24 @@ This document defines the implementation specifications for **Step 2.0 of the Ma
 
 ---
 
-## 2. Base Configuration (`StrictBaseModel`)
+## 2. Framework Selection & Alternatives Evaluated
+
+To establish zero-trust inter-layer payload validation, four runtime validation approaches were evaluated:
+
+| Concern | Chosen Tool | Alternatives Evaluated | Primary Decision Drivers |
+| :--- | :--- | :--- | :--- |
+| **Runtime Data Validation** | **Pydantic v2** | Marshmallow, Cerberus/JSONSchema, Attrs+Cattrs | Rust core engine (`pydantic-core`), native FastAPI integration, `ConfigDict(extra="forbid")` guardrails. |
+
+### Decision Rationale: **Pydantic v2**
+- **Alternatives Evaluated:**
+  1. *Marshmallow:* Requires duplicating schema classes and dataclasses; runs significantly slower in pure Python.
+  2. *Cerberus / JSONSchema:* Validates raw dicts against JSON schema dicts, but lacks IDE autocompletion, type hint integration, and automatic Python object instantiation.
+  3. *Attrs + Cattrs:* Strong object model, but requires separate serialization layers (`cattrs`) and lacks native FastAPI integration.
+- **Decision Rationale:** **Pydantic v2** features a core engine written in Rust (`pydantic-core`), delivering 5x–20x performance improvements over v1. It integrates directly with FastAPI for automatic OpenAPI generation, supports `ConfigDict(extra="forbid")` for zero-trust payload injection defense, and handles string stripping and enum coercion natively.
+
+---
+
+## 3. Base Configuration (`StrictBaseModel`)
 
 All domain payloads inherit from a unified `StrictBaseModel` to enforce Zero-Trust security rules:
 
@@ -47,39 +64,74 @@ class StrictBaseModel(BaseModel):
 
 ## 3. Standardized Enums (`src/models/enums.py`)
 
-Standardized enums establish a single source of truth across all architectural layers, eliminating "magic strings" and securing SLM entity extraction against uncalibrated outputs:
+Standardized enums establish a single source of truth across all architectural layers, eliminating "magic strings", securing SLM entity extraction against uncalibrated outputs, and providing 1:1 mapping with database `ENUM` types:
 
 ```python
 from enum import Enum
 
 class ChannelType(str, Enum):
     WHATSAPP = "whatsapp"
-    IVR = "ivr"
+    IVR_VOICE = "ivr_voice"
     USSD = "ussd"
+    SMS = "sms"
 
 class PayloadType(str, Enum):
     AUDIO = "audio"
     TEXT = "text"
+    IMAGE = "image"
+    DOCUMENT = "document"
 
 class StructureLevel(str, Enum):
     FREE_TEXT = "free_text"
     MENU_SELECTION = "menu_selection"
+    DTMF_SELECTION = "dtmf_selection"
 
 class ApplicationIntent(str, Enum):
     APPLY_SUBSIDY = "apply_subsidy"
     CHECK_STATUS = "check_status"
+    SUBMIT_APPEAL = "submit_appeal"
     GRIEVANCE_REDIRECTION = "grievance_redirection"
+    UPDATE_CROP_DETAILS = "update_crop_details"
+    SCHEME_INQUIRY = "scheme_inquiry"
     UNKNOWN = "unknown"
 
 class EligibilityStatus(str, Enum):
+    PENDING_VERIFICATION = "PENDING_VERIFICATION"
     ELIGIBLE = "ELIGIBLE"
     INELIGIBLE = "INELIGIBLE"
     REQUIRES_REVIEW = "REQUIRES_REVIEW"
 
 class GovernanceDecision(str, Enum):
     AUTOMATED_PAYOUT = "AUTOMATED_PAYOUT"
-    HUMAN_REVIEW = "HUMAN_REVIEW"
+    AUTO_APPROVE = "AUTO_APPROVE"
     AUTO_REJECT = "AUTO_REJECT"
+    HUMAN_REVIEW = "HUMAN_REVIEW"
+    ROUTE_FOR_MANUAL_REVIEW = "ROUTE_FOR_MANUAL_REVIEW"
+    REQUEST_MORE_INFO = "REQUEST_MORE_INFO"
+    MANUAL_APPROVE = "MANUAL_APPROVE"
+    MANUAL_REJECT = "MANUAL_REJECT"
+
+class SessionStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    ABANDONED = "ABANDONED"
+    TIMEOUT = "TIMEOUT"
+
+class ApplicationStatus(str, Enum):
+    DRAFT = "DRAFT"
+    SUBMITTED = "SUBMITTED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    FINALIZED = "FINALIZED"
+    REJECTED = "REJECTED"
+    APPEALED = "APPEALED"
+
+class DisbursementStatus(str, Enum):
+    PENDING = "PENDING"
+    INITIATED = "INITIATED"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"
+    RETURNED = "RETURNED"
 ```
 
 ---
@@ -99,7 +151,7 @@ from src.models.base import StrictBaseModel
 from src.models.enums import PayloadType
 
 class WhatsAppIngressPayload(StrictBaseModel):
-    wa_id: str = Field(..., description="Carrier WhatsApp ID / Phone Number")
+    whatsapp_sender_id: str = Field(..., description="Carrier WhatsApp user ID / phone number (E.164 standard)")
     message_id: str = Field(..., description="Meta unique message ID")
     payload_type: PayloadType
     media_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
@@ -199,9 +251,9 @@ class GovernanceRoutingPayload(StrictBaseModel):
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
     eligibility_status: EligibilityStatus
     governance_decision: GovernanceDecision
-    disbursement_ref: Optional[str] = Field(None, description="Populated for AUTOMATED_PAYOUT")
-    caseworker_id: Optional[str] = Field(None, description="Populated for HUMAN_REVIEW")
-    rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT")
+    disbursement_ref: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
+    caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
+    rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
 ```
 
 ---
