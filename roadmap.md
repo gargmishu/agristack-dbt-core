@@ -14,13 +14,13 @@
 *Purpose: Explicitly define the environment boundaries, programming language, runtime, static analysis, and code quality rules to prevent syntax errors, type coercion bugs, or non-compliant code.*
 
 * **Step 1.1: Choose Language, Runtime & AI Frameworks:** Select the core application runtime for gateways/connectors, the orchestration engine for state transitions, and local Small Language Model (SLM) frameworks for sovereign in-memory entity extraction.  
-* **Step 1.2: Configure Environment Strictness & Code Quality Tools:** Configure strict code linting (Ruff), static type checking (`mypy --strict`), test framework execution (Pytest), and git pre-commit hooks ([runtime_strictness_linting.md](./decisions/runtime_strictness_linting.md)) to enforce strict code quality boundaries and environment sanity.
+* **Step 1.2: Enforce Code Quality & Environment Strictness:** Evaluate, select, and configure code linting, static type checking, test framework execution, and git pre-commit hooks to enforce strict code quality boundaries and environment sanity.
 
 ## **Phase 2: Modular Project Scaffolding & Domain Contracts**
 
 *Purpose: Create the canonical data contracts and physical map of the project. The AI needs explicit domain models and folder structures anchoring each layer of the flowchart so it does not hallucinate data structures or module locations.*
 
-* **Step 2.0: Define Canonical Domain Contracts & Standardized Schemas:** Define standardized domain enums (`src/models/enums.py`), the Pydantic v2 `StrictBaseModel` base model (`src/models/base.py`), and canonical inter-layer validation schemas ([canonical_domain_schemas.md](./decisions/canonical_domain_schemas.md)) with strict extra-field prohibition (`extra="forbid"`) to prevent malformed payload injection between system layers.
+* **Step 2.0: Define Canonical Domain Contracts & Standardized Schemas:** Define standardized domain enums, base validation models, and canonical inter-layer payload validation schemas with strict extra-field prohibition (`extra="forbid"`) to prevent malformed payload injection between system layers.
 * **Step 2.1: Initialize Package Manager & Dependencies:** Generate the root dependency configuration file (`pyproject.toml`) and establish test framework runners.  
 * **Step 2.2: Scaffold 4-Layer Architecture Structure:** Reference the master flowchart and generate skeleton files mapped strictly to the system layers:  
   * **Layer 1: Channel Edge Connectors** (Voice stream gateways, chat webhooks, USSD menu signaling) — e.g., IVR SIP gateway, WhatsApp webhook receiver, USSD session handler.
