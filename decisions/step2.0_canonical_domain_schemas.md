@@ -148,17 +148,17 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **Auto Whitespace Trimming** | *All String Fields* | **All Payloads** | Enforced via `StrictBaseModel(str_strip_whitespace=True)`. Auto-trims leading/trailing spaces. |
 | **Strict Enum Coercion** | *All Enum Fields* | **All Payloads** | Enforced via `StrictBaseModel(use_enum_values=True)`. Validates string against declared `Enum`. |
 | **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
-| **Session ID Bounds** | `channel_session_id` | 5 Payloads | Must be a non-blank string bounded between 8 and 128 characters (`min_length=8, max_length=128`). |
-| **E.164 Phone Format** | `originating_phone_number` | L1/L2 Ingress (3) | Must match international E.164 telephone format (e.g., `+919876543210`). |
-| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp` | 4 Payloads | Must be valid ISO-8601 UTC `datetime`; rejected if in future beyond 5s clock skew allowance. |
-| **Audio URL Validation** | `audio_recording_url` | WhatsApp, IVR | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
-| **AI Score Bounds** | `ai_confidence_score` | SLM, Governance | Float strictly constrained between `0.0` and `1.0` inclusive (`ge=0.0, le=1.0`). |
+| **Session ID Bounds** | `channel_session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **SessionTelemetryLog** | Must be a non‑blank string length 8‑128 characters (`min_length=8, max_length=128`). |
+| **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format, e.g., `+919876543210`. |
+| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp` (and any logging timestamps) | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **SessionTelemetryLog** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
+| **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
+| **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`ge=0.0, le=1.0`). |
 
 ---
 
-### 4.1 Layer 1 $\rightarrow$ Layer 2 Carrier Ingress Schemas (`src/models/ingress.py`)
+### 4.1 Carrier Ingress Payloads (`src/models/ingress.py`)
 
-Channel-specific connectors receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1/2 and MUST be tokenized before passing into Layer 3.
+Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1 and Layer 2 and MUST be tokenized before passing into Layer 3. Here we define the **Layer 1 $\rightarrow$ Layer 2** Schema:
 
 #### WhatsApp Ingress Payload
 ```python
@@ -211,16 +211,11 @@ class USSDIngressPayload(StrictBaseModel):
 
 ---
 
-### 4.2 Layer 2 $\rightarrow$ Layer 3 Standardized Intake Payload (`src/models/intake.py`)
+### 4.2 Public Agent Intake Payload (`src/models/intake.py`)
 
-This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present.
+This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 $\rightarrow$ Layer 3** Schema:
 
 ```python
-from datetime import datetime
-from pydantic import Field
-from src.models.base import StrictBaseModel
-from src.models.enums import ChannelType, PayloadType, StructureLevel
-
 class StandardizedIntakePayload(StrictBaseModel):
     """
     Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Intake API.
@@ -242,15 +237,12 @@ class StandardizedIntakePayload(StrictBaseModel):
 
 ---
 
-### 4.3 Layer 4 Intent & Governance Schemas (`src/models/governance.py`)
+### 4.3 Intent & Governance Schemas (`src/models/governance.py`)
+
+Here we define the **Layer 3 $\rightarrow$ Layer 4** Schema:
 
 #### SLM Extracted Entity Payload
 ```python
-from typing import Any, Dict
-from pydantic import Field
-from src.models.base import StrictBaseModel
-from src.models.enums import ApplicationIntent
-
 class ExtractedEntityPayload(StrictBaseModel):
     application_intent: ApplicationIntent
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
@@ -267,11 +259,6 @@ class ExtractedEntityPayload(StrictBaseModel):
 
 #### Governance Routing Decision Payload
 ```python
-from typing import Optional
-from pydantic import Field
-from src.models.base import StrictBaseModel
-from src.models.enums import EligibilityStatus, GovernanceDecision
-
 class GovernanceRoutingPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
