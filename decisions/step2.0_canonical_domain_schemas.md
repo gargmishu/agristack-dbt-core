@@ -138,46 +138,76 @@ class DisbursementStatus(str, Enum):
 
 ## 4. Inter-Layer Data Validation Schemas
 
+### 4.0 Shared & Reusable Validation Rules
+
+To maintain consistency and avoid duplicate validation logic across services, the following validation rules are **shared across multiple domain payloads**:
+
+| Shared Validation Rule | Target Field(s) | Shared Across Payloads | Validation Constraint Specification |
+| :--- | :--- | :--- | :--- |
+| **Extra Field Guardrail** | *All JSON Fields* | **All Payloads** | Enforced via `StrictBaseModel(extra="forbid")`. Rejects unexpected or injected keys. |
+| **Auto Whitespace Trimming** | *All String Fields* | **All Payloads** | Enforced via `StrictBaseModel(str_strip_whitespace=True)`. Auto-trims leading/trailing spaces. |
+| **Strict Enum Coercion** | *All Enum Fields* | **All Payloads** | Enforced via `StrictBaseModel(use_enum_values=True)`. Validates string against declared `Enum`. |
+| **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
+| **Session ID Bounds** | `channel_session_id` | 5 Payloads | Must be a non-blank string bounded between 8 and 128 characters (`min_length=8, max_length=128`). |
+| **E.164 Phone Format** | `originating_phone_number` | L1/L2 Ingress (3) | Must match international E.164 telephone format (e.g., `+919876543210`). |
+| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp` | 4 Payloads | Must be valid ISO-8601 UTC `datetime`; rejected if in future beyond 5s clock skew allowance. |
+| **Audio URL Validation** | `audio_recording_url` | WhatsApp, IVR | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
+| **AI Score Bounds** | `ai_confidence_score` | SLM, Governance | Float strictly constrained between `0.0` and `1.0` inclusive (`ge=0.0, le=1.0`). |
+
+---
+
 ### 4.1 Layer 1 $\rightarrow$ Layer 2 Carrier Ingress Schemas (`src/models/ingress.py`)
 
 Channel-specific connectors receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1/2 and MUST be tokenized before passing into Layer 3.
 
 #### WhatsApp Ingress Payload
 ```python
-from datetime import datetime
-from typing import Optional
-from pydantic import Field, HttpUrl
-from src.models.base import StrictBaseModel
-from src.models.enums import PayloadType
-
 class WhatsAppIngressPayload(StrictBaseModel):
-    whatsapp_sender_id: str = Field(..., description="Carrier WhatsApp user ID / phone number (E.164 standard)")
-    message_id: str = Field(..., description="Meta unique message ID")
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
+    originating_phone_number: str = Field(..., description="Carrier messaging user ID / phone number (E.164 standard)")
+    channel_message_id: str = Field(..., description="Carrier/Provider unique message ID (e.g. Meta wmid, RCS message ID)")
     payload_type: PayloadType
-    audio_media_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
+    ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
+    audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message")
-    timestamp: datetime
 ```
+
+##### WhatsApp Ingress Specific Validations:
+1. **Provider Message ID:** `channel_message_id` must be a non-empty string.
+2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
+   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `text_body` **must** be `None`.
+   - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` **must** be `None`.
+
+---
 
 #### IVR Telephony Ingress Payload
 ```python
 class IVRIngressPayload(StrictBaseModel):
-    caller_session_sid: str = Field(..., description="Telephony Provider Call Session ID")
-    caller_ani: str = Field(..., description="Originating ANI phone number")
-    audio_wav_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
+    originating_phone_number: str = Field(..., description="Originating ANI phone number (E.164 standard)")
+    audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: int = Field(..., ge=1, le=600)
-    timestamp: datetime
+    ingress_timestamp: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
 ```
+
+##### IVR Telephony Specific Validations:
+1. **Call Duration Bounds:** `duration_seconds` must be an integer strictly bounded between `1` and `600` seconds (10 minutes max); must reject 0 or negative values.
+
+---
 
 #### USSD Menu Ingress Payload
 ```python
 class USSDIngressPayload(StrictBaseModel):
-    session_id: str = Field(..., description="Telco network session ID")
-    phone_number: str = Field(..., description="Originating MSISDN")
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
+    originating_phone_number: str = Field(..., description="Originating MSISDN phone number (E.164 standard)")
     ussd_service_code: str = Field(..., example="*147#")
     ussd_user_digit_selection: str = Field(..., max_length=50, description="Digit selection or menu string")
-    timestamp: datetime
+    ingress_timestamp: datetime = Field(..., description="UTC timestamp when telco received USSD code")
 ```
+
+##### USSD Menu Specific Validations:
+1. **Shortcode Pattern:** `ussd_service_code` must match valid USSD shortcode pattern (e.g., `^\*\d+#$`).
+2. **Digit Selection Bounds:** `ussd_user_digit_selection` must be a non-empty string of menu choices or digit entries (maximum 50 characters).
 
 ---
 
@@ -187,7 +217,7 @@ This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. 
 
 ```python
 from datetime import datetime
-from pydantic import Field, field_validator
+from pydantic import Field
 from src.models.base import StrictBaseModel
 from src.models.enums import ChannelType, PayloadType, StructureLevel
 
@@ -195,22 +225,20 @@ class StandardizedIntakePayload(StrictBaseModel):
     """
     Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Intake API.
     """
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
+    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC Token")
     channel_type: ChannelType
     payload_type: PayloadType
     structure_level: StructureLevel
-    channel_session_id: str = Field(..., min_length=8, max_length=128)
-    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC Token")
-    raw_content: str = Field(..., max_length=5000, description="Audio metadata stream reference or raw text string")
-    locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
-    timestamp: datetime
-
-    @field_validator("raw_content")
-    @classmethod
-    def validate_content_not_empty(cls, content_value: str) -> str:
-        if not content_value.strip():
-            raise ValueError("raw_content cannot be empty or blank")
-        return content_value
+    unprocessed_input_content: str = Field(..., max_length=5000, description="Audio metadata stream reference or raw text string")
+    intake_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
+    language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
 ```
+
+##### Standardized Intake Specific Validations:
+1. **Zero-PII Token Validation:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string. Cleartext phone numbers are strictly prohibited and rejected.
+2. **Non-Empty Input Content:** `unprocessed_input_content` must be a string between 1 and 5000 characters; validator must reject empty or whitespace-only strings.
+3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
 
 ---
 
@@ -219,24 +247,23 @@ class StandardizedIntakePayload(StrictBaseModel):
 #### SLM Extracted Entity Payload
 ```python
 from typing import Any, Dict
-from pydantic import Field, ValidationInfo, field_validator
+from pydantic import Field
 from src.models.base import StrictBaseModel
 from src.models.enums import ApplicationIntent
 
 class ExtractedEntityPayload(StrictBaseModel):
-    intent: ApplicationIntent
-    entities: Dict[str, Any] = Field(default_factory=dict, description="Parsed domain fields: district, crop, land_size")
+    application_intent: ApplicationIntent
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
+    domain_entities: Dict[str, Any] = Field(default_factory=dict, description="Parsed domain fields: district, crop, land_size")
     is_adversarial_attempt: bool = Field(False, description="Flagged by prompt injection firewall")
-    bypass_ai: bool = Field(False, description="True for USSD structured menu selections")
-
-    @field_validator("ai_confidence_score")
-    @classmethod
-    def enforce_adversarial_zero_score(cls, confidence_score: float, validation_info: ValidationInfo) -> float:
-        if validation_info.data.get("is_adversarial_attempt", False):
-            return 0.0
-        return confidence_score
+    is_structured_menu_bypass: bool = Field(False, description="True for USSD structured menu selections")
 ```
+
+##### SLM Extracted Entity Specific Validations:
+1. **Domain Entities Structure:** `domain_entities` must be a dictionary containing parsed domain entity keys (e.g., `district`, `crop`, `land_size`).
+2. **Adversarial Zeroing Enforcement Rule:** If `is_adversarial_attempt == True`, `ai_confidence_score` **must** be automatically coerced to `0.0` regardless of the original score.
+
+---
 
 #### Governance Routing Decision Payload
 ```python
@@ -246,15 +273,22 @@ from src.models.base import StrictBaseModel
 from src.models.enums import EligibilityStatus, GovernanceDecision
 
 class GovernanceRoutingPayload(StrictBaseModel):
-    session_id: str
-    payload_id: str
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
+    payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
     eligibility_status: EligibilityStatus
     governance_decision: GovernanceDecision
-    disbursement_reference_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
+    disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
     assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
-    rejection_reason_description: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
+    rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
 ```
+
+##### Governance Routing Decision Specific Validations:
+1. **Payload UUID Foreign Key:** `payload_id` must be a valid UUID string referencing `session_extraction_details.payload_id`.
+2. **Conditional Field Population Rules:**
+   - If `governance_decision` is `AUTO_APPROVE`, `MANUAL_APPROVE`, or `AUTOMATED_PAYOUT`: `disbursement_txn_id` **must** be populated; `rejection_reason` **must** be `None`.
+   - If `governance_decision` is `AUTO_REJECT` or `MANUAL_REJECT`: `rejection_reason` **must** be populated; `disbursement_txn_id` **must** be `None`.
+   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW` or `HUMAN_REVIEW`: `assigned_caseworker_id` **must** be populated.
 
 ---
 
