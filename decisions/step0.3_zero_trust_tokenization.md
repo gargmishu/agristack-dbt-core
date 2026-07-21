@@ -4,7 +4,7 @@
 **Related Documents:** 
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
-- [data_model_design.md](./data_model_design.md)
+- [step0.2_data_model_design.md](./step0.2_data_model_design.md)
 
 ---
 

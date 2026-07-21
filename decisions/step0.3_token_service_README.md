@@ -93,4 +93,4 @@ curl -X POST https://token.example.svc/v1/tokenize \
 
 ---
 
-For link-back: reference this file from `decisions/zero_trust_tokenization.md` if desired.
+For link-back: reference this file from `decisions/step0.3_zero_trust_tokenization.md` if desired.

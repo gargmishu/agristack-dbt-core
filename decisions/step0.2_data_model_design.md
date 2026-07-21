@@ -1,11 +1,11 @@
 # Domain Entity & Relational Data Model Design
 
 **Framework Step:** Phase 0 · Step 0.2: Identify Entities, Tables & Table Names  
-**Target Environment:** Authoritative Relational Database ([database_evaluation.md](./database_evaluation.md))  
+**Target Environment:** Authoritative Relational Database ([step0.1_database_evaluation.md](./step0.1_database_evaluation.md))  
 **Related Documents:** 
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
-- [database_evaluation.md](./database_evaluation.md)
+- [step0.1_database_evaluation.md](./step0.1_database_evaluation.md)
 
 ---
 

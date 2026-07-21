@@ -4,11 +4,11 @@
 **Target Architecture:** FastAPI + Pydantic v2  
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
-- [runtime_strictness_linting.md](./runtime_strictness_linting.md)
-- [tech_stack_evaluation.md](./tech_stack_evaluation.md)
+- [step1.2_runtime_strictness_linting.md](./step1.2_runtime_strictness_linting.md)
+- [step1.1_tech_stack_evaluation.md](./step1.1_tech_stack_evaluation.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
-- [database_schema_design.md](./database_schema_design.md)
-- [zero_trust_tokenization.md](./zero_trust_tokenization.md)
+- [step0.4_database_schema_design.md](./step0.4_database_schema_design.md)
+- [step0.3_zero_trust_tokenization.md](./step0.3_zero_trust_tokenization.md)
 
 ---
 

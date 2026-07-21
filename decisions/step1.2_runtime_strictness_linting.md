@@ -4,8 +4,8 @@
 **Target Architecture:** Ruff + MyPy + Pytest + pre-commit  
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
-- [canonical_domain_schemas.md](./canonical_domain_schemas.md)
-- [tech_stack_evaluation.md](./tech_stack_evaluation.md)
+- [step2.0_canonical_domain_schemas.md](./step2.0_canonical_domain_schemas.md)
+- [step1.1_tech_stack_evaluation.md](./step1.1_tech_stack_evaluation.md)
 
 ---
 
