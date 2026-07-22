@@ -132,6 +132,17 @@ class DisbursementStatus(str, Enum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     RETURNED = "RETURNED"
+
+class DomainEntityKey(str, Enum):
+    DISTRICT = "district"
+    TALUKA = "taluka"
+    VILLAGE = "village"
+    CROP_NAME = "crop_name"
+    CROP_VARIETY = "crop_variety"
+    LAND_SIZE_ACRES = "land_size_acres"
+    SUBSIDY_SCHEME_ID = "subsidy_scheme_id"
+    SURVEY_NUMBER = "survey_number"
+    BANK_ACCOUNT_LAST4 = "bank_account_last4"
 ```
 
 ---
@@ -307,13 +318,13 @@ Here we define the **Layer 3 $\rightarrow$ Layer 4** Schema:
 class ExtractedEntityPayload(StrictBaseModel):
     application_intent: ApplicationIntent
     ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
-    domain_entities: Dict[str, Any] = Field(default_factory=dict, description="Parsed domain fields: district, crop, land_size")
+    domain_entities: Dict[DomainEntityKey, Any] = Field(default_factory=dict, description="Parsed domain fields keyed by canonical DomainEntityKey")
     is_adversarial_attempt: bool = Field(False, description="Flagged by prompt injection firewall")
     is_structured_menu_bypass: bool = Field(False, description="True for USSD structured menu selections")
 ```
 
 ##### SLM Extracted Entity Specific Validations:
-1. **Domain Entities Structure:** `domain_entities` must be a dictionary containing parsed domain entity keys (e.g., `district`, `crop`, `land_size`).
+1. **Domain Entities Key Strictness:** `domain_entities` keys must strictly be valid members of `DomainEntityKey` enum (e.g. `district`, `crop_name`, `land_size_acres`). Any uncalibrated key names or hallucinations emitted by the SLM will trigger a Pydantic `ValidationError` and be rejected.
 2. **Adversarial Zeroing Enforcement Rule:** If `is_adversarial_attempt == True`, `ai_confidence_score` **must** be automatically coerced to `0.0` regardless of the original score.
 
 ---
