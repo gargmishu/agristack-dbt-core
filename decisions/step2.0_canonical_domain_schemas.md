@@ -200,13 +200,26 @@ class IVRIngressPayload(StrictBaseModel):
 class USSDIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
     originating_phone_number: str = Field(..., description="Originating MSISDN phone number (E.164 standard)")
-    ussd_service_code: str = Field(..., example="*147#")
+    ussd_service_code: str = Field(..., pattern=r"^\*\d+(\*\d+)*#$", description="USSD shortcode (e.g., *147#, *147*1*2#)")
     ussd_user_digit_selection: str = Field(..., max_length=50, description="Digit selection or menu string")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when telco received USSD code")
 ```
 
 ##### USSD Menu Specific Validations:
-1. **Shortcode Pattern:** `ussd_service_code` must match valid USSD shortcode pattern (e.g., `^\*\d+#$`).
+1. **Shortcode Pattern:** `ussd_service_code` must match the USSD shortcode regex `^\*\d+(\*\d+)*#$`.
+   - **Rule:** Must start with `*`, end with `#`, contain only digits and `*` segment separators — no spaces, letters, or special characters.
+   - **Segment structure:** One or more numeric segments separated by `*`. Each segment must contain at least one digit.
+   - **Valid examples:**
+     - `*147#` — single-segment base code
+     - `*147*1#` — base code with one sub-menu selection
+     - `*147*1*2#` — base code with two levels of sub-menu navigation
+     - `*99*1234*9876543210#` — NUUP/IMPS style parameterised code (NPCI standard)
+   - **Invalid examples (must be rejected):**
+     - `147#` — missing leading `*`
+     - `*147` — missing trailing `#`
+     - `*147**2#` — empty segment between two `*` delimiters
+     - `*ABC#` — non-numeric segment
+     - `* 147#` — whitespace in code
 2. **Digit Selection Bounds:** `ussd_user_digit_selection` must be a non-empty string of menu choices or digit entries (maximum 50 characters).
 
 ---
