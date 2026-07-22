@@ -231,7 +231,11 @@ class StandardizedIntakePayload(StrictBaseModel):
 ```
 
 ##### Standardized Intake Specific Validations:
-1. **Zero-PII Token Validation:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string. Cleartext phone numbers are strictly prohibited and rejected.
+1. **Zero-PII Token Validation:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string. Cleartext phone numbers (or any raw PII) are strictly prohibited and rejected.
+   - **Design intent:** `tokenized_citizen_id` is a **stable, pseudonymous citizen identity token** — it is not a "tokenized phone". The schema is intentionally agnostic to the underlying PII source. Layer 2 is the only layer that knows what was fed into the HMAC.
+   - **Current derivation (phone-sourced channels):** `HMAC-SHA256(secret_key, phone_number)` — used for WhatsApp, IVR, and USSD channels where the citizen is identified by their MSISDN.
+   - **Future derivation (Aadhaar-sourced channels):** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits any entity from storing or hashing raw Aadhaar numbers without being a UIDAI-registered Authentication User Agency (AUA). For Aadhaar-authenticated channels, Layer 2 must call UIDAI's e-KYC/OTP API, receive the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`. The raw Aadhaar number is never persisted or passed downstream.
+   - **Other future sources (Voter ID, PAN):** May be used as HMAC input only where lawful purpose and explicit citizen consent under the DPDP Act exist.
 2. **Non-Empty Input Content:** `unprocessed_input_content` must be a string between 1 and 5000 characters; validator must reject empty or whitespace-only strings.
 3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
 
