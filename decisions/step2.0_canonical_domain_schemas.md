@@ -263,13 +263,32 @@ class StandardizedIntakePayload(StrictBaseModel):
 ```
 
 ##### Standardized Intake Specific Validations:
-1. **Zero-PII Token Validation:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string. Cleartext phone numbers (or any raw PII) are strictly prohibited and rejected.
-   - **Design intent:** `tokenized_citizen_id` is a **stable, pseudonymous citizen identity token** — it is not a "tokenized phone". The schema is intentionally agnostic to the underlying PII source. Layer 2 is the only layer that knows what was fed into the HMAC.
-   - **Current derivation (phone-sourced channels):** `HMAC-SHA256(secret_key, phone_number)` — used for WhatsApp, IVR, and USSD channels where the citizen is identified by their MSISDN.
-   - **Future derivation (Aadhaar-sourced channels):** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits any entity from storing or hashing raw Aadhaar numbers without being a UIDAI-registered Authentication User Agency (AUA). For Aadhaar-authenticated channels, Layer 2 must call UIDAI's e-KYC/OTP API, receive the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`. The raw Aadhaar number is never persisted or passed downstream.
-   - **Other future sources (Voter ID, PAN):** May be used as HMAC input only where lawful purpose and explicit citizen consent under the DPDP Act exist.
+1. **Zero-PII Token Format:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string (`min_length=64, max_length=64`). Cleartext phone numbers or raw PII are strictly prohibited.
 2. **Non-Empty Input Content:** `unprocessed_input_content` must be a string between 1 and 5000 characters; validator must reject empty or whitespace-only strings.
 3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
+4. **Cross-Field Structure Level Compatibility Rules:** `structure_level` must be validated by `channel_type`, then `payload_type`:
+   - **`WHATSAPP` channel:**
+     - If `payload_type == TEXT`: May be `FREE_TEXT` (user-typed message) or `MENU_SELECTION` (button / interactive list selection).
+     - If `payload_type == AUDIO`: Must strictly be `FREE_TEXT` (unstructured spoken voice note).
+   - **`IVR_VOICE` channel:**
+     - `payload_type` is always `AUDIO`: Must strictly be `FREE_TEXT` (unstructured spoken audio recording).
+   - **`USSD` channel:**
+     - `payload_type` is always `TEXT`: Must strictly be `DTMF_SELECTION` (concatenated keypad digit entries).
+   - **`SMS` channel:**
+     - `payload_type` is always `TEXT`: Must strictly be `FREE_TEXT` (free-form SMS text).
+
+##### Architectural Design Decisions & Rationale:
+
+1. **Choice of `tokenized_citizen_id` over `tokenized_phone`:**
+   - **Design Intent:** `tokenized_citizen_id` represents a **stable, pseudonymous citizen identity token** — not a "tokenized phone". The schema is intentionally agnostic to the underlying PII source. Layer 2 is the only layer that knows what PII source was fed into the HMAC.
+   - **Current Derivation (Phone-Sourced Channels):** Computed as `HMAC-SHA256(secret_key, phone_number)` for WhatsApp, IVR, and USSD channels where citizen identity is rooted in MSISDN.
+   - **Aadhaar-Sourced Channels & Legal Constraint:** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits storing or hashing raw Aadhaar numbers without UIDAI Authentication User Agency (AUA) registration. For Aadhaar-authenticated channels, Layer 2 must call UIDAI e-KYC/OTP API, obtain the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`.
+   - **Other Identity Sources (Voter ID, PAN):** May serve as HMAC input only where lawful purpose and explicit citizen consent exist under the DPDP Act.
+
+2. **Choice & Purpose of `structure_level`:**
+   - **Pipeline Routing:** Bypasses SLM entity extraction for `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp buttons), routing directly to deterministic lookup tables while directing `FREE_TEXT` to the Ollama NLU/STT pipeline.
+   - **Confidence Baseline:** Automatically assigns `ai_confidence_score = 1.0` for deterministic selections (`DTMF_SELECTION` / `MENU_SELECTION`), whereas `FREE_TEXT` requires dynamic SLM scoring and prompt-injection checks.
+   - **Channel Decoupling:** Allows Layer 3/4 to branch cleanly on parsing strategy (`if structure_level == DTMF_SELECTION`) without writing channel-specific `if channel_type == USSD` conditionals.
 
 ---
 
