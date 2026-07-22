@@ -201,7 +201,7 @@ class USSDIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
     originating_phone_number: str = Field(..., description="Originating MSISDN phone number (E.164 standard)")
     ussd_service_code: str = Field(..., pattern=r"^\*\d+(\*\d+)*#$", description="USSD shortcode (e.g., *147#, *147*1*2#)")
-    ussd_user_digit_selection: str = Field(..., max_length=50, description="Digit selection or menu string")
+    ussd_user_digit_selection: str = Field(..., min_length=1, max_length=64, description="Concatenated digit selections and data entries separated by *")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when telco received USSD code")
 ```
 
@@ -220,7 +220,18 @@ class USSDIngressPayload(StrictBaseModel):
      - `*147**2#` — empty segment between two `*` delimiters
      - `*ABC#` — non-numeric segment
      - `* 147#` — whitespace in code
-2. **Digit Selection Bounds:** `ussd_user_digit_selection` must be a non-empty string of menu choices or digit entries (maximum 50 characters).
+2. **Digit Selection Bounds:** `ussd_user_digit_selection` must be a non-empty string of concatenated digit selections and data entries separated by `*` (minimum 1, maximum 64 characters).
+   - **Formula:** `max_length = 2N + D×(L_d + 1) - 1`
+     - `N` = number of navigation-only menu levels (each produces exactly 1 digit: the citizen presses `1`, `2`, etc.)
+     - `D` = number of data-entry levels (citizen types a free numeric string, e.g., a loan ID or mobile number)
+     - `L_d` = maximum digit length of each data-entry field
+     - The `(N + D - 1)` term accounts for `*` separators between all segments; each segment contributes 1 separator except the last.
+   - **How parameters are chosen:**
+     - `N=5` — derived from the deepest AgriStack USSD flow (5 menu levels: scheme → state → district → sub-scheme → action). Increase if new flows add deeper navigation.
+     - `D=5` — maximum number of free-input fields across any single USSD session (e.g., land parcel ID, mobile number, crop type code, season, amount). Increase if a flow requires more user inputs.
+     - `L_d=10` — longest numeric data field expected (10-digit mobile number / MSISDN). If a 16-digit account number or Aadhaar-linked reference is ever required, update to `L_d=16`.
+   - **Calculation:** `2(5) + 5×(10+1) - 1 = 10 + 55 - 1 = 64`.
+   - **Recalculation rule:** If the USSD flow design changes (deeper menus or longer input fields), update `N`, `D`, or `L_d` and recompute. The `max_length` in the `Field(...)` definition must be updated in lockstep.
 
 ---
 
