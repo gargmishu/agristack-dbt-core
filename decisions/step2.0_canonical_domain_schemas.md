@@ -257,14 +257,17 @@ class StandardizedIntakePayload(StrictBaseModel):
     channel_type: ChannelType
     payload_type: PayloadType
     structure_level: StructureLevel
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Audio metadata stream reference or raw text string")
+    unprocessed_input_content: str = Field(..., max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
     intake_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
     language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
 ```
 
 ##### Standardized Intake Specific Validations:
 1. **Zero-PII Token Format:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string (`min_length=64, max_length=64`). Cleartext phone numbers or raw PII are strictly prohibited.
-2. **Non-Empty Input Content:** `unprocessed_input_content` must be a string between 1 and 5000 characters; validator must reject empty or whitespace-only strings.
+2. **Input Content Validation (`unprocessed_input_content`):**
+   - **General:** Must be a non-empty string between 1 and 5000 characters (`min_length=1, max_length=5000`); validator must reject empty or whitespace-only strings.
+   - **When `payload_type == AUDIO`:** Must validate as a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio recording file.
+   - **When `payload_type == TEXT`:** Must be raw user text (max 5000 chars) or a valid USSD DTMF string matching `^\d+(\*\d+)*$`.
 3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
 4. **Cross-Field Structure Level Compatibility Rules:** `structure_level` must be validated by `channel_type`, then `payload_type`:
    - **`WHATSAPP` channel:**
@@ -284,11 +287,14 @@ class StandardizedIntakePayload(StrictBaseModel):
    - **Current Derivation (Phone-Sourced Channels):** Computed as `HMAC-SHA256(secret_key, phone_number)` for WhatsApp, IVR, and USSD channels where citizen identity is rooted in MSISDN.
    - **Aadhaar-Sourced Channels & Legal Constraint:** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits storing or hashing raw Aadhaar numbers without UIDAI Authentication User Agency (AUA) registration. For Aadhaar-authenticated channels, Layer 2 must call UIDAI e-KYC/OTP API, obtain the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`.
    - **Other Identity Sources (Voter ID, PAN):** May serve as HMAC input only where lawful purpose and explicit citizen consent exist under the DPDP Act.
-
 2. **Choice & Purpose of `structure_level`:**
    - **Pipeline Routing:** Bypasses SLM entity extraction for `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp buttons), routing directly to deterministic lookup tables while directing `FREE_TEXT` to the Ollama NLU/STT pipeline.
    - **Confidence Baseline:** Automatically assigns `ai_confidence_score = 1.0` for deterministic selections (`DTMF_SELECTION` / `MENU_SELECTION`), whereas `FREE_TEXT` requires dynamic SLM scoring and prompt-injection checks.
-   - **Channel Decoupling:** Allows Layer 3/4 to branch cleanly on parsing strategy (`if structure_level == DTMF_SELECTION`) without writing channel-specific `if channel_type == USSD` conditionals.
+3. **Content Representation in `unprocessed_input_content`:**
+   - **For `PayloadType.TEXT` (WhatsApp text, USSD, SMS):** Stores the raw text string or concatenated DTMF menu digits (e.g., `"1*2*10"`).
+   - **For `PayloadType.AUDIO` (WhatsApp voice notes, IVR calls):** Stores the **signed audio recording URL** (`audio_recording_url` forwarded from Layer 1/2). 
+     - *Generation & Ownership:* The signed URL is generated **automatically by the Layer 1/2 backend connector** using service account storage credentials when the audio arrives — the citizen/user does not perform any signing.
+     - *Security & Efficiency:* A "signed URL" is a cryptographically signed, time-limited HTTPS link (e.g., valid for 15 minutes) pointing to a private object storage file (S3/GCS/Supabase). This maintains zero-trust security (public storage access is disabled) while keeping JSON payloads lightweight (~150-byte URL string vs. 4.8 MB Base64 payload).
 
 ---
 
