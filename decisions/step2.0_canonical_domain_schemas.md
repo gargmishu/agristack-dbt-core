@@ -165,7 +165,7 @@ Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. 
 class WhatsAppIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
     originating_phone_number: str = Field(..., description="Carrier messaging user ID / phone number (E.164 standard)")
-    channel_message_id: str = Field(..., description="Carrier/Provider unique message ID (e.g. Meta wmid, RCS message ID)")
+    channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
     payload_type: PayloadType
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
     audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
@@ -173,7 +173,10 @@ class WhatsAppIngressPayload(StrictBaseModel):
 ```
 
 ##### WhatsApp Ingress Specific Validations:
-1. **Provider Message ID:** `channel_message_id` must be a non-empty string.
+1. **Provider Message ID Bounds:** `channel_message_id` must be a non-empty string, `min_length=8, max_length=128`.
+   - **min=8:** entropy floor matching `channel_session_id`; all real carrier message IDs are ≥8 chars — shorter values indicate truncation or spoofing.
+   - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
+   - **WhatsApp wmid format note:** WhatsApp message ids always begins with the `wamid.` prefix ("wa" = WhatsApp) followed by a base64-encoded payload issued by the WhatsApp Business Platform. A value that does not start with `wamid.` on a WhatsApp channel is anomalous and should be flagged.
 2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
    - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `text_body` **must** be `None`.
    - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` **must** be `None`.
