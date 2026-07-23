@@ -226,7 +226,7 @@ class IvrIngressPayload(StrictBaseModel):
 ##### IVR Telephony Specific Validations:
 1. **Call Duration Bounds:** `duration_seconds` must be an integer, `min=1, max=600`.
    - **min=1:** A call with `duration_seconds=0` means the call connected but immediately dropped before any audio was captured — no usable recording exists. Negative values are physically impossible. Any call that produced a valid `audio_recording_url` must have at least 1 second of audio.
-   - **max=600 (i.e., 10 minutes):** Any payload with `duration_seconds > 600` is immediately rejected at the Pydantic schema validation layer. Chosen from three converging constraints:
+   - **max=600:** Chosen from three converging constraints:
      1. **Flow design ceiling:** The longest AgriStack IVR flow (subsidy application) was derived bottom-up from its component steps: opening greeting + language selection (~15 s) + 5 navigation menu levels at ~15 s each (~75 s) + 5 data-entry inputs at ~30 s each (system prompt → DTMF digits → readback → confirm = ~150 s) + summary readback (~20 s) + closing + reference number announcement (~15 s) = **~275 s ≈ 4.6 min**. 600s gives 2× headroom above that ceiling without being unbounded.
      2. **Audio file size:**  The file size formula is `sample_rate × bytes_per_sample × channels × duration`. At standard IVR encoding (8 kHz, 8-bit, mono) & 10min audio, it becomes `8,000 × 1 × 1 × 600 = 4.8 MB`. We are currently assuming that SLMs should be able to handle audio files up to this size without chunking.
      3. **Anti-resource-exhaustion:** A hard ceiling prevents stuck or adversarial calls from filling the audio storage bucket with arbitrarily large files.
