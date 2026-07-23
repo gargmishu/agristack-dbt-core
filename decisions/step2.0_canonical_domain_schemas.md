@@ -163,7 +163,7 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format, e.g., `+919876543210`. |
 | **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp` (and any logging timestamps) | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **SessionTelemetryLog** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
 | **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
-| **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`ge=0.0, le=1.0`). |
+| **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`min=0.0, max=1.0`). |
 
 ---
 
@@ -177,7 +177,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
     originating_phone_number: str = Field(..., description="Carrier messaging user ID / phone number (E.164 standard)")
     channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
-    payload_type: PayloadType
+    payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
     audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message")
@@ -200,14 +200,14 @@ class IVRIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
     originating_phone_number: str = Field(..., description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
-    duration_seconds: int = Field(..., ge=1, le=600)
+    duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
 ```
 
 ##### IVR Telephony Specific Validations:
-1. **Call Duration Bounds:** `duration_seconds` must be an integer, `ge=1, le=600`.
-   - **min=1 (ge=1):** A call with `duration_seconds=0` means the call connected but immediately dropped before any audio was captured — no usable recording exists. Negative values are physically impossible. Any call that produced a valid `audio_recording_url` must have at least 1 second of audio.
-   - **max=600 (le=600, i.e., 10 minutes):** Chosen from three converging constraints:
+1. **Call Duration Bounds:** `duration_seconds` must be an integer, `min=1, max=600`.
+   - **min=1:** A call with `duration_seconds=0` means the call connected but immediately dropped before any audio was captured — no usable recording exists. Negative values are physically impossible. Any call that produced a valid `audio_recording_url` must have at least 1 second of audio.
+   - **max=600 (i.e., 10 minutes):** Chosen from three converging constraints:
      1. **Flow design ceiling:** The longest AgriStack IVR flow (subsidy application) was derived bottom-up from its component steps: opening greeting + language selection (~15 s) + 5 navigation menu levels at ~15 s each (~75 s) + 5 data-entry inputs at ~30 s each (system prompt → DTMF digits → readback → confirm = ~150 s) + summary readback (~20 s) + closing + reference number announcement (~15 s) = **~275 s ≈ 4.6 min**. 600s gives 2× headroom above that ceiling without being unbounded.
      2. **Audio file size:**  The file size formula is `sample_rate × bytes_per_sample × channels × duration`. At standard IVR encoding (8 kHz, 8-bit, mono) & 10min audio, it becomees `8,000 × 1 × 1 × 600 = 4.8 MB`. We are currently assuming that SLMs should be able to handle audio files upto this size w/o chunking.
      3. **Anti-resource-exhaustion:** A hard ceiling prevents stuck or adversarial calls from filling the audio storage bucket with arbitrarily large files.
@@ -265,9 +265,9 @@ class StandardizedIntakePayload(StrictBaseModel):
     """
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC Token")
-    channel_type: ChannelType
-    payload_type: PayloadType
-    structure_level: StructureLevel
+    channel_type: ChannelType = Field(..., description="Ingress channel source: whatsapp, ivr_voice, ussd, sms")
+    payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
+    structure_level: StructureLevel = Field(..., description="Structure level: free_text, menu_selection, dtmf_selection")
     unprocessed_input_content: str = Field(..., max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
     intake_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
     language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
@@ -316,8 +316,8 @@ Here we define the **Layer 3 $\rightarrow$ Layer 4** Schema:
 #### SLM Extracted Entity Payload
 ```python
 class ExtractedEntityPayload(StrictBaseModel):
-    application_intent: ApplicationIntent
-    ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
+    application_intent: ApplicationIntent = Field(..., description="Classified citizen intent (e.g. apply_subsidy, check_status)")
+    ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="SLM extraction confidence score bounded [0.0, 1.0]")
     domain_entities: Dict[DomainEntityKey, Any] = Field(default_factory=dict, description="Parsed domain fields keyed by canonical DomainEntityKey")
     is_adversarial_attempt: bool = Field(False, description="Flagged by prompt injection firewall")
     is_structured_menu_bypass: bool = Field(False, description="True for USSD structured menu selections")
@@ -342,9 +342,9 @@ class ExtractedEntityPayload(StrictBaseModel):
 class GovernanceRoutingPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
-    ai_confidence_score: float = Field(..., ge=0.0, le=1.0)
-    eligibility_status: EligibilityStatus
-    governance_decision: GovernanceDecision
+    ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
+    eligibility_status: EligibilityStatus = Field(..., description="Computed eligibility classification state")
+    governance_decision: GovernanceDecision = Field(..., description="Automated or manual governance routing action")
     disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
     assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
