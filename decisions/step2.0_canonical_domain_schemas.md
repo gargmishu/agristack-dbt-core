@@ -301,16 +301,13 @@ class StandardizedIntakePayload(StrictBaseModel):
      - **`TEXT` + `MENU_SELECTION`:** Must be a bounded interactive button/list payload identifier (`1 <= len <= 256`).
      - **`TEXT` + `FREE_TEXT`:** Must be non-empty natural language UTF-8 text (`1 <= len <= 5000`). Requires prompt-injection inspection.
 3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
-4. **Cross-Field Structure Level Compatibility Rules:** `structure_level` must be validated by `channel_type`, then `payload_type`:
-   - **`WHATSAPP` channel:**
-     - If `payload_type == TEXT`: May be `FREE_TEXT` (user-typed message) or `MENU_SELECTION` (button / interactive list selection).
-     - If `payload_type == AUDIO`: Must strictly be `FREE_TEXT` (unstructured spoken voice note).
-   - **`IVR_VOICE` channel:**
-     - `payload_type` is always `AUDIO`: Must strictly be `FREE_TEXT` (unstructured spoken audio recording).
-   - **`USSD` channel:**
-     - `payload_type` is always `TEXT`: Must strictly be `DTMF_SELECTION` (concatenated keypad digit entries).
-   - **`SMS` channel:**
-     - `payload_type` is always `TEXT`: Must strictly be `FREE_TEXT` (free-form SMS text).
+4. **2-Type Structure Level Compatibility Rules:** `structure_level` is validated strictly by the 2-type tuple **`(channel_type, payload_type)`**:
+   - **`USSD` + `TEXT`:** Must strictly be `DTMF_SELECTION`.
+   - **`IVR_VOICE` + `AUDIO`:** Must strictly be `FREE_TEXT`.
+   - **`SMS` + `TEXT`:** Must strictly be `FREE_TEXT`.
+   - **`WHATSAPP` + `TEXT`:** May be `FREE_TEXT` (user-typed) or `MENU_SELECTION` (button / interactive list response).
+   - **`WHATSAPP` + `AUDIO`:** Must strictly be `FREE_TEXT`.
+   - *Any unlisted tuple combination (e.g., USSD + AUDIO, SMS + AUDIO, IVR_VOICE + TEXT) is invalid and rejected.*
 
 ##### Architectural Design Decisions & Rationale:
 
