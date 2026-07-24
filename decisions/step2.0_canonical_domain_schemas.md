@@ -293,10 +293,13 @@ class StandardizedIntakePayload(StrictBaseModel):
 
 ##### Standardized Intake Specific Validations:
 1. **Zero-PII Token Format:** `tokenized_citizen_id` must be an exact 64-character hexadecimal SHA-256 HMAC string (`min_length=64, max_length=64`). Cleartext phone numbers or raw PII are strictly prohibited.
-2. **Input Content Validation (`unprocessed_input_content`):**
+2. **2-Type Input Content Validation (`unprocessed_input_content`):**
    - **General:** Must be a non-empty string between 1 and 5000 characters (`min_length=1, max_length=5000`); validator must reject empty or whitespace-only strings.
-   - **When `payload_type == AUDIO`:** Must validate as a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio recording file.
-   - **When `payload_type == TEXT`:** Must be raw user text (max 5000 chars) or a valid USSD DTMF string matching `^\d+(\*\d+)*$`.
+   - Content formatting and structure are validated strictly by the 2-type tuple **`(payload_type, structure_level)`**, decoupling data shape validation from the transport `channel_type`:
+     - **`AUDIO` + `FREE_TEXT`:** Must validate as a valid signed HTTP/HTTPS URL (`HttpUrl`) pointing to a private storage audio recording file (`.wav` or `.ogg`).
+     - **`TEXT` + `DTMF_SELECTION`:** Must strictly match the DTMF keypad regex `^\d+(\*\d+)*$` with length bounded `1 <= len <= 64`. Rejects letters, whitespace, and carrier `#` delimiters.
+     - **`TEXT` + `MENU_SELECTION`:** Must be a bounded interactive button/list payload identifier (`1 <= len <= 256`).
+     - **`TEXT` + `FREE_TEXT`:** Must be non-empty natural language UTF-8 text (`1 <= len <= 5000`). Requires prompt-injection inspection.
 3. **BCP 47 Locale Pattern:** `language_locale` must match BCP 47 language format regex `^[a-z]{2}-[A-Z]{2}$` (e.g., `"hi-IN"`). Defaults to `"hi-IN"`.
 4. **Cross-Field Structure Level Compatibility Rules:** `structure_level` must be validated by `channel_type`, then `payload_type`:
    - **`WHATSAPP` channel:**
