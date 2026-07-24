@@ -183,7 +183,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message")
 ```
 
-##### WhatsApp Ingress Specific Validations:
+##### WhatsApp Specific Validations:
 1. **Provider Message ID Bounds:** `channel_message_id` must be a non-empty string, `min_length=8, max_length=128`.
    - **min=8:** entropy floor matching `channel_session_id`; all real carrier message IDs are ≥8 chars — shorter values indicate truncation or spoofing.
    - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
@@ -261,6 +261,14 @@ class USSDIngressPayload(StrictBaseModel):
      - `L_d=10` — longest numeric data field expected (10-digit mobile number / MSISDN). If a 16-digit account number or Aadhaar-linked reference is ever required, update to `L_d=16`.
    - **Calculation:** `2(5) + 5×(10+1) - 1 = 10 + 55 - 1 = 64`.
    - **Recalculation rule:** If the USSD flow design changes (deeper menus or longer input fields), update `N`, `D`, or `L_d` and recompute. The `max_length` in the `Field(...)` definition must be updated in lockstep.
+
+
+##### Architectural Design Decisions & Rationale:
+1. **Design Choice — Separation of `ussd_service_code` and `ussd_user_digit_selection`:**
+   - **Decoupling Network Route from Session Payload:** `ussd_service_code` (e.g., `*147#`, `*147*1#`) identifies the network-level telco shortcode dialed on the handset to route the session to the target government scheme/tenant. `ussd_user_digit_selection` (e.g., `1*2*9876543210`) captures the interactive application-level menu selections and data entries entered by the citizen during the active session.
+   - **Eliminating Parameterized Parsing Ambiguity:** Merging them into a single string (e.g., `*147*1*2*9876543210#`) makes it impossible for downstream parsers to deterministically identify where the static shortcode route ends and where citizen inputs begin.
+   - **Distinct Validation Framing:** `ussd_service_code` enforces telecom signaling delimiters (`^\*\d+(\*\d+)*#$`), while `ussd_user_digit_selection` is strictly bounded by form menu length calculations ($2N + D(L_d + 1) - 1 \le 64$) without carrier signaling envelopes.
+   - **Clean Downstream Normalization (Layer 2 → Layer 3):** Allows Layer 2 connectors to forward `ussd_user_digit_selection` directly into `unprocessed_input_content` of `StandardizedIntakePayload` while retaining `ussd_service_code` for scheme context routing and telemetry logs.
 
 ---
 
