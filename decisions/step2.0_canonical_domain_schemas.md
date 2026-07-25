@@ -424,6 +424,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
     disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
     escalation_case_id: Optional[str] = Field(None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
+    decided_at_timestamp: datetime = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
 ```
 
 ##### Governance Routing Decision Specific Validations:
