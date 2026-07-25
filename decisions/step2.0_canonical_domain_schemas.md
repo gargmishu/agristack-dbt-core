@@ -336,13 +336,13 @@ Here we define the **Layer 3 $\rightarrow$ Layer 4** Schema:
 class ExtractedEntityPayload(StrictBaseModel):
     application_intent: ApplicationIntent = Field(..., description="Classified citizen intent (e.g. apply_subsidy, check_status)")
     ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="SLM extraction confidence score bounded [0.0, 1.0]")
-    domain_entities: Dict[DomainEntityKey, Any] = Field(default_factory=dict, description="Parsed domain fields keyed by canonical DomainEntityKey")
+    domain_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Parsed domain fields keyed by canonical DomainEntityKey (values constrained to primitive scalars)")
     is_adversarial_attempt: bool = Field(False, description="Flagged by prompt injection firewall")
     is_structured_menu_bypass: bool = Field(False, description="True for USSD structured menu selections")
 ```
 
 ##### SLM Extracted Entity Specific Validations:
-1. **Domain Entities Key Strictness:** `domain_entities` keys must strictly be valid members of `DomainEntityKey` enum (e.g. `district`, `crop_name`, `land_size_acres`). Any uncalibrated key names or hallucinations emitted by the SLM will trigger a Pydantic `ValidationError` and be rejected.
+1. **Domain Entities Key & Value Strictness:** `domain_entities` keys must strictly be valid members of `DomainEntityKey` enum (e.g. `district`, `crop_name`, `land_size_acres`), and values must strictly be primitive scalars (`Union[str, float, int]`). Any uncalibrated key names, arbitrary nested objects/dicts/lists, or prompt-injected structures emitted by the SLM will trigger a Pydantic `ValidationError` and be rejected.
 2. **Adversarial Zeroing Enforcement Rule:** If `is_adversarial_attempt == True`, `ai_confidence_score` **must** be automatically coerced to `0.0` regardless of the original score.
 
 ##### Flag Behavior & Concrete Examples:
