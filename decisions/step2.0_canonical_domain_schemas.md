@@ -175,7 +175,7 @@ Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. 
 ```python
 class WhatsAppIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
-    originating_phone_number: str = Field(..., description="Carrier messaging user ID / phone number (E.164 standard)")
+    originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Carrier messaging user ID / phone number (E.164 standard)")
     channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
     payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
@@ -198,7 +198,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
 ```python
 class IVRIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
-    originating_phone_number: str = Field(..., description="Originating ANI phone number (E.164 standard)")
+    originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
@@ -228,7 +228,7 @@ class IVRIngressPayload(StrictBaseModel):
 ```python
 class USSDIngressPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
-    originating_phone_number: str = Field(..., description="Originating MSISDN phone number (E.164 standard)")
+    originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating MSISDN phone number (E.164 standard)")
     ussd_service_code: str = Field(..., pattern=r"^\*\d+(\*\d+)*#$", description="USSD shortcode (e.g., *147#, *147*1*2#)")
     ussd_user_digit_selection: str = Field(..., min_length=1, max_length=64, description="Concatenated digit selections and data entries separated by *")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when telco received USSD code")
@@ -456,6 +456,7 @@ class CaseworkerIncidentStagingPayload(StrictBaseModel):
     """
     escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
+    payload_id: str = Field(..., description="Foreign key referencing original extraction payload (session_extraction_details.payload_id)")
     tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
