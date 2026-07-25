@@ -553,22 +553,59 @@ async def validation_exception_handler(incoming_request: Request, validation_err
 
 ## 6. Physical File Implementation Plan
 
-Step 2.0 establishes the following file structure:
+Step 2.0 establishes the following physical file structure and model export hierarchy:
 
 ```text
 agristack-dbt-core/
-└── src/
+├── src/
+│   ├── models/
+│   │   ├── __init__.py             <-- Centralized model exports for package-level imports
+│   │   ├── base.py                 <-- StrictBaseModel base configuration class
+│   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
+│   │   ├── ingress.py              <-- WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
+│   │   ├── intake.py               <-- StandardizedIntakePayload
+│   │   ├── governance.py           <-- ExtractedEntityPayload, GovernanceRoutingPayload
+│   │   ├── caseworker.py           <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
+│   │   └── disbursement.py         <-- DisbursementCallbackPayload
+│   └── errors/
+│       ├── __init__.py             <-- Error handler package exports
+│       └── handlers.py             <-- RFC 7807 validation_exception_handler implementation
+└── tests/
     ├── models/
-    │   ├── __init__.py
-    │   ├── base.py                 <-- StrictBaseModel definition
-    │   ├── enums.py                <-- Channel, Payload, Intent & Governance Enums
-    │   ├── ingress.py              <-- WhatsApp, IVR, USSD carrier models
-    │   ├── intake.py               <-- StandardizedIntakePayload model
-    │   └── governance.py           <-- SLM Extraction & Governance models
+    │   ├── test_ingress.py         <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
+    │   ├── test_intake.py          <-- 2-type tuple validation & zero-PII HMAC token format tests
+    │   ├── test_governance.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
+    │   ├── test_caseworker.py      <-- Incident ticket staging & caseworker review decision tests
+    │   └── test_disbursement.py    <-- Bank clearing callback & terminal failure reason tests
     └── errors/
-        ├── __init__.py
-        └── handlers.py             <-- RFC 7807 validation error handler
+        └── test_handlers.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
 ```
+
+### Module Responsibilities & Model Exports
+
+1. **`src/models/base.py` (`StrictBaseModel`):**
+   Inherits from Pydantic `BaseModel`. Configures `extra="forbid"`, `str_strip_whitespace=True`, `use_enum_values=True`, and `frozen=True` (immutability). All payload classes inherit from `StrictBaseModel`.
+
+2. **`src/models/enums.py`:**
+   Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
+
+3. **`src/models/ingress.py`:**
+   Contains Layer 1 $\rightarrow$ Layer 2 carrier ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling ($1 \le \text{duration} \le 600$), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`).
+
+4. **`src/models/intake.py`:**
+   Contains Layer 2 $\rightarrow$ Layer 3 intake payload: `StandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
+
+5. **`src/models/governance.py`:**
+   Contains Layer 3 $\rightarrow$ Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.
+
+6. **`src/models/caseworker.py`:**
+   Contains Step 11 manual escalation schemas: `CaseworkerIncidentStagingPayload` (queue ticket staging into District Officer Dashboard) and `CaseworkerReviewPayload` (manual decision submitted by human caseworker).
+
+7. **`src/models/disbursement.py`:**
+   Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
+
+8. **`src/errors/handlers.py`:**
+   Implements `validation_exception_handler` to convert Pydantic validation failures into RFC 7807 problem details payloads, sanitizing internal implementation details while returning machine-readable `invalid_params` error arrays.
 
 ---
 
