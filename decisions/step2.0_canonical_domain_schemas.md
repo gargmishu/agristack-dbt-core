@@ -422,7 +422,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
     governance_decision: GovernanceDecision = Field(..., description="Automated or manual governance routing action")
     disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT")
     disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
-    assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
+    escalation_case_id: Optional[str] = Field(None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
 ```
 
@@ -433,13 +433,13 @@ class GovernanceRoutingPayload(StrictBaseModel):
    - If `governance_decision` is `AUTO_APPROVE`, `MANUAL_APPROVE`, or `AUTOMATED_PAYOUT`:
      - `disbursement_txn_id` **must** be populated.
      - `disbursement_status` **must** be `PENDING` or `INITIATED`.
-     - `rejection_reason` **must** be `None`.
+     - `rejection_reason` and `escalation_case_id` **must** be `None`.
    - If `governance_decision` is `AUTO_REJECT` or `MANUAL_REJECT`:
      - `rejection_reason` **must** be populated.
-     - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
+     - `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` **must** be `None`.
    - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW` or `HUMAN_REVIEW`:
-     - `assigned_caseworker_id` **must** be populated.
-     - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
+     - `escalation_case_id` **must** be a valid incident case ticket string (`SPP-CASE-YYYY-XXXXXX`).
+     - `disbursement_txn_id`, `disbursement_status`, and `rejection_reason` **must** be `None`.
 
 ---
 
@@ -463,6 +463,59 @@ class DisbursementCallbackPayload(StrictBaseModel):
 2. **Terminal State Conditional Rule:**
    - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
    - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.
+
+---
+
+### 4.5 Caseworker Review Decision Payload (`src/models/caseworker.py`)
+
+Manual decision submitted by a human caseworker or agricultural officer reviewing an escalated incident ticket from the District Review Ledger Dashboard:
+
+```python
+class CaseworkerReviewPayload(StrictBaseModel):
+    """
+    Manual decision submitted by a human caseworker/officer reviewing an escalated case.
+    """
+    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
+    payload_id: str = Field(..., description="Foreign key referencing original extraction payload (session_extraction_details.payload_id)")
+    reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID of the caseworker submitting decision")
+    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE or MANUAL_REJECT")
+    review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
+    approved_amount: Optional[float] = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
+    rejection_reason: Optional[str] = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
+    decision_timestamp: datetime = Field(..., description="UTC timestamp when officer submitted decision")
+```
+
+##### Caseworker Review Specific Validations:
+1. **Case Ticket Match:** `escalation_case_id` must match a staged case ticket generated during `step_11_caseworker_incident_staging` (`SPP-CASE-...`).
+2. **Decision Enum Restriction:** `governance_decision` must strictly be either `MANUAL_APPROVE` or `MANUAL_REJECT`. Automated routing decisions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
+3. **Conditional Field Population Rules:**
+   - If `governance_decision == MANUAL_APPROVE`: `approved_amount` **must** be populated (> 0.0); `rejection_reason` **must** be `None`.
+   - If `governance_decision == MANUAL_REJECT`: `rejection_reason` **must** be a non-empty string explaining rejection grounds; `approved_amount` **must** be `None`.
+
+---
+
+### 4.6 Caseworker Incident Staging Payload (`src/models/caseworker.py`)
+
+Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
+
+```python
+class CaseworkerIncidentStagingPayload(StrictBaseModel):
+    """
+    Payload emitted by Step 11 to stage an escalated case ticket inside the Caseworker Review Dashboard.
+    """
+    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
+    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
+    application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
+    extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
+    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
+    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation (e.g. LOW_CONFIDENCE, ADVERSARIAL_FLAG, REGISTRY_DISCREPANCY)")
+    staged_at_timestamp: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
+```
+
+##### Caseworker Incident Staging Specific Validations:
+1. **Incident Case Ticket Pattern:** `escalation_case_id` must match the standardized ticket format `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`).
+2. **Zero-PII Token Enforcement:** `tokenized_citizen_id` must be an exact 64-character SHA-256 HMAC token. Cleartext MSISDN or Aadhaar values are strictly prohibited.
 
 ---
 
