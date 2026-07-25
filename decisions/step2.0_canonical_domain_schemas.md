@@ -35,7 +35,9 @@ To establish zero-trust inter-layer payload validation, four runtime validation 
 
 ---
 
-## 3. Base Configuration (`StrictBaseModel`)
+## 3. Core Foundation & Standardized Enums
+
+### 3.1 Base Configuration (`StrictBaseModel`)
 
 All domain payloads inherit from a unified `StrictBaseModel` to enforce Zero-Trust security rules:
 
@@ -62,7 +64,7 @@ class StrictBaseModel(BaseModel):
 
 ---
 
-## 3. Standardized Enums (`src/models/enums.py`)
+### 3.2 Standardized Enums (`src/models/enums.py`)
 
 Standardized enums establish a single source of truth across all architectural layers, eliminating "magic strings", securing SLM entity extraction against uncalibrated outputs, and providing 1:1 mapping with database `ENUM` types:
 
@@ -159,11 +161,12 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **Auto Whitespace Trimming** | *All String Fields* | **All Payloads** | Enforced via `StrictBaseModel(str_strip_whitespace=True)`. Auto-trims leading/trailing spaces. |
 | **Strict Enum Coercion** | *All Enum Fields* | **All Payloads** | Enforced via `StrictBaseModel(use_enum_values=True)`. Validates string against declared `Enum`. |
 | **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
-| **Session ID Bounds** | `channel_session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **SessionTelemetryLog** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
-| **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format, e.g., `+919876543210`. |
-| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp` (and any logging timestamps) | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **SessionTelemetryLog** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
+| **Session ID Bounds** | `channel_session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. 
+| **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format regex `^\+[1-9]\d{1,14}$`, e.g., `+919876543210`. |
+| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp`, `decided_at_timestamp`, `staged_at_timestamp`, `decision_timestamp`, `cleared_at_timestamp` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
 | **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
 | **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`min=0.0, max=1.0`). |
+| **Incident Ticket Pattern** | `escalation_case_id` | **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload**, **CaseworkerReviewPayload** | Must match ticket format regex `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`). |
 
 ---
 
