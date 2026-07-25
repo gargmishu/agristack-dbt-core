@@ -377,8 +377,37 @@ class ExtractedEntityPayload(StrictBaseModel):
      - Emits a high-priority security telemetry alert to `SessionTelemetryLog`.
 
 - **`is_structured_menu_bypass = True` (Deterministic Menu Bypass Flag):**
-  - *Trigger:* Input originated from structured USSD keypad selection (`"1*2*10"`) or WhatsApp interactive button click.
+  - *Trigger:* Input originated from structured USSD keypad selection (e.g., `"1*2*101"`) or WhatsApp interactive button click (`structure_level` is `DTMF_SELECTION` or `MENU_SELECTION`).
   - *Outcome:* SLM NLU is bypassed entirely; entities are populated via deterministic lookup table with `ai_confidence_score = 1.0` and `is_structured_menu_bypass = True`.
+
+##### Detailed End-to-End Example: Deterministic Menu Bypass (`is_structured_menu_bypass = True`)
+
+1. **Structured Ingress Input (USSD Keypad Entry / WhatsApp Button Click):**
+   > *Channel:* `USSD`
+   > *Keypad Digit String (`unprocessed_input_content`):* `"1*2*101"`
+   > *Decoded Context:* `1` = PM-KISAN Crop Subsidy, `2` = Ambala District, `101` = Status Inquiry Action
+   > *Structure Level:* `DTMF_SELECTION`
+
+2. **Layer 3 Deterministic Lookup & SLM NLU Bypass:**
+   Because `structure_level == DTMF_SELECTION`, the system bypasses the SLM entity extraction pipeline (saving ~800ms of GPU inference latency and eliminating AI hallucination risk). The string `"1*2*101"` is mapped directly via a static lookup table into the canonical payload:
+
+   ```json
+   {
+     "application_intent": "check_status",
+     "ai_confidence_score": 1.0,
+     "domain_entities": {
+       "subsidy_scheme_id": "PM_KISAN_2026",
+       "district": "Ambala"
+     },
+     "is_adversarial_attempt": false,
+     "is_structured_menu_bypass": true
+   }
+   ```
+
+3. **Validation & Pipeline Enforcement Trace:**
+   - **Deterministic Baseline Confidence:** Pydantic validation rule assigns `ai_confidence_score = 1.0` (100% confidence) because keypad/button inputs are zero-ambiguity deterministic selections.
+   - **Zero AI Latency & Zero Hallucination:** No SLM/NLU model call is executed; entity extraction risk is 0%.
+   - **Downstream Governance Decision (Layer 4):** Layer 4 evaluates `ai_confidence_score = 1.0 >= 0.85` (auto-approval threshold gate), allowing instant automated query execution or disbursement verification.
 
 ---
 
