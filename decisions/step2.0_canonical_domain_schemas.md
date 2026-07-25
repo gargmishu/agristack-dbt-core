@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors $\rightarrow$ Layer 2 Gateways $\rightarrow$ Layer 3 Public Agent Intake $\rightarrow$ Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/models/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
+This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/models/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
 
 ---
 
@@ -172,7 +172,7 @@ To maintain consistency and avoid duplicate validation logic across services, th
 
 ### 4.1 Carrier Ingress Payloads (`src/models/ingress.py`)
 
-Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1 and Layer 2 and MUST be tokenized before passing into Layer 3. Here we define the **Layer 1 $\rightarrow$ Layer 2** Schema:
+Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1 and Layer 2 and MUST be tokenized before passing into Layer 3. Here we define the **Layer 1 -> Layer 2** Schema:
 
 #### WhatsApp Ingress Payload
 ```python
@@ -193,7 +193,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
    - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
    - **WhatsApp wmid format note:** WhatsApp message ids always begins with the `wamid.` prefix ("wa" = WhatsApp) followed by a base64-encoded payload issued by the WhatsApp Business Platform. A value that does not start with `wamid.` on a WhatsApp channel is anomalous and should be flagged.
 2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
-   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `duration_seconds` **must** be an integer ($1 \le \text{duration} \le 600$); `text_body` **must** be `None`.
+   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `duration_seconds` **must** be an integer (`1 <= duration <= 600`); `text_body` **must** be `None`.
    - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` and `duration_seconds` **must** be `None`.
 
 ---
@@ -219,8 +219,8 @@ class IVRIngressPayload(StrictBaseModel):
    - **`audio_recording_url` (Binary Data Pointer):** Cryptographically signed, time-limited HTTPS URL pointing to the private object storage audio recording (.wav). Keeps JSON metadata payloads lightweight (~150 bytes) instead of shipping multi-megabyte binary blobs.
    - **`duration_seconds` (Fail-Fast Gatekeeping & Resource Budgeting):** Metadata integer field enabling immediate schema-level rejection of invalid, dropped, or oversized calls *prior to* any network I/O or audio download. Also enables downstream ASR/STT orchestrators to allocate GPU/compute timeout budgets without decoding audio headers.
 3. **Actual Audio Stream Validation (e.g., `duration_seconds=480` (8 min) but actual audio > 10 min):**
-   - **Ingress Layer (Layer 1 → Layer 2):** The JSON schema evaluates `duration_seconds=480` against `min=1, max=600`. The metadata check passes, and `audio_recording_url` is verified for URL syntax only (no network download occurs during Pydantic schema instantiation).
-   - **Audio Decoding Layer (Layer 2 → Layer 3 Ingestion Worker):** When the ingestion worker fetches the `.wav` file, it computes actual physical duration from decoded samples: `actual_duration = total_samples / sample_rate`.
+   - **Ingress Layer (Layer 1 -> Layer 2):** The JSON schema evaluates `duration_seconds=480` against `min=1, max=600`. The metadata check passes, and `audio_recording_url` is verified for URL syntax only (no network download occurs during Pydantic schema instantiation).
+   - **Audio Decoding Layer (Layer 2 -> Layer 3 Ingestion Worker):** When the ingestion worker fetches the `.wav` file, it computes actual physical duration from decoded samples: `actual_duration = total_samples / sample_rate`.
    - **Discrepancy Action:** If `actual_duration > 600s` or drifts beyond tolerance from `duration_seconds`:
      - The worker triggers an `AudioDurationMismatchError` / `PayloadBufferOverflowError`.
      - The audio is **strictly rejected** from entering the single-pass SLM/ASR pipeline (protecting GPU workers from Out-Of-Memory crashes and context truncation hallucinations).
@@ -271,14 +271,14 @@ class USSDIngressPayload(StrictBaseModel):
 1. **Design Choice — Separation of `ussd_service_code` and `ussd_user_digit_selection`:**
    - **Decoupling Network Route from Session Payload:** `ussd_service_code` (e.g., `*147#`, `*147*1#`) identifies the network-level telco shortcode dialed on the handset to route the session to the target government scheme/tenant. `ussd_user_digit_selection` (e.g., `1*2*9876543210`) captures the interactive application-level menu selections and data entries entered by the citizen during the active session.
    - **Eliminating Parameterized Parsing Ambiguity:** Merging them into a single string (e.g., `*147*1*2*9876543210#`) makes it impossible for downstream parsers to deterministically identify where the static shortcode route ends and where citizen inputs begin.
-   - **Distinct Validation Framing:** `ussd_service_code` enforces telecom signaling delimiters (`^\*\d+(\*\d+)*#$`), while `ussd_user_digit_selection` is strictly bounded by form menu length calculations ($2N + D(L_d + 1) - 1 \le 64$) without carrier signaling envelopes.
-   - **Clean Downstream Normalization (Layer 2 → Layer 3):** Allows Layer 2 connectors to forward `ussd_user_digit_selection` directly into `unprocessed_input_content` of `StandardizedIntakePayload` while retaining `ussd_service_code` for scheme context routing and telemetry logs.
+   - **Distinct Validation Framing:** `ussd_service_code` enforces telecom signaling delimiters (`^\*\d+(\*\d+)*#$`), while `ussd_user_digit_selection` is strictly bounded by form menu length calculations (`2N + D(L_d + 1) - 1 <= 64`) without carrier signaling envelopes.
+   - **Clean Downstream Normalization (Layer 2 -> Layer 3):** Allows Layer 2 connectors to forward `ussd_user_digit_selection` directly into `unprocessed_input_content` of `StandardizedIntakePayload` while retaining `ussd_service_code` for scheme context routing and telemetry logs.
 
 ---
 
 ### 4.2 Public Agent Intake Payload (`src/models/intake.py`)
 
-This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 $\rightarrow$ Layer 3** Schema:
+This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
 
 ```python
 class StandardizedIntakePayload(StrictBaseModel):
@@ -333,7 +333,7 @@ class StandardizedIntakePayload(StrictBaseModel):
 
 ### 4.3 Intent & Governance Schemas (`src/models/governance.py`)
 
-Here we define the **Layer 3 $\rightarrow$ Layer 4** Schema:
+Here we define the **Layer 3 -> Layer 4** Schema:
 
 #### SLM Extracted Entity Payload
 ```python
@@ -594,13 +594,13 @@ agristack-dbt-core/
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
 
 3. **`src/models/ingress.py`:**
-   Contains Layer 1 $\rightarrow$ Layer 2 carrier ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling ($1 \le \text{duration} \le 600$), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`).
+   Contains Layer 1 -> Layer 2 carrier ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`).
 
 4. **`src/models/intake.py`:**
-   Contains Layer 2 $\rightarrow$ Layer 3 intake payload: `StandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
+   Contains Layer 2 -> Layer 3 intake payload: `StandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
 
 5. **`src/models/governance.py`:**
-   Contains Layer 3 $\rightarrow$ Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.
+   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.
 
 6. **`src/models/caseworker.py`:**
    Contains Step 11 manual escalation schemas: `CaseworkerIncidentStagingPayload` (queue ticket staging into District Officer Dashboard) and `CaseworkerReviewPayload` (manual decision submitted by human caseworker).
