@@ -478,7 +478,6 @@ class CaseworkerReviewPayload(StrictBaseModel):
     Manual decision submitted by a human caseworker/officer reviewing an escalated case.
     """
     escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
-    payload_id: str = Field(..., description="Foreign key referencing original extraction payload (session_extraction_details.payload_id)")
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID of the caseworker submitting decision")
     governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE or MANUAL_REJECT")
     review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
