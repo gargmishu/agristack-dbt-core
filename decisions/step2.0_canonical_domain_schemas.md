@@ -418,19 +418,51 @@ class GovernanceRoutingPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
     ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
-    eligibility_status: EligibilityStatus = Field(..., description="Computed eligibility classification state")
+    eligibility_status: EligibilityStatus = Field(..., description="Computed citizen scheme eligibility status from DPI registry cross-matching (ELIGIBLE, INELIGIBLE, PENDING_VERIFICATION, REQUIRES_REVIEW)")
     governance_decision: GovernanceDecision = Field(..., description="Automated or manual governance routing action")
-    disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE")
-    assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW")
+    disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT")
+    disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
+    assigned_caseworker_id: Optional[str] = Field(None, description="Populated for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
 ```
 
 ##### Governance Routing Decision Specific Validations:
 1. **Payload UUID Foreign Key:** `payload_id` must be a valid UUID string referencing `session_extraction_details.payload_id`.
-2. **Conditional Field Population Rules:**
-   - If `governance_decision` is `AUTO_APPROVE`, `MANUAL_APPROVE`, or `AUTOMATED_PAYOUT`: `disbursement_txn_id` **must** be populated; `rejection_reason` **must** be `None`.
-   - If `governance_decision` is `AUTO_REJECT` or `MANUAL_REJECT`: `rejection_reason` **must** be populated; `disbursement_txn_id` **must** be `None`.
-   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW` or `HUMAN_REVIEW`: `assigned_caseworker_id` **must** be populated.
+2. **DPI Eligibility Status Source:** `eligibility_status` is computed during Layer 4 execution by cross-matching citizen HMAC identity tokens (`tokenized_citizen_id`), land cadastral records (`survey_number`, `district`), and seasonal crop survey data against sovereign DPI registries.
+3. **Conditional Field Population Rules:**
+   - If `governance_decision` is `AUTO_APPROVE`, `MANUAL_APPROVE`, or `AUTOMATED_PAYOUT`:
+     - `disbursement_txn_id` **must** be populated.
+     - `disbursement_status` **must** be `PENDING` or `INITIATED`.
+     - `rejection_reason` **must** be `None`.
+   - If `governance_decision` is `AUTO_REJECT` or `MANUAL_REJECT`:
+     - `rejection_reason` **must** be populated.
+     - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
+   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW` or `HUMAN_REVIEW`:
+     - `assigned_caseworker_id` **must** be populated.
+     - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
+
+---
+
+### 4.4 Payment Clearing Callback Schema (`src/models/disbursement.py`)
+
+Incoming asynchronous payment status callback payload received from external payment clearing rails (PFMS / NPCI / OpenSPP) when financial transactions settle or fail:
+
+```python
+class DisbursementCallbackPayload(StrictBaseModel):
+    """
+    Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
+    """
+    disbursement_txn_id: str = Field(..., min_length=8, max_length=128, description="Unique payment clearing transaction ID")
+    disbursement_status: DisbursementStatus = Field(..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED")
+    cleared_at_timestamp: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
+    failure_reason_code: Optional[str] = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
+```
+
+##### Payment Clearing Callback Specific Validations:
+1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceRoutingPayload.disbursement_txn_id`.
+2. **Terminal State Conditional Rule:**
+   - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
+   - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.
 
 ---
 
