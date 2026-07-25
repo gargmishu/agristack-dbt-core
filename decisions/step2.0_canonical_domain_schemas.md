@@ -443,31 +443,33 @@ class GovernanceRoutingPayload(StrictBaseModel):
 
 ---
 
-### 4.4 Payment Clearing Callback Schema (`src/models/disbursement.py`)
+### 4.4 Caseworker Incident Staging & Review Schemas (`src/models/caseworker.py`)
 
-Incoming asynchronous payment status callback payload received from external payment clearing rails (PFMS / NPCI / OpenSPP) when financial transactions settle or fail:
+#### 4.4.1 Caseworker Incident Staging Payload
+Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
 
 ```python
-class DisbursementCallbackPayload(StrictBaseModel):
+class CaseworkerIncidentStagingPayload(StrictBaseModel):
     """
-    Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
+    Payload emitted by Step 11 to stage an escalated case ticket inside the Caseworker Review Dashboard.
     """
-    disbursement_txn_id: str = Field(..., min_length=8, max_length=128, description="Unique payment clearing transaction ID")
-    disbursement_status: DisbursementStatus = Field(..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED")
-    cleared_at_timestamp: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
-    failure_reason_code: Optional[str] = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
+    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
+    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
+    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
+    application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
+    extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
+    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
+    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation (e.g. LOW_CONFIDENCE, ADVERSARIAL_FLAG, REGISTRY_DISCREPANCY)")
+    staged_at_timestamp: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
 ```
 
-##### Payment Clearing Callback Specific Validations:
-1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceRoutingPayload.disbursement_txn_id`.
-2. **Terminal State Conditional Rule:**
-   - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
-   - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.
+##### Caseworker Incident Staging Specific Validations:
+1. **Incident Case Ticket Pattern:** `escalation_case_id` must match the standardized ticket format `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`).
+2. **Zero-PII Token Enforcement:** `tokenized_citizen_id` must be an exact 64-character SHA-256 HMAC token. Cleartext MSISDN or Aadhaar values are strictly prohibited.
 
 ---
 
-### 4.5 Caseworker Review Decision Payload (`src/models/caseworker.py`)
-
+#### 4.4.2 Caseworker Review Decision Payload
 Manual decision submitted by a human caseworker or agricultural officer reviewing an escalated incident ticket from the District Review Ledger Dashboard:
 
 ```python
@@ -494,28 +496,26 @@ class CaseworkerReviewPayload(StrictBaseModel):
 
 ---
 
-### 4.6 Caseworker Incident Staging Payload (`src/models/caseworker.py`)
+### 4.5 Payment Clearing Callback Schema (`src/models/disbursement.py`)
 
-Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
+Incoming asynchronous payment status callback payload received from external payment clearing rails (PFMS / NPCI / OpenSPP) when financial transactions settle or fail:
 
 ```python
-class CaseworkerIncidentStagingPayload(StrictBaseModel):
+class DisbursementCallbackPayload(StrictBaseModel):
     """
-    Payload emitted by Step 11 to stage an escalated case ticket inside the Caseworker Review Dashboard.
+    Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
     """
-    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
-    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
-    application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
-    extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation (e.g. LOW_CONFIDENCE, ADVERSARIAL_FLAG, REGISTRY_DISCREPANCY)")
-    staged_at_timestamp: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
+    disbursement_txn_id: str = Field(..., min_length=8, max_length=128, description="Unique payment clearing transaction ID")
+    disbursement_status: DisbursementStatus = Field(..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED")
+    cleared_at_timestamp: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
+    failure_reason_code: Optional[str] = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
 ```
 
-##### Caseworker Incident Staging Specific Validations:
-1. **Incident Case Ticket Pattern:** `escalation_case_id` must match the standardized ticket format `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`).
-2. **Zero-PII Token Enforcement:** `tokenized_citizen_id` must be an exact 64-character SHA-256 HMAC token. Cleartext MSISDN or Aadhaar values are strictly prohibited.
+##### Payment Clearing Callback Specific Validations:
+1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceRoutingPayload.disbursement_txn_id`.
+2. **Terminal State Conditional Rule:**
+   - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
+   - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.
 
 ---
 
