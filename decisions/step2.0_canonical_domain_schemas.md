@@ -182,8 +182,9 @@ class WhatsAppIngressPayload(StrictBaseModel):
     channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
     payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
     ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
-    audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file")
-    text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message")
+    audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file (populated for AUDIO)")
+    duration_seconds: Optional[int] = Field(None, min=1, max=600, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)")
+    text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message (populated for TEXT)")
 ```
 
 ##### WhatsApp Specific Validations:
@@ -192,8 +193,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
    - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
    - **WhatsApp wmid format note:** WhatsApp message ids always begins with the `wamid.` prefix ("wa" = WhatsApp) followed by a base64-encoded payload issued by the WhatsApp Business Platform. A value that does not start with `wamid.` on a WhatsApp channel is anomalous and should be flagged.
 2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
-   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `text_body` **must** be `None`.
-   - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` **must** be `None`.
+   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `duration_seconds` **must** be an integer ($1 \le \text{duration} \le 600$); `text_body` **must** be `None`.
+   - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` and `duration_seconds` **must** be `None`.
 
 ---
 
