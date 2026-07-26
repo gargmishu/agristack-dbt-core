@@ -1,6 +1,6 @@
 """Layer 1 USSD Menu Edge Connector skeleton."""
 
-from src.models.ingress import USSDIngressPayload
+from src.models.raw_ingress import USSDIngressPayload
 
 
 class USSDConnector:
