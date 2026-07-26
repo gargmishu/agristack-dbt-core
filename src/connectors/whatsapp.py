@@ -1,6 +1,6 @@
 """Layer 1 WhatsApp Edge Connector skeleton."""
 
-from src.models.ingress import WhatsAppIngressPayload
+from src.models.raw_ingress import WhatsAppIngressPayload
 
 
 class WhatsAppConnector:

@@ -1,6 +1,6 @@
 """Layer 1 IVR Telephony Edge Connector skeleton."""
 
-from src.models.ingress import IVRIngressPayload
+from src.models.raw_ingress import IVRIngressPayload
 
 
 class IVRConnector:

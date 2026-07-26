@@ -571,7 +571,11 @@ agristack-dbt-core/
 │   │   ├── __init__.py             <-- Centralized model exports for package-level imports
 │   │   ├── base.py                 <-- StrictBaseModel base configuration class
 │   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
-│   │   ├── ingress.py              <-- WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
+│   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
+│   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
+│   │   │   ├── whatsapp.py         <-- WhatsAppIngressPayload
+│   │   │   ├── ivr.py              <-- IVRIngressPayload
+│   │   │   └── ussd.py             <-- USSDIngressPayload
 │   │   ├── public_agent.py         <-- StandardizedPublicAgentPayload
 │   │   ├── governance.py           <-- ExtractedEntityPayload, GovernanceRoutingPayload
 │   │   ├── caseworker.py           <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
@@ -581,7 +585,7 @@ agristack-dbt-core/
 │       └── handlers.py             <-- RFC 7807 validation_exception_handler implementation
 └── tests/
     ├── models/
-    │   ├── test_ingress.py         <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
+    │   ├── test_raw_ingress.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
     │   ├── test_public_agent.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
     │   ├── test_governance.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
     │   ├── test_caseworker.py      <-- Incident ticket staging & caseworker review decision tests
@@ -598,8 +602,8 @@ agristack-dbt-core/
 2. **`src/models/enums.py`:**
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
 
-3. **`src/models/ingress.py`:**
-   Contains Layer 1 -> Layer 2 carrier ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`).
+3. **`src/models/raw_ingress/` Subpackage (`whatsapp.py`, `ivr.py`, `ussd.py`):**
+   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
 
 4. **`src/models/public_agent.py`:**
    Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.

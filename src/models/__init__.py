@@ -17,12 +17,12 @@ from src.models.enums import (
     StructureLevel,
 )
 from src.models.governance import ExtractedEntityPayload, GovernanceRoutingPayload
-from src.models.ingress import (
+from src.models.public_agent import StandardizedPublicAgentPayload
+from src.models.raw_ingress import (
     IVRIngressPayload,
     USSDIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.models.public_agent import StandardizedPublicAgentPayload
 
 __all__ = [
     "StrictBaseModel",

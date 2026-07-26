@@ -4,7 +4,7 @@ import pytest
 from pydantic import HttpUrl, TypeAdapter, ValidationError
 
 from src.models.enums import PayloadType
-from src.models.ingress import (
+from src.models.raw_ingress import (
     IVRIngressPayload,
     USSDIngressPayload,
     WhatsAppIngressPayload,
