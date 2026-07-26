@@ -9,8 +9,8 @@ from src.models.validators import (
 )
 
 
-class StandardizedPublicAgentPayload(StrictBaseModel):
-    """Normalized, zero-PII public agent payload (Layer 2 -> Layer 3)."""
+class PublicAgentStandardizedIntakePayload(StrictBaseModel):
+    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3)."""
 
     channel_session_id: ChannelSessionId
     tokenized_citizen_id: HMACCitizenToken
@@ -36,7 +36,7 @@ class StandardizedPublicAgentPayload(StrictBaseModel):
     public_agent_timestamp: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_type_tuple_rules(self) -> "StandardizedPublicAgentPayload":
+    def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":
         """Enforces 2-type tuple input rules for channel and modality compatibility."""
         payload_str = str(self.payload_type)
         structure_str = str(self.structure_level)

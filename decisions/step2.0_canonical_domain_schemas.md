@@ -281,12 +281,12 @@ class USSDIngressPayload(StrictBaseModel):
 
 ---
 
-### 4.2 Public Agent Payload (`src/models/public_agent.py`)
+### 4.2 Public Agent Payload (`src/models/public_agent/standardized_intake_payload.py`)
 
 This is the **immutable contract payload** submitted to `PublicAgentApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
 
 ```python
-class StandardizedPublicAgentPayload(StrictBaseModel):
+class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """
     Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Public Agent API.
     """
@@ -421,9 +421,9 @@ class ExtractedEntityPayload(StrictBaseModel):
 
 ---
 
-#### Governance Decision Payload
+#### Application Decision Payload
 ```python
-class GovernanceDecisionPayload(StrictBaseModel):
+class ApplicationDecisionPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
     ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
@@ -522,7 +522,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
 ```
 
 ##### Payment Clearing Callback Specific Validations:
-1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceDecisionPayload.disbursement_txn_id`.
+1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `ApplicationDecisionPayload.disbursement_txn_id`.
 2. **Terminal State Conditional Rule:**
    - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
    - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.

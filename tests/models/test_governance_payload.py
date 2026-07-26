@@ -10,7 +10,7 @@ from src.models.enums import (
     EligibilityStatus,
     GovernanceDecision,
 )
-from src.models.governance import ExtractedEntityPayload, GovernanceDecisionPayload
+from src.models.governance import ApplicationDecisionPayload, ExtractedEntityPayload
 
 
 def test_extracted_entity_adversarial_zeroing() -> None:
@@ -27,7 +27,7 @@ def test_extracted_entity_adversarial_zeroing() -> None:
 
 
 def test_governance_routing_approved_decision() -> None:
-    payload = GovernanceDecisionPayload(
+    payload = ApplicationDecisionPayload(
         channel_session_id="sess_12345678",
         payload_id="550e8400-e29b-41d4-a716-446655440000",
         ai_confidence_score=0.92,
@@ -43,7 +43,7 @@ def test_governance_routing_approved_decision() -> None:
 
 def test_governance_routing_review_decision_missing_case_id() -> None:
     with pytest.raises(ValidationError) as exc:
-        GovernanceDecisionPayload(
+        ApplicationDecisionPayload(
             channel_session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.45,

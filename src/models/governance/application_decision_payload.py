@@ -12,8 +12,8 @@ from src.models.validators import (
 )
 
 
-class GovernanceDecisionPayload(StrictBaseModel):
-    """Governance decision payload emitted by Layer 4 rules engine."""
+class ApplicationDecisionPayload(StrictBaseModel):
+    """Application decision payload emitted by Layer 4 rules engine."""
 
     channel_session_id: ChannelSessionId
     payload_id: ExtractionPayloadId
@@ -40,7 +40,7 @@ class GovernanceDecisionPayload(StrictBaseModel):
     decided_at_timestamp: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_conditional_decision_fields(self) -> "GovernanceDecisionPayload":  # noqa: PLR0912
+    def validate_conditional_decision_fields(self) -> "ApplicationDecisionPayload":  # noqa: PLR0912
         """Enforces conditional field population based on governance decision outcome."""
         approved_decisions = {
             GovernanceDecision.AUTO_APPROVE.value,

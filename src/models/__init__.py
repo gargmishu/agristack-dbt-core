@@ -17,10 +17,10 @@ from src.models.enums import (
     StructureLevel,
 )
 from src.models.governance import (
+    ApplicationDecisionPayload,
     ExtractedEntityPayload,
-    GovernanceDecisionPayload,
 )
-from src.models.public_agent_payload import StandardizedPublicAgentPayload
+from src.models.public_agent import PublicAgentStandardizedIntakePayload
 from src.models.raw_ingress import (
     IVRIngressPayload,
     USSDIngressPayload,
@@ -62,9 +62,9 @@ __all__ = [
     "WhatsAppIngressPayload",
     "IVRIngressPayload",
     "USSDIngressPayload",
-    "StandardizedPublicAgentPayload",
+    "PublicAgentStandardizedIntakePayload",
     "ExtractedEntityPayload",
-    "GovernanceDecisionPayload",
+    "ApplicationDecisionPayload",
     "CaseworkerCaseReviewPayload",
     "CaseworkerManualDecisionPayload",
     "DisbursementCallbackPayload",
