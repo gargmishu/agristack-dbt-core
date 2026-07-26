@@ -73,6 +73,3 @@ python_functions = ["test_*"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 addopts = "-ra -q --strict-markers"
-
-[tool.pyright]
-extraPaths = ["."]
