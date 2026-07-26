@@ -30,7 +30,9 @@ from src.models.validators import (
     AiConfidenceScore,
     AudioDurationSeconds,
     ChannelSessionId,
+    DisbursementTxnId,
     EscalationCaseId,
+    ExtractionPayloadId,
     HMACCitizenToken,
     PhoneNumberE164,
 )
@@ -51,6 +53,8 @@ __all__ = [
     "PhoneNumberE164",
     "HMACCitizenToken",
     "EscalationCaseId",
+    "DisbursementTxnId",
+    "ExtractionPayloadId",
     "AudioDurationSeconds",
     "AiConfidenceScore",
     "WhatsAppIngressPayload",

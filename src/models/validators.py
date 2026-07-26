@@ -37,6 +37,24 @@ EscalationCaseId = Annotated[
     ),
 ]
 
+DisbursementTxnId = Annotated[
+    str,
+    Field(
+        min_length=8,
+        max_length=128,
+        description="Unique payment clearing transaction ID (entropy floor >=8, ceiling <=128)",
+    ),
+]
+
+ExtractionPayloadId = Annotated[
+    str,
+    Field(
+        min_length=8,
+        max_length=128,
+        description="Foreign key referencing original extraction payload_id",
+    ),
+]
+
 AudioDurationSeconds = Annotated[
     int,
     Field(

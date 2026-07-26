@@ -13,7 +13,9 @@ from src.models.enums import (
 from src.models.validators import (
     AiConfidenceScore,
     ChannelSessionId,
+    DisbursementTxnId,
     EscalationCaseId,
+    ExtractionPayloadId,
 )
 
 
@@ -48,10 +50,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
     """Governance routing decision payload emitted by Layer 4 rules engine."""
 
     channel_session_id: ChannelSessionId
-    payload_id: str = Field(
-        ...,
-        description="Foreign key referencing extraction payload (payload_id)",
-    )
+    payload_id: ExtractionPayloadId
     ai_confidence_score: AiConfidenceScore
     eligibility_status: EligibilityStatus = Field(
         ...,
@@ -60,7 +59,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
     governance_decision: GovernanceDecision = Field(
         ..., description="Automated or manual governance routing action"
     )
-    disbursement_txn_id: str | None = Field(
+    disbursement_txn_id: DisbursementTxnId | None = Field(
         None,
         description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT",
     )

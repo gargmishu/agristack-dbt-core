@@ -4,17 +4,13 @@ from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import DisbursementStatus
+from src.models.validators import DisbursementTxnId
 
 
 class DisbursementCallbackPayload(StrictBaseModel):
     """Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails."""
 
-    disbursement_txn_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Unique payment clearing transaction ID",
-    )
+    disbursement_txn_id: DisbursementTxnId
     disbursement_status: DisbursementStatus = Field(
         ..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED"
     )

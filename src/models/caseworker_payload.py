@@ -7,6 +7,7 @@ from src.models.enums import ApplicationIntent, DomainEntityKey, GovernanceDecis
 from src.models.validators import (
     ChannelSessionId,
     EscalationCaseId,
+    ExtractionPayloadId,
     HMACCitizenToken,
 )
 
@@ -16,10 +17,7 @@ class CaseworkerIncidentStagingPayload(StrictBaseModel):
 
     escalation_case_id: EscalationCaseId
     channel_session_id: ChannelSessionId
-    payload_id: str = Field(
-        ...,
-        description="Foreign key referencing original extraction payload (payload_id)",
-    )
+    payload_id: ExtractionPayloadId
     tokenized_citizen_id: HMACCitizenToken
     application_intent: ApplicationIntent = Field(
         ..., description="Target scheme intent"

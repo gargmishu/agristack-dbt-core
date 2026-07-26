@@ -4,7 +4,11 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import PayloadType
-from src.models.validators import ChannelSessionId, PhoneNumberE164
+from src.models.validators import (
+    AudioDurationSeconds,
+    ChannelSessionId,
+    PhoneNumberE164,
+)
 
 
 class WhatsAppIngressPayload(StrictBaseModel):
@@ -27,11 +31,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )
-    duration_seconds: int | None = Field(
-        None,
-        ge=1,
-        le=600,
-        description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)",
+    duration_seconds: AudioDurationSeconds | None = Field(
+        None, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)"
     )
     text_body: str | None = Field(
         None,
