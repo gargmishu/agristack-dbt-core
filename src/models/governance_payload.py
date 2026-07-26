@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
@@ -16,6 +14,7 @@ from src.models.validators import (
     DisbursementTxnId,
     EscalationCaseId,
     ExtractionPayloadId,
+    UtcTimestamp,
 )
 
 
@@ -71,9 +70,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
     )
-    decided_at_timestamp: datetime = Field(
-        ..., description="UTC timestamp when Layer 4 finalized governance decision"
-    )
+    decided_at_timestamp: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_conditional_decision_fields(self) -> "GovernanceRoutingPayload":  # noqa: PLR0912

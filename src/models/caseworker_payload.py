@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
@@ -9,6 +7,7 @@ from src.models.validators import (
     EscalationCaseId,
     ExtractionPayloadId,
     HMACCitizenToken,
+    UtcTimestamp,
 )
 
 
@@ -31,9 +30,7 @@ class CaseworkerIncidentStagingPayload(StrictBaseModel):
     escalation_reason: str = Field(
         ..., max_length=512, description="Reason for escalation"
     )
-    staged_at_timestamp: datetime = Field(
-        ..., description="UTC timestamp when staged into caseworker queue"
-    )
+    staged_at_timestamp: UtcTimestamp
 
 
 class CaseworkerReviewPayload(StrictBaseModel):
@@ -61,9 +58,7 @@ class CaseworkerReviewPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, max_length=512, description="Populated for MANUAL_REJECT"
     )
-    decision_timestamp: datetime = Field(
-        ..., description="UTC timestamp when officer submitted decision"
-    )
+    decision_timestamp: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_caseworker_decision_fields(self) -> "CaseworkerReviewPayload":

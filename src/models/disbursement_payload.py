@@ -1,10 +1,8 @@
-from datetime import datetime
-
 from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import DisbursementStatus
-from src.models.validators import DisbursementTxnId
+from src.models.validators import DisbursementTxnId, UtcTimestamp
 
 
 class DisbursementCallbackPayload(StrictBaseModel):
@@ -14,9 +12,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
     disbursement_status: DisbursementStatus = Field(
         ..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED"
     )
-    cleared_at_timestamp: datetime = Field(
-        ..., description="UTC timestamp when payment gateway processed transaction"
-    )
+    cleared_at_timestamp: UtcTimestamp
     failure_reason_code: str | None = Field(
         None, max_length=256, description="Populated if status is FAILED or RETURNED"
     )

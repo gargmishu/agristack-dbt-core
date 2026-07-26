@@ -1,8 +1,9 @@
 """Shared field type annotations and reusable validation rules across domain payloads."""
 
+from datetime import UTC, datetime
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import AfterValidator, Field
 
 ChannelSessionId = Annotated[
     str,
@@ -71,4 +72,23 @@ AiConfidenceScore = Annotated[
         le=1.0,
         description="SLM/Governance confidence score bounded [0.0, 1.0]",
     ),
+]
+
+MAX_CLOCK_SKEW_SECONDS = 5.0
+
+
+def validate_utc_freshness(dt: datetime) -> datetime:
+    """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation)."""
+    now = datetime.now(UTC)
+    parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+
+    if (parsed_dt - now).total_seconds() > MAX_CLOCK_SKEW_SECONDS:
+        raise ValueError("Timestamp cannot be >5 seconds in the future (clock-skew violation)")
+    return parsed_dt
+
+
+UtcTimestamp = Annotated[
+    datetime,
+    Field(description="Valid ISO-8601 UTC timestamp with freshness check"),
+    AfterValidator(validate_utc_freshness),
 ]

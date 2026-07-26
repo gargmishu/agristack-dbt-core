@@ -1,9 +1,11 @@
-from datetime import datetime
-
 from pydantic import Field
 
 from src.models.base import StrictBaseModel
-from src.models.validators import ChannelSessionId, PhoneNumberE164
+from src.models.validators import (
+    ChannelSessionId,
+    PhoneNumberE164,
+    UtcTimestamp,
+)
 
 
 class USSDIngressPayload(StrictBaseModel):
@@ -22,6 +24,4 @@ class USSDIngressPayload(StrictBaseModel):
         max_length=64,
         description="Concatenated digit selections and data entries separated by *",
     )
-    ingress_timestamp: datetime = Field(
-        ..., description="UTC timestamp when telco received USSD code"
-    )
+    ingress_timestamp: UtcTimestamp

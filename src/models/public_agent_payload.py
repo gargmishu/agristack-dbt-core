@@ -1,10 +1,12 @@
-from datetime import datetime
-
 from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import ChannelType, PayloadType, StructureLevel
-from src.models.validators import ChannelSessionId, HMACCitizenToken
+from src.models.validators import (
+    ChannelSessionId,
+    HMACCitizenToken,
+    UtcTimestamp,
+)
 
 
 class StandardizedPublicAgentPayload(StrictBaseModel):
@@ -31,9 +33,7 @@ class StandardizedPublicAgentPayload(StrictBaseModel):
         max_length=5000,
         description="Raw citizen text or signed audio URL pointer",
     )
-    public_agent_timestamp: datetime = Field(
-        ..., description="UTC timestamp when public agent API accepted event"
-    )
+    public_agent_timestamp: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_type_tuple_rules(self) -> "StandardizedPublicAgentPayload":

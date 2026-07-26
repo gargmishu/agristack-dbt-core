@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from pydantic import Field, HttpUrl, model_validator
 
 from src.models.base import StrictBaseModel
@@ -8,6 +6,7 @@ from src.models.validators import (
     AudioDurationSeconds,
     ChannelSessionId,
     PhoneNumberE164,
+    UtcTimestamp,
 )
 
 
@@ -25,9 +24,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
     )
-    ingress_timestamp: datetime = Field(
-        ..., description="UTC timestamp when carrier received event"
-    )
+    ingress_timestamp: UtcTimestamp
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )
