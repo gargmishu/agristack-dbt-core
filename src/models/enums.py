@@ -1,7 +1,11 @@
+"""Standardized domain enumeration types for inter-layer payload validation."""
+
 from enum import StrEnum
 
 
 class ChannelType(StrEnum):
+    """Originating messaging or telephony communication channel at Layer 1 perimeter."""
+
     WHATSAPP = "whatsapp"
     IVR_VOICE = "ivr_voice"
     USSD = "ussd"
@@ -9,6 +13,8 @@ class ChannelType(StrEnum):
 
 
 class PayloadType(StrEnum):
+    """Normalized payload content modality."""
+
     AUDIO = "audio"
     TEXT = "text"
     IMAGE = "image"
@@ -16,12 +22,16 @@ class PayloadType(StrEnum):
 
 
 class StructureLevel(StrEnum):
+    """Input structure complexity level of incoming citizen payload."""
+
     FREE_TEXT = "free_text"
     MENU_SELECTION = "menu_selection"
     DTMF_SELECTION = "dtmf_selection"
 
 
 class ApplicationIntent(StrEnum):
+    """Classified citizen intent driving workflow routing."""
+
     APPLY_SUBSIDY = "apply_subsidy"
     CHECK_STATUS = "check_status"
     SUBMIT_APPEAL = "submit_appeal"
@@ -32,6 +42,8 @@ class ApplicationIntent(StrEnum):
 
 
 class EligibilityStatus(StrEnum):
+    """Computed citizen scheme eligibility status from DPI registry cross-matching."""
+
     PENDING_VERIFICATION = "PENDING_VERIFICATION"
     ELIGIBLE = "ELIGIBLE"
     INELIGIBLE = "INELIGIBLE"
@@ -39,6 +51,8 @@ class EligibilityStatus(StrEnum):
 
 
 class GovernanceDecision(StrEnum):
+    """Governance decision action evaluated by Layer 4 routing matrix."""
+
     AUTOMATED_PAYOUT = "AUTOMATED_PAYOUT"
     AUTO_APPROVE = "AUTO_APPROVE"
     AUTO_REJECT = "AUTO_REJECT"
@@ -50,6 +64,8 @@ class GovernanceDecision(StrEnum):
 
 
 class SessionStatus(StrEnum):
+    """Lifecycle state of parent citizen communication session."""
+
     ACTIVE = "ACTIVE"
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
@@ -58,6 +74,8 @@ class SessionStatus(StrEnum):
 
 
 class ApplicationStatus(StrEnum):
+    """Formal status of citizen claim application in governance ledger."""
+
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
     UNDER_REVIEW = "UNDER_REVIEW"
@@ -67,6 +85,8 @@ class ApplicationStatus(StrEnum):
 
 
 class DisbursementStatus(StrEnum):
+    """Financial clearing status of benefit disbursement payment."""
+
     PENDING = "PENDING"
     INITIATED = "INITIATED"
     SUCCESS = "SUCCESS"
@@ -75,6 +95,8 @@ class DisbursementStatus(StrEnum):
 
 
 class DomainEntityKey(StrEnum):
+    """Canonical domain parameter keys extracted by Small Language Models (SLM)."""
+
     DISTRICT = "district"
     TALUKA = "taluka"
     VILLAGE = "village"
