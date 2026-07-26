@@ -421,9 +421,9 @@ class ExtractedEntityPayload(StrictBaseModel):
 
 ---
 
-#### Governance Routing Decision Payload
+#### Governance Decision Payload
 ```python
-class GovernanceRoutingPayload(StrictBaseModel):
+class GovernanceDecisionPayload(StrictBaseModel):
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
     ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
@@ -455,13 +455,13 @@ class GovernanceRoutingPayload(StrictBaseModel):
 
 ### 4.4 Caseworker Incident Staging & Review Schemas (`src/models/caseworker.py`)
 
-#### 4.4.1 Caseworker Incident Staging Payload
+#### 4.4.1 Case Review Payload
 Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
 
 ```python
-class CaseworkerIncidentStagingPayload(StrictBaseModel):
+class CaseReviewPayload(StrictBaseModel):
     """
-    Payload emitted by Step 11 to stage an escalated case ticket inside the Caseworker Review Dashboard.
+    Payload emitted by Step 11 to stage an escalated case review inside the Caseworker Review Dashboard.
     """
     escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
@@ -522,7 +522,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
 ```
 
 ##### Payment Clearing Callback Specific Validations:
-1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceRoutingPayload.disbursement_txn_id`.
+1. **Transaction Key Match:** `disbursement_txn_id` must match an existing transaction ID issued in `GovernanceDecisionPayload.disbursement_txn_id`.
 2. **Terminal State Conditional Rule:**
    - If `disbursement_status` is `FAILED` or `RETURNED`: `failure_reason_code` **must** be a non-empty string explaining the bank clearing error (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
    - If `disbursement_status` is `SUCCESS`: `failure_reason_code` **must** be `None`.
@@ -571,14 +571,21 @@ agristack-dbt-core/
 │   │   ├── __init__.py             <-- Centralized model exports for package-level imports
 │   │   ├── base.py                 <-- StrictBaseModel base configuration class
 │   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
+│   │   ├── validators.py           <-- Cross-cutting field type annotations & UtcTimestamp clock-skew freshness validator
 │   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
 │   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
 │   │   │   ├── whatsapp_payload.py <-- WhatsAppIngressPayload
 │   │   │   ├── ivr_payload.py      <-- IVRIngressPayload
 │   │   │   └── ussd_payload.py     <-- USSDIngressPayload
 │   │   ├── public_agent_payload.py <-- StandardizedPublicAgentPayload
-│   │   ├── governance_payload.py   <-- ExtractedEntityPayload, GovernanceRoutingPayload
-│   │   ├── caseworker_payload.py   <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
+│   │   ├── governance/             <-- Subpackage for Layer 3 -> Layer 4 governance schemas
+│   │   │   ├── __init__.py         <-- Exports ExtractedEntityPayload, GovernanceRoutingPayload
+│   │   │   ├── extracted_entity_payload.py <-- ExtractedEntityPayload
+│   │   │   └── routing_payload.py  <-- GovernanceRoutingPayload
+│   │   ├── caseworker/             <-- Subpackage for Step 11 manual escalation schemas
+│   │   │   ├── __init__.py         <-- Exports CaseworkerEscalationTicketPayload, CaseworkerManualDecisionPayload
+│   │   │   ├── escalation_ticket_payload.py <-- CaseworkerEscalationTicketPayload
+│   │   │   └── manual_decision_payload.py   <-- CaseworkerManualDecisionPayload
 │   │   └── disbursement_payload.py <-- DisbursementCallbackPayload
 │   └── errors/
 │       ├── __init__.py             <-- Error handler package exports
@@ -588,7 +595,7 @@ agristack-dbt-core/
     │   ├── test_raw_ingress_payload.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
     │   ├── test_public_agent_payload.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
     │   ├── test_governance_payload.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
-    │   ├── test_caseworker_payload.py      <-- Incident ticket staging & caseworker review decision tests
+    │   ├── test_caseworker_payload.py      <-- Escalation ticket staging & caseworker review decision tests
     │   └── test_disbursement_payload.py    <-- Bank clearing callback & terminal failure reason tests
     └── errors/
         └── test_handlers.py                <-- RFC 7807 error format compliance & stack trace sanitization tests
@@ -602,19 +609,22 @@ agristack-dbt-core/
 2. **`src/models/enums.py`:**
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
 
-3. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
+3. **`src/models/validators.py`:**
+   Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HMACCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
+
+4. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
    Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
 
-4. **`src/models/public_agent_payload.py`:**
+5. **`src/models/public_agent_payload.py`:**
    Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
 
-5. **`src/models/governance_payload.py`:**
-   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.
+6. **`src/models/governance/` Subpackage (`extracted_entity_payload.py`, `routing_payload.py`):**
+   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes. Re-exported via `src/models/governance/__init__.py`.
 
-6. **`src/models/caseworker_payload.py`:**
-   Contains Step 11 manual escalation schemas: `CaseworkerIncidentStagingPayload` (queue ticket staging into District Officer Dashboard) and `CaseworkerReviewPayload` (manual decision submitted by human caseworker).
+7. **`src/models/caseworker/` Subpackage (`escalation_ticket_payload.py`, `manual_decision_payload.py`):**
+   Contains Step 11 manual escalation schemas: `CaseworkerEscalationTicketPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerManualDecisionPayload` (manual adjudication decision submitted by human officer). Re-exported via `src/models/caseworker/__init__.py`.
 
-7. **`src/models/disbursement_payload.py`:**
+8. **`src/models/disbursement_payload.py`:**
    Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
 
 8. **`src/errors/handlers.py`:**

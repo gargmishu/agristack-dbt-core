@@ -33,12 +33,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
                 f"failure_reason_code is required for disbursement status {status_str}"
             )
 
-        if (
-            status_str == DisbursementStatus.SUCCESS.value
-            and self.failure_reason_code is not None
-        ):
-            raise ValueError(
-                "failure_reason_code must be None when disbursement status is SUCCESS"
-            )
+        if status_str == DisbursementStatus.SUCCESS.value and self.failure_reason_code is not None:
+            raise ValueError("failure_reason_code must be None when disbursement status is SUCCESS")
 
         return self

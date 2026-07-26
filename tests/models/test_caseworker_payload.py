@@ -3,15 +3,15 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.caseworker_payload import (
-    CaseworkerIncidentStagingPayload,
-    CaseworkerReviewPayload,
+from src.models.caseworker import (
+    CaseworkerCaseReviewPayload,
+    CaseworkerManualDecisionPayload,
 )
 from src.models.enums import ApplicationIntent, GovernanceDecision
 
 
-def test_caseworker_incident_staging_valid() -> None:
-    payload = CaseworkerIncidentStagingPayload(
+def test_case_review_payload_valid() -> None:
+    payload = CaseworkerCaseReviewPayload(
         escalation_case_id="SPP-CASE-2026-981245",
         channel_session_id="sess_12345678",
         payload_id="550e8400-e29b-41d4-a716-446655440000",
@@ -24,8 +24,8 @@ def test_caseworker_incident_staging_valid() -> None:
     assert payload.escalation_case_id == "SPP-CASE-2026-981245"
 
 
-def test_caseworker_review_valid_manual_approve() -> None:
-    payload = CaseworkerReviewPayload(
+def test_caseworker_manual_decision_valid_approve() -> None:
+    payload = CaseworkerManualDecisionPayload(
         escalation_case_id="SPP-CASE-2026-981245",
         reviewer_id="OFFICER-991",
         governance_decision=GovernanceDecision.MANUAL_APPROVE,
@@ -37,9 +37,9 @@ def test_caseworker_review_valid_manual_approve() -> None:
     assert payload.approved_amount == 5000.0  # noqa: PLR2004
 
 
-def test_caseworker_review_invalid_decision_type() -> None:
+def test_caseworker_manual_decision_invalid_type() -> None:
     with pytest.raises(ValidationError) as exc:
-        CaseworkerReviewPayload(
+        CaseworkerManualDecisionPayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
             governance_decision=GovernanceDecision.AUTO_APPROVE,  # Automated decision not permitted

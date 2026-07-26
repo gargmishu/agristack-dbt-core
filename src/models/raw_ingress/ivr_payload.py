@@ -14,8 +14,6 @@ class IVRIngressPayload(StrictBaseModel):
 
     channel_session_id: ChannelSessionId
     originating_phone_number: PhoneNumberE164
-    audio_recording_url: HttpUrl = Field(
-        ..., description="Signed URL for .wav recording"
-    )
+    audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: AudioDurationSeconds
     ingress_timestamp: UtcTimestamp

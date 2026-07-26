@@ -56,8 +56,6 @@ class StandardizedPublicAgentPayload(StrictBaseModel):
             channel_str in (ChannelType.USSD.value, ChannelType.SMS.value)
             and payload_str != PayloadType.TEXT.value
         ):
-            raise ValueError(
-                f"{channel_str} channel strictly requires TEXT payload_type"
-            )
+            raise ValueError(f"{channel_str} channel strictly requires TEXT payload_type")
 
         return self
