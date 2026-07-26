@@ -573,25 +573,25 @@ agristack-dbt-core/
 │   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
 │   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
 │   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
-│   │   │   ├── whatsapp.py         <-- WhatsAppIngressPayload
-│   │   │   ├── ivr.py              <-- IVRIngressPayload
-│   │   │   └── ussd.py             <-- USSDIngressPayload
-│   │   ├── public_agent.py         <-- StandardizedPublicAgentPayload
-│   │   ├── governance.py           <-- ExtractedEntityPayload, GovernanceRoutingPayload
-│   │   ├── caseworker.py           <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
-│   │   └── disbursement.py         <-- DisbursementCallbackPayload
+│   │   │   ├── whatsapp_payload.py <-- WhatsAppIngressPayload
+│   │   │   ├── ivr_payload.py      <-- IVRIngressPayload
+│   │   │   └── ussd_payload.py     <-- USSDIngressPayload
+│   │   ├── public_agent_payload.py <-- StandardizedPublicAgentPayload
+│   │   ├── governance_payload.py   <-- ExtractedEntityPayload, GovernanceRoutingPayload
+│   │   ├── caseworker_payload.py   <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
+│   │   └── disbursement_payload.py <-- DisbursementCallbackPayload
 │   └── errors/
 │       ├── __init__.py             <-- Error handler package exports
 │       └── handlers.py             <-- RFC 7807 validation_exception_handler implementation
 └── tests/
     ├── models/
-    │   ├── test_raw_ingress.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
-    │   ├── test_public_agent.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
-    │   ├── test_governance.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
-    │   ├── test_caseworker.py      <-- Incident ticket staging & caseworker review decision tests
-    │   └── test_disbursement.py    <-- Bank clearing callback & terminal failure reason tests
+    │   ├── test_raw_ingress_payload.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
+    │   ├── test_public_agent_payload.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
+    │   ├── test_governance_payload.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
+    │   ├── test_caseworker_payload.py      <-- Incident ticket staging & caseworker review decision tests
+    │   └── test_disbursement_payload.py    <-- Bank clearing callback & terminal failure reason tests
     └── errors/
-        └── test_handlers.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
+        └── test_handlers.py                <-- RFC 7807 error format compliance & stack trace sanitization tests
 ```
 
 ### Module Responsibilities & Model Exports
@@ -602,19 +602,19 @@ agristack-dbt-core/
 2. **`src/models/enums.py`:**
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
 
-3. **`src/models/raw_ingress/` Subpackage (`whatsapp.py`, `ivr.py`, `ussd.py`):**
+3. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
    Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
 
-4. **`src/models/public_agent.py`:**
+4. **`src/models/public_agent_payload.py`:**
    Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
 
-5. **`src/models/governance.py`:**
+5. **`src/models/governance_payload.py`:**
    Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.
 
-6. **`src/models/caseworker.py`:**
+6. **`src/models/caseworker_payload.py`:**
    Contains Step 11 manual escalation schemas: `CaseworkerIncidentStagingPayload` (queue ticket staging into District Officer Dashboard) and `CaseworkerReviewPayload` (manual decision submitted by human caseworker).
 
-7. **`src/models/disbursement.py`:**
+7. **`src/models/disbursement_payload.py`:**
    Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
 
 8. **`src/errors/handlers.py`:**

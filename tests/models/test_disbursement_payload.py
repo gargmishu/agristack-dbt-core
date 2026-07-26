@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.disbursement import DisbursementCallbackPayload
+from src.models.disbursement_payload import DisbursementCallbackPayload
 from src.models.enums import DisbursementStatus
 
 

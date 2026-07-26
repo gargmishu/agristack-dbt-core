@@ -10,6 +10,11 @@ from src.models.enums import (
     EligibilityStatus,
     GovernanceDecision,
 )
+from src.models.validators import (
+    AiConfidenceScore,
+    ChannelSessionId,
+    EscalationCaseId,
+)
 
 
 class ExtractedEntityPayload(StrictBaseModel):
@@ -18,9 +23,7 @@ class ExtractedEntityPayload(StrictBaseModel):
     application_intent: ApplicationIntent = Field(
         ..., description="Classified citizen intent (e.g. apply_subsidy, check_status)"
     )
-    ai_confidence_score: float = Field(
-        ..., ge=0.0, le=1.0, description="SLM extraction confidence score bounded [0.0, 1.0]"
-    )
+    ai_confidence_score: AiConfidenceScore
     domain_entities: dict[DomainEntityKey, str | float | int] = Field(
         default_factory=dict,
         description="Parsed domain fields keyed by canonical DomainEntityKey",
@@ -44,22 +47,12 @@ class ExtractedEntityPayload(StrictBaseModel):
 class GovernanceRoutingPayload(StrictBaseModel):
     """Governance routing decision payload emitted by Layer 4 rules engine."""
 
-    channel_session_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Unified channel session ID",
-    )
+    channel_session_id: ChannelSessionId
     payload_id: str = Field(
         ...,
         description="Foreign key referencing extraction payload (payload_id)",
     )
-    ai_confidence_score: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Governance confidence score evaluated against threshold gates",
-    )
+    ai_confidence_score: AiConfidenceScore
     eligibility_status: EligibilityStatus = Field(
         ...,
         description="Computed citizen scheme eligibility status from DPI registry cross-matching",
@@ -75,11 +68,7 @@ class GovernanceRoutingPayload(StrictBaseModel):
         None,
         description="Initialized to PENDING/INITIATED for approved payouts; None otherwise",
     )
-    escalation_case_id: str | None = Field(
-        None,
-        pattern=r"^\w+-CASE-\d{4}-\d{6,}$",
-        description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW",
-    )
+    escalation_case_id: EscalationCaseId | None = None
     rejection_reason: str | None = Field(
         None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
     )

@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.enums import ChannelType, PayloadType, StructureLevel
-from src.models.public_agent import StandardizedPublicAgentPayload
+from src.models.public_agent_payload import StandardizedPublicAgentPayload
 
 
 def test_standardized_public_agent_valid() -> None:

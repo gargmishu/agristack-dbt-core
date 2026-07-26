@@ -3,22 +3,14 @@ from datetime import datetime
 from pydantic import Field
 
 from src.models.base import StrictBaseModel
+from src.models.validators import ChannelSessionId, PhoneNumberE164
 
 
 class USSDIngressPayload(StrictBaseModel):
     """USSD Menu signaling ingress payload (Layer 1 -> Layer 2)."""
 
-    channel_session_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Telco network session ID",
-    )
-    originating_phone_number: str = Field(
-        ...,
-        pattern=r"^\+[1-9]\d{1,14}$",
-        description="Originating MSISDN phone number (E.164 standard)",
-    )
+    channel_session_id: ChannelSessionId
+    originating_phone_number: PhoneNumberE164
     ussd_service_code: str = Field(
         ...,
         pattern=r"^\*\d+(\*\d+)*#$",

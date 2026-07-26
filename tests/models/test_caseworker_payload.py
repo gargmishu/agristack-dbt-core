@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.caseworker import (
+from src.models.caseworker_payload import (
     CaseworkerIncidentStagingPayload,
     CaseworkerReviewPayload,
 )

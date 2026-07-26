@@ -1,6 +1,6 @@
 """Layer 3 Public Agent Gateway API skeleton."""
 
-from src.models.public_agent import StandardizedPublicAgentPayload
+from src.models.public_agent_payload import StandardizedPublicAgentPayload
 
 
 class PublicAgentApi:

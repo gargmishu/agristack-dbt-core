@@ -1,9 +1,9 @@
 from src.models.base import StrictBaseModel
-from src.models.caseworker import (
+from src.models.caseworker_payload import (
     CaseworkerIncidentStagingPayload,
     CaseworkerReviewPayload,
 )
-from src.models.disbursement import DisbursementCallbackPayload
+from src.models.disbursement_payload import DisbursementCallbackPayload
 from src.models.enums import (
     ApplicationIntent,
     ApplicationStatus,
@@ -16,12 +16,23 @@ from src.models.enums import (
     SessionStatus,
     StructureLevel,
 )
-from src.models.governance import ExtractedEntityPayload, GovernanceRoutingPayload
-from src.models.public_agent import StandardizedPublicAgentPayload
+from src.models.governance_payload import (
+    ExtractedEntityPayload,
+    GovernanceRoutingPayload,
+)
+from src.models.public_agent_payload import StandardizedPublicAgentPayload
 from src.models.raw_ingress import (
     IVRIngressPayload,
     USSDIngressPayload,
     WhatsAppIngressPayload,
+)
+from src.models.validators import (
+    AiConfidenceScore,
+    AudioDurationSeconds,
+    ChannelSessionId,
+    EscalationCaseId,
+    HMACCitizenToken,
+    PhoneNumberE164,
 )
 
 __all__ = [
@@ -36,6 +47,12 @@ __all__ = [
     "ApplicationStatus",
     "DisbursementStatus",
     "DomainEntityKey",
+    "ChannelSessionId",
+    "PhoneNumberE164",
+    "HMACCitizenToken",
+    "EscalationCaseId",
+    "AudioDurationSeconds",
+    "AiConfidenceScore",
     "WhatsAppIngressPayload",
     "IVRIngressPayload",
     "USSDIngressPayload",
