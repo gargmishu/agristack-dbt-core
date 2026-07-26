@@ -1,0 +1,127 @@
+from datetime import datetime
+
+from pydantic import Field, HttpUrl, model_validator
+
+from src.models.base import StrictBaseModel
+from src.models.enums import PayloadType
+
+
+class WhatsAppIngressPayload(StrictBaseModel):
+    """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2)."""
+
+    channel_session_id: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Conversational channel session ID",
+    )
+    originating_phone_number: str = Field(
+        ...,
+        pattern=r"^\+[1-9]\d{1,14}$",
+        description="Carrier messaging user ID / phone number (E.164 standard)",
+    )
+    channel_message_id: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)",
+    )
+    payload_type: PayloadType = Field(
+        ..., description="Ingress payload modality: audio, text, image, document"
+    )
+    ingress_timestamp: datetime = Field(
+        ..., description="UTC timestamp when carrier received event"
+    )
+    audio_recording_url: HttpUrl | None = Field(
+        None, description="Signed URL for .ogg audio file (populated for AUDIO)"
+    )
+    duration_seconds: int | None = Field(
+        None,
+        ge=1,
+        le=600,
+        description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)",
+    )
+    text_body: str | None = Field(
+        None,
+        max_length=1000,
+        description="Raw text message (populated for TEXT)",
+    )
+
+    @model_validator(mode="after")
+    def validate_content_mutual_exclusivity(self) -> "WhatsAppIngressPayload":
+        """Enforces mutual exclusivity between audio and text content."""
+        if str(self.payload_type) == PayloadType.AUDIO.value:
+            if self.audio_recording_url is None:
+                raise ValueError("audio_recording_url is required when payload_type is AUDIO")
+            if self.duration_seconds is None:
+                raise ValueError("duration_seconds is required when payload_type is AUDIO")
+            if self.text_body is not None:
+                raise ValueError("text_body must be None when payload_type is AUDIO")
+        elif str(self.payload_type) == PayloadType.TEXT.value:
+            if self.text_body is None or not self.text_body.strip():
+                raise ValueError(
+                    "text_body must be a non-empty string when payload_type is TEXT"
+                )
+            if self.audio_recording_url is not None:
+                raise ValueError("audio_recording_url must be None when payload_type is TEXT")
+            if self.duration_seconds is not None:
+                raise ValueError("duration_seconds must be None when payload_type is TEXT")
+        return self
+
+
+class IVRIngressPayload(StrictBaseModel):
+    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2)."""
+
+    channel_session_id: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Telephony Provider Call Session ID",
+    )
+    originating_phone_number: str = Field(
+        ...,
+        pattern=r"^\+[1-9]\d{1,14}$",
+        description="Originating ANI phone number (E.164 standard)",
+    )
+    audio_recording_url: HttpUrl = Field(
+        ..., description="Signed URL for .wav recording"
+    )
+    duration_seconds: int = Field(
+        ...,
+        ge=1,
+        le=600,
+        description="Total call audio duration in seconds (1 to 600s)",
+    )
+    ingress_timestamp: datetime = Field(
+        ..., description="UTC timestamp when call arrived at SIP trunk"
+    )
+
+
+class USSDIngressPayload(StrictBaseModel):
+    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2)."""
+
+    channel_session_id: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="Telco network session ID",
+    )
+    originating_phone_number: str = Field(
+        ...,
+        pattern=r"^\+[1-9]\d{1,14}$",
+        description="Originating MSISDN phone number (E.164 standard)",
+    )
+    ussd_service_code: str = Field(
+        ...,
+        pattern=r"^\*\d+(\*\d+)*#$",
+        description="USSD shortcode (e.g., *147#, *147*1*2#)",
+    )
+    ussd_user_digit_selection: str = Field(
+        ...,
+        min_length=1,
+        max_length=64,
+        description="Concatenated digit selections and data entries separated by *",
+    )
+    ingress_timestamp: datetime = Field(
+        ..., description="UTC timestamp when telco received USSD code"
+    )
