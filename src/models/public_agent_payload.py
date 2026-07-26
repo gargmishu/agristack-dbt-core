@@ -4,22 +4,14 @@ from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import ChannelType, PayloadType, StructureLevel
+from src.models.validators import ChannelSessionId, HMACCitizenToken
 
 
 class StandardizedPublicAgentPayload(StrictBaseModel):
     """Normalized, zero-PII public agent payload (Layer 2 -> Layer 3)."""
 
-    channel_session_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Unified channel session ID",
-    )
-    tokenized_citizen_id: str = Field(
-        ...,
-        pattern=r"^[a-fA-F0-9]{64}$",
-        description="Zero-PII SHA-256 HMAC citizen identity token",
-    )
+    channel_session_id: ChannelSessionId
+    tokenized_citizen_id: HMACCitizenToken
     channel_type: ChannelType = Field(
         ..., description="Originating channel type: whatsapp, ivr_voice, ussd, sms"
     )

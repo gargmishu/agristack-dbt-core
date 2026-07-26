@@ -26,6 +26,14 @@ from src.models.raw_ingress import (
     USSDIngressPayload,
     WhatsAppIngressPayload,
 )
+from src.models.validators import (
+    AiConfidenceScore,
+    AudioDurationSeconds,
+    ChannelSessionId,
+    EscalationCaseId,
+    HMACCitizenToken,
+    PhoneNumberE164,
+)
 
 __all__ = [
     "StrictBaseModel",
@@ -39,6 +47,12 @@ __all__ = [
     "ApplicationStatus",
     "DisbursementStatus",
     "DomainEntityKey",
+    "ChannelSessionId",
+    "PhoneNumberE164",
+    "HMACCitizenToken",
+    "EscalationCaseId",
+    "AudioDurationSeconds",
+    "AiConfidenceScore",
     "WhatsAppIngressPayload",
     "IVRIngressPayload",
     "USSDIngressPayload",

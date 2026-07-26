@@ -4,22 +4,14 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import PayloadType
+from src.models.validators import ChannelSessionId, PhoneNumberE164
 
 
 class WhatsAppIngressPayload(StrictBaseModel):
     """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2)."""
 
-    channel_session_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Conversational channel session ID",
-    )
-    originating_phone_number: str = Field(
-        ...,
-        pattern=r"^\+[1-9]\d{1,14}$",
-        description="Carrier messaging user ID / phone number (E.164 standard)",
-    )
+    channel_session_id: ChannelSessionId
+    originating_phone_number: PhoneNumberE164
     channel_message_id: str = Field(
         ...,
         min_length=8,

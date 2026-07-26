@@ -4,33 +4,23 @@ from pydantic import Field, model_validator
 
 from src.models.base import StrictBaseModel
 from src.models.enums import ApplicationIntent, DomainEntityKey, GovernanceDecision
+from src.models.validators import (
+    ChannelSessionId,
+    EscalationCaseId,
+    HMACCitizenToken,
+)
 
 
 class CaseworkerIncidentStagingPayload(StrictBaseModel):
     """Payload emitted by Step 11 to stage case ticket in Caseworker Review Dashboard."""
 
-    escalation_case_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        pattern=r"^\w+-CASE-\d{4}-\d{6,}$",
-        description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)",
-    )
-    channel_session_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description="Parent communication session ID",
-    )
+    escalation_case_id: EscalationCaseId
+    channel_session_id: ChannelSessionId
     payload_id: str = Field(
         ...,
         description="Foreign key referencing original extraction payload (payload_id)",
     )
-    tokenized_citizen_id: str = Field(
-        ...,
-        pattern=r"^[a-fA-F0-9]{64}$",
-        description="SHA-256 HMAC citizen identity token",
-    )
+    tokenized_citizen_id: HMACCitizenToken
     application_intent: ApplicationIntent = Field(
         ..., description="Target scheme intent"
     )
@@ -51,13 +41,7 @@ class CaseworkerIncidentStagingPayload(StrictBaseModel):
 class CaseworkerReviewPayload(StrictBaseModel):
     """Manual decision submitted by a human caseworker/officer reviewing an escalated case."""
 
-    escalation_case_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        pattern=r"^\w+-CASE-\d{4}-\d{6,}$",
-        description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)",
-    )
+    escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(
         ...,
         min_length=5,
