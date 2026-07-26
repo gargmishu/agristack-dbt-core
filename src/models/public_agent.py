@@ -6,8 +6,8 @@ from src.models.base import StrictBaseModel
 from src.models.enums import ChannelType, PayloadType, StructureLevel
 
 
-class StandardizedIntakePayload(StrictBaseModel):
-    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3)."""
+class StandardizedPublicAgentPayload(StrictBaseModel):
+    """Normalized, zero-PII public agent payload (Layer 2 -> Layer 3)."""
 
     channel_session_id: str = Field(
         ...,
@@ -39,12 +39,12 @@ class StandardizedIntakePayload(StrictBaseModel):
         max_length=5000,
         description="Raw citizen text or signed audio URL pointer",
     )
-    intake_timestamp: datetime = Field(
-        ..., description="UTC timestamp when intake API accepted event"
+    public_agent_timestamp: datetime = Field(
+        ..., description="UTC timestamp when public agent API accepted event"
     )
 
     @model_validator(mode="after")
-    def validate_type_tuple_rules(self) -> "StandardizedIntakePayload":
+    def validate_type_tuple_rules(self) -> "StandardizedPublicAgentPayload":
         """Enforces 2-type tuple input rules for channel and modality compatibility."""
         payload_str = str(self.payload_type)
         structure_str = str(self.structure_level)

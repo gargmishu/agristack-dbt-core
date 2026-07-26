@@ -281,14 +281,14 @@ class USSDIngressPayload(StrictBaseModel):
 
 ---
 
-### 4.2 Public Agent Intake Payload (`src/models/intake.py`)
+### 4.2 Public Agent Payload (`src/models/public_agent.py`)
 
-This is the **immutable contract payload** submitted to `PublicAgentIntakeApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
+This is the **immutable contract payload** submitted to `PublicAgentApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
 
 ```python
-class StandardizedIntakePayload(StrictBaseModel):
+class StandardizedPublicAgentPayload(StrictBaseModel):
     """
-    Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Intake API.
+    Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Public Agent API.
     """
     channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC Token")
@@ -296,7 +296,7 @@ class StandardizedIntakePayload(StrictBaseModel):
     payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
     structure_level: StructureLevel = Field(..., description="Structure level: free_text, menu_selection, dtmf_selection")
     unprocessed_input_content: str = Field(..., max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
-    intake_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
+    public_agent_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
     language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
 ```
 
@@ -572,7 +572,7 @@ agristack-dbt-core/
 │   │   ├── base.py                 <-- StrictBaseModel base configuration class
 │   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
 │   │   ├── ingress.py              <-- WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
-│   │   ├── intake.py               <-- StandardizedIntakePayload
+│   │   ├── public_agent.py         <-- StandardizedPublicAgentPayload
 │   │   ├── governance.py           <-- ExtractedEntityPayload, GovernanceRoutingPayload
 │   │   ├── caseworker.py           <-- CaseworkerIncidentStagingPayload, CaseworkerReviewPayload
 │   │   └── disbursement.py         <-- DisbursementCallbackPayload
@@ -582,7 +582,7 @@ agristack-dbt-core/
 └── tests/
     ├── models/
     │   ├── test_ingress.py         <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
-    │   ├── test_intake.py          <-- 2-type tuple validation & zero-PII HMAC token format tests
+    │   ├── test_public_agent.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
     │   ├── test_governance.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
     │   ├── test_caseworker.py      <-- Incident ticket staging & caseworker review decision tests
     │   └── test_disbursement.py    <-- Bank clearing callback & terminal failure reason tests
@@ -601,8 +601,8 @@ agristack-dbt-core/
 3. **`src/models/ingress.py`:**
    Contains Layer 1 -> Layer 2 carrier ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`).
 
-4. **`src/models/intake.py`:**
-   Contains Layer 2 -> Layer 3 intake payload: `StandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
+4. **`src/models/public_agent.py`:**
+   Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
 
 5. **`src/models/governance.py`:**
    Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes.

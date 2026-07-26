@@ -22,7 +22,7 @@ from src.models.ingress import (
     USSDIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.models.intake import StandardizedIntakePayload
+from src.models.public_agent import StandardizedPublicAgentPayload
 
 __all__ = [
     "StrictBaseModel",
@@ -39,7 +39,7 @@ __all__ = [
     "WhatsAppIngressPayload",
     "IVRIngressPayload",
     "USSDIngressPayload",
-    "StandardizedIntakePayload",
+    "StandardizedPublicAgentPayload",
     "ExtractedEntityPayload",
     "GovernanceRoutingPayload",
     "CaseworkerIncidentStagingPayload",
