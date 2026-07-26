@@ -1,6 +1,6 @@
-from src.models.raw_ingress.ivr import IVRIngressPayload
-from src.models.raw_ingress.ussd import USSDIngressPayload
-from src.models.raw_ingress.whatsapp import WhatsAppIngressPayload
+from src.models.raw_ingress.ivr_payload import IVRIngressPayload
+from src.models.raw_ingress.ussd_payload import USSDIngressPayload
+from src.models.raw_ingress.whatsapp_payload import WhatsAppIngressPayload
 
 __all__ = [
     "WhatsAppIngressPayload",

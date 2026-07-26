@@ -1,6 +1,6 @@
 """Layer 4 GovernanceRouter decision matrix skeleton."""
 
-from src.models.governance import GovernanceRoutingPayload
+from src.models.governance_payload import GovernanceRoutingPayload
 
 
 class GovernanceRouter:

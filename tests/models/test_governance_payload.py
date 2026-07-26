@@ -10,7 +10,7 @@ from src.models.enums import (
     EligibilityStatus,
     GovernanceDecision,
 )
-from src.models.governance import ExtractedEntityPayload, GovernanceRoutingPayload
+from src.models.governance_payload import ExtractedEntityPayload, GovernanceRoutingPayload
 
 
 def test_extracted_entity_adversarial_zeroing() -> None:
