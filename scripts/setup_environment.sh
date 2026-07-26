@@ -45,12 +45,15 @@ else
     echo "  Using standard 'pip' installer..."
     pip install --upgrade pip setuptools wheel 2>/dev/null || true
     
-    # Try standard editable install first, fallback to --no-build-isolation if in offline sandbox
+    # Try standard editable install first, fallback to reading pyproject.toml directly
     if ! pip install -e ".[dev]"; then
         echo "  Standard build failed, retrying with --no-build-isolation..."
         pip install --no-build-isolation -e ".[dev]" || {
-            echo "  Installing core runtime & dev packages directly..."
-            pip install fastapi pydantic pydantic-settings uvicorn asyncpg "psycopg[binary]" sqlalchemy alembic pytest pytest-asyncio pytest-cov mypy ruff pre-commit
+            echo "  Parsing dependencies directly from pyproject.toml..."
+            DEPS=$(python3 -c 'import tomllib; f=open("pyproject.toml","rb"); d=tomllib.load(f); deps=d.get("project",{}).get("dependencies",[])+d.get("project",{}).get("optional-dependencies",{}).get("dev",[]); print(" ".join(deps))')
+            echo "  Installing parsed dependencies: ${DEPS}"
+            # shellcheck disable=SC2086
+            pip install ${DEPS}
         }
     fi
 fi
