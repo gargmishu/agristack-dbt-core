@@ -38,7 +38,7 @@ source .venv/bin/activate
 # Step 3: Install dependencies listed in pyproject.toml
 echo "[3/4] Installing dependencies declared in pyproject.toml..."
 
-if command -v uv &> /dev/null && uv --version &> /dev/null; then
+if command -v uv &> /dev/null; then
     echo "  Using 'uv' fast installer..."
     uv pip install -e ".[dev]"
 else
@@ -48,13 +48,13 @@ else
     # Try standard editable install first, fallback to reading pyproject.toml directly
     if ! pip install -e ".[dev]"; then
         echo "  Standard build failed, retrying with --no-build-isolation..."
-        pip install --no-build-isolation -e ".[dev]" || {
+        if ! pip install --no-build-isolation -e ".[dev]"; then
             echo "  Parsing dependencies directly from pyproject.toml..."
-            DEPS=$(python3 -c 'import tomllib; f=open("pyproject.toml","rb"); d=tomllib.load(f); deps=d.get("project",{}).get("dependencies",[])+d.get("project",{}).get("optional-dependencies",{}).get("dev",[]); print(" ".join(deps))')
+            DEPS=$(python3 -c 'import sys; sys.version_info >= (3, 11) or sys.exit("Python 3.11+ required for tomllib"); import tomllib; f=open("pyproject.toml","rb"); d=tomllib.load(f); deps=d.get("project",{}).get("dependencies",[])+d.get("project",{}).get("optional-dependencies",{}).get("dev",[]); print(" ".join(deps))')
             echo "  Installing parsed dependencies: ${DEPS}"
             # shellcheck disable=SC2086
             pip install ${DEPS}
-        }
+        fi
     fi
 fi
 
@@ -70,6 +70,8 @@ if [ -f "src/__init__.py" ]; then
     echo "Running ruff & mypy verification..."
     ruff check .
     mypy src
+else
+    echo "Note: 'src/__init__.py' not found. Skipping mypy and ruff checks."
 fi
 
 echo "======================================================================"
