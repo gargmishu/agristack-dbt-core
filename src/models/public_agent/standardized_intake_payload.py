@@ -1,10 +1,12 @@
 from pydantic import Field, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import ChannelType, PayloadType, StructureLevel
-from src.models.validators import (
+from src.models.common import (
     ChannelSessionId,
+    ChannelType,
     HMACCitizenToken,
+    PayloadType,
+    StrictBaseModel,
+    StructureLevel,
     UtcTimestamp,
 )
 

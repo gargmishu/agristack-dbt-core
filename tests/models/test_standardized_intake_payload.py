@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.enums import ChannelType, PayloadType, StructureLevel
+from src.models.common import ChannelType, PayloadType, StructureLevel
 from src.models.public_agent import PublicAgentStandardizedIntakePayload
 
 

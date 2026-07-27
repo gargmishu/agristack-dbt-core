@@ -1,9 +1,9 @@
 from pydantic import Field
 
-from src.models.base import StrictBaseModel
-from src.models.validators import (
+from src.models.common import (
     ChannelSessionId,
     PhoneNumberE164,
+    StrictBaseModel,
     UtcTimestamp,
 )
 

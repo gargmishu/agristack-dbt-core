@@ -1,10 +1,10 @@
 from pydantic import Field, HttpUrl
 
-from src.models.base import StrictBaseModel
-from src.models.validators import (
+from src.models.common import (
     AudioDurationSeconds,
     ChannelSessionId,
     PhoneNumberE164,
+    StrictBaseModel,
     UtcTimestamp,
 )
 

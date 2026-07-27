@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/models/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
+This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/models/common/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
 
 ---
 

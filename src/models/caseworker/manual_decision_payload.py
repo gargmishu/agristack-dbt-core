@@ -1,8 +1,11 @@
 from pydantic import Field, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import GovernanceDecision
-from src.models.validators import EscalationCaseId, UtcTimestamp
+from src.models.common import (
+    EscalationCaseId,
+    GovernanceDecision,
+    StrictBaseModel,
+    UtcTimestamp,
+)
 
 
 class CaseworkerManualDecisionPayload(StrictBaseModel):

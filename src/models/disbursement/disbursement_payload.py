@@ -1,8 +1,11 @@
 from pydantic import Field, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import DisbursementStatus
-from src.models.validators import DisbursementTxnId, UtcTimestamp
+from src.models.common import (
+    DisbursementStatus,
+    DisbursementTxnId,
+    StrictBaseModel,
+    UtcTimestamp,
+)
 
 
 class DisbursementCallbackPayload(StrictBaseModel):

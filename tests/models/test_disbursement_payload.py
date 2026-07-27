@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.disbursement_payload import DisbursementCallbackPayload
-from src.models.enums import DisbursementStatus
+from src.models.common import DisbursementStatus
+from src.models.disbursement import DisbursementCallbackPayload
 
 
 def test_disbursement_callback_success() -> None:

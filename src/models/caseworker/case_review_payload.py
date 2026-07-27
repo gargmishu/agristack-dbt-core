@@ -1,12 +1,13 @@
 from pydantic import Field
 
-from src.models.base import StrictBaseModel
-from src.models.enums import ApplicationIntent, DomainEntityKey
-from src.models.validators import (
+from src.models.common import (
+    ApplicationIntent,
     ChannelSessionId,
+    DomainEntityKey,
     EscalationCaseId,
     ExtractionPayloadId,
     HMACCitizenToken,
+    StrictBaseModel,
     UtcTimestamp,
 )
 

@@ -1,13 +1,15 @@
 from pydantic import Field, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import DisbursementStatus, EligibilityStatus, GovernanceDecision
-from src.models.validators import (
+from src.models.common import (
     AiConfidenceScore,
     ChannelSessionId,
+    DisbursementStatus,
     DisbursementTxnId,
+    EligibilityStatus,
     EscalationCaseId,
     ExtractionPayloadId,
+    GovernanceDecision,
+    StrictBaseModel,
     UtcTimestamp,
 )
 

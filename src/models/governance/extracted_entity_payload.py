@@ -1,8 +1,11 @@
 from pydantic import Field, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import ApplicationIntent, DomainEntityKey
-from src.models.validators import AiConfidenceScore
+from src.models.common import (
+    AiConfidenceScore,
+    ApplicationIntent,
+    DomainEntityKey,
+    StrictBaseModel,
+)
 
 
 class ExtractedEntityPayload(StrictBaseModel):

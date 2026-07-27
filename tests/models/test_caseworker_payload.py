@@ -7,7 +7,7 @@ from src.models.caseworker import (
     CaseworkerCaseReviewPayload,
     CaseworkerManualDecisionPayload,
 )
-from src.models.enums import ApplicationIntent, GovernanceDecision
+from src.models.common import ApplicationIntent, GovernanceDecision
 
 
 def test_case_review_payload_valid() -> None:

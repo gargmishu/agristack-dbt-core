@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.models.enums import (
+from src.models.common import (
     ApplicationIntent,
     DisbursementStatus,
     DomainEntityKey,

@@ -1,11 +1,11 @@
 from pydantic import Field, HttpUrl, model_validator
 
-from src.models.base import StrictBaseModel
-from src.models.enums import PayloadType
-from src.models.validators import (
+from src.models.common import (
     AudioDurationSeconds,
     ChannelSessionId,
+    PayloadType,
     PhoneNumberE164,
+    StrictBaseModel,
     UtcTimestamp,
 )
 
