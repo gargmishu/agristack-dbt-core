@@ -9,7 +9,11 @@ from src.models.common import (
 
 
 class USSDIngressPayload(StrictBaseModel):
-    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2)."""
+    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2).
+
+    Note: Unlike WhatsApp, USSD has no channel_message_id because USSD is a transient
+    synchronous GSM signaling session bound 1:1 to channel_session_id rather than discrete messages.
+    """
 
     channel_session_id: ChannelSessionId
     originating_phone_number: PhoneNumberE164

@@ -10,7 +10,11 @@ from src.models.common import (
 
 
 class IVRIngressPayload(StrictBaseModel):
-    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2)."""
+    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2).
+
+    Note: Unlike WhatsApp, IVR has no channel_message_id because a phone call is a
+    continuous voice stream bound 1:1 to channel_session_id rather than discrete messages.
+    """
 
     channel_session_id: ChannelSessionId
     originating_phone_number: PhoneNumberE164

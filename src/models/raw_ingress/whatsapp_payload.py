@@ -19,7 +19,10 @@ class WhatsAppIngressPayload(StrictBaseModel):
         ...,
         min_length=8,
         max_length=128,
-        description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)",
+        description=(
+            "Carrier unique message ID (e.g. WhatsApp wamid). Needed for async discrete "
+            "message deduplication; unlike IVR/USSD where interaction is bound to session."
+        ),
     )
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
