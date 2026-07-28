@@ -27,7 +27,6 @@ class WhatsAppIngressPayload(StrictBaseModel):
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
     )
-    received_at: UtcTimestamp
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )
@@ -39,6 +38,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
         max_length=1000,
         description="Raw text message (populated for TEXT)",
     )
+    received_at: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_content_mutual_exclusivity(self) -> "WhatsAppIngressPayload":
