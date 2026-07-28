@@ -3,7 +3,7 @@ from pydantic import Field, model_validator
 from src.models.common import (
     ChannelSessionId,
     ChannelType,
-    HMACCitizenToken,
+    HmacCitizenToken,
     PayloadType,
     StrictBaseModel,
     StructureLevel,
@@ -15,7 +15,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3)."""
 
     channel_session_id: ChannelSessionId
-    tokenized_citizen_id: HMACCitizenToken
+    tokenized_citizen_id: HmacCitizenToken
     channel_type: ChannelType = Field(
         ..., description="Originating channel type: whatsapp, ivr_voice, ussd, sms"
     )
@@ -35,7 +35,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
         max_length=5000,
         description="Raw citizen text or signed audio URL pointer",
     )
-    public_agent_timestamp: UtcTimestamp
+    received_at: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":

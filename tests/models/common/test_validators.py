@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from src.models.common.base import StrictBaseModel
 from src.models.common.validators import (
     ChannelSessionId,
-    HMACCitizenToken,
+    HmacCitizenToken,
     PhoneNumberE164,
 )
 
@@ -12,7 +12,7 @@ from src.models.common.validators import (
 class DummyValidatorModel(StrictBaseModel):
     session_id: ChannelSessionId
     phone: PhoneNumberE164
-    hmac_token: HMACCitizenToken
+    hmac_token: HmacCitizenToken
 
 
 def test_validators_valid() -> None:

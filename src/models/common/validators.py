@@ -22,7 +22,7 @@ PhoneNumberE164 = Annotated[
     ),
 ]
 
-HMACCitizenToken = Annotated[
+HmacCitizenToken = Annotated[
     str,
     Field(
         pattern=r"^[a-fA-F0-9]{64}$",

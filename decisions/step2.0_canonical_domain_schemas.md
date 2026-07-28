@@ -296,7 +296,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
     structure_level: StructureLevel = Field(..., description="Structure level: free_text, menu_selection, dtmf_selection")
     unprocessed_input_content: str = Field(..., max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
-    public_agent_timestamp: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
+    received_at: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
     language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
 ```
 
@@ -610,7 +610,7 @@ agristack-dbt-core/
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
 
 3. **`src/models/validators.py`:**
-   Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HMACCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
+   Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
 
 4. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
    Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.

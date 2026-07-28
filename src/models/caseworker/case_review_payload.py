@@ -6,7 +6,7 @@ from src.models.common import (
     DomainEntityKey,
     EscalationCaseId,
     ExtractionPayloadId,
-    HMACCitizenToken,
+    HmacCitizenToken,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -18,7 +18,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId
     channel_session_id: ChannelSessionId
     payload_id: ExtractionPayloadId
-    tokenized_citizen_id: HMACCitizenToken
+    tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
         default_factory=dict, description="Extracted domain parameters"

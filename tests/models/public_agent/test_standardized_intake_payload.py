@@ -16,7 +16,7 @@ def test_standardized_intake_payload_valid() -> None:
         structure_level=StructureLevel.FREE_TEXT,
         language_locale="hi-IN",
         unprocessed_input_content="Mujhe PM KISAN kist ki jankari chahiye",
-        public_agent_timestamp=datetime.now(UTC),
+        received_at=datetime.now(UTC),
     )
     assert payload.channel_type == ChannelType.WHATSAPP
     assert payload.language_locale == "hi-IN"
@@ -31,7 +31,7 @@ def test_standardized_intake_payload_invalid_hmac_length() -> None:
             payload_type=PayloadType.TEXT,
             structure_level=StructureLevel.FREE_TEXT,
             unprocessed_input_content="Query text",
-            public_agent_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
         )
 
 
@@ -44,6 +44,6 @@ def test_standardized_intake_payload_ivr_modality_mismatch() -> None:
             payload_type=PayloadType.TEXT,  # IVR strictly requires AUDIO
             structure_level=StructureLevel.FREE_TEXT,
             unprocessed_input_content="Query text",
-            public_agent_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
         )
     assert "IVR_VOICE channel strictly requires AUDIO payload_type" in str(exc.value)

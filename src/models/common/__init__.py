@@ -18,7 +18,7 @@ from src.models.common.validators import (
     DisbursementTxnId,
     EscalationCaseId,
     ExtractionPayloadId,
-    HMACCitizenToken,
+    HmacCitizenToken,
     PhoneNumberE164,
     UtcTimestamp,
 )
@@ -37,7 +37,7 @@ __all__ = [
     "DomainEntityKey",
     "ChannelSessionId",
     "PhoneNumberE164",
-    "HMACCitizenToken",
+    "HmacCitizenToken",
     "EscalationCaseId",
     "DisbursementTxnId",
     "ExtractionPayloadId",
