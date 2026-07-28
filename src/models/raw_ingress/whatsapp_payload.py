@@ -2,9 +2,9 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.models.common import (
     AudioDurationSeconds,
-    ChannelSessionId,
     PayloadType,
     PhoneNumberE164,
+    SessionId,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -13,7 +13,7 @@ from src.models.common import (
 class WhatsAppIngressPayload(StrictBaseModel):
     """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2)."""
 
-    channel_session_id: ChannelSessionId
+    session_id: SessionId
     originating_phone_number: PhoneNumberE164
     channel_message_id: str = Field(
         ...,

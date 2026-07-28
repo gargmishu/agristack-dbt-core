@@ -11,7 +11,7 @@ http_url_adapter = TypeAdapter(HttpUrl)
 
 def test_whatsapp_ingress_valid_text() -> None:
     payload = WhatsAppIngressPayload(
-        channel_session_id="sess_12345678",
+        session_id="sess_12345678",
         originating_phone_number="+919876543210",
         channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
         payload_type=PayloadType.TEXT,
@@ -26,7 +26,7 @@ def test_whatsapp_ingress_valid_text() -> None:
 def test_whatsapp_ingress_valid_audio() -> None:
     url = http_url_adapter.validate_python("https://storage.agristack.gov.in/audio/voice.ogg")
     payload = WhatsAppIngressPayload(
-        channel_session_id="sess_12345678",
+        session_id="sess_12345678",
         originating_phone_number="+919876543210",
         channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
         payload_type=PayloadType.AUDIO,
@@ -42,7 +42,7 @@ def test_whatsapp_ingress_valid_audio() -> None:
 def test_whatsapp_ingress_invalid_audio_missing_url() -> None:
     with pytest.raises(ValidationError) as exc:
         WhatsAppIngressPayload(
-            channel_session_id="sess_12345678",
+            session_id="sess_12345678",
             originating_phone_number="+919876543210",
             channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
             payload_type=PayloadType.AUDIO,
@@ -55,7 +55,7 @@ def test_whatsapp_ingress_invalid_audio_missing_url() -> None:
 def test_whatsapp_ingress_invalid_phone_number() -> None:
     with pytest.raises(ValidationError):
         WhatsAppIngressPayload(
-            channel_session_id="sess_12345678",
+            session_id="sess_12345678",
             originating_phone_number="9876543210",  # Missing leading +
             channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
             payload_type=PayloadType.TEXT,

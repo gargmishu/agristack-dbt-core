@@ -1,10 +1,10 @@
 from pydantic import Field, model_validator
 
 from src.models.common import (
-    ChannelSessionId,
     ChannelType,
     HmacCitizenToken,
     PayloadType,
+    SessionId,
     StrictBaseModel,
     StructureLevel,
     UtcTimestamp,
@@ -14,7 +14,7 @@ from src.models.common import (
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3)."""
 
-    channel_session_id: ChannelSessionId
+    session_id: SessionId
     tokenized_citizen_id: HmacCitizenToken
     channel_type: ChannelType = Field(
         ..., description="Originating channel type: whatsapp, ivr_voice, ussd, sms"

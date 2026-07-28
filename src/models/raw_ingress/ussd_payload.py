@@ -1,21 +1,21 @@
 from pydantic import Field
 
 from src.models.common import (
-    ChannelSessionId,
     PhoneNumberE164,
+    SessionId,
     StrictBaseModel,
     UtcTimestamp,
 )
 
 
-class USSDIngressPayload(StrictBaseModel):
+class UssdIngressPayload(StrictBaseModel):
     """USSD Menu signaling ingress payload (Layer 1 -> Layer 2).
 
-    Note: Unlike WhatsApp, USSD has no channel_message_id because USSD is a transient
-    synchronous GSM signaling session bound 1:1 to channel_session_id rather than discrete messages.
+    Note: Unlike WhatsApp, USSD has no session_message_id because USSD is a transient
+    synchronous GSM signaling session bound 1:1 to session_id rather than discrete messages.
     """
 
-    channel_session_id: ChannelSessionId
+    session_id: SessionId
     originating_phone_number: PhoneNumberE164
     ussd_service_code: str = Field(
         ...,

@@ -5,12 +5,12 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field
 
-ChannelSessionId = Annotated[
+SessionId = Annotated[
     str,
     Field(
         min_length=8,
         max_length=128,
-        description="Unified channel session ID (entropy floor >=8, ceiling <=128)",
+        description="Unified session ID (entropy floor >=8, ceiling <=128)",
     ),
 ]
 

@@ -3,14 +3,14 @@ from pydantic import ValidationError
 
 from src.models.common.base import StrictBaseModel
 from src.models.common.validators import (
-    ChannelSessionId,
     HmacCitizenToken,
     PhoneNumberE164,
+    SessionId,
 )
 
 
 class DummyValidatorModel(StrictBaseModel):
-    session_id: ChannelSessionId
+    session_id: SessionId
     phone: PhoneNumberE164
     hmac_token: HmacCitizenToken
 

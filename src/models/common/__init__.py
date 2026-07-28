@@ -14,12 +14,12 @@ from src.models.common.enums import (
 from src.models.common.validators import (
     AiConfidenceScore,
     AudioDurationSeconds,
-    ChannelSessionId,
     DisbursementTxnId,
     EscalationCaseId,
     ExtractionPayloadId,
     HmacCitizenToken,
     PhoneNumberE164,
+    SessionId,
     UtcTimestamp,
 )
 
@@ -35,7 +35,7 @@ __all__ = [
     "ApplicationStatus",
     "DisbursementStatus",
     "DomainEntityKey",
-    "ChannelSessionId",
+    "SessionId",
     "PhoneNumberE164",
     "HmacCitizenToken",
     "EscalationCaseId",

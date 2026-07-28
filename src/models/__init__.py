@@ -7,7 +7,6 @@ from src.models.common import (
     ApplicationIntent,
     ApplicationStatus,
     AudioDurationSeconds,
-    ChannelSessionId,
     ChannelType,
     DisbursementStatus,
     DisbursementTxnId,
@@ -19,6 +18,7 @@ from src.models.common import (
     HmacCitizenToken,
     PayloadType,
     PhoneNumberE164,
+    SessionId,
     SessionStatus,
     StrictBaseModel,
     StructureLevel,
@@ -31,8 +31,8 @@ from src.models.governance import (
 )
 from src.models.public_agent import PublicAgentStandardizedIntakePayload
 from src.models.raw_ingress import (
-    IVRIngressPayload,
-    USSDIngressPayload,
+    IvrIngressPayload,
+    UssdIngressPayload,
     WhatsAppIngressPayload,
 )
 
@@ -48,7 +48,7 @@ __all__ = [
     "ApplicationStatus",
     "DisbursementStatus",
     "DomainEntityKey",
-    "ChannelSessionId",
+    "SessionId",
     "PhoneNumberE164",
     "HmacCitizenToken",
     "EscalationCaseId",
@@ -58,8 +58,8 @@ __all__ = [
     "AiConfidenceScore",
     "UtcTimestamp",
     "WhatsAppIngressPayload",
-    "IVRIngressPayload",
-    "USSDIngressPayload",
+    "IvrIngressPayload",
+    "UssdIngressPayload",
     "PublicAgentStandardizedIntakePayload",
     "ExtractedEntityPayload",
     "ApplicationDecisionPayload",

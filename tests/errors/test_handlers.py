@@ -13,7 +13,7 @@ async def test_validation_exception_handler_rfc7807_format() -> None:
     # Trigger a real Pydantic ValidationError
     try:
         WhatsAppIngressPayload(
-            channel_session_id="short",  # min_length=8 violation
+            session_id="short",  # min_length=8 violation
             originating_phone_number="invalid",
             channel_message_id="wamid",
             payload_type="invalid_type",  # type: ignore[arg-type]

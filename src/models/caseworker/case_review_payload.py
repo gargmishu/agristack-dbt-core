@@ -2,11 +2,11 @@ from pydantic import Field
 
 from src.models.common import (
     ApplicationIntent,
-    ChannelSessionId,
     DomainEntityKey,
     EscalationCaseId,
     ExtractionPayloadId,
     HmacCitizenToken,
+    SessionId,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -16,7 +16,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     """Payload emitted by Step 11 to stage case review in Caseworker Review Dashboard."""
 
     escalation_case_id: EscalationCaseId
-    channel_session_id: ChannelSessionId
+    session_id: SessionId
     payload_id: ExtractionPayloadId
     tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")

@@ -161,7 +161,7 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **Auto Whitespace Trimming** | *All String Fields* | **All Payloads** | Enforced via `StrictBaseModel(str_strip_whitespace=True)`. Auto-trims leading/trailing spaces. |
 | **Strict Enum Coercion** | *All Enum Fields* | **All Payloads** | Enforced via `StrictBaseModel(use_enum_values=True)`. Validates string against declared `Enum`. |
 | **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
-| **Session ID Bounds** | `channel_session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
+| **Session ID Bounds** | `session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
 | **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format regex `^\+[1-9]\d{1,14}$`, e.g., `+919876543210`. |
 | **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp`, `decided_at_timestamp`, `staged_at_timestamp`, `decision_timestamp`, `cleared_at_timestamp` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
 | **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
@@ -190,7 +190,7 @@ Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. 
 #### WhatsApp Ingress Payload
 ```python
 class WhatsAppIngressPayload(StrictBaseModel):
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
+    session_id: str = Field(..., min_length=8, max_length=128, description="Conversational channel session ID")
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Carrier messaging user ID / phone number (E.164 standard)")
     channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
     payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
@@ -202,7 +202,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
 
 ##### WhatsApp Specific Validations:
 1. **Provider Message ID Bounds:** `channel_message_id` must be a non-empty string, `min_length=8, max_length=128`.
-   - **min=8:** entropy floor matching `channel_session_id`; all real carrier message IDs are ≥8 chars — shorter values indicate truncation or spoofing.
+   - **min=8:** entropy floor matching `session_id`; all real carrier message IDs are ≥8 chars — shorter values indicate truncation or spoofing.
    - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
    - **WhatsApp wmid format note:** WhatsApp message ids always begins with the `wamid.` prefix ("wa" = WhatsApp) followed by a base64-encoded payload issued by the WhatsApp Business Platform. A value that does not start with `wamid.` on a WhatsApp channel is anomalous and should be flagged.
 2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
@@ -214,8 +214,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
 
 #### IVR Telephony Ingress Payload
 ```python
-class IVRIngressPayload(StrictBaseModel):
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
+class IvrIngressPayload(StrictBaseModel):
+    session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
@@ -235,8 +235,8 @@ class IVRIngressPayload(StrictBaseModel):
 
 #### USSD Menu Ingress Payload
 ```python
-class USSDIngressPayload(StrictBaseModel):
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
+class UssdIngressPayload(StrictBaseModel):
+    session_id: str = Field(..., min_length=8, max_length=128, description="Telco network session ID")
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating MSISDN phone number (E.164 standard)")
     ussd_service_code: str = Field(..., pattern=r"^\*\d+(\*\d+)*#$", description="USSD shortcode (e.g., *147#, *147*1*2#)")
     ussd_user_digit_selection: str = Field(..., min_length=1, max_length=64, description="Concatenated digit selections and data entries separated by *")
@@ -290,7 +290,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """
     Normalized, PII-purged JSON payload passed from Layer 2 Connectors to Layer 3 Public Agent API.
     """
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
+    session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC Token")
     channel_type: ChannelType = Field(..., description="Ingress channel source: whatsapp, ivr_voice, ussd, sms")
     payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
@@ -424,7 +424,7 @@ class ExtractedEntityPayload(StrictBaseModel):
 #### Application Decision Payload
 ```python
 class ApplicationDecisionPayload(StrictBaseModel):
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
+    session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
     payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
     ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
     eligibility_status: EligibilityStatus = Field(..., description="Computed citizen scheme eligibility status from DPI registry cross-matching (ELIGIBLE, INELIGIBLE, PENDING_VERIFICATION, REQUIRES_REVIEW)")
@@ -464,7 +464,7 @@ class CaseReviewPayload(StrictBaseModel):
     Payload emitted by Step 11 to stage an escalated case review inside the Caseworker Review Dashboard.
     """
     escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
-    channel_session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
+    session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
     payload_id: str = Field(..., description="Foreign key referencing original extraction payload (session_extraction_details.payload_id)")
     tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
@@ -613,7 +613,7 @@ agristack-dbt-core/
    Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
 
 4. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
-   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IVRIngressPayload`, and `USSDIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
+   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IvrIngressPayload`, and `UssdIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
 
 5. **`src/models/public_agent_payload.py`:**
    Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.

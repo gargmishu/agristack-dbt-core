@@ -2,13 +2,13 @@ from pydantic import Field, model_validator
 
 from src.models.common import (
     AiConfidenceScore,
-    ChannelSessionId,
     DisbursementStatus,
     DisbursementTxnId,
     EligibilityStatus,
     EscalationCaseId,
     ExtractionPayloadId,
     GovernanceDecision,
+    SessionId,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -17,7 +17,7 @@ from src.models.common import (
 class ApplicationDecisionPayload(StrictBaseModel):
     """Application decision payload emitted by Layer 4 rules engine."""
 
-    channel_session_id: ChannelSessionId
+    session_id: SessionId
     payload_id: ExtractionPayloadId
     ai_confidence_score: AiConfidenceScore
     eligibility_status: EligibilityStatus = Field(
