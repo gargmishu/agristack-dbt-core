@@ -14,7 +14,7 @@ def test_caseworker_manual_decision_valid_approve() -> None:
         governance_decision=GovernanceDecision.MANUAL_APPROVE,
         review_notes="Verified land record document manually",
         approved_amount=5000.0,  # noqa: PLR2004
-        decision_timestamp=datetime.now(UTC),
+        decided_at=datetime.now(UTC),
     )
     assert payload.governance_decision == GovernanceDecision.MANUAL_APPROVE
     assert payload.approved_amount == 5000.0  # noqa: PLR2004
@@ -28,6 +28,6 @@ def test_caseworker_manual_decision_invalid_type() -> None:
             governance_decision=GovernanceDecision.AUTO_APPROVE,  # Automated decision not permitted
             review_notes="Notes",
             approved_amount=5000.0,  # noqa: PLR2004
-            decision_timestamp=datetime.now(UTC),
+            decided_at=datetime.now(UTC),
         )
     assert "must be MANUAL_APPROVE or MANUAL_REJECT" in str(exc.value)

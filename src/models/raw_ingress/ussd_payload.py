@@ -28,4 +28,4 @@ class UssdIngressPayload(StrictBaseModel):
         max_length=64,
         description="Concatenated digit selections and data entries separated by *",
     )
-    ingress_timestamp: UtcTimestamp
+    received_at: UtcTimestamp

@@ -15,7 +15,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
     disbursement_status: DisbursementStatus = Field(
         ..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED"
     )
-    cleared_at_timestamp: UtcTimestamp
+    cleared_at: UtcTimestamp
     failure_reason_code: str | None = Field(
         None, max_length=256, description="Populated if status is FAILED or RETURNED"
     )

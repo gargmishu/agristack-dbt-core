@@ -163,7 +163,7 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
 | **Session ID Bounds** | `session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
 | **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format regex `^\+[1-9]\d{1,14}$`, e.g., `+919876543210`. |
-| **UTC Timestamp Freshness** | `ingress_timestamp`, `intake_timestamp`, `decided_at_timestamp`, `staged_at_timestamp`, `decision_timestamp`, `cleared_at_timestamp` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
+| **UTC Timestamp Freshness** | `received_at`, `intake_timestamp`, `decided_at_timestamp`, `staged_at_timestamp`, `decision_timestamp`, `cleared_at_timestamp` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
 | **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
 | **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`min=0.0, max=1.0`). |
 | **Incident Ticket Pattern** | `escalation_case_id` | **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload**, **CaseworkerReviewPayload** | Must match ticket format regex `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`). |
@@ -194,7 +194,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Carrier messaging user ID / phone number (E.164 standard)")
     channel_message_id: str = Field(..., min_length=8, max_length=128, description="Carrier/Provider unique message ID (e.g. WhatsApp wmid, RCS message ID)")
     payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
-    ingress_timestamp: datetime = Field(..., description="UTC timestamp when carrier received event")
+    received_at: datetime = Field(..., description="UTC timestamp when carrier received event")
     audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file (populated for AUDIO)")
     duration_seconds: Optional[int] = Field(None, min=1, max=600, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)")
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message (populated for TEXT)")
@@ -219,7 +219,7 @@ class IvrIngressPayload(StrictBaseModel):
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
-    ingress_timestamp: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
+    received_at: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
 ```
 
 ##### IVR Telephony Specific Validations:
@@ -240,7 +240,7 @@ class UssdIngressPayload(StrictBaseModel):
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating MSISDN phone number (E.164 standard)")
     ussd_service_code: str = Field(..., pattern=r"^\*\d+(\*\d+)*#$", description="USSD shortcode (e.g., *147#, *147*1*2#)")
     ussd_user_digit_selection: str = Field(..., min_length=1, max_length=64, description="Concatenated digit selections and data entries separated by *")
-    ingress_timestamp: datetime = Field(..., description="UTC timestamp when telco received USSD code")
+    received_at: datetime = Field(..., description="UTC timestamp when telco received USSD code")
 ```
 
 ##### USSD Menu Specific Validations:
@@ -433,7 +433,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
     disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
     escalation_case_id: Optional[str] = Field(None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
-    decided_at_timestamp: datetime = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
+    decided_at: datetime = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
 ```
 
 ##### Governance Routing Decision Specific Validations:
@@ -471,7 +471,7 @@ class CaseReviewPayload(StrictBaseModel):
     extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
     unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
     escalation_reason: str = Field(..., max_length=512, description="Reason for escalation (e.g. LOW_CONFIDENCE, ADVERSARIAL_FLAG, REGISTRY_DISCREPANCY)")
-    staged_at_timestamp: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
+    staged_at: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
 ```
 
 ##### Caseworker Incident Staging Specific Validations:
@@ -494,7 +494,7 @@ class CaseworkerReviewPayload(StrictBaseModel):
     review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
     approved_amount: Optional[float] = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
     rejection_reason: Optional[str] = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
-    decision_timestamp: datetime = Field(..., description="UTC timestamp when officer submitted decision")
+    decided_at: datetime = Field(..., description="UTC timestamp when officer submitted decision")
 ```
 
 ##### Caseworker Review Specific Validations:
@@ -517,7 +517,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
     """
     disbursement_txn_id: str = Field(..., min_length=8, max_length=128, description="Unique payment clearing transaction ID")
     disbursement_status: DisbursementStatus = Field(..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED")
-    cleared_at_timestamp: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
+    cleared_at: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
     failure_reason_code: Optional[str] = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
 ```
 

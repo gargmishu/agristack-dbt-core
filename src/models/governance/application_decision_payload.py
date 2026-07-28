@@ -39,7 +39,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
     )
-    decided_at_timestamp: UtcTimestamp
+    decided_at: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_conditional_decision_fields(self) -> "ApplicationDecisionPayload":  # noqa: PLR0912

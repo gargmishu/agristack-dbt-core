@@ -17,7 +17,7 @@ async def test_validation_exception_handler_rfc7807_format() -> None:
             originating_phone_number="invalid",
             channel_message_id="wamid",
             payload_type="invalid_type",  # type: ignore[arg-type]
-            ingress_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
         )
     except ValidationError as err:
         validation_error = err

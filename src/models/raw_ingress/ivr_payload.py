@@ -20,4 +20,4 @@ class IvrIngressPayload(StrictBaseModel):
     originating_phone_number: PhoneNumberE164
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     duration_seconds: AudioDurationSeconds
-    ingress_timestamp: UtcTimestamp
+    received_at: UtcTimestamp

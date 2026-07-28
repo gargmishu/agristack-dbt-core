@@ -15,7 +15,7 @@ def test_whatsapp_ingress_valid_text() -> None:
         originating_phone_number="+919876543210",
         channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
         payload_type=PayloadType.TEXT,
-        ingress_timestamp=datetime.now(UTC),
+        received_at=datetime.now(UTC),
         text_body="Hello AgriStack",
     )
     assert payload.payload_type == PayloadType.TEXT
@@ -30,7 +30,7 @@ def test_whatsapp_ingress_valid_audio() -> None:
         originating_phone_number="+919876543210",
         channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
         payload_type=PayloadType.AUDIO,
-        ingress_timestamp=datetime.now(UTC),
+        received_at=datetime.now(UTC),
         audio_recording_url=url,
         duration_seconds=120,
     )
@@ -46,7 +46,7 @@ def test_whatsapp_ingress_invalid_audio_missing_url() -> None:
             originating_phone_number="+919876543210",
             channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
             payload_type=PayloadType.AUDIO,
-            ingress_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
             duration_seconds=120,
         )
     assert "audio_recording_url is required" in str(exc.value)
@@ -59,6 +59,6 @@ def test_whatsapp_ingress_invalid_phone_number() -> None:
             originating_phone_number="9876543210",  # Missing leading +
             channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
             payload_type=PayloadType.TEXT,
-            ingress_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
             text_body="Hello",
         )

@@ -15,7 +15,7 @@ def test_ivr_ingress_valid() -> None:
         originating_phone_number="+919876543210",
         audio_recording_url=url,
         duration_seconds=300,
-        ingress_timestamp=datetime.now(UTC),
+        received_at=datetime.now(UTC),
     )
     assert payload.duration_seconds == 300  # noqa: PLR2004
 
@@ -28,5 +28,5 @@ def test_ivr_ingress_duration_exceeds_ceiling() -> None:
             originating_phone_number="+919876543210",
             audio_recording_url=url,
             duration_seconds=601,  # Exceeds max 600s ceiling
-            ingress_timestamp=datetime.now(UTC),
+            received_at=datetime.now(UTC),
         )

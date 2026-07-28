@@ -20,7 +20,7 @@ def test_governance_routing_approved_decision() -> None:
         governance_decision=GovernanceDecision.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
-        decided_at_timestamp=datetime.now(UTC),
+        decided_at=datetime.now(UTC),
     )
     assert payload.governance_decision == GovernanceDecision.AUTO_APPROVE
     assert payload.disbursement_txn_id == "TXN-2026-987654"
@@ -34,6 +34,6 @@ def test_governance_routing_review_decision_missing_case_id() -> None:
             ai_confidence_score=0.45,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
             governance_decision=GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
-            decided_at_timestamp=datetime.now(UTC),
+            decided_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required" in str(exc.value)

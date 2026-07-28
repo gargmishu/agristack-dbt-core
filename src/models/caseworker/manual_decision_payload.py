@@ -31,7 +31,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, max_length=512, description="Populated for MANUAL_REJECT"
     )
-    decision_timestamp: UtcTimestamp
+    decided_at: UtcTimestamp
 
     @model_validator(mode="after")
     def validate_caseworker_decision_fields(self) -> "CaseworkerManualDecisionPayload":

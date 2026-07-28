@@ -27,7 +27,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
     )
-    ingress_timestamp: UtcTimestamp
+    received_at: UtcTimestamp
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )

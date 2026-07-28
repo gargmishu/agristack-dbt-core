@@ -13,6 +13,6 @@ def test_case_review_payload_valid() -> None:
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         unprocessed_input_content="Voice note transcript",
         escalation_reason="LOW_CONFIDENCE",
-        staged_at_timestamp=datetime.now(UTC),
+        staged_at=datetime.now(UTC),
     )
     assert payload.escalation_case_id == "SPP-CASE-2026-981245"

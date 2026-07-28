@@ -27,4 +27,4 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
         ..., max_length=5000, description="Raw citizen text or signed audio URL"
     )
     escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
-    staged_at_timestamp: UtcTimestamp
+    staged_at: UtcTimestamp
