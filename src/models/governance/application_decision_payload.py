@@ -32,11 +32,17 @@ class ApplicationDecisionPayload(StrictBaseModel):
     )
     disbursement_txn_id: DisbursementTxnId | None = Field(
         None,
-        description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT",
+        description=(
+            "Idempotency tracking key generated at approval time for "
+            "AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT"
+        ),
     )
     disbursement_status: DisbursementStatus | None = Field(
         None,
-        description="Initialized to PENDING/INITIATED for approved payouts; None otherwise",
+        description=(
+            "Initialized to PENDING/INITIATED at decision time during clearance gap; "
+            "updated to SUCCESS/FAILED upon bank callback"
+        ),
     )
     escalation_case_id: EscalationCaseId | None = None
     rejection_reason: str | None = Field(
