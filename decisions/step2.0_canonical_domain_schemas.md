@@ -449,6 +449,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
      - `disbursement_txn_id` **must** be populated.
      - `disbursement_status` **must** be `PENDING` or `INITIATED`.
      - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
+     - `review_notes` **must** be populated (non-empty caseworker audit note).
      - `rejection_reason` **must** be `None`.
    - If `governance_decision` is `AUTO_REJECT`:
      - `rejection_reason` **must** be populated.
@@ -456,6 +457,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
    - If `governance_decision` is `MANUAL_REJECT`:
      - `rejection_reason` **must** be populated.
      - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
+     - `review_notes` **must** be populated (non-empty caseworker audit note).
      - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
    - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW`, `HUMAN_REVIEW`, or `REQUEST_MORE_INFO`:
      - `escalation_case_id` **must** be a valid incident case ticket string (`SPP-CASE-YYYY-XXXXXX`).

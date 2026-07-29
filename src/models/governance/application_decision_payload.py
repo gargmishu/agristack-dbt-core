@@ -91,7 +91,9 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("escalation_case_id is required for MANUAL_APPROVE")
             if self.rejection_reason is not None:
                 raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
-            if self.review_notes is not None and not self.review_notes.strip():
+            if self.review_notes is None:
+                raise ValueError("review_notes is required for MANUAL_APPROVE")
+            if not self.review_notes.strip():
                 raise ValueError("review_notes cannot be empty or whitespace for MANUAL_APPROVE")
         return self
 
@@ -118,7 +120,9 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("disbursement_txn_id must be None for MANUAL_REJECT")
             if self.disbursement_status is not None:
                 raise ValueError("disbursement_status must be None for MANUAL_REJECT")
-            if self.review_notes is not None and not self.review_notes.strip():
+            if self.review_notes is None:
+                raise ValueError("review_notes is required for MANUAL_REJECT")
+            if not self.review_notes.strip():
                 raise ValueError("review_notes cannot be empty or whitespace for MANUAL_REJECT")
         return self
 
