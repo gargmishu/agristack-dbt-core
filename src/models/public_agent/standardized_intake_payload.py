@@ -45,15 +45,15 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     received_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":  # noqa: PLR0912
-        """Enforces 2-type tuple input rules for channel, structure, and content compatibility."""
-        content = self.unprocessed_input_content
-
-        # 1. Non-empty & Non-whitespace Guard
-        if not content or not content.strip():
+    def validate_non_empty_content(self) -> "PublicAgentStandardizedIntakePayload":
+        """Ensures unprocessed_input_content is non-empty and non-whitespace."""
+        if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
             raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
+        return self
 
-        # 2. Channel & Structure Level Compatibility Matrix
+    @model_validator(mode="after")
+    def validate_channel_structure_matrix(self) -> "PublicAgentStandardizedIntakePayload":
+        """Enforces channel, payload type, and structure level compatibility matrix."""
         if self.channel_type == ChannelType.USSD:
             if (
                 self.payload_type != PayloadType.TEXT
@@ -97,8 +97,12 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
                 )
             if self.payload_type not in (PayloadType.AUDIO, PayloadType.TEXT):
                 raise ValueError("WHATSAPP channel requires AUDIO or TEXT payload_type")
+        return self
 
-        # 3. Content Formatting Validation
+    @model_validator(mode="after")
+    def validate_content_format(self) -> "PublicAgentStandardizedIntakePayload":
+        """Validates unprocessed_input_content format based on payload type and structure level."""
+        content = self.unprocessed_input_content
         if (
             self.payload_type == PayloadType.AUDIO
             and self.structure_level == StructureLevel.FREE_TEXT
@@ -127,5 +131,4 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
             raise ValueError(
                 "MENU_SELECTION unprocessed_input_content cannot exceed 256 characters"
             )
-
         return self
