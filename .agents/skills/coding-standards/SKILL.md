@@ -1,0 +1,161 @@
+---
+name: coding-standards
+description: Coding rules, naming conventions, package structure, and modularity guidelines established for AgriStack core development. Use whenever designing, refactoring, or writing Python models, validators, or package structures.
+---
+
+# AgriStack Core Coding Standards & Guidelines
+
+This document defines the architectural, structural, and coding standards established for the AgriStack codebase. All new code, refactorings, and schema definitions must strictly adhere to these principles.
+
+---
+
+## 1. Naming Conventions
+
+### 1.1 Class & Type Alias Naming (Strict PascalCase / Upper CamelCase)
+* **Capitalize Acronyms as Words**: Multi-word acronyms in class names and type aliases must treat acronyms as capitalized words (Upper CamelCase) rather than ALL-CAPS to avoid visual collisions (e.g., `CC` collisions) and maintain readability.
+  * **Correct**: `IvrIngressPayload`, `UssdIngressPayload`, `HmacCitizenToken`, `WhatsAppIngressPayload`
+  * **Incorrect**: `IVRIngressPayload`, `USSDIngressPayload`, `HMACCitizenToken`, `WhatsappIngressPayload`
+* **Align with Standard Libraries & Pydantic**: Matches conventions like `HttpUrl`, `HttpClient`, and `hashlib.pbkdf2_hmac`.
+
+### 1.2 Attribute & Field Naming (`snake_case`)
+* All model attributes, function parameters, and variables must strictly use `snake_case`.
+
+### 1.3 Timestamp Attribute Standard (`<action>_at`)
+* All timestamp fields across all 4 architecture layers must follow the clean **`<action>_at`** convention. Avoid redundant `_timestamp` suffixes.
+  * `received_at`: UTC timestamp when raw carrier ingress or Layer 3 intake payload arrived.
+  * `decided_at`: UTC timestamp when governance or caseworker decision was rendered.
+  * `staged_at`: UTC timestamp when incident ticket was staged in caseworker queue.
+  * `cleared_at`: UTC timestamp when payment rail cleared transaction.
+
+### 1.4 Unified Session Key (`session_id`)
+* The primary session key tracking end-to-end communication across all layers must be named **`session_id`** (typed with `SessionId`).
+* Avoid layer-specific stutter like `channel_session_id`.
+
+### 1.5 Phone Number Standard (`originating_phone_number`)
+* Use `originating_phone_number` consistently across all Layer 1 ingress payloads (e.g., WhatsApp, IVR, USSD).
+
+---
+
+## 2. Package & Directory Structure
+
+### 2.1 Categorized Domain Subpackages
+Organize domain models into logical, single-purpose subpackages under `src/models/`:
+
+```
+src/models/
+├── __init__.py                # Top-level re-exports for backward compatibility
+├── common/                    # Shared foundational primitives & type annotations
+│   ├── base.py                # StrictBaseModel definition
+│   ├── enums.py               # StrEnum definitions
+│   └── field_types.py         # Constrained Annotated type aliases & validators
+├── raw_ingress/               # Layer 1 -> Layer 2 carrier raw ingress payloads
+│   ├── whatsapp_payload.py
+│   ├── ivr_payload.py
+│   └── ussd_payload.py
+├── public_agent/              # Layer 2 -> Layer 3 normalized intake contracts
+│   └── standardized_intake_payload.py
+├── governance/                # Layer 4 governance models & extraction payloads
+│   ├── application_decision_payload.py
+│   └── extracted_entity_payload.py
+├── caseworker/                # Caseworker portal models & manual decisions
+│   ├── case_review_payload.py
+│   └── manual_decision_payload.py
+└── disbursement/              # Financial clearing callback models
+    └── disbursement_payload.py
+```
+
+### 2.2 Strict Test Hierarchy Mirroring
+The test suite under `tests/` must mirror `src/` 1:1. Each source module must have a corresponding test file in the matching subdirectory:
+
+```
+tests/models/
+├── common/
+│   ├── test_base.py
+│   ├── test_enums.py
+│   └── test_field_types.py
+├── raw_ingress/
+│   ├── test_whatsapp_payload.py
+│   ├── test_ivr_payload.py
+│   └── test_ussd_payload.py
+├── public_agent/
+│   └── test_standardized_intake_payload.py
+├── governance/
+│   └── test_application_decision_payload.py
+├── caseworker/
+│   ├── test_case_review_payload.py
+│   └── test_manual_decision_payload.py
+└── disbursement/
+    └── test_disbursement_payload.py
+```
+
+---
+
+## 3. Modular Code & Single-Responsibility Principle (SRP)
+
+### 3.1 Focused Model Validators
+* Split validation logic into separate, single-purpose `@model_validator(mode="after")` methods rather than creating monolithic validator functions.
+* **Keep Cyclomatic Complexity Low**: Each validator method should validate one concern (e.g. non-empty check, matrix compatibility, format validation). Keep branch count under 12 to eliminate `# noqa: PLR0912` suppressions.
+
+```python
+# GOOD: Focused single-responsibility validators
+@model_validator(mode="after")
+def validate_non_empty_content(self) -> "PublicAgentStandardizedIntakePayload":
+    if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
+        raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
+    return self
+
+@model_validator(mode="after")
+def validate_channel_structure_matrix(self) -> "PublicAgentStandardizedIntakePayload":
+    # Validate channel_type vs structure_level compatibility matrix
+    return self
+
+@model_validator(mode="after")
+def validate_content_format(self) -> "PublicAgentStandardizedIntakePayload":
+    # Validate content formatting (URL, DTMF regex, max length)
+    return self
+```
+
+### 3.2 Direct Enum Member Comparisons
+* Domain Enums inherit from `StrEnum`. Compare Enum members directly (`self.payload_type == PayloadType.AUDIO`) instead of using `.value` or wrapping with `str(...)`.
+* **Correct**: `if self.payload_type == PayloadType.AUDIO:`
+* **Incorrect**: `if str(self.payload_type) == PayloadType.AUDIO.value:`
+
+---
+
+## 4. Strict Type Safety & Immutability
+
+### 4.1 Base Model Configuration (`StrictBaseModel`)
+All domain models must inherit from `StrictBaseModel`, which enforces strict security and immutability:
+
+```python
+class StrictBaseModel(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",             # Rejects unexpected / injected keys
+        frozen=True,                # Guarantees immutability post-instantiation
+        validate_assignment=True,   # Validates assignments if unfrozen
+        str_strip_whitespace=True,  # Auto-strips leading/trailing whitespace
+        use_enum_values=True,       # Coerces enum values for clean serialization
+    )
+```
+
+### 4.2 Reusable Constrained Types (`src/models/common/field_types.py`)
+* Use `Annotated` type aliases with Pydantic `Field` constraints and `AfterValidator` functions for reusable domain types (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `UtcTimestamp`, `AudioDurationSeconds`, `AiConfidenceScore`).
+
+---
+
+## 5. Verification Checklist
+
+Before committing any changes to models or schemas:
+
+1. **Ruff Linter & Formatter**:
+   ```bash
+   .venv/bin/ruff check --fix . && .venv/bin/ruff format .
+   ```
+2. **Pytest Test Suite**:
+   ```bash
+   .venv/bin/pytest
+   ```
+3. **MyPy Static Type Checker**:
+   ```bash
+   .venv/bin/mypy src tests
+   ```
