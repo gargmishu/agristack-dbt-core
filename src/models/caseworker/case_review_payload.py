@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from src.models.common import (
     ApplicationIntent,
@@ -31,3 +31,12 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     )
     escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
     staged_at: UtcTimestamp
+
+    @model_validator(mode="after")
+    def validate_non_empty_fields(self) -> "CaseworkerCaseReviewPayload":
+        """Ensforces non-empty, non-whitespace text fields."""
+        if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
+            raise ValueError("unprocessed_input_content cannot be empty or whitespace")
+        if not self.escalation_reason or not self.escalation_reason.strip():
+            raise ValueError("escalation_reason cannot be empty or whitespace")
+        return self
