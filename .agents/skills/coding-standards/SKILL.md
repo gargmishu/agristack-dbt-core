@@ -144,10 +144,6 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
   * **Correct**: `SLM/NLU extraction pipeline`, `ASR/STT audio transcription worker`, `AI governance engine`
   * **Incorrect**: `Ollama pipeline`, `Whisper transcription worker`, `LLaMA model`
 
-### 3.6 Separate Automated vs. Manual Execution Paths & Matrix Testing
-* **Never Over-Group `AUTO_*` and `MANUAL_*` Enums**: Always evaluate whether automated machine paths (`AUTO_APPROVE`, `AUTO_REJECT`) have different field requirements from human adjudication paths (`MANUAL_APPROVE`, `MANUAL_REJECT`). Automated paths have zero human context (`escalation_case_id = None`); manual paths always originate from an escalated ticket (`escalation_case_id` required).
-* **Exhaustive Parametrized Matrix Testing**: Test suites for state-machine models must use `@pytest.mark.parametrize` across 100% of Enum members to assert required vs forbidden fields for every single state.
-
 ---
 
 ## 4. Strict Type Safety & Immutability
@@ -176,9 +172,32 @@ class StrictBaseModel(BaseModel):
 
 ---
 
-## 5. Verification Checklist
+## 5. Systemic Logical Error Prevention & Verification Methodology
 
-Before committing any changes to models or schemas:
+To systematically prevent logical errors anywhere across the system (models, connectors, orchestrators, state machines, and API boundaries):
+
+### 5.1 Lifecycle Dataflow Tracing
+* **Trace Across Boundaries**: Never design validation rules or logic for a single component in isolation. Always trace:
+  1. *Origin*: Where did this payload or state originate?
+  2. *Survival*: What foreign keys or context must survive across this transition to maintain auditability?
+  3. *Destination*: Who consumes this payload next, and what guarantees do they expect?
+
+### 5.2 Global System Invariants
+Code validators and business logic against non-negotiable system invariants:
+* **Identity Invariant**: Zero cleartext PII in Layer 3 and Layer 4 contracts.
+* **Auditability Invariant**: Every human manual adjudication MUST reference the escalation ticket ID (`SPP-CASE-...`) and carry officer audit notes (`review_notes`).
+* **Financial Invariant**: Payout transaction IDs (`disbursement_txn_id`) and statuses exist ONLY for approved outcomes; rejection reasons exist ONLY for rejected outcomes.
+* **Security Zeroing Invariant**: Adversarial injection attempts strictly zero confidence scores (`0.0`) and wipe extracted entities.
+
+### 5.3 Exhaustive Matrix & Property-Based Testing
+* **100% Enum Coverage**: State machine models and decision routers must use `@pytest.mark.parametrize` across 100% of Enum members to verify required, optional, and forbidden fields for every state.
+* **Property-Based Verification**: Use property-based testing to stress-test logical boundaries against unexpected edge-case combinations.
+
+---
+
+## 6. Verification Checklist
+
+Before committing any changes to models, schemas, or logic:
 
 1. **Ruff Linter & Formatter**:
    ```bash
