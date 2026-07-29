@@ -7,7 +7,7 @@ voice stream URLs and caller ANI numbers.
 import logging
 from typing import Any
 
-from src.models.raw_ingress import IvrIngressPayload
+from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
 

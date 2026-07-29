@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from src.models.common import ChannelType, PayloadType, StructureLevel
-from src.models.raw_ingress import (
+from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.raw_ingress import (
     IvrIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,

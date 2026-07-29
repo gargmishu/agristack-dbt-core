@@ -8,9 +8,9 @@ See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 
 from typing import Union
 
-from src.models.common import ChannelType, PayloadType, StructureLevel
-from src.models.public_agent import PublicAgentStandardizedIntakePayload
-from src.models.raw_ingress import (
+from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
+from src.data_models.raw_ingress import (
     IvrIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,

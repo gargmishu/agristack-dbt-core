@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.connectors import UssdConnector
-from src.models.raw_ingress import UssdIngressPayload
+from src.data_models.raw_ingress import UssdIngressPayload
 
 
 @pytest.mark.asyncio

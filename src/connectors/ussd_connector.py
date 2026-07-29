@@ -7,7 +7,7 @@ shortcode patterns and concatenated user digit selections.
 import logging
 from typing import Any
 
-from src.models.raw_ingress import UssdIngressPayload
+from src.data_models.raw_ingress import UssdIngressPayload
 
 logger = logging.getLogger(__name__)
 

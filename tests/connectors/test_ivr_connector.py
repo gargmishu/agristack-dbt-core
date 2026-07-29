@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.connectors import IvrConnector
-from src.models.raw_ingress import IvrIngressPayload
+from src.data_models.raw_ingress import IvrIngressPayload
 
 
 @pytest.mark.asyncio

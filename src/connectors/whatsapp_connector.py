@@ -7,7 +7,7 @@ text messages and voice note audio URLs against zero-PII security rules.
 import logging
 from typing import Any
 
-from src.models.raw_ingress import WhatsAppIngressPayload
+from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
 

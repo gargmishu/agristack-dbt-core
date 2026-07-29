@@ -58,7 +58,7 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 ## 2. Package & Directory Structure
 
 ### 2.1 Categorized Domain Subpackages
-Organize domain models into logical, single-purpose subpackages under `src/models/`:
+Organize domain models into logical, single-purpose subpackages under `src/data_models/`:
 
 ```
 src/
@@ -66,7 +66,7 @@ src/
 │   ├── whatsapp_connector.py
 │   ├── ivr_connector.py
 │   └── ussd_connector.py
-├── models/
+├── data_models/               # Domain data contracts & Pydantic validation schemas
 │   ├── common/                # Shared foundational primitives & type annotations
 │   │   ├── base.py            # StrictBaseModel definition
 │   │   ├── enums.py           # StrEnum definitions
@@ -96,24 +96,24 @@ tests/
 │   ├── test_whatsapp_connector.py
 │   ├── test_ivr_connector.py
 │   └── test_ussd_connector.py
-├── models/
-├── common/
-│   ├── test_base.py
-│   ├── test_enums.py
-│   └── test_field_types.py
-├── raw_ingress/
-│   ├── test_whatsapp_payload.py
-│   ├── test_ivr_payload.py
-│   └── test_ussd_payload.py
-├── public_agent/
-│   └── test_standardized_intake_payload.py
-├── governance/
-│   └── test_application_decision_payload.py
-├── caseworker/
-│   ├── test_case_review_payload.py
-│   └── test_manual_decision_payload.py
-└── disbursement/
-    └── test_disbursement_payload.py
+├── data_models/
+│   ├── common/
+│   │   ├── test_base.py
+│   │   ├── test_enums.py
+│   │   └── test_field_types.py
+│   ├── raw_ingress/
+│   │   ├── test_whatsapp_payload.py
+│   │   ├── test_ivr_payload.py
+│   │   └── test_ussd_payload.py
+│   ├── public_agent/
+│   │   └── test_standardized_intake_payload.py
+│   ├── governance/
+│   │   └── test_application_decision_payload.py
+│   ├── caseworker/
+│   │   ├── test_case_review_payload.py
+│   │   └── test_manual_decision_payload.py
+│   └── disbursement/
+│       └── test_disbursement_payload.py
 ```
 
 ---

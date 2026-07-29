@@ -1,6 +1,6 @@
 """Layer 4 StateMachine orchestrator skeleton."""
 
-from src.models.governance import ExtractedEntityPayload
+from src.data_models.governance import ExtractedEntityPayload
 
 
 class StateMachine:

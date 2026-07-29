@@ -4,8 +4,8 @@ import pytest
 from pydantic import ValidationError
 
 from src.connectors import WhatsAppConnector
-from src.models.common import PayloadType
-from src.models.raw_ingress import WhatsAppIngressPayload
+from src.data_models.common import PayloadType
+from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 
 @pytest.mark.asyncio
