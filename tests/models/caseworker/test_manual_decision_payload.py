@@ -44,3 +44,16 @@ def test_caseworker_manual_decision_invalid_type() -> None:
             decided_at=datetime.now(UTC),
         )
     assert "must be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO" in str(exc.value)
+
+
+def test_caseworker_manual_decision_empty_review_notes() -> None:
+    with pytest.raises(ValidationError) as exc:
+        CaseworkerManualDecisionPayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            review_notes="      ",  # 6 spaces
+            approved_amount=5000.0,  # noqa: PLR2004
+            decided_at=datetime.now(UTC),
+        )
+    assert "String should have at least 5 characters" in str(exc.value)

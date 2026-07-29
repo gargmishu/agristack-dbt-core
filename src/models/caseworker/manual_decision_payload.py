@@ -50,6 +50,9 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
                 f"MANUAL_REJECT, or REQUEST_MORE_INFO, got {self.governance_decision}"
             )
 
+        if not self.review_notes or not self.review_notes.strip():
+            raise ValueError("review_notes cannot be empty or whitespace")
+
         if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if self.approved_amount is None or self.approved_amount <= 0.0:
                 raise ValueError("approved_amount > 0.0 is required for MANUAL_APPROVE")
