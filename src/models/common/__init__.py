@@ -11,7 +11,7 @@ from src.models.common.enums import (
     SessionStatus,
     StructureLevel,
 )
-from src.models.common.validators import (
+from src.models.common.field_types import (
     AiConfidenceScore,
     AudioDurationSeconds,
     DisbursementTxnId,

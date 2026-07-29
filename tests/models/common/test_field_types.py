@@ -2,7 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.common.base import StrictBaseModel
-from src.models.common.validators import (
+from src.models.common.field_types import (
     HmacCitizenToken,
     PhoneNumberE164,
     SessionId,
