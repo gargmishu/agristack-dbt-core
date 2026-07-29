@@ -9,11 +9,7 @@ from src.models.common import (
 
 
 class UssdIngressPayload(StrictBaseModel):
-    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2).
-
-    Note: Unlike WhatsApp, USSD has no session_message_id because USSD is a transient
-    synchronous GSM signaling session bound 1:1 to session_id rather than discrete messages.
-    """
+    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2)."""
 
     session_id: SessionId
     originating_phone_number: PhoneNumberE164

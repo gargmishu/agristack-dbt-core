@@ -11,7 +11,13 @@ from src.models.common import (
 
 
 class WhatsAppIngressPayload(StrictBaseModel):
-    """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2)."""
+    """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2).
+
+    Note: channel_message_id is unique to WhatsApp (e.g. wamid). It is required for
+    async discrete message deduplication. IVR and USSD do not carry this field because
+    their interactions are bound 1:1 to session_id (continuous voice stream and transient
+    GSM signaling session, respectively).
+    """
 
     session_id: SessionId
     originating_phone_number: PhoneNumberE164
