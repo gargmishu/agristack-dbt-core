@@ -9,6 +9,25 @@ This document defines the architectural, structural, and coding standards establ
 
 ---
 
+## 0. "Shift-Left" First-Principles Engineering Methodology (Preventing Errors Right From the Outset)
+
+To prevent logical errors, state inconsistencies, and validation gaps **before writing a single line of implementation code**:
+
+### 0.1 Contract Truth Table Specification (Pre-Implementation Mandate)
+Before defining any domain model, validator, or state-machine router, write down an explicit **Contract Truth Table** defining for every single field:
+1. **Field Name & Type**: Type alias with domain constraints.
+2. **Cardinality & Nullability**: Is it Required, Optional, or Strictly Forbidden (`None`) per state?
+3. **Non-Empty / Non-Whitespace Guard**: Does every text/string field explicitly reject empty strings and whitespace (`.strip()`)?
+4. **Foreign Key Survival**: Does this field carry an upstream audit ID (`session_id`, `payload_id`, `escalation_case_id`)?
+
+### 0.2 Default Non-Empty Guard Rule for Text Fields
+Every string field representing text, reasons, notes, or input content MUST have an explicit non-empty guard (`min_length=1` or `model_validator` checking `.strip()`) unless explicitly declared as `None` or optional.
+
+### 0.3 Exhaustive State-Matrix Pre-Check
+Before writing validator methods, map out **100% of Enum states** in a matrix table. Reconcile automated machine paths (where human context `escalation_case_id = None`) against human adjudication paths (where `escalation_case_id` is required).
+
+---
+
 ## 1. Naming Conventions
 
 ### 1.1 Class & Type Alias Naming (Strict PascalCase / Upper CamelCase)
