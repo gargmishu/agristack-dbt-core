@@ -1,4 +1,6 @@
-from pydantic import Field, model_validator
+import re
+
+from pydantic import Field, HttpUrl, TypeAdapter, model_validator
 
 from src.models.common import (
     ChannelType,
@@ -9,6 +11,11 @@ from src.models.common import (
     StructureLevel,
     UtcTimestamp,
 )
+
+MAX_DTMF_LENGTH = 64
+MAX_MENU_SELECTION_LENGTH = 256
+DTMF_REGEX = re.compile(r"^\d+(\*\d+)*$")
+http_url_adapter = TypeAdapter(HttpUrl)
 
 
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
@@ -38,22 +45,87 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     received_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":
-        """Enforces 2-type tuple input rules for channel and modality compatibility."""
-        # 1. Payload Modality & Structure Level Compatibility
+    def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":  # noqa: PLR0912
+        """Enforces 2-type tuple input rules for channel, structure, and content compatibility."""
+        content = self.unprocessed_input_content
+
+        # 1. Non-empty & Non-whitespace Guard
+        if not content or not content.strip():
+            raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
+
+        # 2. Channel & Structure Level Compatibility Matrix
+        if self.channel_type == ChannelType.USSD:
+            if (
+                self.payload_type != PayloadType.TEXT
+                or self.structure_level != StructureLevel.DTMF_SELECTION
+            ):
+                raise ValueError(
+                    "USSD channel strictly requires TEXT payload_type with DTMF_SELECTION "
+                    "structure_level"
+                )
+        elif self.channel_type == ChannelType.IVR_VOICE:
+            if (
+                self.payload_type != PayloadType.AUDIO
+                or self.structure_level != StructureLevel.FREE_TEXT
+            ):
+                raise ValueError(
+                    "IVR_VOICE channel strictly requires AUDIO payload_type with FREE_TEXT "
+                    "structure_level"
+                )
+        elif self.channel_type == ChannelType.SMS:
+            if (
+                self.payload_type != PayloadType.TEXT
+                or self.structure_level != StructureLevel.FREE_TEXT
+            ):
+                raise ValueError(
+                    "SMS channel strictly requires TEXT payload_type with FREE_TEXT structure_level"
+                )
+        elif self.channel_type == ChannelType.WHATSAPP:
+            if (
+                self.payload_type == PayloadType.AUDIO
+                and self.structure_level != StructureLevel.FREE_TEXT
+            ):
+                raise ValueError(
+                    "WHATSAPP AUDIO payload strictly requires FREE_TEXT structure_level"
+                )
+            if self.payload_type == PayloadType.TEXT and self.structure_level not in (
+                StructureLevel.FREE_TEXT,
+                StructureLevel.MENU_SELECTION,
+            ):
+                raise ValueError(
+                    "WHATSAPP TEXT payload requires FREE_TEXT or MENU_SELECTION structure_level"
+                )
+            if self.payload_type not in (PayloadType.AUDIO, PayloadType.TEXT):
+                raise ValueError("WHATSAPP channel requires AUDIO or TEXT payload_type")
+
+        # 3. Content Formatting Validation
         if (
             self.payload_type == PayloadType.AUDIO
-            and self.structure_level != StructureLevel.FREE_TEXT
+            and self.structure_level == StructureLevel.FREE_TEXT
         ):
-            raise ValueError("AUDIO payload_type strictly requires FREE_TEXT structure_level")
-
-        # 2. Channel & Payload Type Compatibility
-        if self.channel_type == ChannelType.IVR_VOICE and self.payload_type != PayloadType.AUDIO:
-            raise ValueError("IVR_VOICE channel strictly requires AUDIO payload_type")
-        if (
-            self.channel_type in (ChannelType.USSD, ChannelType.SMS)
-            and self.payload_type != PayloadType.TEXT
+            try:
+                http_url_adapter.validate_python(content)
+            except Exception as err:
+                raise ValueError(
+                    "AUDIO free_text unprocessed_input_content must be a valid signed HTTP/HTTPS "
+                    f"URL: {err}"
+                ) from err
+        elif (
+            self.payload_type == PayloadType.TEXT
+            and self.structure_level == StructureLevel.DTMF_SELECTION
         ):
-            raise ValueError(f"{self.channel_type} channel strictly requires TEXT payload_type")
+            if len(content) > MAX_DTMF_LENGTH or not DTMF_REGEX.match(content):
+                raise ValueError(
+                    "DTMF_SELECTION unprocessed_input_content must match DTMF keypad pattern "
+                    "^\\d+(\\*\\d+)*$ (max 64 chars)"
+                )
+        elif (
+            self.payload_type == PayloadType.TEXT
+            and self.structure_level == StructureLevel.MENU_SELECTION
+            and len(content) > MAX_MENU_SELECTION_LENGTH
+        ):
+            raise ValueError(
+                "MENU_SELECTION unprocessed_input_content cannot exceed 256 characters"
+            )
 
         return self
