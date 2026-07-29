@@ -235,7 +235,8 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
 ### 7.1 Treasury Payment Clearance (`Step 10`)
 * **Target Clearing Rail:** National Payments Corporation of India (NPCI) Aadhaar Payment Bridge System (APBS) / Public Financial Management System (PFMS) Treasury Gateway.
 * **Idempotency Key:** `disbursement_txn_id` generated at decision finalization time to prevent duplicate bank transfers during retries.
-* **Initial State:** `disbursement_status = PENDING` (queued internally) or `INITIATED` (transmitted over wire).
+* **Wire Execution (`step_10`):** **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) executes the transition from **`PENDING` $\rightarrow$ `INITIATED`** when transmitting the ISO 20022 / APBS payment message across system boundaries to NPCI/PFMS clearing rails.
+* **Initial State:** `disbursement_status = PENDING` (queued internally) $\rightarrow$ `INITIATED` (dispatched over wire via `step_10`).
 
 ### 7.2 Asynchronous Payment Callback Schema (`DisbursementCallbackPayload`)
 Received from PFMS / NPCI rails when bank settlement completes or fails:

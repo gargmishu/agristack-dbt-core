@@ -76,13 +76,13 @@ Financial clearing states track the execution of funds transfer over national cl
            SUCCESS          FAILED           RETURNED
 ```
 
-* **`PENDING` (Internal Queue):** Assigned at decision finalization time along with `disbursement_txn_id`. Bridges the time gap while the claim waits for the payment worker to dispatch the batch.
-* **`INITIATED` (Wire Dispatch):** Set when the transaction request is transmitted across system boundaries to NPCI / PFMS rails.
+* **`PENDING` (Internal Queue):** Assigned at decision finalization time (Step 09 or Caseworker Approval) along with `disbursement_txn_id`. Bridges the time gap while the claim waits for payment dispatch.
+* **`INITIATED` (Wire Dispatch via `step_10`):** Executed by **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails.
 * **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (`DisbursementCallbackPayload`) when funds reach citizen account.
 * **`FAILED` / `RETURNED` (Terminal Failure):** Confirmed by bank callback when clearing fails (requires non-empty `failure_reason_code`, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
 
 > [!IMPORTANT]
-> Backward transitions (e.g. `INITIATED` $\rightarrow$ `PENDING`) are strictly forbidden. If a network fault occurs during dispatch, the transaction is marked `FAILED` and re-initiated under a new idempotent transaction context.
+> The transition from **`PENDING` $\rightarrow$ `INITIATED`** occurs explicitly during **`step_10`** execution. Backward transitions (e.g. `INITIATED` $\rightarrow$ `PENDING`) are strictly forbidden. If a network fault occurs during dispatch, the transaction is marked `FAILED` and re-initiated under a new idempotent transaction context.
 
 ---
 
