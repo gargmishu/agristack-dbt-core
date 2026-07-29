@@ -138,6 +138,12 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """
 ```
 
+### 3.5 Model-Agnostic Comments & Future-Proofing
+* **Avoid Specific Vendor/Model Names**: Never hardcode specific model, vendor, or framework names (e.g. `Ollama`, `LLaMA-3`, `Whisper`, `GPT-4`) in code comments or docstrings, as underlying AI models will evolve or be replaced.
+* **Use Architectural Role Terms**: Always use generic, role-based terminology:
+  * **Correct**: `SLM/NLU extraction pipeline`, `ASR/STT audio transcription worker`, `AI governance engine`
+  * **Incorrect**: `Ollama pipeline`, `Whisper transcription worker`, `LLaMA model`
+
 ---
 
 ## 4. Strict Type Safety & Immutability

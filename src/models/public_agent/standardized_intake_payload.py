@@ -30,7 +30,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
        HMAC(secret, UIDAI_Token_UID) for Aadhaar channels to comply with Aadhaar Act §29.
     2. structure_level: Enables Layer 3 pipeline routing to bypass SLM NLU for DTMF_SELECTION
        and MENU_SELECTION (saving ~800ms GPU inference latency and eliminating AI hallucinations)
-       while directing FREE_TEXT into the Ollama NLU pipeline.
+       while directing FREE_TEXT into the SLM/NLU extraction pipeline.
     """
 
     session_id: SessionId
