@@ -40,8 +40,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
     disbursement_status: DisbursementStatus | None = Field(
         None,
         description=(
-            "Initialized to PENDING/INITIATED at decision time during clearance gap; "
-            "updated to SUCCESS/FAILED upon bank callback"
+            "Initialized to PENDING (queued internally) or INITIATED (dispatched to bank rail) "
+            "at decision time; updated to SUCCESS/FAILED/RETURNED upon bank callback"
         ),
     )
     escalation_case_id: EscalationCaseId | None = None
