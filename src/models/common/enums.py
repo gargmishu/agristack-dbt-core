@@ -88,8 +88,8 @@ class DisbursementStatus(StrEnum):
     """Financial clearing status of benefit disbursement payment.
 
     Monotonic forward-only lifecycle: PENDING (queued internally) -> INITIATED
-    (dispatched to NPCI/PFMS bank rail) -> SUCCESS / FAILED / RETURNED (terminal
-    callback). Backward transitions (e.g. INITIATED -> PENDING) are strictly
+    (dispatched to NPCI/PFMS bank rail via step_10) -> SUCCESS / FAILED / RETURNED
+    (terminal callback). Backward transitions (e.g. INITIATED -> PENDING) are strictly
     forbidden to prevent double-dipping and duplicate payouts.
     """
 
