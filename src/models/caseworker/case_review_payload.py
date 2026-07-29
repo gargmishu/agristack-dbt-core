@@ -24,7 +24,11 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
-        default_factory=dict, description="Extracted domain parameters"
+        default_factory=dict,
+        description=(
+            "Extracted domain parameters. May be empty ({}) if escalation was "
+            "triggered by AI entity extraction failure or unparseable input."
+        ),
     )
     unprocessed_input_content: str = Field(
         ..., max_length=5000, description="Raw citizen text or signed audio URL"
@@ -34,7 +38,12 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_non_empty_fields(self) -> "CaseworkerCaseReviewPayload":
-        """Ensforces non-empty, non-whitespace text fields."""
+        """Enforces non-empty, non-whitespace text fields.
+        
+        Note: extracted_entities is intentionally allowed to be empty ({}) as 
+        escalation often occurs due to AI extraction failure, requiring the 
+        caseworker to review raw unprocessed_input_content.
+        """
         if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
             raise ValueError("unprocessed_input_content cannot be empty or whitespace")
         if not self.escalation_reason or not self.escalation_reason.strip():
