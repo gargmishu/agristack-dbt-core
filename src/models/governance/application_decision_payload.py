@@ -72,6 +72,10 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"escalation_case_id must be None for decision {self.governance_decision}"
                 )
+            if self.review_notes is not None:
+                raise ValueError(
+                    f"review_notes must be None for decision {self.governance_decision}"
+                )
         elif self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if not self.disbursement_txn_id:
                 raise ValueError("disbursement_txn_id is required for MANUAL_APPROVE")
@@ -81,6 +85,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("escalation_case_id is required for MANUAL_APPROVE")
             if self.rejection_reason is not None:
                 raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
+            if self.review_notes is not None and not self.review_notes.strip():
+                raise ValueError("review_notes cannot be empty or whitespace for MANUAL_APPROVE")
         return self
 
     @model_validator(mode="after")
@@ -95,6 +101,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("disbursement_status must be None for AUTO_REJECT")
             if self.escalation_case_id is not None:
                 raise ValueError("escalation_case_id must be None for AUTO_REJECT")
+            if self.review_notes is not None:
+                raise ValueError("review_notes must be None for AUTO_REJECT")
         elif self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason:
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
@@ -104,6 +112,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("disbursement_txn_id must be None for MANUAL_REJECT")
             if self.disbursement_status is not None:
                 raise ValueError("disbursement_status must be None for MANUAL_REJECT")
+            if self.review_notes is not None and not self.review_notes.strip():
+                raise ValueError("review_notes cannot be empty or whitespace for MANUAL_REJECT")
         return self
 
     @model_validator(mode="after")
@@ -130,5 +140,9 @@ class ApplicationDecisionPayload(StrictBaseModel):
             if self.rejection_reason is not None:
                 raise ValueError(
                     f"rejection_reason must be None for decision {self.governance_decision}"
+                )
+            if self.review_notes is not None:
+                raise ValueError(
+                    f"review_notes must be None for decision {self.governance_decision}"
                 )
         return self

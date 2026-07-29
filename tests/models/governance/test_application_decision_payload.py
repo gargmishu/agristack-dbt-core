@@ -70,3 +70,36 @@ def test_governance_routing_manual_approve_missing_case_id() -> None:
             decided_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required for MANUAL_APPROVE" in str(exc.value)
+
+
+def test_governance_routing_auto_approve_rejects_review_notes() -> None:
+    with pytest.raises(ValidationError) as exc:
+        ApplicationDecisionPayload(
+            session_id="sess_12345678",
+            payload_id="550e8400-e29b-41d4-a716-446655440000",
+            ai_confidence_score=0.92,
+            eligibility_status=EligibilityStatus.ELIGIBLE,
+            governance_decision=GovernanceDecision.AUTO_APPROVE,
+            disbursement_txn_id="TXN-2026-987654",
+            disbursement_status=DisbursementStatus.PENDING,
+            review_notes="Invalid review note on automated decision",
+            decided_at=datetime.now(UTC),
+        )
+    assert "review_notes must be None for decision AUTO_APPROVE" in str(exc.value)
+
+
+def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
+    with pytest.raises(ValidationError) as exc:
+        ApplicationDecisionPayload(
+            session_id="sess_12345678",
+            payload_id="550e8400-e29b-41d4-a716-446655440000",
+            escalation_case_id="SPP-CASE-2026-981245",
+            ai_confidence_score=0.78,
+            eligibility_status=EligibilityStatus.ELIGIBLE,
+            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            disbursement_txn_id="TXN-2026-987654",
+            disbursement_status=DisbursementStatus.PENDING,
+            review_notes="   ",
+            decided_at=datetime.now(UTC),
+        )
+    assert "review_notes cannot be empty or whitespace" in str(exc.value)
