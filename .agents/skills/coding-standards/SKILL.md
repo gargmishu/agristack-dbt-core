@@ -144,6 +144,10 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
   * **Correct**: `SLM/NLU extraction pipeline`, `ASR/STT audio transcription worker`, `AI governance engine`
   * **Incorrect**: `Ollama pipeline`, `Whisper transcription worker`, `LLaMA model`
 
+### 3.6 Separate Automated vs. Manual Execution Paths & Matrix Testing
+* **Never Over-Group `AUTO_*` and `MANUAL_*` Enums**: Always evaluate whether automated machine paths (`AUTO_APPROVE`, `AUTO_REJECT`) have different field requirements from human adjudication paths (`MANUAL_APPROVE`, `MANUAL_REJECT`). Automated paths have zero human context (`escalation_case_id = None`); manual paths always originate from an escalated ticket (`escalation_case_id` required).
+* **Exhaustive Parametrized Matrix Testing**: Test suites for state-machine models must use `@pytest.mark.parametrize` across 100% of Enum members to assert required vs forbidden fields for every single state.
+
 ---
 
 ## 4. Strict Type Safety & Immutability

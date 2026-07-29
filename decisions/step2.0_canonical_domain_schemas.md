@@ -441,14 +441,23 @@ class ApplicationDecisionPayload(StrictBaseModel):
 1. **Payload UUID Foreign Key:** `payload_id` must be a valid UUID string referencing `session_extraction_details.payload_id`.
 2. **DPI Eligibility Status Source:** `eligibility_status` is computed during Layer 4 execution by cross-matching citizen HMAC identity tokens (`tokenized_citizen_id`), land cadastral records (`survey_number`, `district`), and seasonal crop survey data against sovereign DPI registries.
 3. **Conditional Field Population Rules:**
-   - If `governance_decision` is `AUTO_APPROVE`, `MANUAL_APPROVE`, or `AUTOMATED_PAYOUT`:
+   - If `governance_decision` is `AUTO_APPROVE` or `AUTOMATED_PAYOUT`:
      - `disbursement_txn_id` **must** be populated.
      - `disbursement_status` **must** be `PENDING` or `INITIATED`.
      - `rejection_reason` and `escalation_case_id` **must** be `None`.
-   - If `governance_decision` is `AUTO_REJECT` or `MANUAL_REJECT`:
+   - If `governance_decision` is `MANUAL_APPROVE`:
+     - `disbursement_txn_id` **must** be populated.
+     - `disbursement_status` **must** be `PENDING` or `INITIATED`.
+     - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
+     - `rejection_reason` **must** be `None`.
+   - If `governance_decision` is `AUTO_REJECT`:
      - `rejection_reason` **must** be populated.
      - `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` **must** be `None`.
-   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW` or `HUMAN_REVIEW`:
+   - If `governance_decision` is `MANUAL_REJECT`:
+     - `rejection_reason` **must** be populated.
+     - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
+     - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
+   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW`, `HUMAN_REVIEW`, or `REQUEST_MORE_INFO`:
      - `escalation_case_id` **must** be a valid incident case ticket string (`SPP-CASE-YYYY-XXXXXX`).
      - `disbursement_txn_id`, `disbursement_status`, and `rejection_reason` **must** be `None`.
 

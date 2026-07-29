@@ -52,12 +52,10 @@ class ApplicationDecisionPayload(StrictBaseModel):
     @model_validator(mode="after")
     def validate_approved_decision_fields(self) -> "ApplicationDecisionPayload":
         """Enforces field requirements for approved decision outcomes."""
-        approved_decisions = {
+        if self.governance_decision in (
             GovernanceDecision.AUTO_APPROVE,
-            GovernanceDecision.MANUAL_APPROVE,
             GovernanceDecision.AUTOMATED_PAYOUT,
-        }
-        if self.governance_decision in approved_decisions:
+        ):
             if not self.disbursement_txn_id:
                 raise ValueError(
                     f"disbursement_txn_id is required for decision {self.governance_decision}"
@@ -74,32 +72,38 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"escalation_case_id must be None for decision {self.governance_decision}"
                 )
+        elif self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
+            if not self.disbursement_txn_id:
+                raise ValueError("disbursement_txn_id is required for MANUAL_APPROVE")
+            if self.disbursement_status is None:
+                raise ValueError("disbursement_status is required for MANUAL_APPROVE")
+            if not self.escalation_case_id:
+                raise ValueError("escalation_case_id is required for MANUAL_APPROVE")
+            if self.rejection_reason is not None:
+                raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
         return self
 
     @model_validator(mode="after")
     def validate_rejected_decision_fields(self) -> "ApplicationDecisionPayload":
         """Enforces field requirements for rejected decision outcomes."""
-        rejected_decisions = {
-            GovernanceDecision.AUTO_REJECT,
-            GovernanceDecision.MANUAL_REJECT,
-        }
-        if self.governance_decision in rejected_decisions:
+        if self.governance_decision == GovernanceDecision.AUTO_REJECT:
             if not self.rejection_reason:
-                raise ValueError(
-                    f"rejection_reason is required for decision {self.governance_decision}"
-                )
+                raise ValueError("rejection_reason is required for AUTO_REJECT")
             if self.disbursement_txn_id is not None:
-                raise ValueError(
-                    f"disbursement_txn_id must be None for decision {self.governance_decision}"
-                )
+                raise ValueError("disbursement_txn_id must be None for AUTO_REJECT")
             if self.disbursement_status is not None:
-                raise ValueError(
-                    f"disbursement_status must be None for decision {self.governance_decision}"
-                )
+                raise ValueError("disbursement_status must be None for AUTO_REJECT")
             if self.escalation_case_id is not None:
-                raise ValueError(
-                    f"escalation_case_id must be None for decision {self.governance_decision}"
-                )
+                raise ValueError("escalation_case_id must be None for AUTO_REJECT")
+        elif self.governance_decision == GovernanceDecision.MANUAL_REJECT:
+            if not self.rejection_reason:
+                raise ValueError("rejection_reason is required for MANUAL_REJECT")
+            if not self.escalation_case_id:
+                raise ValueError("escalation_case_id is required for MANUAL_REJECT")
+            if self.disbursement_txn_id is not None:
+                raise ValueError("disbursement_txn_id must be None for MANUAL_REJECT")
+            if self.disbursement_status is not None:
+                raise ValueError("disbursement_status must be None for MANUAL_REJECT")
         return self
 
     @model_validator(mode="after")
