@@ -49,14 +49,14 @@ class WhatsAppIngressPayload(StrictBaseModel):
     @model_validator(mode="after")
     def validate_content_mutual_exclusivity(self) -> "WhatsAppIngressPayload":
         """Enforces mutual exclusivity between audio and text content."""
-        if str(self.payload_type) == PayloadType.AUDIO.value:
+        if self.payload_type == PayloadType.AUDIO:
             if self.audio_recording_url is None:
                 raise ValueError("audio_recording_url is required when payload_type is AUDIO")
             if self.duration_seconds is None:
                 raise ValueError("duration_seconds is required when payload_type is AUDIO")
             if self.text_body is not None:
                 raise ValueError("text_body must be None when payload_type is AUDIO")
-        elif str(self.payload_type) == PayloadType.TEXT.value:
+        elif self.payload_type == PayloadType.TEXT:
             if self.text_body is None or not self.text_body.strip():
                 raise ValueError("text_body must be a non-empty string when payload_type is TEXT")
             if self.audio_recording_url is not None:

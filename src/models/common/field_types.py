@@ -1,4 +1,4 @@
-"""Shared constrained field type annotations and reusable validation rules across domain payloads."""
+"""Shared constrained field type annotations across domain payloads."""
 
 from datetime import UTC, datetime
 from typing import Annotated
@@ -76,11 +76,6 @@ AiConfidenceScore = Annotated[
     ),
 ]
 
-UtcTimestamp = Annotated[
-    datetime,
-    Field(description="Valid ISO-8601 UTC timestamp with freshness check"),
-    AfterValidator(validate_utc_freshness),
-]
 
 def validate_utc_freshness(dt: datetime) -> datetime:
     """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation)."""
@@ -92,4 +87,8 @@ def validate_utc_freshness(dt: datetime) -> datetime:
     return parsed_dt
 
 
-
+UtcTimestamp = Annotated[
+    datetime,
+    Field(description="Valid ISO-8601 UTC timestamp with freshness check"),
+    AfterValidator(validate_utc_freshness),
+]

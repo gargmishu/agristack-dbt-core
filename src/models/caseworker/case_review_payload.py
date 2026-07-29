@@ -11,7 +11,6 @@ from src.models.common import (
     UtcTimestamp,
 )
 
-
 class CaseworkerCaseReviewPayload(StrictBaseModel):
     """Payload emitted by Step 11 to stage case review in Caseworker Review Dashboard."""
 

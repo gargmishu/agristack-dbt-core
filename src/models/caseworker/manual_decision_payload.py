@@ -37,22 +37,21 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     def validate_caseworker_decision_fields(self) -> "CaseworkerManualDecisionPayload":
         """Enforces field rules for manual caseworker decisions."""
         allowed_decisions = {
-            GovernanceDecision.MANUAL_APPROVE.value,
-            GovernanceDecision.MANUAL_REJECT.value,
+            GovernanceDecision.MANUAL_APPROVE,
+            GovernanceDecision.MANUAL_REJECT,
         }
-        decision_str = str(self.governance_decision)
-        if decision_str not in allowed_decisions:
+        if self.governance_decision not in allowed_decisions:
             raise ValueError(
                 "CaseworkerManualDecisionPayload decision must be MANUAL_APPROVE or "
-                f"MANUAL_REJECT, got {decision_str}"
+                f"MANUAL_REJECT, got {self.governance_decision}"
             )
 
-        if decision_str == GovernanceDecision.MANUAL_APPROVE.value:
+        if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if self.approved_amount is None or self.approved_amount <= 0.0:
                 raise ValueError("approved_amount > 0.0 is required for MANUAL_APPROVE")
             if self.rejection_reason is not None:
                 raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
-        elif decision_str == GovernanceDecision.MANUAL_REJECT.value:
+        elif self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason or not self.rejection_reason.strip():
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
             if self.approved_amount is not None:

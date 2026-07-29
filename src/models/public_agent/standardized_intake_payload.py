@@ -40,24 +40,20 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     @model_validator(mode="after")
     def validate_type_tuple_rules(self) -> "PublicAgentStandardizedIntakePayload":
         """Enforces 2-type tuple input rules for channel and modality compatibility."""
-        payload_str = str(self.payload_type)
-        structure_str = str(self.structure_level)
-        channel_str = str(self.channel_type)
-
         # 1. Payload Modality & Structure Level Compatibility
         if (
-            payload_str == PayloadType.AUDIO.value
-            and structure_str != StructureLevel.FREE_TEXT.value
+            self.payload_type == PayloadType.AUDIO
+            and self.structure_level != StructureLevel.FREE_TEXT
         ):
             raise ValueError("AUDIO payload_type strictly requires FREE_TEXT structure_level")
 
         # 2. Channel & Payload Type Compatibility
-        if channel_str == ChannelType.IVR_VOICE.value and payload_str != PayloadType.AUDIO.value:
+        if self.channel_type == ChannelType.IVR_VOICE and self.payload_type != PayloadType.AUDIO:
             raise ValueError("IVR_VOICE channel strictly requires AUDIO payload_type")
         if (
-            channel_str in (ChannelType.USSD.value, ChannelType.SMS.value)
-            and payload_str != PayloadType.TEXT.value
+            self.channel_type in (ChannelType.USSD, ChannelType.SMS)
+            and self.payload_type != PayloadType.TEXT
         ):
-            raise ValueError(f"{channel_str} channel strictly requires TEXT payload_type")
+            raise ValueError(f"{self.channel_type} channel strictly requires TEXT payload_type")
 
         return self

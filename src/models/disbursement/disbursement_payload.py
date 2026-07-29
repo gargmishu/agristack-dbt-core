@@ -24,19 +24,22 @@ class DisbursementCallbackPayload(StrictBaseModel):
     def validate_disbursement_callback_fields(self) -> "DisbursementCallbackPayload":
         """Enforces failure reason population rules based on clearing status."""
         terminal_failures = {
-            DisbursementStatus.FAILED.value,
-            DisbursementStatus.RETURNED.value,
+            DisbursementStatus.FAILED,
+            DisbursementStatus.RETURNED,
         }
-        status_str = str(self.disbursement_status)
 
-        if status_str in terminal_failures and (
+        if self.disbursement_status in terminal_failures and (
             not self.failure_reason_code or not self.failure_reason_code.strip()
         ):
             raise ValueError(
-                f"failure_reason_code is required for disbursement status {status_str}"
+                "failure_reason_code is required for disbursement status "
+                f"{self.disbursement_status}"
             )
 
-        if status_str == DisbursementStatus.SUCCESS.value and self.failure_reason_code is not None:
+        if (
+            self.disbursement_status == DisbursementStatus.SUCCESS
+            and self.failure_reason_code is not None
+        ):
             raise ValueError("failure_reason_code must be None when disbursement status is SUCCESS")
 
         return self
