@@ -42,26 +42,21 @@ class ApplicationDecisionPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
     )
+    review_notes: str | None = Field(
+        None,
+        max_length=2000,
+        description="Internal caseworker audit notes carried from manual adjudication",
+    )
     decided_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_conditional_decision_fields(self) -> "ApplicationDecisionPayload":  # noqa: PLR0912
-        """Enforces conditional field population based on governance decision outcome."""
+    def validate_approved_decision_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for approved decision outcomes."""
         approved_decisions = {
             GovernanceDecision.AUTO_APPROVE,
             GovernanceDecision.MANUAL_APPROVE,
             GovernanceDecision.AUTOMATED_PAYOUT,
         }
-        rejected_decisions = {
-            GovernanceDecision.AUTO_REJECT,
-            GovernanceDecision.MANUAL_REJECT,
-        }
-        review_decisions = {
-            GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
-            GovernanceDecision.HUMAN_REVIEW,
-            GovernanceDecision.REQUEST_MORE_INFO,
-        }
-
         if self.governance_decision in approved_decisions:
             if not self.disbursement_txn_id:
                 raise ValueError(
@@ -79,7 +74,16 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"escalation_case_id must be None for decision {self.governance_decision}"
                 )
-        elif self.governance_decision in rejected_decisions:
+        return self
+
+    @model_validator(mode="after")
+    def validate_rejected_decision_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for rejected decision outcomes."""
+        rejected_decisions = {
+            GovernanceDecision.AUTO_REJECT,
+            GovernanceDecision.MANUAL_REJECT,
+        }
+        if self.governance_decision in rejected_decisions:
             if not self.rejection_reason:
                 raise ValueError(
                     f"rejection_reason is required for decision {self.governance_decision}"
@@ -96,7 +100,17 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"escalation_case_id must be None for decision {self.governance_decision}"
                 )
-        elif self.governance_decision in review_decisions:
+        return self
+
+    @model_validator(mode="after")
+    def validate_review_decision_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for escalation review decision outcomes."""
+        review_decisions = {
+            GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
+            GovernanceDecision.HUMAN_REVIEW,
+            GovernanceDecision.REQUEST_MORE_INFO,
+        }
+        if self.governance_decision in review_decisions:
             if not self.escalation_case_id:
                 raise ValueError(
                     f"escalation_case_id is required for decision {self.governance_decision}"
@@ -113,5 +127,4 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"rejection_reason must be None for decision {self.governance_decision}"
                 )
-
         return self

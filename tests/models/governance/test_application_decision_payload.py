@@ -37,3 +37,19 @@ def test_governance_routing_review_decision_missing_case_id() -> None:
             decided_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required" in str(exc.value)
+
+
+def test_governance_routing_manual_approve_with_review_notes() -> None:
+    payload = ApplicationDecisionPayload(
+        session_id="sess_12345678",
+        payload_id="550e8400-e29b-41d4-a716-446655440000",
+        ai_confidence_score=0.78,
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        governance_decision=GovernanceDecision.MANUAL_APPROVE,
+        disbursement_txn_id="TXN-2026-987654",
+        disbursement_status=DisbursementStatus.PENDING,
+        review_notes="Verified manual land deed document attached in tribunal appeal",
+        decided_at=datetime.now(UTC),
+    )
+    assert payload.governance_decision == GovernanceDecision.MANUAL_APPROVE
+    assert payload.review_notes == "Verified manual land deed document attached in tribunal appeal"

@@ -433,6 +433,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
     disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
     escalation_case_id: Optional[str] = Field(None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
+    review_notes: Optional[str] = Field(None, max_length=2000, description="Internal caseworker audit notes carried from manual adjudication")
     decided_at: datetime = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
 ```
 
