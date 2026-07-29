@@ -502,8 +502,8 @@ class CaseworkerReviewPayload(StrictBaseModel):
     """
     escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID of the caseworker submitting decision")
-    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE or MANUAL_REJECT")
-    review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
+    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
+    review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note or information request details")
     approved_amount: Optional[float] = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
     rejection_reason: Optional[str] = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
     decided_at: datetime = Field(..., description="UTC timestamp when officer submitted decision")
@@ -511,10 +511,11 @@ class CaseworkerReviewPayload(StrictBaseModel):
 
 ##### Caseworker Review Specific Validations:
 1. **Case Ticket Match:** `escalation_case_id` must match a staged case ticket generated during `step_11_caseworker_incident_staging` (`SPP-CASE-...`).
-2. **Decision Enum Restriction:** `governance_decision` must strictly be either `MANUAL_APPROVE` or `MANUAL_REJECT`. Automated routing decisions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
+2. **Decision Enum Restriction:** `governance_decision` must strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`. Automated routing decisions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
 3. **Conditional Field Population Rules:**
    - If `governance_decision == MANUAL_APPROVE`: `approved_amount` **must** be populated (> 0.0); `rejection_reason` **must** be `None`.
    - If `governance_decision == MANUAL_REJECT`: `rejection_reason` **must** be a non-empty string explaining rejection grounds; `approved_amount` **must** be `None`.
+   - If `governance_decision == REQUEST_MORE_INFO`: `review_notes` **must** specify missing details; `approved_amount` and `rejection_reason` **must** be `None`.
 
 ---
 
