@@ -9,7 +9,10 @@ from src.models.common import (
 
 
 class ExtractedEntityPayload(StrictBaseModel):
-    """SLM structured entity extraction payload (Layer 3 -> Layer 4)."""
+    """SLM structured entity extraction payload (Layer 3 -> Layer 4).
+
+    See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
+    """
 
     application_intent: ApplicationIntent = Field(
         ..., description="Classified citizen intent (e.g. apply_subsidy, check_status)"
@@ -26,7 +29,14 @@ class ExtractedEntityPayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_adversarial_zeroing(self) -> "ExtractedEntityPayload":
-        """Enforces confidence zeroing and entity wipe when adversarial attempt is flagged."""
+        """Enforces confidence zeroing and entity wipe when adversarial attempt is flagged.
+
+        Why object.__setattr__?
+        StrictBaseModel is immutable (frozen=True) to prevent accidental mutation during pipeline
+        execution. When a prompt-injection attack is flagged, we must forcefully override the
+        LLM/SLM output by zeroing confidence score (0.0) and wiping extracted entities to prevent
+        hallucinated or injected parameters from contaminating downstream governance rules.
+        """
         if self.is_adversarial_attempt:
             object.__setattr__(self, "ai_confidence_score", 0.0)
             object.__setattr__(self, "domain_entities", {})

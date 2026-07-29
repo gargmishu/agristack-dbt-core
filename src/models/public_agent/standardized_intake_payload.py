@@ -19,7 +19,19 @@ http_url_adapter = TypeAdapter(HttpUrl)
 
 
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
-    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3)."""
+    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3).
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    See: decisions/step0.3_zero_trust_tokenization.md
+
+    Architectural Design Decisions:
+    1. tokenized_citizen_id: Pseudonymous citizen identity token (not "tokenized_phone").
+       Agnostic to identity source: computed as HMAC(secret, MSISDN) for phone channels, or
+       HMAC(secret, UIDAI_Token_UID) for Aadhaar channels to comply with Aadhaar Act §29.
+    2. structure_level: Enables Layer 3 pipeline routing to bypass SLM NLU for DTMF_SELECTION
+       and MENU_SELECTION (saving ~800ms GPU inference latency and eliminating AI hallucinations)
+       while directing FREE_TEXT into the Ollama NLU pipeline.
+    """
 
     session_id: SessionId
     tokenized_citizen_id: HmacCitizenToken

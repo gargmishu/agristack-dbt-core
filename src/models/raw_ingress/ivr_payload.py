@@ -10,7 +10,10 @@ from src.models.common import (
 
 
 class IvrIngressPayload(StrictBaseModel):
-    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2)."""
+    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2).
+
+    See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
+    """
 
     session_id: SessionId
     originating_phone_number: PhoneNumberE164

@@ -13,7 +13,10 @@ from src.models.common import (
 
 
 class CaseworkerCaseReviewPayload(StrictBaseModel):
-    """Payload emitted by Step 11 to stage case review in Caseworker Review Dashboard."""
+    """Payload emitted by Step 11 to stage case review in Caseworker Review Dashboard.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
+    """
 
     escalation_case_id: EscalationCaseId
     session_id: SessionId

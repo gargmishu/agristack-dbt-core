@@ -9,7 +9,10 @@ from src.models.common import (
 
 
 class CaseworkerManualDecisionPayload(StrictBaseModel):
-    """Manual decision submitted by a human caseworker/officer reviewing an escalated case."""
+    """Manual decision submitted by a human caseworker/officer reviewing an escalated case.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#442-caseworker-review-decision-payload
+    """
 
     escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(

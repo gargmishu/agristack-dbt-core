@@ -9,7 +9,10 @@ from src.models.common import (
 
 
 class DisbursementCallbackPayload(StrictBaseModel):
-    """Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails."""
+    """Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.5)
+    """
 
     disbursement_txn_id: DisbursementTxnId
     disbursement_status: DisbursementStatus = Field(

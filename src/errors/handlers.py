@@ -8,6 +8,8 @@ async def validation_exception_handler(
 ) -> JSONResponse:
     """FastAPI exception handler for Pydantic ValidationError.
 
+    See: decisions/step2.0_canonical_domain_schemas.md#5-api-exception-handling--security-defense
+
     Converts validation errors into RFC 7807 problem details payloads while
     sanitizing internal stack traces.
     """

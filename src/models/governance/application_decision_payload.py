@@ -15,7 +15,10 @@ from src.models.common import (
 
 
 class ApplicationDecisionPayload(StrictBaseModel):
-    """Application decision payload emitted by Layer 4 rules engine."""
+    """Application decision payload emitted by Layer 4 rules engine.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#application-decision-payload
+    """
 
     session_id: SessionId
     payload_id: ExtractionPayloadId

@@ -90,7 +90,7 @@ tests/models/
 
 ---
 
-## 3. Modular Code & Single-Responsibility Principle (SRP)
+## 3. Modular Code, Documentation & Rationale (SRP)
 
 ### 3.1 Focused Model Validators
 * Split validation logic into separate, single-purpose `@model_validator(mode="after")` methods rather than creating monolithic validator functions.
@@ -120,6 +120,24 @@ def validate_content_format(self) -> "PublicAgentStandardizedIntakePayload":
 * **Correct**: `if self.payload_type == PayloadType.AUDIO:`
 * **Incorrect**: `if str(self.payload_type) == PayloadType.AUDIO.value:`
 
+### 3.3 Explicit Rationale Comments ("WHY" Explanations)
+* Always add comments or docstrings explaining **why** a non-obvious constraint, length formula, or security override exists:
+  * **Identity Pseudonymization**: Document why `tokenized_citizen_id` is agnostic to identity source (MSISDN vs. UIDAI Token UID under Aadhaar Act §29).
+  * **Resource Ceilings**: Document why `AudioDurationSeconds` caps at 600s (prevents GPU memory overflow and context truncation on SLM workers).
+  * **Security Zeroing**: Document why `object.__setattr__` is used to override frozen models during prompt-injection neutralization.
+
+### 3.4 Architecture Decision Record (ADR) References
+* All model classes, validation handlers, and foundational modules **must include reference links to their respective ADR `.md` files** in `decisions/`:
+
+```python
+class PublicAgentStandardizedIntakePayload(StrictBaseModel):
+    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3).
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    See: decisions/step0.3_zero_trust_tokenization.md
+    """
+```
+
 ---
 
 ## 4. Strict Type Safety & Immutability
@@ -129,6 +147,11 @@ All domain models must inherit from `StrictBaseModel`, which enforces strict sec
 
 ```python
 class StrictBaseModel(BaseModel):
+    """Base model for all inter-layer payloads.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#31-base-configuration-strictbasemodel
+    See: decisions/step1.2_runtime_strictness_linting.md
+    """
     model_config = ConfigDict(
         extra="forbid",             # Rejects unexpected / injected keys
         frozen=True,                # Guarantees immutability post-instantiation

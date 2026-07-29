@@ -1,12 +1,22 @@
-"""Shared constrained field type annotations across domain payloads."""
+"""Shared constrained field type annotations across domain payloads.
+
+See: decisions/step2.0_canonical_domain_schemas.md#40-shared--reusable-validation-rules
+See: decisions/step0.3_zero_trust_tokenization.md
+"""
 
 from datetime import UTC, datetime
 from typing import Annotated
 
 from pydantic import AfterValidator, Field
 
+# Allow 5 seconds of clock skew between edge connectors and core services to handle
+# minor network latency and NTP drift while preventing replay attacks and future-dated payloads.
 MAX_CLOCK_SKEW_SECONDS = 5.0
 
+# Session ID entropy bounds (8 to 128 chars):
+# - min=8: Entropy floor (8 alphanumeric chars ≈ 48 bits) preventing brute-force guessing.
+# - max=128: Hard ceiling covering long carrier UUIDs (e.g. Meta wamid, SIP Call-ID) while
+#   rejecting oversized injections.
 SessionId = Annotated[
     str,
     Field(
@@ -24,6 +34,9 @@ PhoneNumberE164 = Annotated[
     ),
 ]
 
+# Zero-PII SHA-256 HMAC digest (64 hex characters):
+# Encrypts sensitive citizen identity (MSISDN or UIDAI Token UID under Aadhaar Act §29)
+# to guarantee Zero-Trust anonymity across downstream processing layers.
 HmacCitizenToken = Annotated[
     str,
     Field(
@@ -58,6 +71,10 @@ ExtractionPayloadId = Annotated[
     ),
 ]
 
+# Fail-fast audio duration gatekeeper (1s to 600s / 10 min):
+# - min=1: Rejects dropped calls with duration=0 before allocating ASR resources.
+# - max=600: Prevents Out-Of-Memory (OOM) GPU crashes and context truncation hallucinations
+#   on SLM workers.
 AudioDurationSeconds = Annotated[
     int,
     Field(
@@ -78,7 +95,11 @@ AiConfidenceScore = Annotated[
 
 
 def validate_utc_freshness(dt: datetime) -> datetime:
-    """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation)."""
+    """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation).
+
+    Why 5s? A tight 5-second window accommodates legitimate NTP server drift between edge
+    connectors and core microservices while strictly blocking future-timestamp replay attacks.
+    """
     now = datetime.now(UTC)
     parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
