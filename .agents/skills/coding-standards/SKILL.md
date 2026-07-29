@@ -61,33 +61,42 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 Organize domain models into logical, single-purpose subpackages under `src/models/`:
 
 ```
-src/models/
-├── __init__.py                # Top-level re-exports for backward compatibility
-├── common/                    # Shared foundational primitives & type annotations
-│   ├── base.py                # StrictBaseModel definition
-│   ├── enums.py               # StrEnum definitions
-│   └── field_types.py         # Constrained Annotated type aliases & validators
-├── raw_ingress/               # Layer 1 -> Layer 2 carrier raw ingress payloads
-│   ├── whatsapp_payload.py
-│   ├── ivr_payload.py
-│   └── ussd_payload.py
-├── public_agent/              # Layer 2 -> Layer 3 normalized intake contracts
-│   └── standardized_intake_payload.py
-├── governance/                # Layer 4 governance models & extraction payloads
-│   ├── application_decision_payload.py
-│   └── extracted_entity_payload.py
-├── caseworker/                # Caseworker portal models & manual decisions
-│   ├── case_review_payload.py
-│   └── manual_decision_payload.py
-└── disbursement/              # Financial clearing callback models
-    └── disbursement_payload.py
+src/
+├── connectors/                # Layer 1 Channel Edge Connectors
+│   ├── whatsapp_connector.py
+│   ├── ivr_connector.py
+│   └── ussd_connector.py
+├── models/
+│   ├── common/                # Shared foundational primitives & type annotations
+│   │   ├── base.py            # StrictBaseModel definition
+│   │   ├── enums.py           # StrEnum definitions
+│   │   └── field_types.py     # Constrained Annotated type aliases & validators
+│   ├── raw_ingress/           # Layer 1 -> Layer 2 carrier raw ingress payloads
+│   │   ├── whatsapp_payload.py
+│   │   ├── ivr_payload.py
+│   │   └── ussd_payload.py
+│   ├── public_agent/          # Layer 2 -> Layer 3 normalized intake contracts
+│   │   └── standardized_intake_payload.py
+│   ├── governance/            # Layer 4 governance models & extraction payloads
+│   │   ├── application_decision_payload.py
+│   │   └── extracted_entity_payload.py
+│   ├── caseworker/            # Caseworker portal models & manual decisions
+│   │   ├── case_review_payload.py
+│   │   └── manual_decision_payload.py
+│   └── disbursement/          # Financial clearing callback models
+│       └── disbursement_payload.py
 ```
 
 ### 2.2 Strict Test Hierarchy Mirroring
 The test suite under `tests/` must mirror `src/` 1:1. Each source module must have a corresponding test file in the matching subdirectory:
 
 ```
-tests/models/
+tests/
+├── connectors/
+│   ├── test_whatsapp_connector.py
+│   ├── test_ivr_connector.py
+│   └── test_ussd_connector.py
+├── models/
 ├── common/
 │   ├── test_base.py
 │   ├── test_enums.py

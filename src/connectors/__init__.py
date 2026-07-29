@@ -1,5 +1,5 @@
-from src.connectors.ivr import IvrConnector
-from src.connectors.ussd import UssdConnector
-from src.connectors.whatsapp import WhatsAppConnector
+from src.connectors.ivr_connector import IvrConnector
+from src.connectors.ussd_connector import UssdConnector
+from src.connectors.whatsapp_connector import WhatsAppConnector
 
 __all__ = ["WhatsAppConnector", "IvrConnector", "UssdConnector"]
