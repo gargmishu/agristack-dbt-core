@@ -15,7 +15,11 @@ from src.models.common import (
 MAX_DTMF_LENGTH = 64
 MAX_MENU_SELECTION_LENGTH = 256
 DTMF_REGEX = re.compile(r"^\d+(\*\d+)*$")
+
+# Pydantic v2 TypeAdapter used for standalone validation of HttpUrl strings without wrapping in a full model.
+# Used to validate that AUDIO payload pointers (e.g. signed S3/GCS URLs for voice streams) are valid HTTP/HTTPS URLs.
 http_url_adapter = TypeAdapter(HttpUrl)
+
 
 
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
@@ -120,6 +124,8 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
             and self.structure_level == StructureLevel.FREE_TEXT
         ):
             try:
+                # Validates that the audio content string is a syntactically valid HTTP/HTTPS URL
+                # (e.g. signed S3/GCS URL pointing to the Bhashini/IVR acoustic stream).
                 http_url_adapter.validate_python(content)
             except Exception as err:
                 raise ValueError(
