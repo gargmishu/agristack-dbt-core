@@ -1,7 +1,10 @@
 """Layer 1 IVR Telephony Edge Connector (Layer 1 -> Layer 2).
 
-Processes incoming SIP trunk telephony gateway streams, validating 16kHz PCM
-voice stream URLs and caller ANI numbers.
+See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
+
+Processes incoming Session Initiation Protocol (SIP) trunk telephony gateway streams,
+validating 16kHz Pulse-Code Modulation (PCM) uncompressed audio recording URLs and caller
+Automatic Number Identification (ANI) phone numbers.
 """
 
 import logging

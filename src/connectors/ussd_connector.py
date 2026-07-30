@@ -1,7 +1,10 @@
 """Layer 1 USSD Menu Edge Connector (Layer 1 -> Layer 2).
 
-Processes incoming USSD SS7/SIGTRAN carrier menu signaling payloads, validating
-shortcode patterns and concatenated user digit selections.
+See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
+
+Processes incoming Unstructured Supplementary Service Data (USSD) Signaling System No. 7 (SS7) /
+Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortcode patterns and
+concatenated user digit selections.
 """
 
 import logging

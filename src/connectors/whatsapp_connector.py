@@ -1,7 +1,10 @@
 """Layer 1 WhatsApp Edge Connector (Layer 1 -> Layer 2).
 
-Processes incoming Meta WhatsApp Business API webhooks, validating cleartext
-text messages and voice note audio URLs against zero-PII security rules.
+See: decisions/step2.0_canonical_domain_schemas.md#whatsapp-ingress-payload
+
+Processes incoming Meta WhatsApp Business Application Programming Interface (API) webhooks,
+validating cleartext text messages and voice note audio URLs against zero Personally Identifiable
+Information (zero-PII) security rules.
 """
 
 import logging
