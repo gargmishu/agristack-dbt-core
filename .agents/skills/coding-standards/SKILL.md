@@ -66,6 +66,11 @@ src/
 │   ├── whatsapp_connector.py
 │   ├── ivr_connector.py
 │   └── ussd_connector.py
+├── gateway/                   # Layer 2 Gateway & Perimeter Security
+│   ├── carrier_auth.py        # Webhook HMAC signature & Bearer token verification
+│   ├── identity_tokenizer.py  # RAM-only SHA-256 HMAC Zero-PII identity tokenization
+│   ├── payload_canonicalizer.py # Ingress payload canonicalizer (Raw -> StandardizedIntakePayload)
+│   └── rate_limiter.py        # Token bucket rate limiter & quota guard
 ├── data_models/               # Domain data contracts & Pydantic validation schemas
 │   ├── common/                # Shared foundational primitives & type annotations
 │   │   ├── base.py            # StrictBaseModel definition
@@ -96,6 +101,11 @@ tests/
 │   ├── test_whatsapp_connector.py
 │   ├── test_ivr_connector.py
 │   └── test_ussd_connector.py
+├── gateway/
+│   ├── test_carrier_auth.py
+│   ├── test_identity_tokenizer.py
+│   ├── test_payload_canonicalizer.py
+│   └── test_rate_limiter.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py

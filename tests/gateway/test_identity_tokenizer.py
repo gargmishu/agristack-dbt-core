@@ -1,6 +1,6 @@
 import pytest
 
-from src.transport import ZeroTrustIdentityTokenizer
+from src.gateway import ZeroTrustIdentityTokenizer
 
 
 def test_tokenizer_deterministic_output() -> None:

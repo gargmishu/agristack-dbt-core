@@ -1,7 +1,7 @@
 import hmac
 from hashlib import sha256
 
-from src.transport import CarrierAuthValidator
+from src.gateway import CarrierAuthValidator
 
 
 def test_whatsapp_signature_valid() -> None:

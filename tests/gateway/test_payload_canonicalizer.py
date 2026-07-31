@@ -6,7 +6,7 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.transport import IngressCanonicalizer
+from src.gateway import IngressCanonicalizer
 
 
 def test_canonicalize_whatsapp_text() -> None:

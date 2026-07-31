@@ -15,7 +15,7 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.transport.tokenization import ZeroTrustIdentityTokenizer
+from src.gateway.identity_tokenizer import ZeroTrustIdentityTokenizer
 
 IngressPayloadUnion = Union[WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload]
 

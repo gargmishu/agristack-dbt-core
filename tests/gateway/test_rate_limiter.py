@@ -1,4 +1,4 @@
-from src.transport import IngressRateLimiter
+from src.gateway import IngressRateLimiter
 
 
 def test_rate_limiter_burst_allowance() -> None:
