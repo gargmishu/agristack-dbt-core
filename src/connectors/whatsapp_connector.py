@@ -18,19 +18,16 @@ logger = logging.getLogger(__name__)
 class WhatsAppConnector:
     """Processes WhatsApp cleartext/audio webhooks and passes canonical ingress payload."""
 
-    async def process_webhook(self, payload: WhatsAppIngressPayload | dict[str, Any]) -> WhatsAppIngressPayload:
+    async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook payload into canonical WhatsAppIngressPayload.
 
         Args:
-            payload: Raw dict or pre-parsed WhatsAppIngressPayload instance.
+            payload: Raw dict payload received from Meta WhatsApp API webhook.
 
         Returns:
             Validated WhatsAppIngressPayload.
         """
-        if isinstance(payload, dict):
-            validated_payload = WhatsAppIngressPayload.model_validate(payload)
-        else:
-            validated_payload = payload
+        validated_payload = WhatsAppIngressPayload.model_validate(payload)
 
         logger.info(
             "Processed WhatsApp webhook for session=%s, message_id=%s, type=%s",

@@ -18,19 +18,16 @@ logger = logging.getLogger(__name__)
 class UssdConnector:
     """Processes USSD menu signaling codes and passes canonical ingress payload."""
 
-    async def process_ussd_session(self, payload: UssdIngressPayload | dict[str, Any]) -> UssdIngressPayload:
+    async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
         """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.
 
         Args:
-            payload: Raw dict or pre-parsed UssdIngressPayload instance.
+            payload: Raw dict payload received from USSD SS7/SIGTRAN gateway.
 
         Returns:
             Validated UssdIngressPayload.
         """
-        if isinstance(payload, dict):
-            validated_payload = UssdIngressPayload.model_validate(payload)
-        else:
-            validated_payload = payload
+        validated_payload = UssdIngressPayload.model_validate(payload)
 
         logger.info(
             "Processed USSD session for session=%s, service_code=%s, selections=%s",

@@ -18,19 +18,16 @@ logger = logging.getLogger(__name__)
 class IvrConnector:
     """Processes IVR voice SIP gateway streams and passes canonical ingress payload."""
 
-    async def process_call_session(self, payload: IvrIngressPayload | dict[str, Any]) -> IvrIngressPayload:
+    async def process_call_session(self, payload: dict[str, Any]) -> IvrIngressPayload:
         """Validates and processes raw IVR telephony payload into canonical IvrIngressPayload.
 
         Args:
-            payload: Raw dict or pre-parsed IvrIngressPayload instance.
+            payload: Raw dict payload received from SIP telephony gateway.
 
         Returns:
             Validated IvrIngressPayload.
         """
-        if isinstance(payload, dict):
-            validated_payload = IvrIngressPayload.model_validate(payload)
-        else:
-            validated_payload = payload
+        validated_payload = IvrIngressPayload.model_validate(payload)
 
         logger.info(
             "Processed IVR call session for session=%s, duration=%ss",
