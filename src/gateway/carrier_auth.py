@@ -10,7 +10,7 @@ from hashlib import sha256
 
 
 class CarrierAuthValidator:
-    """Security validator enforcing cryptographic signature & token verification for ingress webhooks."""
+    """Security validator enforcing cryptographic signature & token verification for webhooks."""
 
     @staticmethod
     def validate_whatsapp_signature(

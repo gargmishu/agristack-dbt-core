@@ -6,8 +6,6 @@ zero-PII PublicAgentStandardizedIntakePayload contracts ready for Layer 3 Intake
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 """
 
-from typing import Union
-
 from src.data_models.common import ChannelType, PayloadType, StructureLevel
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
@@ -17,7 +15,9 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway.identity_tokenizer import ZeroTrustIdentityTokenizer
 
-IngressPayloadUnion = Union[WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload]
+IngressPayloadUnion = (
+    WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
+)
 
 
 class IngressCanonicalizer:

@@ -19,7 +19,7 @@ class WhatsAppConnector:
     """Processes WhatsApp cleartext/audio webhooks and passes canonical ingress payload."""
 
     async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
-        """Validates and processes raw WhatsApp webhook payload into canonical WhatsAppIngressPayload.
+        """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.
 
         Args:
             payload: Raw dict payload received from Meta WhatsApp API webhook.

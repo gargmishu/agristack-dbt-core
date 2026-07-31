@@ -16,8 +16,8 @@ MAX_DTMF_LENGTH = 64
 MAX_MENU_SELECTION_LENGTH = 256
 DTMF_REGEX = re.compile(r"^\d+(\*\d+)*$")
 
-# Pydantic v2 TypeAdapter used for standalone validation of HttpUrl strings without wrapping in a full model.
-# Used to validate that AUDIO payload pointers (e.g. signed S3/GCS URLs for voice streams) are valid HTTP/HTTPS URLs.
+# Pydantic v2 TypeAdapter used for standalone validation of HttpUrl strings without a model.
+# Used to validate that AUDIO payload pointers (signed S3/GCS URLs) are valid HTTP/HTTPS URLs.
 http_url_adapter = TypeAdapter(HttpUrl)
 
 

@@ -41,7 +41,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
         None,
         description=(
             "Initialized to PENDING at decision time; transitioned to INITIATED by step_10 "
-            "(or Treasury Dispatcher) upon wire dispatch; updated to SUCCESS/FAILED/RETURNED upon bank callback"
+            "(or Treasury Dispatcher) upon wire dispatch; updated to "
+            "SUCCESS/FAILED/RETURNED upon bank callback"
         ),
     )
     escalation_case_id: EscalationCaseId | None = None
@@ -56,8 +57,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
     decided_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_approved_decision_fields(self) -> "ApplicationDecisionPayload":
-        """Enforces field requirements for approved decision outcomes."""
+    def validate_auto_approve_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for auto-approved decision outcomes."""
         if self.governance_decision in (
             GovernanceDecision.AUTO_APPROVE,
             GovernanceDecision.AUTOMATED_PAYOUT,
@@ -82,7 +83,12 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError(
                     f"review_notes must be None for decision {self.governance_decision}"
                 )
-        elif self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
+        return self
+
+    @model_validator(mode="after")
+    def validate_manual_approve_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for manual caseworker approval decision outcomes."""
+        if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if not self.disbursement_txn_id:
                 raise ValueError("disbursement_txn_id is required for MANUAL_APPROVE")
             if self.disbursement_status is None:
@@ -98,8 +104,8 @@ class ApplicationDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_rejected_decision_fields(self) -> "ApplicationDecisionPayload":
-        """Enforces field requirements for rejected decision outcomes."""
+    def validate_auto_reject_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for auto-rejected decision outcomes."""
         if self.governance_decision == GovernanceDecision.AUTO_REJECT:
             if not self.rejection_reason:
                 raise ValueError("rejection_reason is required for AUTO_REJECT")
@@ -111,7 +117,12 @@ class ApplicationDecisionPayload(StrictBaseModel):
                 raise ValueError("escalation_case_id must be None for AUTO_REJECT")
             if self.review_notes is not None:
                 raise ValueError("review_notes must be None for AUTO_REJECT")
-        elif self.governance_decision == GovernanceDecision.MANUAL_REJECT:
+        return self
+
+    @model_validator(mode="after")
+    def validate_manual_reject_fields(self) -> "ApplicationDecisionPayload":
+        """Enforces field requirements for manual caseworker rejection decision outcomes."""
+        if self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason:
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
             if not self.escalation_case_id:

@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+from pydantic import HttpUrl
+
 from src.data_models.common import ChannelType, PayloadType, StructureLevel
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
@@ -36,7 +38,7 @@ def test_canonicalize_whatsapp_audio() -> None:
         originating_phone_number="+919876543210",
         channel_message_id="wamid.HBgLOTE5ODc2NTQzMjEwFQIAERgSQTU1MzI0MTk0Nzc3MzRCOUEwAA==",
         payload_type=PayloadType.AUDIO,
-        audio_recording_url="https://s3.ap-south-1.amazonaws.com/bhashini/audio.ogg",
+        audio_recording_url=HttpUrl("https://s3.ap-south-1.amazonaws.com/bhashini/audio.ogg"),
         duration_seconds=15,
         received_at=datetime.now(UTC),
     )
@@ -53,7 +55,7 @@ def test_canonicalize_ivr() -> None:
     payload = IvrIngressPayload(
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
-        audio_recording_url="https://sip-gateway.telecom.in/call.wav",
+        audio_recording_url=HttpUrl("https://sip-gateway.telecom.in/call.wav"),
         duration_seconds=30,
         received_at=datetime.now(UTC),
     )

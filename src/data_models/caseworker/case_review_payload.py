@@ -39,9 +39,9 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     @model_validator(mode="after")
     def validate_non_empty_fields(self) -> "CaseworkerCaseReviewPayload":
         """Enforces non-empty, non-whitespace text fields.
-        
-        Note: extracted_entities is intentionally allowed to be empty ({}) as 
-        escalation often occurs due to AI extraction failure, requiring the 
+
+        Note: extracted_entities is intentionally allowed to be empty ({}) as
+        escalation often occurs due to AI extraction failure, requiring the
         caseworker to review raw unprocessed_input_content.
         """
         if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
