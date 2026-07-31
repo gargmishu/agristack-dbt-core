@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 
 from src.data_models.common import ChannelType, PayloadType, StructureLevel
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
-from src.public_agent import IntakeValidator
+from src.public_agent import IntakePayloadEvaluator
 
 
-def test_intake_validator_dtmf_structured_bypass() -> None:
-    validator = IntakeValidator()
+def test_intake_payload_evaluator_dtmf_structured_bypass() -> None:
+    evaluator = IntakePayloadEvaluator()
     payload = PublicAgentStandardizedIntakePayload(
         session_id="sess_12345678",
         tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
@@ -18,14 +18,14 @@ def test_intake_validator_dtmf_structured_bypass() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = validator.validate_intake(payload)
+    result = evaluator.evaluate_payload(payload)
     assert result.is_valid is True
     assert result.requires_nlu_extraction is False
-    assert "Structured input cleared" in result.validation_message
+    assert "Structured input cleared" in result.evaluation_message
 
 
-def test_intake_validator_free_text_requires_nlu() -> None:
-    validator = IntakeValidator()
+def test_intake_payload_evaluator_free_text_requires_nlu() -> None:
+    evaluator = IntakePayloadEvaluator()
     payload = PublicAgentStandardizedIntakePayload(
         session_id="sess_12345678",
         tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
@@ -37,7 +37,7 @@ def test_intake_validator_free_text_requires_nlu() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = validator.validate_intake(payload)
+    result = evaluator.evaluate_payload(payload)
     assert result.is_valid is True
     assert result.requires_nlu_extraction is True
-    assert "Free-text input cleared" in result.validation_message
+    assert "Free-text input cleared" in result.evaluation_message

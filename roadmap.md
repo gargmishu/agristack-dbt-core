@@ -37,7 +37,7 @@
       ├── index.js                     <-- Module exports & entry point
       ├── intake/
       │   ├── PublicAgentIntakeApi.js  <-- (Layer 3: Public Agent Intake Gateway)
-      │   └── IntakeValidator.js       <-- (Layer 3: Intent & Missing Entity Gate)
+      │   └── IntakePayloadEvaluator.js<-- (Layer 3: Intent & Missing Entity Gate)
       ├── connectors/                  <-- (Layer 2: Gateways & Connectors)
       │   ├── WhatsAppConnector.js     <-- Text/Audio (.ogg) cleartext webhook
       │   ├── IvrConnector.js          <-- Voice stream (.wav) SIP gateway

@@ -73,7 +73,7 @@ src/
 │   └── rate_limiter.py        # Token bucket rate limiter & quota guard
 ├── public_agent/              # Layer 3 Public Agent Intake Gateway Surface
 │   ├── public_agent_api.py    # Public Agent Gateway API Surface
-│   └── intake_validator.py    # Structure level & NLU routing validator
+│   └── intake_payload_evaluator.py # Structure level & NLU routing evaluator
 ├── data_models/               # Domain data contracts & Pydantic validation schemas
 │   ├── common/                # Shared foundational primitives & type annotations
 │   │   ├── base.py            # StrictBaseModel definition
@@ -111,7 +111,7 @@ tests/
 │   └── test_rate_limiter.py
 ├── public_agent/
 │   ├── test_public_agent_api.py
-│   └── test_intake_validator.py
+│   └── test_intake_payload_evaluator.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py
