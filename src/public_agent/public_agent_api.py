@@ -1,9 +1,16 @@
 """Layer 3 Public Agent Gateway API (Layer 3 Intake Surface).
 
 Receives canonical, zero-PII PublicAgentStandardizedIntakePayload from Layer 2 Gateway,
-evaluates intake structure routing, and prepares structured intake for Layer 4 Orchestrator.
+evaluates intake structure routing via IntakePayloadEvaluator, and prepares structured
+intake payloads for Layer 4 Orchestrator Brain execution.
+
+Why decouple Layer 3 Public Agent API from Layer 2 Access Proxy?
+Layer 2 canonicalizes raw channel webhooks (WhatsApp, IVR, USSD) into zero-PII payloads.
+Layer 3 provides the public API surface for event intake, Intent Gate routing, and payload
+preparation before submitting to Layer 4 state machines.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+See: roadmap.md (Phase 2 Step 2.2 Layer 3)
 """
 
 import logging
@@ -18,10 +25,20 @@ logger = logging.getLogger(__name__)
 
 
 class PublicAgentApi:
-    """Public Agent Gateway API normalizing events before submitting to Layer 4."""
+    """Public Agent Gateway API normalizing events before submitting to Layer 4.
+
+    Evaluates structural routing directives and submits accepted payloads for downstream
+    orchestration.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    """
 
     def __init__(self, evaluator: IntakePayloadEvaluator | None = None) -> None:
-        """Initializes PublicAgentApi with an IntakePayloadEvaluator."""
+        """Initializes PublicAgentApi with an IntakePayloadEvaluator instance.
+
+        Args:
+            evaluator: Custom or default IntakePayloadEvaluator instance.
+        """
         self._evaluator = evaluator or IntakePayloadEvaluator()
 
     async def submit_payload(
@@ -34,6 +51,9 @@ class PublicAgentApi:
 
         Returns:
             Tuple of (PublicAgentStandardizedIntakePayload, IntakeEvaluationResult).
+
+        Raises:
+            ValueError: If payload fails intake evaluation sanity checks.
         """
         evaluation_result = self._evaluator.evaluate_payload(payload)
         if not evaluation_result.is_valid:

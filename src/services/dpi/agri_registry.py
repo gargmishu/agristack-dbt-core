@@ -2,7 +2,12 @@
 
 Performs cadastral plot verification, landholding ownership cross-matching, and crop validation.
 
-See: decisions/step2.0_canonical_domain_schemas.md
+Why cross-match against AgriStack cadastral registries?
+Benefit eligibility requires verifying landholding entitlement, survey/khata numbers, and seasonal
+crop records before executing automated payouts or staging caseworker reviews.
+
+See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
+See: decisions/step2.2_governance_flows_and_state_transitions.md
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
@@ -12,7 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 class AgriRegistryService:
-    """Service abstraction for AgriStack cadastral and crop land registry cross-matching."""
+    """Service abstraction for AgriStack cadastral and crop land registry cross-matching.
+
+    Validates land ownership parameters and seasonal crop entitlement without exposing PII.
+
+    See: decisions/step2.0_canonical_domain_schemas.md
+    """
 
     async def verify_land_record(self, tokenized_citizen_id: str, land_record_id: str) -> bool:
         """Cross-matches citizen identity token against cadastral land record ID.

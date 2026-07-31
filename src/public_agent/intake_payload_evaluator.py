@@ -1,9 +1,14 @@
 """Layer 3 Intake Payload Evaluator (Layer 3 Intent & Structure Gate).
 
 Performs structural routing evaluation on PublicAgentStandardizedIntakePayload:
-1. Fast-path routing for DTMF_SELECTION and MENU_SELECTION (bypassing SLM NLU).
+1. Fast-path routing for DTMF_SELECTION and MENU_SELECTION (bypassing NLU extraction).
 2. NLU path routing for FREE_TEXT.
 3. Content sanity & non-empty validation.
+
+Why structured bypass for DTMF and Menu Selections?
+Structured inputs (e.g. keypresses on USSD or IVR phone menus) have deterministic intent
+and parameter values. Bypassing AI/SLM entity extraction saves ~800ms GPU NLU latency and
+completely eliminates AI hallucinations for structured selections.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 See: roadmap.md (Phase 2 Step 2.2 Layer 3)
@@ -19,7 +24,13 @@ logger = logging.getLogger(__name__)
 
 
 class IntakeEvaluationResult(NamedTuple):
-    """Result of Layer 3 intake payload evaluation."""
+    """Result of Layer 3 intake payload evaluation.
+
+    Attributes:
+        is_valid: Boolean indicating whether the payload passes structural sanity guards.
+        requires_nlu_extraction: True if payload requires SLM NLU entity extraction.
+        evaluation_message: Descriptive message explaining evaluation decision outcome.
+    """
 
     is_valid: bool
     requires_nlu_extraction: bool
@@ -27,7 +38,13 @@ class IntakeEvaluationResult(NamedTuple):
 
 
 class IntakePayloadEvaluator:
-    """Evaluates and determines pipeline routing for Layer 3 intake payloads."""
+    """Evaluates and determines pipeline routing for Layer 3 intake payloads.
+
+    Validates non-empty input content guards and classifies payloads into fast-path
+    deterministic routing vs. NLU extraction pipeline execution.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    """
 
     def evaluate_payload(
         self, payload: PublicAgentStandardizedIntakePayload
@@ -68,7 +85,7 @@ class IntakePayloadEvaluator:
                 evaluation_message="Structured input cleared for direct deterministic processing",
             )
         else:
-            # Free-text NLU path: Requires Bhashini ASR/NMT translation and SLM entity extraction.
+            # Free-text NLU path: Requires ASR/NMT translation and SLM entity extraction.
             logger.info(
                 "NLU extraction path evaluated for session=%s, channel=%s, modality=%s",
                 payload.session_id,

@@ -3,7 +3,11 @@
 Interfaces with OpenSPP / Social Welfare registries for incident ticket staging
 and case lifecycle management.
 
-See: decisions/step2.2_governance_flows_and_state_transitions.md
+Why stage cases into Social Protection Registries?
+When AI extraction confidence falls below threshold (<0.85) or entity discrepancies occur,
+claims must be staged into caseworker queues (`SPP-CASE-...`) for human officer adjudication.
+
+See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2 & 4.2)
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
@@ -15,7 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 class SocialRegistryService:
-    """Service abstraction for social welfare case staging and benefit lifecycle tracking."""
+    """Service abstraction for social welfare case staging and benefit lifecycle tracking.
+
+    Manages incident ticket staging (`SPP-CASE-YYYY-XXXXXX`) and human officer review queues.
+
+    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.2)
+    """
 
     async def stage_case_review(self, case_review: CaseworkerCaseReviewPayload) -> bool:
         """Stages an incident review ticket into the district caseworker review queue.
