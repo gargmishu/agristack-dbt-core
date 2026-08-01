@@ -30,7 +30,7 @@ class IvrConnector:
         validated_payload = IvrIngressPayload.model_validate(payload)
 
         logger.info(
-            "Processed IVR call session for session=%s, duration=%ss",
+            "Validated IVR call session for session=%s, duration=%ss",
             validated_payload.session_id,
             validated_payload.duration_seconds,
         )

@@ -30,7 +30,7 @@ class WhatsAppConnector:
         validated_payload = WhatsAppIngressPayload.model_validate(payload)
 
         logger.info(
-            "Processed WhatsApp webhook for session=%s, message_id=%s, type=%s",
+            "Validated WhatsApp webhook for session=%s, message_id=%s, type=%s",
             validated_payload.session_id,
             validated_payload.channel_message_id,
             validated_payload.payload_type,
