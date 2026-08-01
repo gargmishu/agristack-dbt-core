@@ -25,6 +25,9 @@ async def test_whatsapp_connector_valid_text_payload() -> None:
     assert result.text_body == "Mujhe PM KISAN kist ki jankari chahiye"
 
 
+EXPECTED_DURATION = 15
+
+
 @pytest.mark.asyncio
 async def test_whatsapp_connector_valid_audio_payload() -> None:
     connector = WhatsAppConnector()
@@ -34,13 +37,13 @@ async def test_whatsapp_connector_valid_audio_payload() -> None:
         "channel_message_id": "wamid.HBgLOTE5ODc2NTQzMjEwFQIAERgSQTU1MzI0MTk0Nzc3MzRCOUEwAA==",
         "payload_type": PayloadType.AUDIO,
         "audio_recording_url": "https://s3.ap-south-1.amazonaws.com/bhashini-audio/recordings/audio_123.ogg",
-        "duration_seconds": 15,
+        "duration_seconds": EXPECTED_DURATION,
         "received_at": datetime.now(UTC).isoformat(),
     }
     result = await connector.process_webhook(payload_data)
     assert isinstance(result, WhatsAppIngressPayload)
     assert result.payload_type == PayloadType.AUDIO
-    assert result.duration_seconds == 15
+    assert result.duration_seconds == EXPECTED_DURATION
 
 
 @pytest.mark.asyncio

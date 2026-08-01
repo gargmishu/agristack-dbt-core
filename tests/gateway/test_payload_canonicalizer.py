@@ -10,6 +10,8 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway import IngressCanonicalizer
 
+EXPECTED_TOKEN_LEN = 64
+
 
 def test_canonicalize_whatsapp_text() -> None:
     canonicalizer = IngressCanonicalizer()
@@ -28,7 +30,7 @@ def test_canonicalize_whatsapp_text() -> None:
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.FREE_TEXT
     assert intake.unprocessed_input_content == "Mujhe PM KISAN kist ki jankari chahiye"
-    assert len(intake.tokenized_citizen_id) == 64
+    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LEN
 
 
 def test_canonicalize_whatsapp_audio() -> None:
@@ -47,7 +49,9 @@ def test_canonicalize_whatsapp_audio() -> None:
     assert intake.channel_type == ChannelType.WHATSAPP
     assert intake.payload_type == PayloadType.AUDIO
     assert intake.structure_level == StructureLevel.FREE_TEXT
-    assert intake.unprocessed_input_content == "https://s3.ap-south-1.amazonaws.com/bhashini/audio.ogg"
+    assert (
+        intake.unprocessed_input_content == "https://s3.ap-south-1.amazonaws.com/bhashini/audio.ogg"
+    )
 
 
 def test_canonicalize_ivr() -> None:

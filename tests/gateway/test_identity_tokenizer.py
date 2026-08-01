@@ -2,6 +2,8 @@ import pytest
 
 from src.gateway import ZeroTrustIdentityTokenizer
 
+EXPECTED_TOKEN_LEN = 64
+
 
 def test_tokenizer_deterministic_output() -> None:
     tokenizer = ZeroTrustIdentityTokenizer(pepper_key="test_pepper_key")
@@ -9,7 +11,7 @@ def test_tokenizer_deterministic_output() -> None:
     token1 = tokenizer.tokenize_phone_number(phone)
     token2 = tokenizer.tokenize_phone_number(phone)
 
-    assert len(token1) == 64
+    assert len(token1) == EXPECTED_TOKEN_LEN
     assert token1 == token2
     assert token1.isalnum()
 

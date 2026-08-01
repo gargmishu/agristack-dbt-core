@@ -15,9 +15,7 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway.identity_tokenizer import ZeroTrustIdentityTokenizer
 
-IngressPayloadUnion = (
-    WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
-)
+IngressPayloadUnion = WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
 
 
 class IngressCanonicalizer:

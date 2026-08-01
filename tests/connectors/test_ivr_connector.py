@@ -6,6 +6,8 @@ from pydantic import ValidationError
 from src.connectors import IvrConnector
 from src.data_models.raw_ingress import IvrIngressPayload
 
+EXPECTED_DURATION = 45
+
 
 @pytest.mark.asyncio
 async def test_ivr_connector_valid_session() -> None:
@@ -14,12 +16,12 @@ async def test_ivr_connector_valid_session() -> None:
         "session_id": "sess_12345678",
         "originating_phone_number": "+919876543210",
         "audio_recording_url": "https://sip-gateway.telecom.in/audio/call_987.wav",
-        "duration_seconds": 45,
+        "duration_seconds": EXPECTED_DURATION,
         "received_at": datetime.now(UTC).isoformat(),
     }
     result = await connector.process_call_session(payload_data)
     assert isinstance(result, IvrIngressPayload)
-    assert result.duration_seconds == 45
+    assert result.duration_seconds == EXPECTED_DURATION
     assert str(result.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
 
 
@@ -30,11 +32,11 @@ async def test_ivr_connector_invalid_audio_url() -> None:
         "session_id": "sess_12345678",
         "originating_phone_number": "+919876543210",
         "audio_recording_url": "not_a_valid_url",
-        "duration_seconds": 45,
+        "duration_seconds": EXPECTED_DURATION,
         "received_at": datetime.now(UTC).isoformat(),
     }
     with pytest.raises(ValidationError):
-        await connector.process_call_session(invalid_invalid := invalid_payload)
+        await connector.process_call_session(invalid_payload)
 
 
 @pytest.mark.asyncio

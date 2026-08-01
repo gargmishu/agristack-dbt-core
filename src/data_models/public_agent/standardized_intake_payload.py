@@ -21,7 +21,6 @@ DTMF_REGEX = re.compile(r"^\d+(\*\d+)*$")
 http_url_adapter = TypeAdapter(HttpUrl)
 
 
-
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3).
 
