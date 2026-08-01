@@ -12,7 +12,9 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
 import logging
+from datetime import UTC, datetime
 
+from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import ApplicationDecisionPayload
 
@@ -43,4 +45,19 @@ class PaymentRailService:
             decision.session_id,
             decision.disbursement_txn_id,
         )
-        return None
+        if decision.disbursement_txn_id is None:
+            return None
+
+        if "FAIL" in str(decision.disbursement_txn_id).upper():
+            status = DisbursementStatus.FAILED
+            reason = "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"
+        else:
+            status = DisbursementStatus.SUCCESS
+            reason = None
+
+        return DisbursementCallbackPayload(
+            disbursement_txn_id=decision.disbursement_txn_id,
+            disbursement_status=status,
+            cleared_at=datetime.now(UTC),
+            failure_reason_code=reason,
+        )

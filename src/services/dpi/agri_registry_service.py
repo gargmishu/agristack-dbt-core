@@ -39,4 +39,10 @@ class AgriRegistryService:
             land_record_id,
             tokenized_citizen_id[:16],
         )
-        return True
+        if (
+            not land_record_id.strip()
+            or land_record_id.startswith("INVALID")
+            or "000/0" in land_record_id
+        ):
+            return False
+        return tokenized_citizen_id != "0" * 64

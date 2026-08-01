@@ -25,4 +25,25 @@ async def test_payment_rail_initiate_disbursement() -> None:
         decided_at=datetime.now(UTC),
     )
     result = await service.initiate_disbursement(decision)
-    assert result is None
+    assert result is not None
+    assert result.disbursement_txn_id == "TXN-2026-987654"
+    assert result.disbursement_status == DisbursementStatus.SUCCESS
+
+
+@pytest.mark.asyncio
+async def test_payment_rail_disbursement_failure() -> None:
+    service = PaymentRailService()
+    decision = ApplicationDecisionPayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.96,
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        governance_decision=GovernanceDecision.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-FAIL-101",
+        disbursement_status=DisbursementStatus.PENDING,
+        decided_at=datetime.now(UTC),
+    )
+    result = await service.initiate_disbursement(decision)
+    assert result is not None
+    assert result.disbursement_status == DisbursementStatus.FAILED
+    assert result.failure_reason_code is not None

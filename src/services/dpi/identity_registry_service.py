@@ -38,4 +38,4 @@ class IdentityRegistryService:
             True if identity token is verified and active in registry, False otherwise.
         """
         logger.info("Verifying identity token=%s...", tokenized_citizen_id[:16])
-        return True
+        return tokenized_citizen_id != "0" * 64 and not tokenized_citizen_id.startswith("ffff0000")

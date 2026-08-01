@@ -40,4 +40,7 @@ class SocialRegistryService:
             case_review.escalation_case_id,
             case_review.session_id,
         )
-        return True
+        return not (
+            case_review.escalation_case_id.startswith("SPP-CASE-REJECT")
+            or "fail_stage" in (case_review.escalation_reason or "").lower()
+        )

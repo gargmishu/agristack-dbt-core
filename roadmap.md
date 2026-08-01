@@ -31,31 +31,40 @@
 
   *Example Recommended Folder Tree:*  
   ```text
-  project-root/
-  ├── package.json
+  agristack-dbt-core/
+  ├── pyproject.toml
   └── src/
-      ├── index.js                     <-- Module exports & entry point
-      ├── intake/
-      │   ├── PublicAgentIntakeApi.js  <-- (Layer 3: Public Agent Intake Gateway)
-      │   └── IntakePayloadEvaluator.js<-- (Layer 3: Intent & Missing Entity Gate)
-      ├── connectors/                  <-- (Layer 2: Gateways & Connectors)
-      │   ├── WhatsAppConnector.js     <-- Text/Audio (.ogg) cleartext webhook
-      │   ├── IvrConnector.js          <-- Voice stream (.wav) SIP gateway
-      │   └── UssdConnector.js         <-- Menu signaling (*147#) bypass connector
-      ├── orchestrator/                <-- (Layer 4: DPI Workflow Execution)
-      │   ├── StateMachine.js          <-- Deterministic execution loop
-      │   └── GovernanceRouter.js      <-- Decision matrix (Payout vs Review vs Reject)
-      ├── services/                    <-- External Dependency Abstractions
-      │   ├── ai/                      <-- Foundational & Sector AI Blocks
-      │   │   ├── bhashiniService.js   <-- ASR, NMT Translation, and TTS blocks
-      │   │   └── slmExtractor.js      <-- Local Ollama structured entity extractor
-      │   └── dpi/                     <-- Authoritative DPI Registries
-      │       ├── identityRegistry.js  <-- Aadhaar/MOSIP verification & hashing
-      │       ├── agriRegistry.js      <-- AgriStack cadastral & crop cross-match
-      │       ├── socialRegistry.js    <-- OpenSPP case lifecycle staging
-      │       └── paymentRail.js       <-- NPCI APBS / Mojaloop disbursement
-      └── models/                      <-- Data structures & DB layer
-          └── StandardizedIntakePayload.js
+      ├── connectors/                      # Layer 1 Channel Edge Connectors
+      │   ├── whatsapp_connector.py        # Text/Audio (.ogg) cleartext webhook
+      │   ├── ivr_connector.py             # Voice stream (.wav) SIP gateway
+      │   └── ussd_connector.py            # Menu signaling (*147#) bypass connector
+      ├── gateway/                         # Layer 2 Gateway & Perimeter Security
+      │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
+      │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
+      │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
+      │   └── rate_limiter.py              # Token bucket rate limiter & quota guard
+      ├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
+      │   ├── public_agent_api.py          # Public Agent Gateway API Surface
+      │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
+      ├── orchestrator/                    # Layer 4 DPI Workflow Execution Brain
+      │   ├── state_machine.py             # Deterministic workflow execution loop
+      │   └── governance_router.py         # Decision matrix (Payout vs Review vs Reject)
+      ├── services/                        # External Dependency Abstractions
+      │   ├── ai/                          # Foundational & Sector AI Blocks
+      │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
+      │   │   └── slm_extractor.py         # Sovereign structured entity extractor
+      │   └── dpi/                         # Authoritative DPI Registries
+      │       ├── identity_registry_service.py # Aadhaar/MOSIP verification & zero-PII tokens
+      │       ├── agri_registry_service.py     # AgriStack cadastral & crop cross-match
+      │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
+      │       └── payment_rail_service.py      # NPCI APBS / PFMS Treasury disbursement
+      └── data_models/                     # Domain data contracts & Pydantic schemas
+          ├── common/                      # Foundational base schemas & enums
+          ├── raw_ingress/                 # Layer 1 -> Layer 2 ingress payloads
+          ├── public_agent/                # Layer 2 -> Layer 3 intake contracts
+          ├── governance/                  # Layer 4 decision & entity schemas
+          ├── caseworker/                  # Caseworker adjudication models
+          └── disbursement/                # Financial clearing callback schemas
   ```
 
   *Rationale: This exact split maps directly to the layers in the flowchart and dependency taxonomy, guaranteeing Separation of Concerns so that a bug in a WhatsApp connector won't break core governance routing or identity tokenization.*
