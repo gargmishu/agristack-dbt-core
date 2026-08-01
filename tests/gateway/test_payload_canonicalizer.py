@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+import pytest
 from pydantic import HttpUrl
 
 from src.data_models.common import ChannelType, PayloadType, StructureLevel
@@ -11,6 +12,11 @@ from src.data_models.raw_ingress import (
 from src.gateway import IngressCanonicalizer
 
 EXPECTED_TOKEN_LEN = 64
+
+
+@pytest.fixture(autouse=True)
+def _setup_pepper_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_canonicalizer_pepper_key")
 
 
 def test_canonicalize_whatsapp_text() -> None:

@@ -15,15 +15,18 @@ class ZeroTrustIdentityTokenizer:
     """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance."""
 
     DEFAULT_PEPPER_ENV_VAR = "AGRISTACK_PEPPER_SECRET"
-    DEFAULT_FALLBACK_PEPPER = "agristack_sovereign_dbt_pepper_2026_production_secret_key"
 
     def __init__(self, pepper_key: str | None = None) -> None:
         """Initializes tokenizer with environment-injected cryptographic pepper key."""
-        if pepper_key:
-            self._pepper_key = pepper_key.encode("utf-8")
-        else:
-            env_pepper = os.getenv(self.DEFAULT_PEPPER_ENV_VAR, self.DEFAULT_FALLBACK_PEPPER)
-            self._pepper_key = env_pepper.encode("utf-8")
+        if pepper_key is None:
+            pepper_key = os.getenv(self.DEFAULT_PEPPER_ENV_VAR)
+
+        if not pepper_key or not pepper_key.strip():
+            raise ValueError(
+                "Pepper key is required. Pass 'pepper_key' explicitly or set the "
+                f"'{self.DEFAULT_PEPPER_ENV_VAR}' environment variable."
+            )
+        self._pepper_key = pepper_key.encode("utf-8")
 
     def tokenize_citizen_id(self, raw_identifier: str) -> str:
         """Tokenizes raw citizen ID (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.
