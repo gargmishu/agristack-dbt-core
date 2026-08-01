@@ -30,9 +30,8 @@ class UssdConnector:
         validated_payload = UssdIngressPayload.model_validate(payload)
 
         logger.info(
-            "Validated USSD session for session=%s, service_code=%s, selections=%s",
+            "Validated USSD session for session=%s, service_code=%s",
             validated_payload.session_id,
             validated_payload.ussd_service_code,
-            validated_payload.ussd_user_digit_selection,
         )
         return validated_payload

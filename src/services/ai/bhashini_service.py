@@ -35,7 +35,7 @@ class BhashiniService:
         Returns:
             Transcribed text string in original spoken language.
         """
-        logger.info("Transcribing audio URL=%s locale=%s", audio_url, language_locale)
+        logger.info("Transcribing audio for locale=%s", language_locale)
         return ""
 
     async def translate_text(
