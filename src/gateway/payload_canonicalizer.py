@@ -21,9 +21,14 @@ IngressPayloadUnion = WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPa
 class IngressCanonicalizer:
     """Canonicalizes raw carrier ingress payloads into Layer 3 intake payloads."""
 
-    def __init__(self, tokenizer: ZeroTrustIdentityTokenizer | None = None) -> None:
-        """Initializes canonicalizer with an identity tokenizer."""
-        self._tokenizer = tokenizer or ZeroTrustIdentityTokenizer()
+    def __init__(self, tokenizer: ZeroTrustIdentityTokenizer) -> None:
+        """Initializes canonicalizer with an explicit identity tokenizer."""
+        self._tokenizer = tokenizer
+
+    @classmethod
+    def from_env(cls) -> "IngressCanonicalizer":
+        """Factory method to instantiate canonicalizer using environment configured tokenizer."""
+        return cls(tokenizer=ZeroTrustIdentityTokenizer.from_env())
 
     def canonicalize(
         self,

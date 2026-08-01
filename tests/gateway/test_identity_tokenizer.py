@@ -34,13 +34,19 @@ def test_tokenizer_empty_identifier_raises() -> None:
 def test_tokenizer_missing_pepper_key_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AGRISTACK_PEPPER_SECRET", raising=False)
     with pytest.raises(ValueError) as exc:
-        ZeroTrustIdentityTokenizer()
-    assert "Pepper key is required" in str(exc.value)
+        ZeroTrustIdentityTokenizer.from_env()
+    assert "Required env var" in str(exc.value)
+
+
+def test_tokenizer_empty_pepper_arg_raises() -> None:
+    with pytest.raises(ValueError) as exc:
+        ZeroTrustIdentityTokenizer(pepper_key="   ")
+    assert "pepper_key cannot be empty or whitespace-only" in str(exc.value)
 
 
 def test_tokenizer_reads_pepper_from_env_var(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "env_test_pepper_key")
-    tokenizer = ZeroTrustIdentityTokenizer()
+    tokenizer = ZeroTrustIdentityTokenizer.from_env()
     phone = "+919876543210"
     token = tokenizer.tokenize_phone_number(phone)
     assert len(token) == EXPECTED_TOKEN_LEN

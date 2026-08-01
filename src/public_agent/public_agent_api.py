@@ -33,13 +33,18 @@ class PublicAgentApi:
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
 
-    def __init__(self, evaluator: IntakePayloadEvaluator | None = None) -> None:
-        """Initializes PublicAgentApi with an IntakePayloadEvaluator instance.
+    def __init__(self, evaluator: IntakePayloadEvaluator) -> None:
+        """Initializes PublicAgentApi with an explicit IntakePayloadEvaluator instance.
 
         Args:
-            evaluator: Custom or default IntakePayloadEvaluator instance.
+            evaluator: IntakePayloadEvaluator instance.
         """
-        self._evaluator = evaluator or IntakePayloadEvaluator()
+        self._evaluator = evaluator
+
+    @classmethod
+    def from_default(cls) -> "PublicAgentApi":
+        """Factory method to instantiate PublicAgentApi with default evaluator."""
+        return cls(evaluator=IntakePayloadEvaluator())
 
     async def submit_payload(
         self, payload: PublicAgentStandardizedIntakePayload

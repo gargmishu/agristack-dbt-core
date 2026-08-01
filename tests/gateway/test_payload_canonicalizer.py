@@ -20,7 +20,7 @@ def _setup_pepper_secret(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_canonicalize_whatsapp_text() -> None:
-    canonicalizer = IngressCanonicalizer()
+    canonicalizer = IngressCanonicalizer.from_env()
     payload = WhatsAppIngressPayload(
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
@@ -40,7 +40,7 @@ def test_canonicalize_whatsapp_text() -> None:
 
 
 def test_canonicalize_whatsapp_audio() -> None:
-    canonicalizer = IngressCanonicalizer()
+    canonicalizer = IngressCanonicalizer.from_env()
     payload = WhatsAppIngressPayload(
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
@@ -61,7 +61,7 @@ def test_canonicalize_whatsapp_audio() -> None:
 
 
 def test_canonicalize_ivr() -> None:
-    canonicalizer = IngressCanonicalizer()
+    canonicalizer = IngressCanonicalizer.from_env()
     payload = IvrIngressPayload(
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
@@ -78,7 +78,7 @@ def test_canonicalize_ivr() -> None:
 
 
 def test_canonicalize_ussd() -> None:
-    canonicalizer = IngressCanonicalizer()
+    canonicalizer = IngressCanonicalizer.from_env()
     payload = UssdIngressPayload(
         session_id="sess_12345678",
         originating_phone_number="+919876543210",

@@ -214,6 +214,12 @@ class StrictBaseModel(BaseModel):
 ### 4.2 Reusable Constrained Types (`src/models/common/field_types.py`)
 * Use `Annotated` type aliases with Pydantic `Field` constraints and `AfterValidator` functions for reusable domain types (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `UtcTimestamp`, `AudioDurationSeconds`, `AiConfidenceScore`).
 
+### 4.3 Strict Dependency Injection & Non-Nullable Constructors
+* **No Magic `None` Fallbacks in Constructors**: Never accept `None` as a default parameter value in class constructors (`__init__`) to implicitly trigger default instantiation or environment variable reads. Doing so obscures dependency contracts and masks upstream configuration bugs.
+* **Explicit Dependency Injection**: Constructor parameters for core domain components, gateways, and services must be strictly non-nullable (e.g., `pepper_key: str`, `tokenizer: ZeroTrustIdentityTokenizer`).
+* **Dedicated Factory Class Methods**: When effortless construction from default components or environment variables is desired, implement explicit `@classmethod` factories (e.g., `from_env(cls)` or `from_default(cls)`).
+* **Permitted Nullability**: `None` is acceptable as a parameter value only at perimeter security boundaries (to evaluate absent HTTP headers cleanly) and within Pydantic schema state matrices representing inapplicable state fields.
+
 ---
 
 ## 5. Systemic Logical Error Prevention & Verification Methodology
@@ -232,6 +238,7 @@ Code validators and business logic against non-negotiable system invariants:
 * **Auditability Invariant**: Every human manual adjudication MUST reference the escalation ticket ID (`SPP-CASE-...`) and carry officer audit notes (`review_notes`).
 * **Financial Invariant**: Payout transaction IDs (`disbursement_txn_id`) and statuses exist ONLY for approved outcomes; rejection reasons exist ONLY for rejected outcomes.
 * **Security Zeroing Invariant**: Adversarial injection attempts strictly zero confidence scores (`0.0`) and wipe extracted entities.
+* **Fail-Fast Configuration & Secrets Invariant**: Never define fallback cryptographic keys or default production secrets in code. If an environment-injected secret (e.g. cryptographic pepper key, bearer token) is missing or empty, fail fast immediately with an explicit exception (`ValueError` or `RuntimeError`). Do not fall back to insecure default strings.
 
 ### 5.3 Exhaustive Matrix & Property-Based Testing
 * **100% Enum Coverage**: State machine models and decision routers must use `@pytest.mark.parametrize` across 100% of Enum members to verify required, optional, and forbidden fields for every state.

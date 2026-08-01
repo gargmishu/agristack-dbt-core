@@ -16,17 +16,21 @@ class ZeroTrustIdentityTokenizer:
 
     DEFAULT_PEPPER_ENV_VAR = "AGRISTACK_PEPPER_SECRET"
 
-    def __init__(self, pepper_key: str | None = None) -> None:
-        """Initializes tokenizer with environment-injected cryptographic pepper key."""
-        if pepper_key is None:
-            pepper_key = os.getenv(self.DEFAULT_PEPPER_ENV_VAR)
+    def __init__(self, pepper_key: str) -> None:
+        """Initializes tokenizer with an explicit cryptographic pepper key."""
+        if not pepper_key or not pepper_key.strip():
+            raise ValueError("pepper_key cannot be empty or whitespace-only.")
+        self._pepper_key = pepper_key.encode("utf-8")
 
+    @classmethod
+    def from_env(cls) -> "ZeroTrustIdentityTokenizer":
+        """Factory method to instantiate tokenizer using environment variable configuration."""
+        pepper_key = os.getenv(cls.DEFAULT_PEPPER_ENV_VAR)
         if not pepper_key or not pepper_key.strip():
             raise ValueError(
-                "Pepper key is required. Pass 'pepper_key' explicitly or set the "
-                f"'{self.DEFAULT_PEPPER_ENV_VAR}' environment variable."
+                f"Required env var '{cls.DEFAULT_PEPPER_ENV_VAR}' is missing or empty."
             )
-        self._pepper_key = pepper_key.encode("utf-8")
+        return cls(pepper_key=pepper_key)
 
     def tokenize_citizen_id(self, raw_identifier: str) -> str:
         """Tokenizes raw citizen ID (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.
