@@ -1,4 +1,4 @@
-from src.data_models.disbursement.disbursement_payload import (
+from src.data_models.disbursement.disbursement_callback_payload import (
     DisbursementCallbackPayload,
 )
 

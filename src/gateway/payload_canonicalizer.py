@@ -13,12 +13,12 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.gateway.identity_tokenizer import ZeroTrustIdentityTokenizer
+from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
 IngressPayloadUnion = WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
 
 
-class IngressCanonicalizer:
+class PayloadCanonicalizer:
     """Canonicalizes raw carrier ingress payloads into Layer 3 intake payloads."""
 
     def __init__(self, tokenizer: ZeroTrustIdentityTokenizer) -> None:
@@ -26,7 +26,7 @@ class IngressCanonicalizer:
         self._tokenizer = tokenizer
 
     @classmethod
-    def from_env(cls) -> "IngressCanonicalizer":
+    def from_env(cls) -> "PayloadCanonicalizer":
         """Factory method to instantiate canonicalizer using environment configured tokenizer."""
         return cls(tokenizer=ZeroTrustIdentityTokenizer.from_env())
 

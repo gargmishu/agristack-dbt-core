@@ -53,46 +53,61 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 ### 1.5 Phone Number Standard (`originating_phone_number`)
 * Use `originating_phone_number` consistently across all Layer 1 ingress payloads (e.g., WhatsApp, IVR, USSD).
 
+### 1.6 Module-to-Class Naming Symmetry
+* For operational components (gateways, connectors, orchestrator rules, and services), Python module filenames in `snake_case` must strictly match their primary class names in `PascalCase` (e.g., `CarrierAuthValidator` in `carrier_auth_validator.py`, `PaymentRailService` in `payment_rail_service.py`). Do not omit descriptive suffixes like `_validator`, `_tokenizer`, or `_service` from module names.
+
+### 1.7 Domain Schema Namespacing
+* Within categorized domain model subpackages (`raw_ingress`, `caseworker`, `disbursement`), file names represent the schema entity (e.g. `manual_decision_payload.py`), while model class names may include the domain namespace prefix (e.g. `CaseworkerManualDecisionPayload`) to avoid symbol collisions when imported into cross-domain contexts.
+
 ---
 
 ## 2. Package & Directory Structure
 
 ### 2.1 Categorized Domain Subpackages
-Organize domain models into logical, single-purpose subpackages under `src/data_models/`:
+Organize domain models and services into logical, single-purpose subpackages under `src/`:
 
 ```
 src/
-├── connectors/                # Layer 1 Channel Edge Connectors
+├── connectors/                      # Layer 1 Channel Edge Connectors
 │   ├── whatsapp_connector.py
 │   ├── ivr_connector.py
 │   └── ussd_connector.py
-├── gateway/                   # Layer 2 Gateway & Perimeter Security
-│   ├── carrier_auth.py        # Webhook HMAC signature & Bearer token verification
-│   ├── identity_tokenizer.py  # RAM-only SHA-256 HMAC Zero-PII identity tokenization
-│   ├── payload_canonicalizer.py # Ingress payload canonicalizer (Raw -> StandardizedIntakePayload)
-│   └── rate_limiter.py        # Token bucket rate limiter & quota guard
-├── public_agent/              # Layer 3 Public Agent Intake Gateway Surface
-│   ├── public_agent_api.py    # Public Agent Gateway API Surface
-│   └── intake_payload_evaluator.py # Structure level & NLU routing evaluator
-├── data_models/               # Domain data contracts & Pydantic validation schemas
-│   ├── common/                # Shared foundational primitives & type annotations
-│   │   ├── base.py            # StrictBaseModel definition
-│   │   ├── enums.py           # StrEnum definitions
-│   │   └── field_types.py     # Constrained Annotated type aliases & validators
-│   ├── raw_ingress/           # Layer 1 -> Layer 2 carrier raw ingress payloads
+├── gateway/                         # Layer 2 Gateway & Perimeter Security
+│   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
+│   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
+│   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
+│   └── rate_limiter.py              # Token bucket rate limiter & quota guard
+├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
+│   ├── public_agent_api.py          # Public Agent Gateway API Surface
+│   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
+├── services/                        # Authoritative DPI Registries & AI Services
+│   ├── ai/
+│   │   ├── bhashini_service.py
+│   │   └── slm_extractor.py
+│   └── dpi/
+│       ├── agri_registry_service.py
+│       ├── identity_registry_service.py
+│       ├── payment_rail_service.py
+│       └── social_registry_service.py
+├── data_models/                     # Domain data contracts & Pydantic validation schemas
+│   ├── common/                      # Shared foundational primitives & type annotations
+│   │   ├── base.py                  # StrictBaseModel definition
+│   │   ├── enums.py                 # StrEnum definitions
+│   │   └── field_types.py           # Constrained Annotated type aliases & validators
+│   ├── raw_ingress/                 # Layer 1 -> Layer 2 carrier raw ingress payloads
 │   │   ├── whatsapp_payload.py
 │   │   ├── ivr_payload.py
 │   │   └── ussd_payload.py
-│   ├── public_agent/          # Layer 2 -> Layer 3 normalized intake contracts
+│   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
 │   │   └── standardized_intake_payload.py
-│   ├── governance/            # Layer 4 governance models & extraction payloads
+│   ├── governance/                  # Layer 4 governance models & extraction payloads
 │   │   ├── application_decision_payload.py
 │   │   └── extracted_entity_payload.py
-│   ├── caseworker/            # Caseworker portal models & manual decisions
+│   ├── caseworker/                  # Caseworker portal models & manual decisions
 │   │   ├── case_review_payload.py
 │   │   └── manual_decision_payload.py
-│   └── disbursement/          # Financial clearing callback models
-│       └── disbursement_payload.py
+│   └── disbursement/                # Financial clearing callback models
+│       └── disbursement_callback_payload.py
 ```
 
 ### 2.2 Strict Test Hierarchy Mirroring
@@ -105,13 +120,22 @@ tests/
 │   ├── test_ivr_connector.py
 │   └── test_ussd_connector.py
 ├── gateway/
-│   ├── test_carrier_auth.py
-│   ├── test_identity_tokenizer.py
+│   ├── test_carrier_auth_validator.py
+│   ├── test_zero_trust_identity_tokenizer.py
 │   ├── test_payload_canonicalizer.py
 │   └── test_rate_limiter.py
 ├── public_agent/
 │   ├── test_public_agent_api.py
 │   └── test_intake_payload_evaluator.py
+├── services/
+│   ├── ai/
+│   │   ├── test_bhashini_service.py
+│   │   └── test_slm_extractor.py
+│   └── dpi/
+│       ├── test_agri_registry_service.py
+│       ├── test_identity_registry_service.py
+│       ├── test_payment_rail_service.py
+│       └── test_social_registry_service.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py
@@ -129,7 +153,7 @@ tests/
 │   │   ├── test_case_review_payload.py
 │   │   └── test_manual_decision_payload.py
 │   └── disbursement/
-│       └── test_disbursement_payload.py
+│       └── test_disbursement_callback_payload.py
 ```
 
 ---

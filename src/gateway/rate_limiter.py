@@ -8,7 +8,7 @@ import time
 from collections import defaultdict
 
 
-class IngressRateLimiter:
+class RateLimiter:
     """Token bucket rate limiter tracking requests per identifier/channel."""
 
     def __init__(self, rate_per_minute: int = 60, capacity: int = 10) -> None:
