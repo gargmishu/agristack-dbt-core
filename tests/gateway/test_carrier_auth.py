@@ -27,15 +27,15 @@ def test_whatsapp_signature_invalid() -> None:
     )
 
 
-def test_bearer_token_valid() -> None:
+def test_carrier_bearer_token_valid() -> None:
     bearer_key = "secret_carrier_token_9988"  # noqa: S105
     auth_header = f"Bearer {bearer_key}"
 
-    assert CarrierAuthValidator.validate_bearer_token(auth_header, bearer_key) is True
+    assert CarrierAuthValidator.validate_carrier_bearer_token(auth_header, bearer_key) is True
 
 
-def test_bearer_token_invalid() -> None:
+def test_carrier_bearer_token_invalid() -> None:
     bearer_key = "secret_carrier_token_9988"  # noqa: S105
     auth_header = "Bearer wrong_token"
 
-    assert CarrierAuthValidator.validate_bearer_token(auth_header, bearer_key) is False
+    assert CarrierAuthValidator.validate_carrier_bearer_token(auth_header, bearer_key) is False

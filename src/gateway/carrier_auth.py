@@ -1,7 +1,7 @@
 """Layer 2 Carrier Auth Validator (Layer 1 -> Layer 2 Security Gateway).
 
 Validates webhook signatures (e.g. Meta X-Hub-Signature-256 for WhatsApp)
-and carrier gateway bearer tokens (SIP / USSD SS7 gateways).
+and carrier gateway bearer tokens for both IVR (SIP) and USSD (SS7) edge integrations.
 """
 
 import hmac
@@ -23,7 +23,7 @@ class CarrierAuthValidator:
         Args:
             payload_bytes: Raw HTTP request body bytes.
             signature_header: Raw 'X-Hub-Signature-256' header string (e.g., 'sha256=abcdef...').
-            app_secret: Meta Application Secret key.
+            app_secret: Meta Application Secret key (provided via the Meta Developers Dashboard).
 
         Returns:
             True if signature matches, False otherwise.
@@ -41,15 +41,15 @@ class CarrierAuthValidator:
         return secrets.compare_digest(computed_signature, expected_signature)
 
     @staticmethod
-    def validate_bearer_token(
+    def validate_carrier_bearer_token(
         auth_header: str | None,
         expected_token: str,
     ) -> bool:
-        """Validates Bearer token header for SIP/USSD carrier gateway requests.
+        """Validates Bearer token header for both IVR (SIP) and USSD (SS7) carrier gateway requests.
 
         Args:
             auth_header: Raw 'Authorization' header string (e.g., 'Bearer secret_token').
-            expected_token: Expected secret token string.
+            expected_token: Expected secret token string configured for the carrier gateway.
 
         Returns:
             True if token matches using constant-time comparison, False otherwise.
