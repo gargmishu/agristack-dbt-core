@@ -7,6 +7,8 @@ from src.connectors import WhatsAppConnector
 from src.data_models.common import PayloadType
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
+EXPECTED_DURATION = 15
+
 
 @pytest.mark.asyncio
 async def test_whatsapp_connector_valid_text_payload() -> None:
@@ -23,9 +25,6 @@ async def test_whatsapp_connector_valid_text_payload() -> None:
     assert isinstance(result, WhatsAppIngressPayload)
     assert result.channel_message_id.startswith("wamid.")
     assert result.text_body == "Mujhe PM KISAN kist ki jankari chahiye"
-
-
-EXPECTED_DURATION = 15
 
 
 @pytest.mark.asyncio
