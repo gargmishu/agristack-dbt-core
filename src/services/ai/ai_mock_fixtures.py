@@ -1,0 +1,78 @@
+"""Offline Mock Fixtures for Foundational AI Block Abstractions (Step 3.1).
+
+Provides deterministic, locally testable data structures and response mappings for ASR, NMT, TTS,
+and SLM structured entity extraction during offline development and testing.
+"""
+
+from typing import NamedTuple
+
+from src.data_models.common import ApplicationIntent, DomainEntityKey
+
+MOCK_ASR_TRANSCRIPTIONS: dict[str, str] = {
+    "hi-IN": "Mujhe PM KISAN ki kist nahi mili hai, mera village Hadoli hai.",
+    "en-IN": "I have not received my PM KISAN installment, my village is Hadoli.",
+    "default": "I have not received my PM KISAN installment, my village is Hadoli.",
+}
+
+MOCK_NMT_TRANSLATIONS: dict[str, str] = {
+    "kharab": "My crop in Karnal district has suffered weather damage.",
+    "kist": "I have not received my PM KISAN installment of 2000 rupees.",
+}
+
+MOCK_TTS_URL_TEMPLATE = "https://bhashini-gateway.ai/synth/2026_{locale}_response_824921.wav"
+
+ADVERSARIAL_INJECTION_KEYWORDS: tuple[str, ...] = (
+    "ignore previous",
+    "override",
+    "system prompt",
+    "drop",
+)
+
+
+class MockExtractionRule(NamedTuple):
+    """Configuration rule for deterministic SLM entity extraction simulation."""
+
+    intent: ApplicationIntent
+    entities: dict[DomainEntityKey, str | float | int]
+    confidence_score: float
+
+
+MOCK_SLM_RULES: dict[str, MockExtractionRule] = {
+    "subsidy_claim": MockExtractionRule(
+        intent=ApplicationIntent.APPLY_SUBSIDY,
+        entities={
+            DomainEntityKey.DISTRICT: "Pune",
+            DomainEntityKey.TALUKA: "Haveli",
+            DomainEntityKey.VILLAGE: "Hadoli",
+            DomainEntityKey.CROP_NAME: "Wheat",
+            DomainEntityKey.SURVEY_NUMBER: "124/2A",
+        },
+        confidence_score=0.96,
+    ),
+    "status_check": MockExtractionRule(
+        intent=ApplicationIntent.CHECK_STATUS,
+        entities={
+            DomainEntityKey.DISTRICT: "Pune",
+            DomainEntityKey.VILLAGE: "Hadoli",
+        },
+        confidence_score=0.92,
+    ),
+    "missing_entity": MockExtractionRule(
+        intent=ApplicationIntent.APPLY_SUBSIDY,
+        entities={
+            DomainEntityKey.DISTRICT: "Pune",
+        },
+        confidence_score=0.65,
+    ),
+    "default_fallback": MockExtractionRule(
+        intent=ApplicationIntent.APPLY_SUBSIDY,
+        entities={
+            DomainEntityKey.DISTRICT: "Karnal",
+            DomainEntityKey.TALUKA: "Nilokheri",
+            DomainEntityKey.VILLAGE: "Sultanpur",
+            DomainEntityKey.CROP_NAME: "Rice",
+            DomainEntityKey.SURVEY_NUMBER: "45/1B",
+        },
+        confidence_score=0.88,
+    ),
+}

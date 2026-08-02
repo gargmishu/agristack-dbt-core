@@ -14,6 +14,7 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 import logging
 
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
+from src.services.dpi.dpi_mock_fixtures import MOCK_CASE_REJECT_PREFIX, MOCK_FAIL_STAGE_NOTE
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,6 @@ class SocialRegistryService:
             case_review.session_id,
         )
         return not (
-            case_review.escalation_case_id.startswith("SPP-CASE-REJECT")
-            or "fail_stage" in (case_review.escalation_reason or "").lower()
+            case_review.escalation_case_id.startswith(MOCK_CASE_REJECT_PREFIX)
+            or MOCK_FAIL_STAGE_NOTE in (case_review.escalation_reason or "").lower()
         )

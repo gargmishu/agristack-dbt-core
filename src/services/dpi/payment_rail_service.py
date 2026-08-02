@@ -17,6 +17,10 @@ from datetime import UTC, datetime
 from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import ApplicationDecisionPayload
+from src.services.dpi.dpi_mock_fixtures import (
+    MOCK_PAYMENT_FAIL_TRIGGER,
+    MOCK_PAYMENT_FAILURE_REASON,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +52,9 @@ class PaymentRailService:
         if decision.disbursement_txn_id is None:
             return None
 
-        if "FAIL" in str(decision.disbursement_txn_id).upper():
+        if MOCK_PAYMENT_FAIL_TRIGGER in str(decision.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED
-            reason = "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"
+            reason = MOCK_PAYMENT_FAILURE_REASON
         else:
             status = DisbursementStatus.SUCCESS
             reason = None

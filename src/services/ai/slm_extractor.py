@@ -14,8 +14,8 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 
-from src.data_models.common import ApplicationIntent, DomainEntityKey
 from src.data_models.governance import ExtractedEntityPayload
+from src.services.ai.ai_mock_fixtures import ADVERSARIAL_INJECTION_KEYWORDS, MOCK_SLM_RULES
 
 logger = logging.getLogger(__name__)
 
@@ -49,49 +49,21 @@ class SlmExtractor:
         if "error" in content_lower or not unprocessed_content.strip():
             return None
 
-        is_adversarial = any(
-            w in content_lower for w in ["ignore previous", "override", "system prompt", "drop"]
-        )
+        is_adversarial = any(kw in content_lower for kw in ADVERSARIAL_INJECTION_KEYWORDS)
 
-        entities: dict[DomainEntityKey, str | float | int]
-        if "kist" in content_lower or "subsidy" in content_lower or "pm kisan" in content_lower:
-            intent = ApplicationIntent.APPLY_SUBSIDY
-            entities = {
-                DomainEntityKey.DISTRICT: "Pune",
-                DomainEntityKey.TALUKA: "Haveli",
-                DomainEntityKey.VILLAGE: "Hadoli",
-                DomainEntityKey.CROP_NAME: "Wheat",
-                DomainEntityKey.SURVEY_NUMBER: "124/2A",
-            }
-            confidence = 0.96
-        elif "status" in content_lower or "jankari" in content_lower:
-            intent = ApplicationIntent.CHECK_STATUS
-            entities = {
-                DomainEntityKey.DISTRICT: "Pune",
-                DomainEntityKey.VILLAGE: "Hadoli",
-            }
-            confidence = 0.92
-        elif "missing" in content_lower or "incomplete" in content_lower:
-            intent = ApplicationIntent.APPLY_SUBSIDY
-            entities = {
-                DomainEntityKey.DISTRICT: "Pune",
-            }
-            confidence = 0.65
+        if any(k in content_lower for k in ["kist", "subsidy", "pm kisan"]):
+            rule = MOCK_SLM_RULES["subsidy_claim"]
+        elif any(k in content_lower for k in ["status", "jankari"]):
+            rule = MOCK_SLM_RULES["status_check"]
+        elif any(k in content_lower for k in ["missing", "incomplete"]):
+            rule = MOCK_SLM_RULES["missing_entity"]
         else:
-            intent = ApplicationIntent.APPLY_SUBSIDY
-            entities = {
-                DomainEntityKey.DISTRICT: "Karnal",
-                DomainEntityKey.TALUKA: "Nilokheri",
-                DomainEntityKey.VILLAGE: "Sultanpur",
-                DomainEntityKey.CROP_NAME: "Rice",
-                DomainEntityKey.SURVEY_NUMBER: "45/1B",
-            }
-            confidence = 0.88
+            rule = MOCK_SLM_RULES["default_fallback"]
 
         return ExtractedEntityPayload(
-            application_intent=intent,
-            ai_confidence_score=confidence,
-            domain_entities=entities,
+            application_intent=rule.intent,
+            ai_confidence_score=rule.confidence_score,
+            domain_entities=rule.entities,
             is_adversarial_attempt=is_adversarial,
             is_structured_menu_bypass=False,
         )

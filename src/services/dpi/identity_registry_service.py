@@ -16,6 +16,11 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 
+from src.services.dpi.dpi_mock_fixtures import (
+    UNVERIFIED_IDENTITY_PREFIX,
+    UNVERIFIED_IDENTITY_TOKEN_ZERO,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,4 +43,7 @@ class IdentityRegistryService:
             True if identity token is verified and active in registry, False otherwise.
         """
         logger.info("Verifying identity token=%s...", tokenized_citizen_id[:16])
-        return tokenized_citizen_id != "0" * 64 and not tokenized_citizen_id.startswith("ffff0000")
+        return (
+            tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO
+            and not tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
+        )

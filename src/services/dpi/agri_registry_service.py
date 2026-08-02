@@ -13,6 +13,12 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 
+from src.services.dpi.dpi_mock_fixtures import (
+    INVALID_LAND_RECORD_PREFIX,
+    INVALID_SURVEY_NUMBER,
+    UNVERIFIED_IDENTITY_TOKEN_ZERO,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,8 +47,8 @@ class AgriRegistryService:
         )
         if (
             not land_record_id.strip()
-            or land_record_id.startswith("INVALID")
-            or "000/0" in land_record_id
+            or land_record_id.startswith(INVALID_LAND_RECORD_PREFIX)
+            or INVALID_SURVEY_NUMBER in land_record_id
         ):
             return False
-        return tokenized_citizen_id != "0" * 64
+        return tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO

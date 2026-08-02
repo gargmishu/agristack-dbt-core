@@ -13,6 +13,12 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 
+from src.services.ai.ai_mock_fixtures import (
+    MOCK_ASR_TRANSCRIPTIONS,
+    MOCK_NMT_TRANSLATIONS,
+    MOCK_TTS_URL_TEMPLATE,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,9 +47,7 @@ class BhashiniService:
         if "error" in audio_url.lower() or "invalid" in audio_url.lower():
             raise ValueError("ASR audio stream formatting or download error.")
 
-        if language_locale.startswith("hi"):
-            return "Mujhe PM KISAN ki kist nahi mili hai, mera village Hadoli hai."
-        return "I have not received my PM KISAN installment, my village is Hadoli."
+        return MOCK_ASR_TRANSCRIPTIONS.get(language_locale, MOCK_ASR_TRANSCRIPTIONS["default"])
 
     async def translate_text(
         self, text: str, source_locale: str, target_locale: str = "en-IN"
@@ -64,9 +68,10 @@ class BhashiniService:
         if source_locale == target_locale:
             return text
         if source_locale.startswith("hi") and target_locale.startswith("en"):
-            if "kharab" in text.lower():
-                return "My crop in Karnal district has suffered weather damage."
-            return "I have not received my PM KISAN installment of 2000 rupees."
+            for kw, translation in MOCK_NMT_TRANSLATIONS.items():
+                if kw in text.lower():
+                    return translation
+            return MOCK_NMT_TRANSLATIONS["kist"]
         return f"[Translated to {target_locale}] {text}"
 
     async def synthesize_speech(self, text: str, language_locale: str) -> str:
@@ -83,4 +88,4 @@ class BhashiniService:
         if not text.strip():
             raise ValueError("Cannot synthesize empty response text into speech.")
         clean_locale = language_locale.replace("-", "_").lower()
-        return f"https://bhashini-gateway.ai/synth/2026_{clean_locale}_response_824921.wav"
+        return MOCK_TTS_URL_TEMPLATE.format(locale=clean_locale)
