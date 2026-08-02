@@ -1,11 +1,11 @@
-from src.data_models.governance.application_decision_payload import (
-    ApplicationDecisionPayload,
-)
 from src.data_models.governance.extracted_entity_payload import (
     ExtractedEntityPayload,
 )
+from src.data_models.governance.governance_outcome_payload import (
+    GovernanceOutcomePayload,
+)
 
 __all__ = [
-    "ApplicationDecisionPayload",
     "ExtractedEntityPayload",
+    "GovernanceOutcomePayload",
 ]

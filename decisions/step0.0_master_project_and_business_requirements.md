@@ -132,11 +132,11 @@ $$\text{evaluation\_passed} = (\text{ai\_confidence\_score} \ge 0.85) \land (\te
 
 ### 6.2 Governance Decisions & Payload Validation Contracts
 
-#### A. `ApplicationDecisionPayload` (`src/models/governance/application_decision_payload.py`)
+#### A. `GovernanceOutcomePayload` (`src/models/governance/governance_outcome_payload.py`)
 Emitted when Layer 4 or Caseworker Adjudication finalizes a governance decision.
 
 ```python
-class ApplicationDecisionPayload(StrictBaseModel):
+class GovernanceOutcomePayload(StrictBaseModel):
     session_id: SessionId
     payload_id: ExtractionPayloadId
     ai_confidence_score: AiConfidenceScore

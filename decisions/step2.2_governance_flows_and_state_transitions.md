@@ -101,7 +101,7 @@ Targeted at high-confidence, zero-anomaly claims requiring instant execution.
 
 1. **Evaluation:** Step 08 validates `ai_confidence_score >= 0.85` and `eligibility_status == ELIGIBLE`.
 2. **Double-Dipping Check:** System queries `tokenized_identity_hash` in `application_governance_ledger` to verify citizen has not already received an approved payout for the active season.
-3. **Payload Generation:** Layer 4 emits `ApplicationDecisionPayload` with:
+3. **Payload Generation:** Layer 4 emits `GovernanceOutcomePayload` with:
    * `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`)
    * `disbursement_txn_id = "TXN-YYYY-XXXXXX"` (Idempotency tracking key)
    * `disbursement_status = PENDING` (or `INITIATED`)
@@ -154,12 +154,12 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ## 4. Canonical Model Contracts & Validation Rules
 
-### 4.1 `ApplicationDecisionPayload` (`src/models/governance/application_decision_payload.py`)
+### 4.1 `GovernanceOutcomePayload` (`src/models/governance/governance_outcome_payload.py`)
 
 Emitted when Layer 4 or Caseworker Adjudication finalizes a governance decision.
 
 ```python
-class ApplicationDecisionPayload(StrictBaseModel):
+class GovernanceOutcomePayload(StrictBaseModel):
     session_id: SessionId
     payload_id: ExtractionPayloadId
     ai_confidence_score: AiConfidenceScore

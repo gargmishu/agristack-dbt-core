@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 
 from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
-from src.data_models.governance import ApplicationDecisionPayload
+from src.data_models.governance import GovernanceOutcomePayload
 from src.services.dpi.dpi_mock_fixtures import (
     MOCK_PAYMENT_FAIL_TRIGGER,
     MOCK_PAYMENT_FAILURE_REASON,
@@ -34,12 +34,12 @@ class PaymentRailService:
     """
 
     async def initiate_disbursement(
-        self, decision: ApplicationDecisionPayload
+        self, decision: GovernanceOutcomePayload
     ) -> DisbursementCallbackPayload | None:
         """Dispatches automated payout instruction over sovereign payment clearing rails.
 
         Args:
-            decision: ApplicationDecisionPayload with valid disbursement_txn_id.
+            decision: GovernanceOutcomePayload with valid disbursement_txn_id.
 
         Returns:
             DisbursementCallbackPayload indicating initial wire status, or None.

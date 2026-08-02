@@ -13,7 +13,7 @@ See: roadmap.md (Phase 3 Step 3.3 Layer 4 Governance Router)
 
 import logging
 
-from src.data_models.governance import ApplicationDecisionPayload
+from src.data_models.governance import GovernanceOutcomePayload
 
 logger = logging.getLogger(__name__)
 
@@ -29,15 +29,15 @@ class GovernanceRouter:
     """
 
     async def route_governance_decision(
-        self, payload: ApplicationDecisionPayload
-    ) -> ApplicationDecisionPayload:
+        self, payload: GovernanceOutcomePayload
+    ) -> GovernanceOutcomePayload:
         """Routes application decision through governance policy matrix.
 
         Args:
-            payload: Validated ApplicationDecisionPayload instance.
+            payload: Validated GovernanceOutcomePayload instance.
 
         Returns:
-            ApplicationDecisionPayload with finalized governance decision and tracking keys.
+            GovernanceOutcomePayload with finalized governance decision and tracking keys.
         """
         logger.info(
             "Routing governance decision for session=%s, decision=%s, confidence=%.2f",

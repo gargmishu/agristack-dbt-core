@@ -8,11 +8,11 @@ from src.data_models.common import (
     EligibilityStatus,
     GovernanceDecision,
 )
-from src.data_models.governance import ApplicationDecisionPayload
+from src.data_models.governance import GovernanceOutcomePayload
 
 
 def test_governance_routing_approved_decision() -> None:
-    payload = ApplicationDecisionPayload(
+    payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="550e8400-e29b-41d4-a716-446655440000",
         ai_confidence_score=0.92,
@@ -28,7 +28,7 @@ def test_governance_routing_approved_decision() -> None:
 
 def test_governance_routing_review_decision_missing_case_id() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.45,
@@ -40,7 +40,7 @@ def test_governance_routing_review_decision_missing_case_id() -> None:
 
 
 def test_governance_routing_manual_approve_with_review_notes() -> None:
-    payload = ApplicationDecisionPayload(
+    payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="550e8400-e29b-41d4-a716-446655440000",
         escalation_case_id="SPP-CASE-2026-981245",
@@ -59,7 +59,7 @@ def test_governance_routing_manual_approve_with_review_notes() -> None:
 
 def test_governance_routing_manual_approve_missing_case_id() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.78,
@@ -74,7 +74,7 @@ def test_governance_routing_manual_approve_missing_case_id() -> None:
 
 def test_governance_routing_auto_approve_rejects_review_notes() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.92,
@@ -90,7 +90,7 @@ def test_governance_routing_auto_approve_rejects_review_notes() -> None:
 
 def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             escalation_case_id="SPP-CASE-2026-981245",
@@ -107,7 +107,7 @@ def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
 
 def test_governance_routing_manual_approve_missing_review_notes() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             escalation_case_id="SPP-CASE-2026-981245",
@@ -124,7 +124,7 @@ def test_governance_routing_manual_approve_missing_review_notes() -> None:
 
 def test_governance_routing_manual_reject_missing_review_notes() -> None:
     with pytest.raises(ValidationError) as exc:
-        ApplicationDecisionPayload(
+        GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             escalation_case_id="SPP-CASE-2026-981245",

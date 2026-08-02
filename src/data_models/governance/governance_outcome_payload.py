@@ -14,10 +14,10 @@ from src.data_models.common import (
 )
 
 
-class ApplicationDecisionPayload(StrictBaseModel):
-    """Application decision payload emitted by Layer 4 rules engine.
+class GovernanceOutcomePayload(StrictBaseModel):
+    """Governance outcome payload emitted by Layer 4 rules engine.
 
-    See: decisions/step2.0_canonical_domain_schemas.md#application-decision-payload
+    See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
     """
 
     session_id: SessionId
@@ -57,7 +57,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
     decided_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_auto_approve_fields(self) -> "ApplicationDecisionPayload":
+    def validate_auto_approve_fields(self) -> "GovernanceOutcomePayload":
         """Enforces field requirements for auto-approved decision outcomes."""
         if self.governance_decision in (
             GovernanceDecision.AUTO_APPROVE,
@@ -86,7 +86,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_manual_approve_fields(self) -> "ApplicationDecisionPayload":
+    def validate_manual_approve_fields(self) -> "GovernanceOutcomePayload":
         """Enforces field requirements for manual caseworker approval decision outcomes."""
         if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if not self.disbursement_txn_id:
@@ -104,7 +104,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_auto_reject_fields(self) -> "ApplicationDecisionPayload":
+    def validate_auto_reject_fields(self) -> "GovernanceOutcomePayload":
         """Enforces field requirements for auto-rejected decision outcomes."""
         if self.governance_decision == GovernanceDecision.AUTO_REJECT:
             if not self.rejection_reason:
@@ -120,7 +120,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_manual_reject_fields(self) -> "ApplicationDecisionPayload":
+    def validate_manual_reject_fields(self) -> "GovernanceOutcomePayload":
         """Enforces field requirements for manual caseworker rejection decision outcomes."""
         if self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason:
@@ -138,7 +138,7 @@ class ApplicationDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_review_decision_fields(self) -> "ApplicationDecisionPayload":
+    def validate_review_decision_fields(self) -> "GovernanceOutcomePayload":
         """Enforces field requirements for escalation review decision outcomes."""
         review_decisions = {
             GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,

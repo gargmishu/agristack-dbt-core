@@ -7,14 +7,14 @@ from src.data_models.common import (
     EligibilityStatus,
     GovernanceDecision,
 )
-from src.data_models.governance import ApplicationDecisionPayload
+from src.data_models.governance import GovernanceOutcomePayload
 from src.orchestrator.governance_router import GovernanceRouter
 
 
 @pytest.mark.asyncio
 async def test_governance_router_auto_approve() -> None:
     router = GovernanceRouter()
-    payload = ApplicationDecisionPayload(
+    payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
         ai_confidence_score=0.96,

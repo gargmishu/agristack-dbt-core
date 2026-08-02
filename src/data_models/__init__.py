@@ -26,8 +26,8 @@ from src.data_models.common import (
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
-    ApplicationDecisionPayload,
     ExtractedEntityPayload,
+    GovernanceOutcomePayload,
 )
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
@@ -62,7 +62,7 @@ __all__ = [
     "UssdIngressPayload",
     "PublicAgentStandardizedIntakePayload",
     "ExtractedEntityPayload",
-    "ApplicationDecisionPayload",
+    "GovernanceOutcomePayload",
     "CaseworkerCaseReviewPayload",
     "CaseworkerManualDecisionPayload",
     "DisbursementCallbackPayload",

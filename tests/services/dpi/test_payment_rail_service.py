@@ -7,14 +7,14 @@ from src.data_models.common import (
     EligibilityStatus,
     GovernanceDecision,
 )
-from src.data_models.governance import ApplicationDecisionPayload
+from src.data_models.governance import GovernanceOutcomePayload
 from src.services.dpi import PaymentRailService
 
 
 @pytest.mark.asyncio
 async def test_payment_rail_initiate_disbursement() -> None:
     service = PaymentRailService()
-    decision = ApplicationDecisionPayload(
+    decision = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
         ai_confidence_score=0.96,
@@ -33,7 +33,7 @@ async def test_payment_rail_initiate_disbursement() -> None:
 @pytest.mark.asyncio
 async def test_payment_rail_disbursement_failure() -> None:
     service = PaymentRailService()
-    decision = ApplicationDecisionPayload(
+    decision = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
         ai_confidence_score=0.96,
