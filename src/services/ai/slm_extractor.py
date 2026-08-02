@@ -15,7 +15,13 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 import logging
 
 from src.data_models.governance import ExtractedEntityPayload
-from src.services.ai.ai_mock_fixtures import ADVERSARIAL_INJECTION_KEYWORDS, MOCK_SLM_RULES
+from src.services.ai.ai_mock_fixtures import (
+    ADVERSARIAL_INJECTION_KEYWORDS,
+    MISSING_ENTITY_KEYWORDS,
+    MOCK_SLM_RULES,
+    STATUS_CHECK_KEYWORDS,
+    SUBSIDY_CLAIM_KEYWORDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +57,11 @@ class SlmExtractor:
 
         is_adversarial = any(kw in content_lower for kw in ADVERSARIAL_INJECTION_KEYWORDS)
 
-        if any(k in content_lower for k in ["kist", "subsidy", "pm kisan"]):
+        if any(k in content_lower for k in SUBSIDY_CLAIM_KEYWORDS):
             rule = MOCK_SLM_RULES["subsidy_claim"]
-        elif any(k in content_lower for k in ["status", "jankari"]):
+        elif any(k in content_lower for k in STATUS_CHECK_KEYWORDS):
             rule = MOCK_SLM_RULES["status_check"]
-        elif any(k in content_lower for k in ["missing", "incomplete"]):
+        elif any(k in content_lower for k in MISSING_ENTITY_KEYWORDS):
             rule = MOCK_SLM_RULES["missing_entity"]
         else:
             rule = MOCK_SLM_RULES["default_fallback"]

@@ -12,8 +12,12 @@ from hashlib import sha256
 class CarrierAuthValidator:
     """Security validator enforcing cryptographic signature & token verification for webhooks."""
 
-    @staticmethod
+    SIGNATURE_PREFIX = "sha256="
+    BEARER_PREFIX = "Bearer "
+
+    @classmethod
     def validate_whatsapp_signature(
+        cls,
         payload_bytes: bytes,
         signature_header: str | None,
         app_secret: str,
@@ -28,10 +32,10 @@ class CarrierAuthValidator:
         Returns:
             True if signature matches, False otherwise.
         """
-        if not signature_header or not signature_header.startswith("sha256="):
+        if not signature_header or not signature_header.startswith(cls.SIGNATURE_PREFIX):
             return False
 
-        expected_signature = signature_header[7:].strip()
+        expected_signature = signature_header.removeprefix(cls.SIGNATURE_PREFIX).strip()
         computed_signature = hmac.new(
             app_secret.encode("utf-8"),
             payload_bytes,
@@ -40,8 +44,9 @@ class CarrierAuthValidator:
 
         return secrets.compare_digest(computed_signature, expected_signature)
 
-    @staticmethod
+    @classmethod
     def validate_carrier_bearer_token(
+        cls,
         auth_header: str | None,
         expected_token: str,
     ) -> bool:
@@ -54,8 +59,8 @@ class CarrierAuthValidator:
         Returns:
             True if token matches using constant-time comparison, False otherwise.
         """
-        if not auth_header or not auth_header.startswith("Bearer "):
+        if not auth_header or not auth_header.startswith(cls.BEARER_PREFIX):
             return False
 
-        provided_token = auth_header[7:].strip()
+        provided_token = auth_header.removeprefix(cls.BEARER_PREFIX).strip()
         return secrets.compare_digest(provided_token, expected_token)

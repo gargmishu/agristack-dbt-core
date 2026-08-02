@@ -18,6 +18,10 @@ MOCK_NMT_TRANSLATIONS: dict[str, str] = {
     "kharab": "My crop in Karnal district has suffered weather damage.",
     "kist": "I have not received my PM KISAN installment of 2000 rupees.",
 }
+DEFAULT_NMT_FALLBACK_KEY = "kist"
+
+MOCK_STREAM_EMPTY_KEYWORD = "empty"
+MOCK_STREAM_ERROR_KEYWORDS: tuple[str, ...] = ("error", "invalid")
 
 MOCK_TTS_URL_TEMPLATE = "https://bhashini-gateway.ai/synth/2026_{locale}_response_824921.wav"
 
@@ -27,6 +31,10 @@ ADVERSARIAL_INJECTION_KEYWORDS: tuple[str, ...] = (
     "system prompt",
     "drop",
 )
+
+SUBSIDY_CLAIM_KEYWORDS: tuple[str, ...] = ("kist", "subsidy", "pm kisan")
+STATUS_CHECK_KEYWORDS: tuple[str, ...] = ("status", "jankari")
+MISSING_ENTITY_KEYWORDS: tuple[str, ...] = ("missing", "incomplete")
 
 
 class MockExtractionRule(NamedTuple):

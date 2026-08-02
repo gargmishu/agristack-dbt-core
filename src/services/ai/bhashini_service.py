@@ -14,8 +14,11 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 import logging
 
 from src.services.ai.ai_mock_fixtures import (
+    DEFAULT_NMT_FALLBACK_KEY,
     MOCK_ASR_TRANSCRIPTIONS,
     MOCK_NMT_TRANSLATIONS,
+    MOCK_STREAM_EMPTY_KEYWORD,
+    MOCK_STREAM_ERROR_KEYWORDS,
     MOCK_TTS_URL_TEMPLATE,
 )
 
@@ -42,9 +45,10 @@ class BhashiniService:
             Transcribed text string in original spoken language.
         """
         logger.info("Transcribing audio for url=%s locale=%s", audio_url, language_locale)
-        if "empty" in audio_url.lower():
+        url_lower = audio_url.lower()
+        if MOCK_STREAM_EMPTY_KEYWORD in url_lower:
             return ""
-        if "error" in audio_url.lower() or "invalid" in audio_url.lower():
+        if any(err in url_lower for err in MOCK_STREAM_ERROR_KEYWORDS):
             raise ValueError("ASR audio stream formatting or download error.")
 
         return MOCK_ASR_TRANSCRIPTIONS.get(language_locale, MOCK_ASR_TRANSCRIPTIONS["default"])
@@ -71,7 +75,7 @@ class BhashiniService:
             for kw, translation in MOCK_NMT_TRANSLATIONS.items():
                 if kw in text.lower():
                     return translation
-            return MOCK_NMT_TRANSLATIONS["kist"]
+            return MOCK_NMT_TRANSLATIONS[DEFAULT_NMT_FALLBACK_KEY]
         return f"[Translated to {target_locale}] {text}"
 
     async def synthesize_speech(self, text: str, language_locale: str) -> str:
