@@ -6,9 +6,10 @@ Why cross-match against AgriStack cadastral registries?
 Benefit eligibility requires verifying landholding entitlement, survey/khata numbers, and seasonal
 crop records before executing automated payouts or staging caseworker reviews.
 
+See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.2)
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 See: decisions/step2.2_governance_flows_and_state_transitions.md
-See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
+See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 
 import logging
@@ -16,6 +17,7 @@ import logging
 from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
     INVALID_SURVEY_NUMBER,
+    MOCK_CADASTRAL_REGISTRY,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
 
@@ -27,7 +29,7 @@ class AgriRegistryService:
 
     Validates land ownership parameters and seasonal crop entitlement without exposing PII.
 
-    See: decisions/step2.0_canonical_domain_schemas.md
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.2)
     """
 
     async def verify_land_record(self, tokenized_citizen_id: str, land_record_id: str) -> bool:
@@ -51,4 +53,8 @@ class AgriRegistryService:
             or INVALID_SURVEY_NUMBER in land_record_id
         ):
             return False
-        return tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO
+        if tokenized_citizen_id == UNVERIFIED_IDENTITY_TOKEN_ZERO:
+            return False
+        if land_record_id in MOCK_CADASTRAL_REGISTRY:
+            return MOCK_CADASTRAL_REGISTRY[land_record_id].is_entitled
+        return True

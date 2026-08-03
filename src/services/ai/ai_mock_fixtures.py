@@ -2,6 +2,15 @@
 
 Provides deterministic, locally testable data structures and response mappings for ASR, NMT, TTS,
 and SLM structured entity extraction during offline development and testing.
+
+Why abstract AI blocks behind offline simulation fixtures?
+Sovereign orchestration development under an Inside-Out methodology requires decoupling core state
+machine execution from real LLM inference latency, network timeouts, and non-deterministic model
+hallucinations. These fixtures provide reproducible inputs for stress-testing multi-attempt loops
+and adversarial prompt injection boundaries.
+
+See: decisions/step3.1_foundational_mock_boundaries.md (Section 2)
+See: roadmap.md (Phase 3 Step 3.1)
 """
 
 from typing import NamedTuple

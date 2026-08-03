@@ -1,6 +1,7 @@
 from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
     INVALID_SURVEY_NUMBER,
+    MOCK_CADASTRAL_REGISTRY,
     MOCK_CASE_REJECT_PREFIX,
     MOCK_FAIL_STAGE_NOTE,
     MOCK_PAYMENT_FAIL_TRIGGER,
@@ -10,6 +11,7 @@ from src.services.dpi.dpi_mock_fixtures import (
 )
 
 EXPECTED_TOKEN_LEN = 64
+EXPECTED_REGISTRY_SIZE = 3
 
 
 def test_dpi_mock_fixtures_integrity() -> None:
@@ -21,3 +23,6 @@ def test_dpi_mock_fixtures_integrity() -> None:
     assert MOCK_FAIL_STAGE_NOTE == "fail_stage"
     assert MOCK_PAYMENT_FAIL_TRIGGER == "FAIL"
     assert MOCK_PAYMENT_FAILURE_REASON == "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"
+    assert len(MOCK_CADASTRAL_REGISTRY) >= EXPECTED_REGISTRY_SIZE
+    assert MOCK_CADASTRAL_REGISTRY["LAND-REC-1002"].district == "Pune"
+    assert MOCK_CADASTRAL_REGISTRY["LAND-REC-3006"].is_entitled is False
