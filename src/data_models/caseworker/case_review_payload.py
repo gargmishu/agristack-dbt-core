@@ -20,10 +20,18 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
     """
 
-    escalation_case_id: EscalationCaseId
-    session_id: SessionId
-    payload_id: ExtractionPayloadId
-    tokenized_citizen_id: HmacCitizenToken
+    escalation_case_id: EscalationCaseId = Field(
+        ..., description="Unique escalation incident ticket identifier"
+    )
+    session_id: SessionId = Field(
+        ..., description="Primary session key tracking citizen interaction context"
+    )
+    payload_id: ExtractionPayloadId = Field(
+        ..., description="Foreign key referencing upstream NLU extraction payload"
+    )
+    tokenized_citizen_id: HmacCitizenToken = Field(
+        ..., description="Zero-PII SHA-256 HMAC citizen identity token"
+    )
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
         default_factory=dict,
@@ -36,7 +44,9 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
         ..., max_length=5000, description="Raw citizen text or signed audio URL"
     )
     escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
-    staged_at: UtcTimestamp
+    staged_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when incident ticket was staged into review dashboard"
+    )
 
     @model_validator(mode="after")
     def validate_non_empty_fields(self) -> "CaseworkerCaseReviewPayload":

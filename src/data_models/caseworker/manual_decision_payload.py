@@ -16,7 +16,9 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md#442-caseworker-review-decision-payload
     """
 
-    escalation_case_id: EscalationCaseId
+    escalation_case_id: EscalationCaseId = Field(
+        ..., description="Upstream incident ticket ID being adjudicated by caseworker"
+    )
     reviewer_id: str = Field(
         ...,
         min_length=5,
@@ -36,7 +38,9 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, max_length=512, description="Populated for MANUAL_REJECT"
     )
-    decided_at: UtcTimestamp
+    decided_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when officer rendered adjudication verdict"
+    )
 
     @model_validator(mode="after")
     def validate_decision_type_and_audit_notes(self) -> "CaseworkerManualDecisionPayload":

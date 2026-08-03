@@ -17,8 +17,16 @@ class IvrIngressPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
     """
 
-    session_id: SessionId
-    originating_phone_number: PhoneNumberE164
+    session_id: SessionId = Field(
+        ..., description="Unified continuous voice stream session identifier"
+    )
+    originating_phone_number: PhoneNumberE164 = Field(
+        ..., description="Caller Automatic Number Identification (ANI) E.164 phone number"
+    )
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
-    duration_seconds: AudioDurationSeconds
-    received_at: UtcTimestamp
+    duration_seconds: AudioDurationSeconds = Field(
+        ..., description="Voice stream acoustic duration in seconds (bounded 1 to 600s)"
+    )
+    received_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when SIP gateway received voice stream"
+    )

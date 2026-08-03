@@ -22,8 +22,10 @@ class UssdIngressPayload(StrictBaseModel):
     StandardizedIntakePayload.unprocessed_input_content.
     """
 
-    session_id: SessionId
-    originating_phone_number: PhoneNumberE164
+    session_id: SessionId = Field(..., description="Transient GSM signaling session identifier")
+    originating_phone_number: PhoneNumberE164 = Field(
+        ..., description="Citizen mobile subscriber E.164 phone number"
+    )
     ussd_service_code: str = Field(
         ...,
         pattern=r"^\*\d+(\*\d+)*#$",
@@ -38,4 +40,6 @@ class UssdIngressPayload(StrictBaseModel):
         max_length=64,
         description="Concatenated digit selections and data entries separated by *",
     )
-    received_at: UtcTimestamp
+    received_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when SS7/SIGTRAN gateway received USSD frame"
+    )

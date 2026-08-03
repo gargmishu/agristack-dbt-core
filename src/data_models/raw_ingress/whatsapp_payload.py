@@ -23,8 +23,10 @@ class WhatsAppIngressPayload(StrictBaseModel):
     GSM signaling session, respectively).
     """
 
-    session_id: SessionId
-    originating_phone_number: PhoneNumberE164
+    session_id: SessionId = Field(..., description="Unified channel messaging session identifier")
+    originating_phone_number: PhoneNumberE164 = Field(
+        ..., description="Citizen WhatsApp Business E.164 mobile account number"
+    )
     channel_message_id: str = Field(
         ...,
         min_length=8,
@@ -48,11 +50,13 @@ class WhatsAppIngressPayload(StrictBaseModel):
         max_length=1000,
         description="Raw text message (populated for TEXT)",
     )
-    received_at: UtcTimestamp
+    received_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when Meta webhook payload arrived"
+    )
 
     @model_validator(mode="after")
-    def validate_content_mutual_exclusivity(self) -> "WhatsAppIngressPayload":
-        """Enforces mutual exclusivity between audio and text content."""
+    def validate_audio_modality_fields(self) -> "WhatsAppIngressPayload":
+        """Enforces mandatory voice parameters and excludes text when modality is AUDIO."""
         if self.payload_type == PayloadType.AUDIO:
             if self.audio_recording_url is None:
                 raise ValueError("audio_recording_url is required when payload_type is AUDIO")
@@ -60,7 +64,12 @@ class WhatsAppIngressPayload(StrictBaseModel):
                 raise ValueError("duration_seconds is required when payload_type is AUDIO")
             if self.text_body is not None:
                 raise ValueError("text_body must be None when payload_type is AUDIO")
-        elif self.payload_type == PayloadType.TEXT:
+        return self
+
+    @model_validator(mode="after")
+    def validate_text_modality_fields(self) -> "WhatsAppIngressPayload":
+        """Enforces non-empty text body and excludes audio pointers when modality is TEXT."""
+        if self.payload_type == PayloadType.TEXT:
             if self.text_body is None or not self.text_body.strip():
                 raise ValueError("text_body must be a non-empty string when payload_type is TEXT")
             if self.audio_recording_url is not None:
