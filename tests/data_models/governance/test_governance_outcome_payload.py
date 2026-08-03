@@ -20,7 +20,7 @@ def test_governance_routing_approved_decision() -> None:
         governance_decision=GovernanceDecision.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
-        decided_at=datetime.now(UTC),
+        evaluated_at=datetime.now(UTC),
     )
     assert payload.governance_decision == GovernanceDecision.AUTO_APPROVE
     assert payload.disbursement_txn_id == "TXN-2026-987654"
@@ -34,7 +34,7 @@ def test_governance_routing_review_decision_missing_case_id() -> None:
             ai_confidence_score=0.45,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
             governance_decision=GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required" in str(exc.value)
 
@@ -50,7 +50,7 @@ def test_governance_routing_manual_approve_with_review_notes() -> None:
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
         review_notes="Verified manual land deed document attached in tribunal appeal",
-        decided_at=datetime.now(UTC),
+        evaluated_at=datetime.now(UTC),
     )
     assert payload.governance_decision == GovernanceDecision.MANUAL_APPROVE
     assert payload.escalation_case_id == "SPP-CASE-2026-981245"
@@ -67,7 +67,7 @@ def test_governance_routing_manual_approve_missing_case_id() -> None:
             governance_decision=GovernanceDecision.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required for MANUAL_APPROVE" in str(exc.value)
 
@@ -83,7 +83,7 @@ def test_governance_routing_auto_approve_rejects_review_notes() -> None:
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes="Invalid review note on automated decision",
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "review_notes must be None for decision AUTO_APPROVE" in str(exc.value)
 
@@ -100,7 +100,7 @@ def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes="   ",
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "review_notes cannot be empty or whitespace" in str(exc.value)
 
@@ -117,7 +117,7 @@ def test_governance_routing_manual_approve_missing_review_notes() -> None:
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes=None,
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "review_notes is required for MANUAL_APPROVE" in str(exc.value)
 
@@ -133,6 +133,6 @@ def test_governance_routing_manual_reject_missing_review_notes() -> None:
             governance_decision=GovernanceDecision.MANUAL_REJECT,
             rejection_reason="Land deed mismatch",
             review_notes=None,
-            decided_at=datetime.now(UTC),
+            evaluated_at=datetime.now(UTC),
         )
     assert "review_notes is required for MANUAL_REJECT" in str(exc.value)

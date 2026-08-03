@@ -14,7 +14,7 @@ from src.services.dpi import PaymentRailService
 @pytest.mark.asyncio
 async def test_payment_rail_initiate_disbursement() -> None:
     service = PaymentRailService()
-    decision = GovernanceOutcomePayload(
+    outcome = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
         ai_confidence_score=0.96,
@@ -22,9 +22,9 @@ async def test_payment_rail_initiate_disbursement() -> None:
         governance_decision=GovernanceDecision.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
-        decided_at=datetime.now(UTC),
+        evaluated_at=datetime.now(UTC),
     )
-    result = await service.initiate_disbursement(decision)
+    result = await service.initiate_disbursement(outcome)
     assert result is not None
     assert result.disbursement_txn_id == "TXN-2026-987654"
     assert result.disbursement_status == DisbursementStatus.SUCCESS
@@ -33,7 +33,7 @@ async def test_payment_rail_initiate_disbursement() -> None:
 @pytest.mark.asyncio
 async def test_payment_rail_disbursement_failure() -> None:
     service = PaymentRailService()
-    decision = GovernanceOutcomePayload(
+    outcome = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
         ai_confidence_score=0.96,
@@ -41,9 +41,9 @@ async def test_payment_rail_disbursement_failure() -> None:
         governance_decision=GovernanceDecision.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-FAIL-101",
         disbursement_status=DisbursementStatus.PENDING,
-        decided_at=datetime.now(UTC),
+        evaluated_at=datetime.now(UTC),
     )
-    result = await service.initiate_disbursement(decision)
+    result = await service.initiate_disbursement(outcome)
     assert result is not None
     assert result.disbursement_status == DisbursementStatus.FAILED
     assert result.failure_reason_code is not None

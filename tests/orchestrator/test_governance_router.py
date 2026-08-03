@@ -22,8 +22,8 @@ async def test_governance_router_auto_approve() -> None:
         governance_decision=GovernanceDecision.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
-        decided_at=datetime.now(UTC),
+        evaluated_at=datetime.now(UTC),
     )
 
-    result = await router.route_governance_decision(payload)
+    result = await router.route_governance_outcome(payload)
     assert result.governance_decision == GovernanceDecision.AUTO_APPROVE

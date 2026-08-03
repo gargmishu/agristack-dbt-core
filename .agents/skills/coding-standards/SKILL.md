@@ -42,7 +42,8 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 ### 1.3 Timestamp Attribute Standard (`<action>_at`)
 * All timestamp fields across all 4 architecture layers must follow the clean **`<action>_at`** convention. Avoid redundant `_timestamp` suffixes.
   * `received_at`: UTC timestamp when raw carrier ingress or Layer 3 intake payload arrived.
-  * `decided_at`: UTC timestamp when governance or caseworker decision was rendered.
+  * `evaluated_at`: UTC timestamp when rules engine evaluation outcome was rendered.
+  * `reviewed_at`: UTC timestamp when officer submitted review outcome on dashboard.
   * `staged_at`: UTC timestamp when incident ticket was staged in caseworker queue.
   * `cleared_at`: UTC timestamp when payment rail cleared transaction.
 

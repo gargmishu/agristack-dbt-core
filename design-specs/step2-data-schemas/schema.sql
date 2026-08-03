@@ -87,7 +87,7 @@ CREATE TABLE application_governance_ledger (
     application_status application_status_enum NOT NULL,
     claimant_eligibility_status eligibility_status_enum NOT NULL,
     governance_decision governance_decision_enum,
-    decided_at TIMESTAMPTZ,
+    evaluated_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
     
@@ -184,11 +184,11 @@ ON session_extraction_details (session_id, attempt_id DESC);
 
 -- Operational Visibility / Funnel Joins
 CREATE INDEX idx_application_governance_session 
-ON application_governance_ledger (session_id, decided_at DESC);
+ON application_governance_ledger (session_id, evaluated_at DESC);
 
 -- Double-Dipping Fraud Prevention / Status API
 CREATE INDEX idx_governance_identity_lookup 
-ON application_governance_ledger (tokenized_identity_hash, decided_at DESC);
+ON application_governance_ledger (tokenized_identity_hash, evaluated_at DESC);
 
 -- SLA Time-in-State Tracking
 CREATE INDEX idx_governance_history_claim_time 
@@ -223,7 +223,7 @@ BEGIN
         NEW.application_status,
         NEW.governance_decision,
         COALESCE(NEW.governance_metadata->>'reviewer_id', 'SYSTEM:DEFAULT'),
-        COALESCE(NEW.decided_at, NOW())
+        COALESCE(NEW.evaluated_at, NOW())
     );
     RETURN NEW;
 END;
@@ -262,7 +262,7 @@ SELECT
     application_status,
     claimant_eligibility_status,
     governance_decision,
-    decided_at,
+    evaluated_at,
     disbursement_status,
     (governance_metadata->>'approval_amount')::numeric AS approval_amount,
     (governance_metadata->>'rejection_reason')::text AS rejection_reason,
@@ -292,7 +292,7 @@ SELECT
     g.application_status,
     g.claimant_eligibility_status,
     g.governance_decision,
-    g.decided_at,
+    g.evaluated_at,
     g.disbursement_status,
     g.approval_amount,
     g.rejection_reason,

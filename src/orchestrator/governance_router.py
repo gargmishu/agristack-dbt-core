@@ -28,19 +28,19 @@ class GovernanceRouter:
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
 
-    async def route_governance_decision(
+    async def route_governance_outcome(
         self, payload: GovernanceOutcomePayload
     ) -> GovernanceOutcomePayload:
-        """Routes application decision through governance policy matrix.
+        """Routes application evaluation outcome through governance policy matrix.
 
         Args:
             payload: Validated GovernanceOutcomePayload instance.
 
         Returns:
-            GovernanceOutcomePayload with finalized governance decision and tracking keys.
+            GovernanceOutcomePayload with finalized governance action and tracking keys.
         """
         logger.info(
-            "Routing governance decision for session=%s, decision=%s, confidence=%.2f",
+            "Routing governance outcome for session=%s, decision=%s, confidence=%.2f",
             payload.session_id,
             payload.governance_decision,
             payload.ai_confidence_score,

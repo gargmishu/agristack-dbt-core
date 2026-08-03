@@ -48,8 +48,8 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
     rejection_reason: str | None = Field(
         None, max_length=512, description="Populated for MANUAL_REJECT"
     )
-    decided_at: UtcTimestamp = Field(
-        ..., description="UTC timestamp when officer rendered adjudication verdict"
+    reviewed_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when officer submitted review outcome on dashboard"
     )
 
     @model_validator(mode="after")

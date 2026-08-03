@@ -34,25 +34,25 @@ class PaymentRailService:
     """
 
     async def initiate_disbursement(
-        self, decision: GovernanceOutcomePayload
+        self, outcome: GovernanceOutcomePayload
     ) -> DisbursementCallbackPayload | None:
         """Dispatches automated payout instruction over sovereign payment clearing rails.
 
         Args:
-            decision: GovernanceOutcomePayload with valid disbursement_txn_id.
+            outcome: GovernanceOutcomePayload with valid disbursement_txn_id.
 
         Returns:
             DisbursementCallbackPayload indicating initial wire status, or None.
         """
         logger.info(
             "Initiating payment clearing for session=%s, txn=%s",
-            decision.session_id,
-            decision.disbursement_txn_id,
+            outcome.session_id,
+            outcome.disbursement_txn_id,
         )
-        if decision.disbursement_txn_id is None:
+        if outcome.disbursement_txn_id is None:
             return None
 
-        if MOCK_PAYMENT_FAIL_TRIGGER in str(decision.disbursement_txn_id).upper():
+        if MOCK_PAYMENT_FAIL_TRIGGER in str(outcome.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED
             reason = MOCK_PAYMENT_FAILURE_REASON
         else:
@@ -60,7 +60,7 @@ class PaymentRailService:
             reason = None
 
         return DisbursementCallbackPayload(
-            disbursement_txn_id=decision.disbursement_txn_id,
+            disbursement_txn_id=outcome.disbursement_txn_id,
             disbursement_status=status,
             cleared_at=datetime.now(UTC),
             failure_reason_code=reason,
