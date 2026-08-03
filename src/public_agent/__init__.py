@@ -3,4 +3,8 @@
 from src.public_agent.intake_payload_evaluator import IntakeEvaluationResult, IntakePayloadEvaluator
 from src.public_agent.public_agent_api import PublicAgentApi
 
-__all__ = ["PublicAgentApi", "IntakePayloadEvaluator", "IntakeEvaluationResult"]
+__all__ = [
+    "IntakeEvaluationResult",
+    "IntakePayloadEvaluator",
+    "PublicAgentApi",
+]

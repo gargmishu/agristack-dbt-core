@@ -37,8 +37,8 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     decided_at: UtcTimestamp
 
     @model_validator(mode="after")
-    def validate_caseworker_decision_fields(self) -> "CaseworkerManualDecisionPayload":
-        """Enforces field rules for manual caseworker decisions."""
+    def validate_decision_type_and_audit_notes(self) -> "CaseworkerManualDecisionPayload":
+        """Enforces allowed manual decisions and non-empty caseworker audit justification."""
         allowed_decisions = {
             GovernanceDecision.MANUAL_APPROVE,
             GovernanceDecision.MANUAL_REJECT,
@@ -53,20 +53,34 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
         if not self.review_notes or not self.review_notes.strip():
             raise ValueError("review_notes cannot be empty or whitespace")
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_manual_approve_fields(self) -> "CaseworkerManualDecisionPayload":
+        """Enforces positive approved amount and forbids rejection reason on approval."""
         if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if self.approved_amount is None or self.approved_amount <= 0.0:
                 raise ValueError("approved_amount > 0.0 is required for MANUAL_APPROVE")
             if self.rejection_reason is not None:
                 raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
-        elif self.governance_decision == GovernanceDecision.MANUAL_REJECT:
+        return self
+
+    @model_validator(mode="after")
+    def validate_manual_reject_fields(self) -> "CaseworkerManualDecisionPayload":
+        """Enforces mandatory rejection justification and forbids approved amount on rejection."""
+        if self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason or not self.rejection_reason.strip():
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
             if self.approved_amount is not None:
                 raise ValueError("approved_amount must be None for MANUAL_REJECT")
-        elif self.governance_decision == GovernanceDecision.REQUEST_MORE_INFO:
+        return self
+
+    @model_validator(mode="after")
+    def validate_request_info_fields(self) -> "CaseworkerManualDecisionPayload":
+        """Forbids both financial amount and rejection reason when requesting more info."""
+        if self.governance_decision == GovernanceDecision.REQUEST_MORE_INFO:
             if self.approved_amount is not None:
                 raise ValueError("approved_amount must be None for REQUEST_MORE_INFO")
             if self.rejection_reason is not None:
                 raise ValueError("rejection_reason must be None for REQUEST_MORE_INFO")
-
         return self

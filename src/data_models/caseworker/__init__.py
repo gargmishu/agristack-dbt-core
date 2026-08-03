@@ -1,3 +1,5 @@
+"""Caseworker review and manual adjudication data models."""
+
 from src.data_models.caseworker.case_review_payload import (
     CaseworkerCaseReviewPayload,
 )
