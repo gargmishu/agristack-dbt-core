@@ -101,8 +101,8 @@ src/
 │   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
 │   │   └── standardized_intake_payload.py
 │   ├── governance/                  # Layer 4 governance models & extraction payloads
-│   │   ├── application_decision_payload.py
-│   │   └── extracted_entity_payload.py
+│   │   ├── extracted_entity_payload.py
+│   │   └── governance_outcome_payload.py
 │   ├── caseworker/                  # Caseworker portal models & manual decisions
 │   │   ├── case_review_payload.py
 │   │   └── manual_decision_payload.py
@@ -148,7 +148,7 @@ tests/
 │   ├── public_agent/
 │   │   └── test_standardized_intake_payload.py
 │   ├── governance/
-│   │   └── test_application_decision_payload.py
+│   │   └── test_governance_outcome_payload.py
 │   ├── caseworker/
 │   │   ├── test_case_review_payload.py
 │   │   └── test_manual_decision_payload.py

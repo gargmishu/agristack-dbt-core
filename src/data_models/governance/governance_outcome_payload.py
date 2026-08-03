@@ -15,9 +15,19 @@ from src.data_models.common import (
 
 
 class GovernanceOutcomePayload(StrictBaseModel):
-    """Governance outcome payload emitted by Layer 4 rules engine.
+    """Unified governance outcome payload emitted by Layer 4 rules engine or manual adjudication.
+
+    This contract represents the evaluation outcome at any stage of the governance adjudication
+    pipeline—capturing both intermediate non-terminal decisions (e.g., routing for human review or
+    requesting clarification) and definitive terminal verdicts (approval or rejection).
+
+    To maintain a uniform pipeline interface without polymorphic schema fragmentation, this model
+    implements an exhaustive state matrix where attributes specific to alternate states (such as
+    disbursement tracking keys, escalation ticket IDs, and rejection reasons) are strictly forbidden
+    (`None`) when inapplicable to the evaluated `governance_decision`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
+    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.1)
     """
 
     session_id: SessionId
@@ -45,7 +55,13 @@ class GovernanceOutcomePayload(StrictBaseModel):
             "SUCCESS/FAILED/RETURNED upon bank callback"
         ),
     )
-    escalation_case_id: EscalationCaseId | None = None
+    escalation_case_id: EscalationCaseId | None = Field(
+        None,
+        description=(
+            "Incident ticket tracking key (SPP-CASE-YYYY-XXXXXX) required for "
+            "manual review routing, info requests, and caseworker adjudications"
+        ),
+    )
     rejection_reason: str | None = Field(
         None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
     )
@@ -58,7 +74,14 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_auto_approve_fields(self) -> "GovernanceOutcomePayload":
-        """Enforces field requirements for auto-approved decision outcomes."""
+        """Enforces state matrix invariants for automated approval and payout outcomes.
+
+        For automated approvals (`AUTO_APPROVE` and `AUTOMATED_PAYOUT`), the system must decouple
+        governance adjudication from financial clearing by establishing an idempotent transaction
+        key (`disbursement_txn_id`) initialized to `PENDING` status. To guarantee clean auditability
+        and prevent state confusion, all human adjudication fields (`escalation_case_id`,
+        `review_notes`) and rejection reasons must be absent.
+        """
         if self.governance_decision in (
             GovernanceDecision.AUTO_APPROVE,
             GovernanceDecision.AUTOMATED_PAYOUT,
@@ -87,7 +110,13 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_manual_approve_fields(self) -> "GovernanceOutcomePayload":
-        """Enforces field requirements for manual caseworker approval decision outcomes."""
+        """Enforces state matrix invariants for human caseworker approval decisions.
+
+        When a caseworker approves a staged claim (`MANUAL_APPROVE`), the payout transaction keys
+        must be assigned to initiate wire clearing. To preserve system auditability invariants, the
+        outcome must explicitly bind to the upstream escalation ticket (`escalation_case_id`) and
+        carry non-empty officer audit notes (`review_notes`) explaining the justification.
+        """
         if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
             if not self.disbursement_txn_id:
                 raise ValueError("disbursement_txn_id is required for MANUAL_APPROVE")
@@ -105,7 +134,13 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_auto_reject_fields(self) -> "GovernanceOutcomePayload":
-        """Enforces field requirements for auto-rejected decision outcomes."""
+        """Enforces state matrix invariants for automated rules engine rejections.
+
+        When an application fails automated threshold or eligibility gates (`AUTO_REJECT`), a
+        deterministic rejection justification (`rejection_reason`) is strictly required. Financial
+        disbursement keys and human escalation context must be completely omitted to prevent illegal
+        state transitions or accidental financial clearing.
+        """
         if self.governance_decision == GovernanceDecision.AUTO_REJECT:
             if not self.rejection_reason:
                 raise ValueError("rejection_reason is required for AUTO_REJECT")
@@ -121,7 +156,13 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_manual_reject_fields(self) -> "GovernanceOutcomePayload":
-        """Enforces field requirements for manual caseworker rejection decision outcomes."""
+        """Enforces state matrix invariants for caseworker manual adjudication rejections.
+
+        When an officer rejects a case (`MANUAL_REJECT`), both an explicit rejection justification
+        (`rejection_reason`) and officer audit notes (`review_notes`) are mandatory. The outcome
+        must reference the staged escalation ticket (`escalation_case_id`), while financial payout
+        keys remain strictly forbidden.
+        """
         if self.governance_decision == GovernanceDecision.MANUAL_REJECT:
             if not self.rejection_reason:
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
@@ -139,7 +180,14 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_review_decision_fields(self) -> "GovernanceOutcomePayload":
-        """Enforces field requirements for escalation review decision outcomes."""
+        """Enforces state matrix invariants for intermediate escalation and review routing outcomes.
+
+        For non-terminal decisions (`ROUTE_FOR_MANUAL_REVIEW`, `HUMAN_REVIEW`, `REQUEST_MORE_INFO`),
+        the rules engine halts automated disbursement and routes the claim for intervention. This
+        requires an active escalation incident ticket (`escalation_case_id`). Financial clearing
+        attributes, rejection verdicts, and review notes must remain absent until terminal
+        adjudication occurs.
+        """
         review_decisions = {
             GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
             GovernanceDecision.HUMAN_REVIEW,
