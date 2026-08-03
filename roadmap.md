@@ -54,8 +54,8 @@
       │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
       │   │   └── slm_extractor.py         # Sovereign structured entity extractor
       │   └── dpi/                         # Authoritative DPI Registries
-      │       ├── identity_registry_service.py # Aadhaar/MOSIP verification & zero-PII tokens
       │       ├── agri_registry_service.py     # AgriStack cadastral & crop cross-match
+      │       ├── identity_verification_service.py # Aadhaar/MOSIP verification & zero-PII tokens
       │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
       │       └── payment_rail_service.py      # NPCI APBS / PFMS Treasury disbursement
       └── data_models/                     # Domain data contracts & Pydantic schemas

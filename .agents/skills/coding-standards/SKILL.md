@@ -86,7 +86,7 @@ src/
 │   │   └── slm_extractor.py
 │   └── dpi/
 │       ├── agri_registry_service.py
-│       ├── identity_registry_service.py
+│       ├── identity_verification_service.py
 │       ├── payment_rail_service.py
 │       └── social_registry_service.py
 ├── data_models/                     # Domain data contracts & Pydantic validation schemas
@@ -133,7 +133,7 @@ tests/
 │   │   └── test_slm_extractor.py
 │   └── dpi/
 │       ├── test_agri_registry_service.py
-│       ├── test_identity_registry_service.py
+│       ├── test_identity_verification_service.py
 │       ├── test_payment_rail_service.py
 │       └── test_social_registry_service.py
 ├── data_models/

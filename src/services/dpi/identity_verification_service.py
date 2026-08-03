@@ -24,7 +24,7 @@ from src.services.dpi.dpi_mock_fixtures import (
 logger = logging.getLogger(__name__)
 
 
-class IdentityRegistryService:
+class IdentityVerificationService:
     """Service abstraction for sovereign identity registry verification.
 
     Interacts with national identity providers (MOSIP / UIDAI Aadhaar) via zero-trust

@@ -41,8 +41,8 @@ The AI Services module (`src/services/ai/`) provides zero-network, local RAM sim
 
 The DPI Services module (`src/services/dpi/`) simulates cross-matching and clearing operations against national digital public infrastructures without exposing cleartext PII or touching external networks.
 
-### 3.1 Identity Verification & Tokenization (`IdentityRegistryService`)
-* **Module:** `src/services/dpi/identity_registry_service.py`
+### 3.1 Identity Verification & Tokenization (`IdentityVerificationService`)
+* **Module:** `src/services/dpi/identity_verification_service.py`
 * **Fixtures:** `src/services/dpi/dpi_mock_fixtures.py`
 * **Capabilities:**
   * Validates 64-character SHA-256 HMAC tokens against simulated zero-value tokens (`UNVERIFIED_IDENTITY_TOKEN_ZERO`) and unverified prefixes (`UNVERIFIED_IDENTITY_PREFIX`).
