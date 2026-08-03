@@ -11,6 +11,7 @@ See: decisions/step2.0_canonical_domain_schemas.md (Section 3.5)
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
+import hashlib
 import logging
 
 from src.services.ai.ai_mock_fixtures import (
@@ -44,7 +45,10 @@ class BhashiniService:
         Returns:
             Transcribed text string in original spoken language.
         """
-        logger.info("Transcribing audio for url=%s locale=%s", audio_url, language_locale)
+        # Zero-PII Defense: Hash audio_url before logging to prevent leaking pre-signed tokens
+        # or MSISDN phone number identifiers in URL paths.
+        url_hash = hashlib.sha256(audio_url.encode("utf-8")).hexdigest()[:16]
+        logger.info("Transcribing audio for url_hash=%s locale=%s", url_hash, language_locale)
         url_lower = audio_url.lower()
         if MOCK_STREAM_EMPTY_KEYWORD in url_lower:
             return ""
