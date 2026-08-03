@@ -1,3 +1,5 @@
+"""IVR Telephony SIP gateway ingress payload schema (Layer 1 -> Layer 2)."""
+
 from pydantic import Field, HttpUrl
 
 from src.data_models.common import (

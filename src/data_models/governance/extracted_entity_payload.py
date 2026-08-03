@@ -1,3 +1,5 @@
+"""SLM structured entity extraction payload schema (Layer 3 -> Layer 4)."""
+
 from pydantic import Field, model_validator
 
 from src.data_models.common import (

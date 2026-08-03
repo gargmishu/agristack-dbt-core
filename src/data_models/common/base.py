@@ -1,3 +1,5 @@
+"""Shared base Pydantic model configuration across all layers."""
+
 from pydantic import BaseModel, ConfigDict
 
 

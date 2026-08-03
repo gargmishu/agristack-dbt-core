@@ -1,3 +1,5 @@
+"""WhatsApp messaging carrier ingress payload schema (Layer 1 -> Layer 2)."""
+
 from pydantic import Field, HttpUrl, model_validator
 
 from src.data_models.common import (

@@ -1,3 +1,5 @@
+"""Layer 4 governance decision and extracted entity schemas."""
+
 from src.data_models.governance.extracted_entity_payload import (
     ExtractedEntityPayload,
 )

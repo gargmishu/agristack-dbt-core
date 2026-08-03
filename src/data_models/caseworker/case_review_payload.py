@@ -1,3 +1,5 @@
+"""Caseworker incident review staging payload schema."""
+
 from pydantic import Field, model_validator
 
 from src.data_models.common import (

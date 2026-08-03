@@ -1,3 +1,5 @@
+"""Normalized zero-PII standardized intake payload schema (Layer 2 -> Layer 3)."""
+
 import re
 
 from pydantic import Field, HttpUrl, TypeAdapter, model_validator
