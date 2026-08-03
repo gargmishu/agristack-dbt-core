@@ -3,12 +3,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.data_models.caseworker import CaseworkerManualDecisionPayload
+from src.data_models.caseworker import CaseworkerReviewOutcomePayload
 from src.data_models.common import GovernanceDecision
 
 
-def test_caseworker_manual_decision_valid_approve() -> None:
-    payload = CaseworkerManualDecisionPayload(
+def test_caseworker_review_outcome_valid_approve() -> None:
+    payload = CaseworkerReviewOutcomePayload(
         escalation_case_id="SPP-CASE-2026-981245",
         reviewer_id="OFFICER-991",
         governance_decision=GovernanceDecision.MANUAL_APPROVE,
@@ -20,8 +20,8 @@ def test_caseworker_manual_decision_valid_approve() -> None:
     assert payload.approved_amount == 5000.0  # noqa: PLR2004
 
 
-def test_caseworker_manual_decision_valid_request_more_info() -> None:
-    payload = CaseworkerManualDecisionPayload(
+def test_caseworker_review_outcome_valid_request_more_info() -> None:
+    payload = CaseworkerReviewOutcomePayload(
         escalation_case_id="SPP-CASE-2026-981245",
         reviewer_id="OFFICER-991",
         governance_decision=GovernanceDecision.REQUEST_MORE_INFO,
@@ -33,9 +33,9 @@ def test_caseworker_manual_decision_valid_request_more_info() -> None:
     assert payload.rejection_reason is None
 
 
-def test_caseworker_manual_decision_invalid_type() -> None:
+def test_caseworker_review_outcome_invalid_type() -> None:
     with pytest.raises(ValidationError) as exc:
-        CaseworkerManualDecisionPayload(
+        CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
             governance_decision=GovernanceDecision.AUTO_APPROVE,  # Automated decision not permitted
@@ -46,9 +46,9 @@ def test_caseworker_manual_decision_invalid_type() -> None:
     assert "must be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO" in str(exc.value)
 
 
-def test_caseworker_manual_decision_empty_review_notes() -> None:
+def test_caseworker_review_outcome_empty_review_notes() -> None:
     with pytest.raises(ValidationError) as exc:
-        CaseworkerManualDecisionPayload(
+        CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
             governance_decision=GovernanceDecision.MANUAL_APPROVE,

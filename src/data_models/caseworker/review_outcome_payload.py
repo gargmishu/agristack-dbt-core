@@ -1,4 +1,4 @@
-"""Caseworker manual adjudication decision payload schema."""
+"""Caseworker portal review outcome and adjudication payload schema."""
 
 from pydantic import Field, model_validator
 
@@ -10,8 +10,8 @@ from src.data_models.common import (
 )
 
 
-class CaseworkerManualDecisionPayload(StrictBaseModel):
-    """Manual decision submitted by a human caseworker/officer reviewing an escalated case.
+class CaseworkerReviewOutcomePayload(StrictBaseModel):
+    """Review outcome submitted by a human caseworker/officer reviewing an escalated case.
 
     This contract represents the authoritative adjudication outcome rendered by an officer on the
     Caseworker Review Dashboard. It governs human-in-the-loop resolutions for complex claims that
@@ -53,7 +53,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_decision_type_and_audit_notes(self) -> "CaseworkerManualDecisionPayload":
+    def validate_decision_type_and_audit_notes(self) -> "CaseworkerReviewOutcomePayload":
         """Enforces allowed manual decisions and non-empty caseworker audit justification.
 
         Why restrict decision types and enforce non-empty review_notes?
@@ -69,7 +69,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
         }
         if self.governance_decision not in allowed_decisions:
             raise ValueError(
-                "CaseworkerManualDecisionPayload decision must be MANUAL_APPROVE, "
+                "CaseworkerReviewOutcomePayload decision must be MANUAL_APPROVE, "
                 f"MANUAL_REJECT, or REQUEST_MORE_INFO, got {self.governance_decision}"
             )
 
@@ -79,7 +79,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_manual_approve_fields(self) -> "CaseworkerManualDecisionPayload":
+    def validate_manual_approve_fields(self) -> "CaseworkerReviewOutcomePayload":
         """Enforces positive approved amount and forbids rejection reason on approval.
 
         Why enforce approved_amount > 0.0 and reject rejection_reason?
@@ -96,7 +96,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_manual_reject_fields(self) -> "CaseworkerManualDecisionPayload":
+    def validate_manual_reject_fields(self) -> "CaseworkerReviewOutcomePayload":
         """Enforces mandatory rejection justification and forbids approved amount on rejection.
 
         Why mandate rejection_reason and forbid approved_amount?
@@ -112,7 +112,7 @@ class CaseworkerManualDecisionPayload(StrictBaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_request_info_fields(self) -> "CaseworkerManualDecisionPayload":
+    def validate_request_info_fields(self) -> "CaseworkerReviewOutcomePayload":
         """Forbids both financial amount and rejection reason when requesting more info.
 
         Why exclude terminal attributes during information clarification requests?

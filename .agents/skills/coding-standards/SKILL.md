@@ -57,7 +57,7 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 * For operational components (gateways, connectors, orchestrator rules, and services), Python module filenames in `snake_case` must strictly match their primary class names in `PascalCase` (e.g., `CarrierAuthValidator` in `carrier_auth_validator.py`, `PaymentRailService` in `payment_rail_service.py`). Do not omit descriptive suffixes like `_validator`, `_tokenizer`, or `_service` from module names.
 
 ### 1.7 Domain Schema Namespacing
-* Within categorized domain model subpackages (`raw_ingress`, `caseworker`, `disbursement`), file names represent the schema entity (e.g. `manual_decision_payload.py`), while model class names may include the domain namespace prefix (e.g. `CaseworkerManualDecisionPayload`) to avoid symbol collisions when imported into cross-domain contexts.
+* Within categorized domain model subpackages (`raw_ingress`, `caseworker`, `disbursement`), file names represent the schema entity (e.g. `review_outcome_payload.py`), while model class names may include the domain namespace prefix (e.g. `CaseworkerReviewOutcomePayload`) to avoid symbol collisions when imported into cross-domain contexts.
 
 ---
 
@@ -95,17 +95,17 @@ src/
 │   │   ├── enums.py                 # StrEnum definitions
 │   │   └── field_types.py           # Constrained Annotated type aliases & validators
 │   ├── raw_ingress/                 # Layer 1 -> Layer 2 carrier raw ingress payloads
-│   │   ├── whatsapp_payload.py
 │   │   ├── ivr_payload.py
-│   │   └── ussd_payload.py
+│   │   ├── ussd_payload.py
+│   │   └── whatsapp_payload.py
 │   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
 │   │   └── standardized_intake_payload.py
 │   ├── governance/                  # Layer 4 governance models & extraction payloads
 │   │   ├── extracted_entity_payload.py
 │   │   └── governance_outcome_payload.py
-│   ├── caseworker/                  # Caseworker portal models & manual decisions
+│   ├── caseworker/                  # Caseworker portal review staging & outcome models
 │   │   ├── case_review_payload.py
-│   │   └── manual_decision_payload.py
+│   │   └── review_outcome_payload.py
 │   └── disbursement/                # Financial clearing callback models
 │       └── disbursement_callback_payload.py
 ```
@@ -142,16 +142,16 @@ tests/
 │   │   ├── test_enums.py
 │   │   └── test_field_types.py
 │   ├── raw_ingress/
-│   │   ├── test_whatsapp_payload.py
 │   │   ├── test_ivr_payload.py
-│   │   └── test_ussd_payload.py
+│   │   ├── test_ussd_payload.py
+│   │   └── test_whatsapp_payload.py
 │   ├── public_agent/
 │   │   └── test_standardized_intake_payload.py
 │   ├── governance/
 │   │   └── test_governance_outcome_payload.py
 │   ├── caseworker/
 │   │   ├── test_case_review_payload.py
-│   │   └── test_manual_decision_payload.py
+│   │   └── test_review_outcome_payload.py
 │   └── disbursement/
 │       └── test_disbursement_callback_payload.py
 ```

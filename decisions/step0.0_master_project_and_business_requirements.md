@@ -207,11 +207,11 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
 ---
 
-#### C. `CaseworkerManualDecisionPayload` (`src/models/caseworker/manual_decision_payload.py`)
+#### C. `CaseworkerReviewOutcomePayload` (`src/models/caseworker/review_outcome_payload.py`)
 Submitted by a human officer adjudicating an escalated incident ticket.
 
 ```python
-class CaseworkerManualDecisionPayload(StrictBaseModel):
+class CaseworkerReviewOutcomePayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID")
     governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")

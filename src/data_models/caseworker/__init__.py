@@ -3,11 +3,11 @@
 from src.data_models.caseworker.case_review_payload import (
     CaseworkerCaseReviewPayload,
 )
-from src.data_models.caseworker.manual_decision_payload import (
-    CaseworkerManualDecisionPayload,
+from src.data_models.caseworker.review_outcome_payload import (
+    CaseworkerReviewOutcomePayload,
 )
 
 __all__ = [
     "CaseworkerCaseReviewPayload",
-    "CaseworkerManualDecisionPayload",
+    "CaseworkerReviewOutcomePayload",
 ]

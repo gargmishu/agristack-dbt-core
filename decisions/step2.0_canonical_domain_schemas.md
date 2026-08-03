@@ -596,9 +596,9 @@ agristack-dbt-core/
 │   │   │   ├── extracted_entity_payload.py <-- ExtractedEntityPayload
 │   │   │   └── routing_payload.py  <-- GovernanceRoutingPayload
 │   │   ├── caseworker/             <-- Subpackage for Step 11 manual escalation schemas
-│   │   │   ├── __init__.py         <-- Exports CaseworkerEscalationTicketPayload, CaseworkerManualDecisionPayload
+│   │   │   ├── __init__.py         <-- Exports CaseworkerEscalationTicketPayload, CaseworkerReviewOutcomePayload
 │   │   │   ├── escalation_ticket_payload.py <-- CaseworkerEscalationTicketPayload
-│   │   │   └── manual_decision_payload.py   <-- CaseworkerManualDecisionPayload
+│   │   │   └── review_outcome_payload.py   <-- CaseworkerReviewOutcomePayload
 │   │   └── disbursement_payload.py <-- DisbursementCallbackPayload
 │   └── errors/
 │       ├── __init__.py             <-- Error handler package exports
@@ -634,8 +634,8 @@ agristack-dbt-core/
 6. **`src/models/governance/` Subpackage (`extracted_entity_payload.py`, `routing_payload.py`):**
    Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes. Re-exported via `src/models/governance/__init__.py`.
 
-7. **`src/models/caseworker/` Subpackage (`escalation_ticket_payload.py`, `manual_decision_payload.py`):**
-   Contains Step 11 manual escalation schemas: `CaseworkerEscalationTicketPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerManualDecisionPayload` (manual adjudication decision submitted by human officer). Re-exported via `src/models/caseworker/__init__.py`.
+7. **`src/models/caseworker/` Subpackage (`escalation_ticket_payload.py`, `review_outcome_payload.py`):**
+   Contains Step 11 manual escalation schemas: `CaseworkerEscalationTicketPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerReviewOutcomePayload` (manual adjudication review outcome submitted by human officer). Re-exported via `src/models/caseworker/__init__.py`.
 
 8. **`src/models/disbursement_payload.py`:**
    Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).

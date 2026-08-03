@@ -2,7 +2,7 @@
 
 from src.data_models.caseworker import (
     CaseworkerCaseReviewPayload,
-    CaseworkerManualDecisionPayload,
+    CaseworkerReviewOutcomePayload,
 )
 from src.data_models.common import (
     AiConfidenceScore,
@@ -44,7 +44,7 @@ __all__ = [
     "ApplicationStatus",
     "AudioDurationSeconds",
     "CaseworkerCaseReviewPayload",
-    "CaseworkerManualDecisionPayload",
+    "CaseworkerReviewOutcomePayload",
     "ChannelType",
     "DisbursementCallbackPayload",
     "DisbursementStatus",

@@ -126,7 +126,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 1. **Staging (`Step 11`):** System creates incident ticket `SPP-CASE-YYYY-XXXXXX` and emits `CaseworkerCaseReviewPayload`:
    * `unprocessed_input_content` carries raw citizen text/audio URL (**must not be empty**).
    * `extracted_entities` carries extracted parameters, but **may be empty `{}`** if AI extraction failed completely.
-2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerManualDecisionPayload`:
+2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerReviewOutcomePayload`:
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
    * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions back to `DRAFT` so citizen can re-engage over WhatsApp/USSD.
@@ -216,12 +216,12 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
 ---
 
-### 4.3 `CaseworkerManualDecisionPayload` (`src/models/caseworker/manual_decision_payload.py`)
+### 4.3 `CaseworkerReviewOutcomePayload` (`src/models/caseworker/review_outcome_payload.py`)
 
 Submitted by human officers adjudicating an escalated ticket.
 
 ```python
-class CaseworkerManualDecisionPayload(StrictBaseModel):
+class CaseworkerReviewOutcomePayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID")
     governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
