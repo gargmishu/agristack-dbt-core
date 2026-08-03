@@ -56,7 +56,14 @@ class WhatsAppIngressPayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_audio_modality_fields(self) -> "WhatsAppIngressPayload":
-        """Enforces mandatory voice parameters and excludes text when modality is AUDIO."""
+        """Enforces mandatory voice parameters and excludes text when modality is AUDIO.
+
+        Why strictly separate audio URLs from text messages?
+        Carrier webhooks must present a single unambiguous modality to Layer 2 canonicalization
+        services. Requiring both signed audio recording URLs and voice note durations while
+        rejecting text bodies avoids multi-modal parsing complexity and prevents silent attribute
+        truncation during ASR audio transcription staging.
+        """
         if self.payload_type == PayloadType.AUDIO:
             if self.audio_recording_url is None:
                 raise ValueError("audio_recording_url is required when payload_type is AUDIO")
@@ -68,7 +75,13 @@ class WhatsAppIngressPayload(StrictBaseModel):
 
     @model_validator(mode="after")
     def validate_text_modality_fields(self) -> "WhatsAppIngressPayload":
-        """Enforces non-empty text body and excludes audio pointers when modality is TEXT."""
+        """Enforces non-empty text body and excludes audio pointers when modality is TEXT.
+
+        Why strictly exclude audio attributes on text webhooks?
+        Guaranteeing that text payloads carry zero acoustic references prevents edge connectors
+        from accidentally invoking expensive ASR translation workers on text interactions, ensuring
+        optimal CPU/GPU resource utilization and deterministic routing.
+        """
         if self.payload_type == PayloadType.TEXT:
             if self.text_body is None or not self.text_body.strip():
                 raise ValueError("text_body must be a non-empty string when payload_type is TEXT")
