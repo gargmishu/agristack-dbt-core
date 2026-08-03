@@ -70,7 +70,10 @@ class GovernanceOutcomePayload(StrictBaseModel):
         max_length=2000,
         description="Internal caseworker audit notes carried from manual adjudication",
     )
-    decided_at: UtcTimestamp
+    decided_at: UtcTimestamp = Field(
+        ...,
+        description="UTC timestamp when automated governance evaluation or review was rendered",
+    )
 
     @model_validator(mode="after")
     def validate_auto_approve_fields(self) -> "GovernanceOutcomePayload":

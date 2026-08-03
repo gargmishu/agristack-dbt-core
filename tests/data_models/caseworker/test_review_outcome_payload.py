@@ -57,3 +57,58 @@ def test_caseworker_review_outcome_empty_review_notes() -> None:
             decided_at=datetime.now(UTC),
         )
     assert "String should have at least 5 characters" in str(exc.value)
+
+
+def test_caseworker_review_outcome_valid_reject() -> None:
+    payload = CaseworkerReviewOutcomePayload(
+        escalation_case_id="SPP-CASE-2026-981245",
+        reviewer_id="OFFICER-991",
+        governance_decision=GovernanceDecision.MANUAL_REJECT,
+        review_notes="Ineligible under current land parcel rules",
+        rejection_reason="Land parcel area exceeds maximum scheme eligibility allowance",
+        decided_at=datetime.now(UTC),
+    )
+    assert payload.governance_decision == GovernanceDecision.MANUAL_REJECT
+    assert payload.rejection_reason is not None
+    assert payload.approved_amount is None
+
+
+def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None:
+    with pytest.raises(ValidationError) as exc:
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            review_notes="Approved after manual re-verification of land deed",
+            approved_amount=5000.0,  # noqa: PLR2004
+            rejection_reason="Leftover reason",
+            decided_at=datetime.now(UTC),
+        )
+    assert "rejection_reason must be None for MANUAL_APPROVE" in str(exc.value)
+
+
+def test_caseworker_review_outcome_reject_with_approved_amount_fails() -> None:
+    with pytest.raises(ValidationError) as exc:
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_decision=GovernanceDecision.MANUAL_REJECT,
+            review_notes="Rejected due to invalid cadastral survey match",
+            approved_amount=5000.0,  # noqa: PLR2004
+            rejection_reason="Survey number verification failed",
+            decided_at=datetime.now(UTC),
+        )
+    assert "approved_amount must be None for MANUAL_REJECT" in str(exc.value)
+
+
+def test_caseworker_review_outcome_request_info_with_terminal_fields_fails() -> None:
+    with pytest.raises(ValidationError) as exc:
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_decision=GovernanceDecision.REQUEST_MORE_INFO,
+            review_notes="Please upload a higher resolution photograph of the passbook",
+            approved_amount=1000.0,  # noqa: PLR2004
+            decided_at=datetime.now(UTC),
+        )
+    assert "approved_amount must be None for REQUEST_MORE_INFO" in str(exc.value)

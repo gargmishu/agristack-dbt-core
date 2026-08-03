@@ -59,7 +59,9 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
         max_length=5000,
         description="Raw citizen text or signed audio URL pointer",
     )
-    received_at: UtcTimestamp
+    received_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when canonicalized payload reached Layer 3 intake gateway"
+    )
 
     @model_validator(mode="after")
     def validate_non_empty_content(self) -> "PublicAgentStandardizedIntakePayload":
