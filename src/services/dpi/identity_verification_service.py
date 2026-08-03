@@ -1,17 +1,17 @@
-"""Authoritative DPI Registry: Identity Verification & Tokenization Service.
+"""Authoritative DPI Registry: Identity Verification Service.
 
-Provides Zero-PII identity verification and SHA-256 HMAC tokenization against MOSIP/Aadhaar
-registries.
+Provides Zero-PII identity token verification against authoritative MOSIP/Aadhaar registries.
 
-Why RAM-only SHA-256 HMAC Zero-PII Tokenization?
+Why operate exclusively on Zero-PII HMAC tokens?
 Cleartext PII (phone numbers, Aadhaar numbers, cleartext names) is strictly forbidden from
 touching persistent database ledgers or disk storage under Aadhaar Act §29 and national privacy
-mandates. All identity verification operates exclusively on 64-character hex tokens
+mandates. While active tokenization occurs at the Layer 2 perimeter via ZeroTrustIdentityTokenizer,
+all downstream registry verification operates exclusively on pre-computed 64-character hex tokens
 (`HmacCitizenToken`).
 
 See: decisions/step0.3_zero_trust_tokenization.md
-See: decisions/step0.3_hashing_algorithm_evaluation.md
-See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
+See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
+See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 
 import logging

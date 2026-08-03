@@ -55,7 +55,7 @@
       │   │   └── slm_extractor.py         # Sovereign structured entity extractor
       │   └── dpi/                         # Authoritative DPI Registries
       │       ├── agri_registry_service.py     # AgriStack cadastral & crop cross-match
-      │       ├── identity_verification_service.py # Aadhaar/MOSIP verification & zero-PII tokens
+      │       ├── identity_verification_service.py # Aadhaar/MOSIP zero-PII token verification
       │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
       │       └── payment_rail_service.py      # NPCI APBS / PFMS Treasury disbursement
       └── data_models/                     # Domain data contracts & Pydantic schemas
