@@ -7,7 +7,7 @@ This document defines the authoritative project requirements, state machines, wo
 ### Core Architectural Guarantees:
 1. **Zero-PII Compliance:** Citizens are identified exclusively via 64-character SHA-256 HMAC tokens (`tokenized_citizen_id` / `tokenized_identity_hash`). Raw PII (Aadhaar numbers, cleartext phone numbers, unhashed names) is strictly prohibited across all governance schemas and database ledgers.
 2. **Monotonic Forward-Only State Machines:** Financial clearing states (`DisbursementStatus`) move strictly forward (`PENDING` $\rightarrow$ `INITIATED` $\rightarrow$ `SUCCESS`/`FAILED`/`RETURNED`). Reversion (e.g. `INITIATED` $\rightarrow$ `PENDING`) is strictly forbidden to prevent double-dipping and duplicate payouts.
-3. **Decoupled Governance vs. Financial Execution:** Governance decisions (`AUTO_APPROVE` / `MANUAL_APPROVE`) finalize claim eligibility and assign an idempotent tracking key (`disbursement_txn_id`) with `disbursement_status = PENDING`. The actual money movement over sovereign payment rails (NPCI APBS / PFMS) occurs asynchronously downstream.
+3. **Decoupled Governance vs. Financial Execution:** Governance decisions (`AUTO_APPROVE` / `MANUAL_APPROVE`) mark the claim as **approved** and assign an internal idempotent tracking key (`disbursement_txn_id`) with `disbursement_status = PENDING`. The actual money movement over sovereign payment rails (NPCI APBS / PFMS) occurs asynchronously downstream, upon which the bank returns an external transaction reference / UTR (`bank_reference_id`).
 4. **Mandatory Audit Traceability:** Every manual human intervention requires a `reviewer_id` (Officer UUID) and non-whitespace `review_notes` carried into the `application_governance_ledger_history`.
 
 ---
@@ -19,66 +19,69 @@ This document defines the authoritative project requirements, state machines, wo
 The formal lifecycle of a claim in the governance ledger (`application_governance_ledger`):
 
 ```
-                       ┌──────────────┐
-                       │    DRAFT     │ <─────────────┐
-                       └──────┬───────┘               │
-                              │ Citizen Submits       │
-                              ▼                       │
-                       ┌──────────────┐               │
-                       │  SUBMITTED   │               │
-                       └──────┬───────┘               │ (REQUEST_MORE_INFO)
-                              │                       │
-         ┌────────────────────┴────────────────────┐   │
-         │ (High Confidence / Eligible)            │ (Low Confidence / Discrepancy)
-         ▼                                         ▼   │
-┌──────────────────┐                     ┌──────────────────┐
-│    FINALIZED     │                     │   UNDER_REVIEW   │───┘
-└────────┬─────────┘                     └────────┬─────────┘
-         │                                        │ (Caseworker Action)
-         │                                        ├──────────────────────┐
-         ▼                                        ▼                      ▼
-┌──────────────────┐                     ┌──────────────────┐  ┌──────────────────┐
-│   DISBURSEMENT   │                     │    FINALIZED     │  │     REJECTED     │
-│    CHECKOUT      │                     └──────────────────┘  └────────┬─────────┘
-└──────────────────┘                                                    │ Citizen Appeals
-                                                                        ▼
-                                                               ┌──────────────────┐
-                                                               │     APPEALED     │
-                                                               └──────────────────┘
+                        ┌──────────────┐
+                        │    DRAFT     │ <──────────────┐
+                        └──────┬───────┘                │
+                               │ Citizen Submits        │
+                               ▼                        │
+                        ┌──────────────┐                │
+                        │  SUBMITTED   │                │
+                        └──────┬───────┘                │ (REQUEST_MORE_INFO)
+                               │                        │
+         ┌─────────────────────┼─────────────────────┐  │
+         │                     │                     │  │
+         │ (High Confidence    │ (High Confidence    │ (Low Confidence /
+         │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)
+         │                     │  Double-Dip)        │  │
+         ▼                     ▼                     ▼  │
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┘
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+         │                     ▲                     │ (Caseworker Action)
+         │                     │                     ├──────────────────────┐
+         ▼                     │                     ▼                      ▼
+┌──────────────────┐           │            ┌──────────────────┐  ┌──────────────────┐
+│   DISBURSEMENT   │           └────────────┤     REJECTED     │  │     APPROVED     │
+│    CHECKOUT      │                        └────────┬─────────┘  └──────────────────┘
+└──────────────────┘                                 │ Citizen Appeals
+                                                     ▼
+                                            ┌──────────────────┐
+                                            │     APPEALED     │
+                                            └──────────────────┘
 ```
 
-| State | Trigger / Event | Associated `GovernanceDecision` | Next Valid States |
+| State | Trigger / Event | Associated `GovernanceAction` | Next Valid States |
 | :--- | :--- | :--- | :--- |
 | **`DRAFT`** | Citizen creates claim or officer requests info | `REQUEST_MORE_INFO` | `SUBMITTED` |
-| **`SUBMITTED`** | Citizen submits extraction payload | *None (Pending Evaluation)* | `FINALIZED`, `UNDER_REVIEW`, `REJECTED` |
-| **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `FINALIZED`, `REJECTED`, `DRAFT` |
-| **`FINALIZED`** | Claims approved automatically or manually | `AUTO_APPROVE`, `AUTOMATED_PAYOUT`, `MANUAL_APPROVE` | *(Terminal Application State)* |
-| **`REJECTED`** | Claims rejected automatically or manually | `AUTO_REJECT`, `MANUAL_REJECT` | `APPEALED` |
-| **`APPEALED`** | Citizen contests rejection | *None (Re-entering Queue)* | `UNDER_REVIEW`, `FINALIZED`, `REJECTED` |
+| **`SUBMITTED`** | Citizen submits extraction payload | *None (Pending Evaluation)* | `APPROVED`, `REJECTED`, `UNDER_REVIEW` |
+| **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `APPROVED`, `REJECTED`, `DRAFT` |
+| **`APPROVED`** | Claim approved automatically (eligible) or manually by officer | `AUTO_APPROVE`, `AUTOMATED_PAYOUT`, `MANUAL_APPROVE` | *(Terminal Application State; proceeds to clearing)* |
+| **`REJECTED`** | Claim rejected automatically (ineligible/double-dip) or manually | `AUTO_REJECT`, `MANUAL_REJECT` | `APPEALED` |
+| **`APPEALED`** | Citizen contests rejection | *None (Re-entering Queue)* | `UNDER_REVIEW`, `APPROVED`, `REJECTED` |
 
 ---
 
 ### 2.2 Financial Clearing State Machine (`DisbursementStatus`)
 
-Financial clearing states track the execution of funds transfer over national clearing rails:
+Financial clearing states track the execution of funds transfer over national clearing rails for **approved** claims only:
 
 ```
-[ Decision Finalized ] ──> PENDING (Queued internally in batch ledger)
-                               │
-                               │ Payment Dispatcher transmits instruction over wire
-                               ▼
-                      INITIATED (Sent to NPCI APBS / PFMS Treasury Gateway)
-                               │
-                               │ Asynchronous Bank Settlement Callback
-                               ▼
-              ┌────────────────┼────────────────┐
-              ▼                ▼                ▼
-           SUCCESS          FAILED           RETURNED
+[ Claim Approved (AUTO_APPROVE / MANUAL_APPROVE) ] ──> PENDING (Queued internally in batch ledger)
+                                                          │
+                                                          │ Payment Dispatcher transmits instruction over wire
+                                                          ▼
+                                                 INITIATED (Sent to NPCI APBS / PFMS Treasury Gateway)
+                                                          │
+                                                          │ Asynchronous Bank Settlement Callback (Returns bank_reference_id)
+                                                          ▼
+                                         ┌────────────────┼────────────────┐
+                                         ▼                ▼                ▼
+                                      SUCCESS          FAILED           RETURNED
 ```
 
-* **`PENDING` (Internal Queue):** Assigned at decision finalization time (Step 09 or Caseworker Approval) along with `disbursement_txn_id`. Bridges the time gap while the claim waits for payment dispatch.
-* **`INITIATED` (Wire Dispatch via `step_10`):** Executed by **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails.
-* **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (`DisbursementCallbackPayload`) when funds reach citizen account.
+* **`PENDING` (Internal Queue):** Assigned when a claim is **approved** (via Step 09 automated evaluation or Caseworker Manual Approval) along with our internal `disbursement_txn_id`. Bridges the time gap while the approved claim waits for payment dispatch. Notice that rejected claims never enter the disbursement lifecycle.
+* **`INITIATED` (Wire Dispatch via `step_10`):** Executed by **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails using our internal `disbursement_txn_id` as the instruction idempotency key.
+* **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (`DisbursementCallbackPayload`) when funds reach the citizen account. Strictly requires the bank to return an external bank-generated transaction clearing ID / UTR (`bank_reference_id`).
 * **`FAILED` / `RETURNED` (Terminal Failure):** Confirmed by bank callback when clearing fails (requires non-empty `failure_reason_code`, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
 
 > [!IMPORTANT]
@@ -88,25 +91,35 @@ Financial clearing states track the execution of funds transfer over national cl
 
 ## 3. Detailed Workflow Specifications
 
-### 3.1 Flow 1: Straight-Through Automated Approval (STP)
+### 3.1 Flow 1: Straight-Through Automated Processing (STP: Approval & Rejection)
 
-Targeted at high-confidence, zero-anomaly claims requiring instant execution.
+Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant automated adjudication without human intervention. High confidence can result in either an immediate automated **approval** or an immediate automated **rejection**.
 
 ```
 [ Citizen Ingress ] ➔ [ Step 04: Entity Extraction ] ➔ [ Step 08: Confidence Evaluation (>=0.85) ]
                                                                      │
-                                                                     ▼
-[ Step 10: Disbursement ] ◄─ (FORWARD_TO_AUTOMATED_PAYOUT) ◄─ [ Step 09: Governance Router ]
+                                          ┌──────────────────────────┴──────────────────────────┐
+                                          ▼ (Eligible & No Double-Dip)                          ▼ (Ineligible or Double-Dip)
+                     [ Step 09 Router: AUTO_APPROVE / AUTOMATED_PAYOUT ]   [ Step 09 Router: AUTO_REJECT ]
+                                          │                                                     │
+                                          ▼                                                     ▼
+                            [ Application State: APPROVED ]                        [ Application State: REJECTED ]
+                            [ Disbursement State: PENDING ]                        [ Disbursement: N/A (Terminated) ]
+                                          │
+                                          ▼
+                      [ Step 10: Payment Dispatch (INITIATED) ]
 ```
 
-1. **Evaluation:** Step 08 validates `ai_confidence_score >= 0.85` and `eligibility_status == ELIGIBLE`.
-2. **Double-Dipping Check:** System queries `tokenized_identity_hash` in `application_governance_ledger` to verify citizen has not already received an approved payout for the active season.
-3. **Payload Generation:** Layer 4 emits `GovernanceOutcomePayload` with:
-   * `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`)
-   * `disbursement_txn_id = "TXN-YYYY-XXXXXX"` (Idempotency tracking key)
-   * `disbursement_status = PENDING` (or `INITIATED`)
-   * `escalation_case_id = None`, `rejection_reason = None`, `review_notes = None`
-4. **Execution:** Step 09 routes to `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` $\rightarrow$ Step 10 triggers NPCI Aadhaar Payment Bridge.
+1. **Confidence & Eligibility Evaluation:** Step 08 validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
+2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
+   * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
+   * Application status transitions to **`APPROVED`**.
+   * System assigns an internal idempotency tracking key `disbursement_txn_id = "TXN-YYYY-XXXXXX"` and initializes `disbursement_status = PENDING`.
+   * Step 09 routes to Step 10 (`FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT`) to trigger the NPCI Aadhaar Payment Bridge.
+3. **Outcome B — Automated Rejection (`REJECTED`):** If `eligibility_status == INELIGIBLE` OR a duplicate double-dipping claim is detected:
+   * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_REJECT` and populates a descriptive `rejection_reason`.
+   * Application status transitions directly to **`REJECTED`**.
+   * `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` remain `None`. The financial clearing flow is bypassed entirely.
 
 ---
 
@@ -136,18 +149,18 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 ### 3.3 Flow 3: Asynchronous Treasury Payment Clearing
 
 ```
-[ Payment Rail Dispatcher ] ──(ISO 20022 / APBS Message)──> [ NPCI / PFMS Gateway ]
-                                                                   │
-                                                           (Bank Settlement)
-                                                                   │
-[ Governance Ledger ] ◄── (DisbursementCallbackPayload) ───────────┘
-  └─ Sets SUCCESS or FAILED with failure_reason_code
+[ Payment Rail Dispatcher ] ──(disbursement_txn_id instruction)──> [ NPCI / PFMS Gateway ]
+                                                                            │
+                                                          (Bank Clearing / UTR Generation)
+                                                                            │
+[ Governance Ledger ] ◄── (DisbursementCallbackPayload with bank_reference_id) ─┘
+  └─ Sets SUCCESS (with bank_reference_id UTR) or FAILED (with failure_reason_code)
 ```
 
-1. **Dispatch:** Payment worker queries claims where `disbursement_status == PENDING` and transmits batch instructions to NPCI / PFMS, updating status to `INITIATED`.
-2. **Callback Handling:** External bank rails send asynchronous status callback (`DisbursementCallbackPayload`):
-   * Matches on `disbursement_txn_id`.
-   * If `disbursement_status == SUCCESS`: Sets `failure_reason_code = None`, finalizes claim clearance.
+1. **Dispatch:** Payment worker queries approved claims where `disbursement_status == PENDING` and transmits batch instructions to NPCI / PFMS using our internal `disbursement_txn_id`, updating status to `INITIATED`.
+2. **Callback Handling:** External bank rails send an asynchronous status callback (`DisbursementCallbackPayload`):
+   * Matches against our internal instructional order key `disbursement_txn_id`.
+   * If `disbursement_status == SUCCESS`: Strictly requires the bank-generated external transaction ID / UTR (`bank_reference_id`). Sets `failure_reason_code = None`, confirming successful payout clearing.
    * If `disbursement_status in (FAILED, RETURNED)`: Requires non-empty `failure_reason_code` (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`, `NAME_MISMATCH`).
 
 ---
@@ -156,7 +169,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ### 4.1 `GovernanceOutcomePayload` (`src/models/governance/governance_outcome_payload.py`)
 
-Emitted when Layer 4 or Caseworker Adjudication finalizes a governance decision.
+Emitted when Layer 4 automated evaluation or Caseworker Adjudication reaches an **approved** or **rejected** decision (or routes for manual review).
 
 ```python
 class GovernanceOutcomePayload(StrictBaseModel):
@@ -240,22 +253,27 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
 
 ---
 
-### 4.4 `DisbursementCallbackPayload` (`src/models/disbursement/disbursement_payload.py`)
+### 4.4 `DisbursementCallbackPayload` (`src/data_models/disbursement/disbursement_callback_payload.py`)
 
-Asynchronous payment clearing callback received from PFMS / NPCI rails.
+Asynchronous payment clearing callback received from PFMS / NPCI APBS sovereign payment rails.
+
+#### Why two distinct transaction identifiers (`disbursement_txn_id` vs. `bank_reference_id`)?
+* **`disbursement_txn_id` (Internal Instruction Order Key):** Generated internally by AgriStack when a claim is **approved** (at Layer 4 auto-approval or caseworker manual approval) *before* dispatch to the bank. Acts as AgriStack's internal idempotency key so payment instructions can be retried across network interruptions without creating duplicate payouts. This is **not** the bank transaction ID.
+* **`bank_reference_id` (External Bank Transaction ID / UTR):** Generated autonomously by the bank / sovereign payment clearing rail (NPCI APBS or PFMS Treasury Gateway) upon financial wire clearing. Serves as the immutable bank-certified Unique Transaction Reference (UTR) or bank transaction ID for banking reconciliation and citizen payout receipts.
 
 ```python
 class DisbursementCallbackPayload(StrictBaseModel):
-    disbursement_txn_id: DisbursementTxnId
+    disbursement_txn_id: DisbursementTxnId = Field(..., description="Internal idempotency instruction key")
+    bank_reference_id: str | None = Field(None, max_length=64, description="External banking UTR / clearing reference")
     disbursement_status: DisbursementStatus = Field(..., description="Updated clearing state: SUCCESS, FAILED, RETURNED")
-    cleared_at: UtcTimestamp
+    cleared_at: UtcTimestamp = Field(..., description="UTC timestamp of bank rail processing")
     failure_reason_code: str | None = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
 ```
 
 #### Validation Rules:
-* `disbursement_status` **must** be a terminal state (`SUCCESS`, `FAILED`, `RETURNED`).
+* `disbursement_status` **must** be a terminal clearing state (`SUCCESS`, `FAILED`, `RETURNED`).
+* If status is `SUCCESS`: `bank_reference_id` (UTR) **is strictly required**; `failure_reason_code` **must be `None`**.
 * If status is `FAILED` or `RETURNED`: `failure_reason_code` **is strictly required** (non-whitespace).
-* If status is `SUCCESS`: `failure_reason_code` **must be `None`**.
 
 ---
 
@@ -265,6 +283,6 @@ class DisbursementCallbackPayload(StrictBaseModel):
 | :--- | :--- | :--- |
 | **Zero-PII Privacy** | SHA-256 HMAC Tokenization (`HmacCitizenToken`) | Guarantees Aadhaar / Phone numbers are never exposed in ledger tables. |
 | **Double-Dipping Prevention** | Database `UNIQUE(tokenized_identity_hash, season)` & Pre-checkout check | Prevents citizens from receiving duplicate automated payouts in the same season. |
-| **Idempotency Guarantee** | `disbursement_txn_id` generated at approval time | Allows asynchronous payment retries without creating duplicate bank transactions. |
+| **Idempotency vs. Bank Clearing** | Internal `disbursement_txn_id` vs. External Bank ID (`bank_reference_id` UTR) | Internal `disbursement_txn_id` guarantees retry idempotency without duplicate bank orders; external `bank_reference_id` is the bank-generated transaction ID providing proof of clearing. |
 | **Audit Traceability** | `application_governance_ledger_history` append-only table | Records every state change, actor ID (`SYSTEM:{ver}` or Officer UUID), and justification notes. |
 | **Strict Type Safety** | Pydantic `StrictBaseModel` & `str_strip_whitespace=True` | Automatically strips leading/trailing spaces and enforces strict type boundaries. |

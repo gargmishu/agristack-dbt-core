@@ -52,10 +52,10 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `session_id` | `UUID` | Foreign Key anchoring the claim back to the parent telemetry log. |
 | `payload_id` | `UUID` | Foreign Key anchoring the claim back to the specific extraction attempt. |
 | `tokenized_identity_hash` | `VARCHAR(64)` | SHA-256 hash of the National ID / Identity. |
-| `application_status` | `application_status_enum` | Native Postgres `ENUM` (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `FINALIZED`, `REJECTED`, `APPEALED`). |
+| `application_status` | `application_status_enum` | Native Postgres `ENUM` (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `APPEALED`). |
 | `claimant_eligibility_status`| `eligibility_status_enum` | Native Postgres `ENUM` (`PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`). |
-| `governance_decision` | `governance_decision_enum` | Native Postgres `ENUM` (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`). |
-| `decided_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp capturing the exact moment the governance decision was executed. |
+| `governance_action` | `governance_action_enum` | Native Postgres `ENUM` (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`). |
+| `evaluated_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp capturing the exact moment the governance action was executed. |
 | `disbursement_status` | `disbursement_status_enum` | Native Postgres `ENUM` (`PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`) tracking the financial clearing state. |
 | `governance_metadata` | `JSONB` | Flexible payload for sparse edge-case data (rejection reasons, notes). |
 
@@ -102,7 +102,7 @@ To ensure strict data integrity and predictable routing, the following native Po
     *   `COMMITTED` (Final accepted extraction used for the claim)
 
 #### Governance & Ledger Enums
-*   **`application_status_enum`**: `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `FINALIZED`, `REJECTED`, `APPEALED`
+*   **`application_status_enum`**: `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `APPEALED`
 *   **`eligibility_status_enum`**: `PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`
 *   **`governance_decision_enum`**: `AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`
 *   **`disbursement_status_enum`**: `PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`
@@ -128,21 +128,21 @@ While `governance_metadata` is a flexible `JSONB` column, we enforce strict payl
 
 ### 2.4. State Machine Mapping: Application Status vs. Governance Decision
 
-**Note on State Relationship:** `application_status` and `governance_decision` work in tandem but serve different purposes. `application_status` tracks *where* the claim is in its lifecycle, while `governance_decision` tracks *what action* was taken to move it there. 
+**Note on State Relationship:** `application_status` and `governance_action` work in tandem but serve different purposes. `application_status` tracks *where* the claim is in its lifecycle, while `governance_action` tracks *what action* was taken to move it there. 
 
 #### Bidirectional Flow Mapping
 
-| `application_status_enum` | Associated `governance_decision_enum` | Lifecycle Rationale & State Transition |
+| `application_status_enum` | Associated `governance_action_enum` | Lifecycle Rationale & State Transition |
 | :--- | :--- | :--- |
-| **`DRAFT`** | `REQUEST_MORE_INFO` <br>*(or N/A)* | **System/Reviewer Action:** A decision of `REQUEST_MORE_INFO` halts processing and typically kicks the application back to `DRAFT` so the citizen can provide missing details. (Note: Initial drafts are user-created, requiring no backend decision). |
-| **`SUBMITTED`** | *None (Pending)* | **User Action:** This state is triggered by the citizen submitting the payload. It acts as a holding queue awaiting the *next* `governance_decision`. |
-| **`UNDER_REVIEW`** | `ROUTE_FOR_MANUAL_REVIEW` | **System Action:** The rules engine could not confidently auto-approve or auto-reject, issuing a `ROUTE_FOR_MANUAL_REVIEW` decision to transition the claim to the human review queue. |
-| **`FINALIZED`** | `AUTO_APPROVE` <br> `MANUAL_APPROVE` | **System/Human Action:** The rules engine or human reviewer validated all criteria successfully, issued an `AUTO_APPROVE` or `MANUAL_APPROVE` decision, finalizing the application toward disbursement. |
+| **`DRAFT`** | `REQUEST_MORE_INFO` <br>*(or N/A)* | **System/Reviewer Action:** An action of `REQUEST_MORE_INFO` halts processing and typically kicks the application back to `DRAFT` so the citizen can provide missing details. (Note: Initial drafts are user-created, requiring no backend decision). |
+| **`SUBMITTED`** | *None (Pending)* | **User Action:** This state is triggered by the citizen submitting the payload. It acts as a holding queue awaiting the *next* `governance_action`. |
+| **`UNDER_REVIEW`** | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | **System Action:** The rules engine could not confidently auto-approve or auto-reject, issuing a `ROUTE_FOR_MANUAL_REVIEW` action to transition the claim to the human review queue. |
+| **`APPROVED`** | `AUTO_APPROVE` <br> `MANUAL_APPROVE` | **System/Human Action:** The rules engine or human reviewer validated all criteria successfully, issued an `AUTO_APPROVE` or `MANUAL_APPROVE` action, approving the application toward disbursement. |
 | **`REJECTED`** | `AUTO_REJECT` <br> `MANUAL_REJECT` | **System/Human Action:** The system or human detected fraud, anomalies, or strict ineligibility, closing the application loop. |
-| **`APPEALED`** | *None (Pending)* | **User Action:** Triggered by the citizen contesting a `REJECTED` status. Awaiting a new `governance_decision`. |
+| **`APPEALED`** | *None (Pending)* | **User Action:** Triggered by the citizen contesting a `REJECTED` status. Awaiting a new `governance_action`. |
 
-#### System Decision Impact Summary
-* **`AUTO_APPROVE` / `MANUAL_APPROVE`** ➔ Transitions the application to **`FINALIZED`**.
+#### System Action Impact Summary
+* **`AUTO_APPROVE` / `MANUAL_APPROVE`** ➔ Transitions the application to **`APPROVED`**.
 * **`AUTO_REJECT` / `MANUAL_REJECT`** ➔ Transitions the application to **`REJECTED`**.
 * **`ROUTE_FOR_MANUAL_REVIEW`** ➔ Transitions the application to **`UNDER_REVIEW`**.
 * **`REQUEST_MORE_INFO`** ➔ Transitions the application to **`DRAFT`**.
@@ -187,7 +187,7 @@ Indexes were designed based on expected query access patterns from real-time API
    - *Table:* **application_governance_ledger_history**
    - *Business Reason:* **SLA Tracking & Accountability.** Allows management to measure operational bottlenecks, such as exactly how many days a claim sits in the manual review queue before an agent touches it, ensuring the program meets legal disbursement timelines.
    - *Technical Rationale:* Optimizes window functions and chronological sorting for state-transition analysis.
-   - *Analytics Impact:* Enables downstream analysts to calculate "Time-in-State" metrics (e.g., SLA tracking for how long claims sit in the `UNDER_REVIEW` queue before transitioning to `FINALIZED`) without bogging down the database.
+   - *Analytics Impact:* Enables downstream analysts to calculate "Time-in-State" metrics (e.g., SLA tracking for how long claims sit in the `UNDER_REVIEW` queue before transitioning to `APPROVED`) without bogging down the database.
 6. **`idx_consent_active` (`tokenized_phone_hash`, `tokenized_identity_hash`, `expires_at`, `revoked_at`) `WHERE revoked_at IS NULL AND expires_at > NOW()`**
    - *Table:* **consent_registry**
    - *Business Reason:* **Active Consent Filtering.** Makes it inexpensive to resolve whether a consent record is currently valid and enforceable.
