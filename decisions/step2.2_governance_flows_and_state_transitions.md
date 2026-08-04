@@ -98,12 +98,12 @@ Financial clearing states track the execution of funds transfer over national cl
 
 Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant automated adjudication without human intervention. High confidence can result in either an immediate automated **approval** or an immediate automated **rejection**.
 
-1. **Confidence & Eligibility Evaluation:** Step 08 validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
+1. **Confidence & Eligibility Evaluation:** The evaluation engine validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
 2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
    * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
    * Application status transitions to **`APPROVED`**.
    * System assigns an internal idempotency tracking key `disbursement_txn_id = "TXN-YYYY-XXXXXX"` and initializes `disbursement_status = PENDING`.
-   * Step 09 routes to Step 10 (`FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT`) to trigger the NPCI Aadhaar Payment Bridge.
+   * The governance router issues `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` to trigger wire dispatch over the NPCI Aadhaar Payment Bridge.
 3. **Outcome B — Automated Rejection (`REJECTED`):** If `eligibility_status == INELIGIBLE` OR a duplicate double-dipping claim is detected:
    * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_REJECT` and populates a descriptive `rejection_reason`.
    * Application status transitions directly to **`REJECTED`**.
@@ -116,7 +116,7 @@ Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant a
 Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ```
-[ Step 08: Evaluation (<0.85 / Anomaly) ] ➔ [ Step 09 Router ] ➔ [ Step 11: Incident Ticket Staging ]
+[ Evaluation (<0.85 / Anomaly) ] ➔ [ Governance Router ] ➔ [ Incident Ticket Staging ]
                                                                              │
                                                                    (Creates SPP-CASE-YYYY-XXXXXX)
                                                                              │
@@ -124,7 +124,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 [ Application Decision Pipeline ] ◄─── (Submits Review) ◄─── [ Caseworker Review Dashboard ]
 ```
 
-1. **Staging (`Step 11`):** System creates incident ticket `SPP-CASE-YYYY-XXXXXX` and emits `CaseworkerCaseReviewPayload`:
+1. **Incident Staging:** System creates incident ticket `SPP-CASE-YYYY-XXXXXX` and emits `CaseworkerCaseReviewPayload`:
    * `unprocessed_input_content` carries raw citizen text/audio URL (**must not be empty**).
    * `extracted_entities` carries extracted parameters, but **may be empty `{}`** if AI extraction failed completely.
 2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerReviewOutcomePayload`:
@@ -192,7 +192,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
 ### 4.2 `CaseworkerCaseReviewPayload` (`src/models/caseworker/case_review_payload.py`)
 
-Emitted by Step 11 to stage an incident ticket into the Caseworker Review Dashboard.
+Emitted during incident ticket staging to transition an unresolved case into the Caseworker Review Dashboard.
 
 ```python
 class CaseworkerCaseReviewPayload(StrictBaseModel):
