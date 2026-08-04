@@ -148,7 +148,8 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerReviewOutcomePayload`:
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
-   * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD for missing fields without corrupting historical submitted state.
+   * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD.
+     * **Clarification Resolution (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`):** When the citizen replies over their conversational channel with the requested details, the system captures the input, attaches it to the open escalation ticket (`SPP-CASE-YYYY-XXXX`), and transitions the status directly back to **`UNDER_REVIEW`** (marked as *"Clarification Received"* in the caseworker dashboard) for final officer adjudication. Alternatively, if the new information allows automated straight-through processing, the system transitions it to **`SUBMITTED`** for automated re-evaluation.
 
 ---
 
