@@ -28,3 +28,13 @@ async def test_slm_extractor_adversarial_zeroing() -> None:
     assert result.is_adversarial_attempt is True
     assert result.ai_confidence_score == 0.0
     assert result.domain_entities == {}
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_empty_or_error_returns_none() -> None:
+    extractor = SlmExtractor()
+    assert await extractor.extract_entities("sess_12345678", "   ", "hi-IN") is None
+    result = await extractor.extract_entities(
+        "sess_12345678", "Unexpected internal error occurred", "hi-IN"
+    )
+    assert result is None

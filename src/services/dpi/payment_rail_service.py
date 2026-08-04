@@ -44,13 +44,18 @@ class PaymentRailService:
         Returns:
             DisbursementCallbackPayload indicating initial wire status, or None.
         """
+        if outcome.disbursement_txn_id is None:
+            logger.debug(
+                "Skipping payment clearing for session=%s: disbursement_txn_id is None",
+                outcome.session_id,
+            )
+            return None
+
         logger.info(
             "Initiating payment clearing for session=%s, txn=%s",
             outcome.session_id,
             outcome.disbursement_txn_id,
         )
-        if outcome.disbursement_txn_id is None:
-            return None
 
         if MOCK_PAYMENT_FAIL_TRIGGER in str(outcome.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED

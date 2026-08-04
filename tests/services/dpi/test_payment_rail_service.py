@@ -47,3 +47,21 @@ async def test_payment_rail_disbursement_failure() -> None:
     assert result is not None
     assert result.disbursement_status == DisbursementStatus.FAILED
     assert result.failure_reason_code is not None
+
+
+@pytest.mark.asyncio
+async def test_payment_rail_skips_when_txn_id_is_none() -> None:
+    service = PaymentRailService()
+    outcome = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.45,
+        eligibility_status=EligibilityStatus.INELIGIBLE,
+        governance_decision=GovernanceDecision.AUTO_REJECT,
+        rejection_reason="Ineligible land registry status",
+        disbursement_txn_id=None,
+        disbursement_status=None,
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await service.initiate_disbursement(outcome)
+    assert result is None
