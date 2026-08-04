@@ -24,21 +24,21 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
                         └──────┬───────┘
                                │ Citizen Submits
                                ▼
-                        ┌──────────────┐ <────────────────────────────────┐
-                        │  SUBMITTED   │                                  │
-                        └──────┬───────┘                                  │
-                               │                                          │ (Citizen Reply:
-         ┌─────────────────────┼─────────────────────┐                    │  Auto-Reevaluate)
-         │                     │                     │                    │
-         │ (High Confidence    │ (High Confidence    │ (Low Confidence /  │
-         │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)│
-         │                     │  Double-Dip)        │                    │
-         ▼                     ▼                     ▼                    │
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
-│     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┐      │
-└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘   │      │
-         │                     ▲                 ▲   │             │      │
-         │                     │ (Citizen Reply  │   │             ▼      │
+                        ┌──────────────┐
+                        │  SUBMITTED   │
+                        └──────┬───────┘
+                               │
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+         │ (High Confidence    │ (High Confidence    │ (Low Confidence /
+         │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)
+         │                     │  Double-Dip)        │
+         ▼                     ▼                     ▼
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┐
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘   │
+         │                     ▲                 ▲   │             │
+         │                     │ (Citizen Reply  │   │             ▼
          ▼                     │  to Open Ticket)│   │    ┌───────────────┴─┐
 ┌──────────────────┐           │                 └───┼────┤  INFO_REQUESTED │
 │   DISBURSEMENT   │           │                     │    └─────────────────┘
@@ -60,7 +60,7 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 | **`DRAFT`** | Citizen initiates claim (unsubmitted scratch state) | *None (Initial Creation)* | `SUBMITTED` |
 | **`SUBMITTED`** | Citizen confirms claim via chat/voice/USSD; system commits extracted details to ledger | *None (Pending Evaluation)* | `APPROVED`, `REJECTED`, `UNDER_REVIEW` |
 | **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `APPROVED`, `REJECTED`, `INFO_REQUESTED` |
-| **`INFO_REQUESTED`** | Caseworker requests missing details or clarification | `REQUEST_MORE_INFO` | `SUBMITTED`, `UNDER_REVIEW` |
+| **`INFO_REQUESTED`** | Caseworker requests missing details or clarification | `REQUEST_MORE_INFO` | `UNDER_REVIEW` |
 | **`APPROVED`** | Claim approved automatically (eligible) or manually by officer | `AUTO_APPROVE`, `AUTOMATED_PAYOUT`, `MANUAL_APPROVE` | *(Terminal Application State; proceeds to clearing)* |
 | **`REJECTED`** | Claim rejected automatically (ineligible/double-dip) or manually | `AUTO_REJECT`, `MANUAL_REJECT` | `APPEALED` |
 | **`APPEALED`** | Citizen contests rejection | *None (Re-entering Queue)* | `UNDER_REVIEW`, `APPROVED`, `REJECTED` |
@@ -149,7 +149,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
    * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD.
-     * **Clarification Resolution (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`):** When the citizen replies over their conversational channel with the requested details, the system captures the input, attaches it to the open escalation ticket (`SPP-CASE-YYYY-XXXX`), and transitions the status directly back to **`UNDER_REVIEW`** (marked as *"Clarification Received"* in the caseworker dashboard) for final officer adjudication. Alternatively, if the new information allows automated straight-through processing, the system transitions it to **`SUBMITTED`** for automated re-evaluation.
+     * **Clarification Resolution (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`):** When the citizen replies over their conversational channel with the requested details, the system captures the input, attaches it to the open escalation ticket (`SPP-CASE-YYYY-XXXX`), and transitions the status strictly back to **`UNDER_REVIEW`** (marked as *"Clarification Received"* in the caseworker dashboard) for final officer adjudication. Because an officer explicitly initiated the clarification inquiry against an open case, the claim remains in the caseworker queue until a terminal decision (`MANUAL_APPROVE` or `MANUAL_REJECT`) is reached.
 
 ---
 
