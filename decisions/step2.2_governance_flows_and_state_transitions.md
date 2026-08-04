@@ -85,13 +85,10 @@ Financial clearing states track the execution of funds transfer over national cl
                                       SUCCESS          FAILED           RETURNED
 ```
 
-* **`PENDING` (Internal Queue):** Assigned when a claim is **approved** (via Step 09 automated evaluation or Caseworker Manual Approval) along with our internal `disbursement_txn_id`. Bridges the time gap while the approved claim waits for payment dispatch. Notice that rejected claims never enter the disbursement lifecycle.
-* **`INITIATED` (Wire Dispatch via `step_10`):** Executed by **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails using our internal `disbursement_txn_id` as the instruction idempotency key.
+* **`PENDING` (Internal Queue):** Assigned when a claim is **approved** along with our internal `disbursement_txn_id`. Bridges the time gap while the approved claim waits for payment dispatch. Notice that rejected claims never enter the disbursement lifecycle.
+* **`INITIATED` (Wire Dispatch):** Assigned when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails using our internal `disbursement_txn_id` as the instruction idempotency key.
 * **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (`DisbursementCallbackPayload`) when funds reach the citizen account. Strictly requires the bank to return an external bank-generated transaction clearing ID / UTR (`bank_reference_id`).
 * **`FAILED` / `RETURNED` (Terminal Failure):** Confirmed by bank callback when clearing fails (requires non-empty `failure_reason_code`, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
-
-> [!IMPORTANT]
-> The transition from **`PENDING` $\rightarrow$ `INITIATED`** occurs explicitly during **`step_10`** execution. Backward transitions (e.g. `INITIATED` $\rightarrow$ `PENDING`) are strictly forbidden. If a network fault occurs during dispatch, the transaction is marked `FAILED` and re-initiated under a new idempotent transaction context.
 
 ---
 
