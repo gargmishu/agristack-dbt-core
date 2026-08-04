@@ -50,8 +50,8 @@ class EligibilityStatus(StrEnum):
     REQUIRES_REVIEW = "REQUIRES_REVIEW"
 
 
-class GovernanceDecision(StrEnum):
-    """Governance decision action evaluated by Layer 4 routing matrix."""
+class GovernanceAction(StrEnum):
+    """Governance routing or adjudication action evaluated by Layer 4 or officer review."""
 
     AUTOMATED_PAYOUT = "AUTOMATED_PAYOUT"
     AUTO_APPROVE = "AUTO_APPROVE"

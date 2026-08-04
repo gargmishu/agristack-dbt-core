@@ -4,7 +4,7 @@ from pydantic import Field, model_validator
 
 from src.data_models.common import (
     EscalationCaseId,
-    GovernanceDecision,
+    GovernanceAction,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -35,7 +35,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         max_length=128,
         description="UUID or Officer ID of caseworker submitting decision",
     )
-    governance_decision: GovernanceDecision = Field(
+    governance_action: GovernanceAction = Field(
         ..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO"
     )
     review_notes: str = Field(
@@ -53,24 +53,24 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_decision_type_and_audit_notes(self) -> "CaseworkerReviewOutcomePayload":
-        """Enforces allowed manual decisions and non-empty caseworker audit justification.
+    def validate_action_type_and_audit_notes(self) -> "CaseworkerReviewOutcomePayload":
+        """Enforces allowed manual review actions and non-empty caseworker audit justification.
 
-        Why restrict decision types and enforce non-empty review_notes?
-        Automated decisions (e.g. AUTO_APPROVE or AUTOMATED_PAYOUT) are strictly forbidden within
+        Why restrict action types and enforce non-empty review_notes?
+        Automated actions (e.g. AUTO_APPROVE or AUTOMATED_PAYOUT) are strictly forbidden within
         caseworker payloads to prevent automated system spoofing through administrative portals.
         Furthermore, national welfare audit regulations require every human adjudication to carry
         an immutable, meaningful textual justification (`review_notes`) in the governance ledger.
         """
-        allowed_decisions = {
-            GovernanceDecision.MANUAL_APPROVE,
-            GovernanceDecision.MANUAL_REJECT,
-            GovernanceDecision.REQUEST_MORE_INFO,
+        allowed_actions = {
+            GovernanceAction.MANUAL_APPROVE,
+            GovernanceAction.MANUAL_REJECT,
+            GovernanceAction.REQUEST_MORE_INFO,
         }
-        if self.governance_decision not in allowed_decisions:
+        if self.governance_action not in allowed_actions:
             raise ValueError(
-                "CaseworkerReviewOutcomePayload decision must be MANUAL_APPROVE, "
-                f"MANUAL_REJECT, or REQUEST_MORE_INFO, got {self.governance_decision}"
+                "CaseworkerReviewOutcomePayload action must be MANUAL_APPROVE, "
+                f"MANUAL_REJECT, or REQUEST_MORE_INFO, got {self.governance_action}"
             )
 
         if not self.review_notes or not self.review_notes.strip():
@@ -88,7 +88,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         legacy or accidental rejection text on an approved claim violates state integrity and
         pollutes downstream audit records.
         """
-        if self.governance_decision == GovernanceDecision.MANUAL_APPROVE:
+        if self.governance_action == GovernanceAction.MANUAL_APPROVE:
             if self.approved_amount is None or self.approved_amount <= 0.0:
                 raise ValueError("approved_amount > 0.0 is required for MANUAL_APPROVE")
             if self.rejection_reason is not None:
@@ -104,7 +104,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         legally defensible rejection reason to support citizen appeal workflows. Permitting a
         financial allowance on a rejected case violates financial clearing rules.
         """
-        if self.governance_decision == GovernanceDecision.MANUAL_REJECT:
+        if self.governance_action == GovernanceAction.MANUAL_REJECT:
             if not self.rejection_reason or not self.rejection_reason.strip():
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
             if self.approved_amount is not None:
@@ -120,7 +120,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         conversational loop. Assigning a payout or rejection verdict would prematurely bias
         and corrupt subsequent automated re-evaluation passes once the citizen submits new data.
         """
-        if self.governance_decision == GovernanceDecision.REQUEST_MORE_INFO:
+        if self.governance_action == GovernanceAction.REQUEST_MORE_INFO:
             if self.approved_amount is not None:
                 raise ValueError("approved_amount must be None for REQUEST_MORE_INFO")
             if self.rejection_reason is not None:

@@ -22,8 +22,8 @@ CREATE TYPE eligibility_status_enum AS ENUM (
     'PENDING_VERIFICATION', 'ELIGIBLE', 'INELIGIBLE'
 );
 
-CREATE TYPE governance_decision_enum AS ENUM (
-    'AUTO_APPROVE', 'AUTO_REJECT', 'ROUTE_FOR_MANUAL_REVIEW', 'REQUEST_MORE_INFO', 'MANUAL_APPROVE', 'MANUAL_REJECT'
+CREATE TYPE governance_action_enum AS ENUM (
+    'AUTOMATED_PAYOUT', 'AUTO_APPROVE', 'AUTO_REJECT', 'HUMAN_REVIEW', 'ROUTE_FOR_MANUAL_REVIEW', 'REQUEST_MORE_INFO', 'MANUAL_APPROVE', 'MANUAL_REJECT'
 );
 
 CREATE TYPE disbursement_status_enum AS ENUM (
@@ -86,7 +86,7 @@ CREATE TABLE application_governance_ledger (
     tokenized_identity_hash VARCHAR(64) NOT NULL,
     application_status application_status_enum NOT NULL,
     claimant_eligibility_status eligibility_status_enum NOT NULL,
-    governance_decision governance_decision_enum,
+    governance_action governance_action_enum,
     evaluated_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
@@ -101,10 +101,10 @@ CREATE TABLE application_governance_ledger (
     
     -- Business Logic: Terminal Decision Constraints
     CONSTRAINT chk_approval_requires_amount CHECK (
-        governance_decision NOT IN ('AUTO_APPROVE', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
+        governance_action NOT IN ('AUTO_APPROVE', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
     ),
     CONSTRAINT chk_rejection_requires_reason CHECK (
-        governance_decision NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
+        governance_action NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
     )
 );
 
@@ -114,7 +114,7 @@ CREATE TABLE application_governance_ledger_history (
     claim_id UUID NOT NULL REFERENCES application_governance_ledger(claim_id) ON DELETE CASCADE,
     previous_application_status application_status_enum NULL,
     new_application_status application_status_enum NOT NULL,
-    governance_decision governance_decision_enum,
+    governance_action governance_action_enum,
     actor_id VARCHAR(100) NOT NULL,
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -214,14 +214,14 @@ BEGIN
         claim_id,
         previous_application_status,
         new_application_status,
-        governance_decision,
+        governance_action,
         actor_id,
         changed_at
     ) VALUES (
         NEW.claim_id,
         OLD.application_status, 
         NEW.application_status,
-        NEW.governance_decision,
+        NEW.governance_action,
         COALESCE(NEW.governance_metadata->>'reviewer_id', 'SYSTEM:DEFAULT'),
         COALESCE(NEW.evaluated_at, NOW())
     );
@@ -231,9 +231,9 @@ $$ LANGUAGE plpgsql;
 
 -- Trigger captures state changes (AFTER UPDATE)
 CREATE TRIGGER trg_audit_governance_ledger_update
-AFTER UPDATE OF application_status, governance_decision ON application_governance_ledger
+AFTER UPDATE OF application_status, governance_action ON application_governance_ledger
 FOR EACH ROW
-WHEN (OLD.application_status IS DISTINCT FROM NEW.application_status OR OLD.governance_decision IS DISTINCT FROM NEW.governance_decision)
+WHEN (OLD.application_status IS DISTINCT FROM NEW.application_status OR OLD.governance_action IS DISTINCT FROM NEW.governance_action)
 EXECUTE FUNCTION log_governance_ledger_history();
 
 -- Trigger captures initial claim creation (AFTER INSERT)
@@ -261,7 +261,7 @@ SELECT
     tokenized_identity_hash,
     application_status,
     claimant_eligibility_status,
-    governance_decision,
+    governance_action,
     evaluated_at,
     disbursement_status,
     (governance_metadata->>'approval_amount')::numeric AS approval_amount,
@@ -291,7 +291,7 @@ SELECT
     g.tokenized_identity_hash,
     g.application_status,
     g.claimant_eligibility_status,
-    g.governance_decision,
+    g.governance_action,
     g.evaluated_at,
     g.disbursement_status,
     g.approval_amount,

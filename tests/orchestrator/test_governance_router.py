@@ -5,7 +5,7 @@ import pytest
 from src.data_models.common import (
     DisbursementStatus,
     EligibilityStatus,
-    GovernanceDecision,
+    GovernanceAction,
 )
 from src.data_models.governance import GovernanceOutcomePayload
 from src.orchestrator.governance_router import GovernanceRouter
@@ -19,11 +19,11 @@ async def test_governance_router_auto_approve() -> None:
         payload_id="ext_12345678",
         ai_confidence_score=0.96,
         eligibility_status=EligibilityStatus.ELIGIBLE,
-        governance_decision=GovernanceDecision.AUTO_APPROVE,
+        governance_action=GovernanceAction.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
         evaluated_at=datetime.now(UTC),
     )
 
     result = await router.route_governance_outcome(payload)
-    assert result.governance_decision == GovernanceDecision.AUTO_APPROVE
+    assert result.governance_action == GovernanceAction.AUTO_APPROVE

@@ -40,9 +40,9 @@ class GovernanceRouter:
             GovernanceOutcomePayload with finalized governance action and tracking keys.
         """
         logger.info(
-            "Routing governance outcome for session=%s, decision=%s, confidence=%.2f",
+            "Routing governance outcome for session=%s, action=%s, confidence=%.2f",
             payload.session_id,
-            payload.governance_decision,
+            payload.governance_action,
             payload.ai_confidence_score,
         )
         return payload

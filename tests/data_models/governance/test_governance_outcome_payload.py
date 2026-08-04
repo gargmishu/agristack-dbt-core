@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.data_models.common import (
     DisbursementStatus,
     EligibilityStatus,
-    GovernanceDecision,
+    GovernanceAction,
 )
 from src.data_models.governance import GovernanceOutcomePayload
 
@@ -17,12 +17,12 @@ def test_governance_routing_approved_decision() -> None:
         payload_id="550e8400-e29b-41d4-a716-446655440000",
         ai_confidence_score=0.92,
         eligibility_status=EligibilityStatus.ELIGIBLE,
-        governance_decision=GovernanceDecision.AUTO_APPROVE,
+        governance_action=GovernanceAction.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
         evaluated_at=datetime.now(UTC),
     )
-    assert payload.governance_decision == GovernanceDecision.AUTO_APPROVE
+    assert payload.governance_action == GovernanceAction.AUTO_APPROVE
     assert payload.disbursement_txn_id == "TXN-2026-987654"
 
 
@@ -33,7 +33,7 @@ def test_governance_routing_review_decision_missing_case_id() -> None:
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.45,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
-            governance_decision=GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW,
+            governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
             evaluated_at=datetime.now(UTC),
         )
     assert "escalation_case_id is required" in str(exc.value)
@@ -46,13 +46,13 @@ def test_governance_routing_manual_approve_with_review_notes() -> None:
         escalation_case_id="SPP-CASE-2026-981245",
         ai_confidence_score=0.78,
         eligibility_status=EligibilityStatus.ELIGIBLE,
-        governance_decision=GovernanceDecision.MANUAL_APPROVE,
+        governance_action=GovernanceAction.MANUAL_APPROVE,
         disbursement_txn_id="TXN-2026-987654",
         disbursement_status=DisbursementStatus.PENDING,
         review_notes="Verified manual land deed document attached in tribunal appeal",
         evaluated_at=datetime.now(UTC),
     )
-    assert payload.governance_decision == GovernanceDecision.MANUAL_APPROVE
+    assert payload.governance_action == GovernanceAction.MANUAL_APPROVE
     assert payload.escalation_case_id == "SPP-CASE-2026-981245"
     assert payload.review_notes == "Verified manual land deed document attached in tribunal appeal"
 
@@ -64,7 +64,7 @@ def test_governance_routing_manual_approve_missing_case_id() -> None:
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.78,
             eligibility_status=EligibilityStatus.ELIGIBLE,
-            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             evaluated_at=datetime.now(UTC),
@@ -79,13 +79,13 @@ def test_governance_routing_auto_approve_rejects_review_notes() -> None:
             payload_id="550e8400-e29b-41d4-a716-446655440000",
             ai_confidence_score=0.92,
             eligibility_status=EligibilityStatus.ELIGIBLE,
-            governance_decision=GovernanceDecision.AUTO_APPROVE,
+            governance_action=GovernanceAction.AUTO_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes="Invalid review note on automated decision",
             evaluated_at=datetime.now(UTC),
         )
-    assert "review_notes must be None for decision AUTO_APPROVE" in str(exc.value)
+    assert "review_notes must be None for action AUTO_APPROVE" in str(exc.value)
 
 
 def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
@@ -96,7 +96,7 @@ def test_governance_routing_manual_approve_rejects_empty_review_notes() -> None:
             escalation_case_id="SPP-CASE-2026-981245",
             ai_confidence_score=0.78,
             eligibility_status=EligibilityStatus.ELIGIBLE,
-            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes="   ",
@@ -113,7 +113,7 @@ def test_governance_routing_manual_approve_missing_review_notes() -> None:
             escalation_case_id="SPP-CASE-2026-981245",
             ai_confidence_score=0.78,
             eligibility_status=EligibilityStatus.ELIGIBLE,
-            governance_decision=GovernanceDecision.MANUAL_APPROVE,
+            governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
             review_notes=None,
@@ -130,7 +130,7 @@ def test_governance_routing_manual_reject_missing_review_notes() -> None:
             escalation_case_id="SPP-CASE-2026-981245",
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
-            governance_decision=GovernanceDecision.MANUAL_REJECT,
+            governance_action=GovernanceAction.MANUAL_REJECT,
             rejection_reason="Land deed mismatch",
             review_notes=None,
             evaluated_at=datetime.now(UTC),
