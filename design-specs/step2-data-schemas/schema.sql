@@ -15,7 +15,7 @@ CREATE TYPE processing_state_enum AS ENUM (
 );
 
 CREATE TYPE application_status_enum AS ENUM (
-    'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'APPEALED'
+    'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'INFO_REQUESTED', 'APPROVED', 'REJECTED', 'APPEALED'
 );
 
 CREATE TYPE eligibility_status_enum AS ENUM (

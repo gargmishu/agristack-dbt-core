@@ -52,7 +52,7 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `session_id` | `UUID` | Foreign Key anchoring the claim back to the parent telemetry log. |
 | `payload_id` | `UUID` | Foreign Key anchoring the claim back to the specific extraction attempt. |
 | `tokenized_identity_hash` | `VARCHAR(64)` | SHA-256 hash of the National ID / Identity. |
-| `application_status` | `application_status_enum` | Native Postgres `ENUM` (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `APPEALED`). |
+| `application_status` | `application_status_enum` | Native Postgres `ENUM` (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `INFO_REQUESTED`, `APPROVED`, `REJECTED`, `APPEALED`). |
 | `claimant_eligibility_status`| `eligibility_status_enum` | Native Postgres `ENUM` (`PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`). |
 | `governance_action` | `governance_action_enum` | Native Postgres `ENUM` (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`). |
 | `evaluated_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp capturing the exact moment the governance action was executed. |
@@ -102,7 +102,7 @@ To ensure strict data integrity and predictable routing, the following native Po
     *   `COMMITTED` (Final accepted extraction used for the claim)
 
 #### Governance & Ledger Enums
-*   **`application_status_enum`**: `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `APPEALED`
+*   **`application_status_enum`**: `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `INFO_REQUESTED`, `APPROVED`, `REJECTED`, `APPEALED`
 *   **`eligibility_status_enum`**: `PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`
 *   **`governance_decision_enum`**: `AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`
 *   **`disbursement_status_enum`**: `PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`
@@ -134,9 +134,10 @@ While `governance_metadata` is a flexible `JSONB` column, we enforce strict payl
 
 | `application_status_enum` | Associated `governance_action_enum` | Lifecycle Rationale & State Transition |
 | :--- | :--- | :--- |
-| **`DRAFT`** | `REQUEST_MORE_INFO` <br>*(or N/A)* | **System/Reviewer Action:** An action of `REQUEST_MORE_INFO` halts processing and typically kicks the application back to `DRAFT` so the citizen can provide missing details. (Note: Initial drafts are user-created, requiring no backend decision). |
+| **`DRAFT`** | *None (User Creation)* | **User/System Action:** Initial unsubmitted application state created by user interaction before formal submission. |
 | **`SUBMITTED`** | *None (Pending)* | **User Action:** This state is triggered by the citizen submitting the payload. It acts as a holding queue awaiting the *next* `governance_action`. |
 | **`UNDER_REVIEW`** | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | **System Action:** The rules engine could not confidently auto-approve or auto-reject, issuing a `ROUTE_FOR_MANUAL_REVIEW` action to transition the claim to the human review queue. |
+| **`INFO_REQUESTED`** | `REQUEST_MORE_INFO` | **Reviewer Action:** An action of `REQUEST_MORE_INFO` transitions the application into an intermediate clarification loop so the citizen can provide missing details over WhatsApp/USSD without corrupting historical submitted state. |
 | **`APPROVED`** | `AUTO_APPROVE` <br> `MANUAL_APPROVE` | **System/Human Action:** The rules engine or human reviewer validated all criteria successfully, issued an `AUTO_APPROVE` or `MANUAL_APPROVE` action, approving the application toward disbursement. |
 | **`REJECTED`** | `AUTO_REJECT` <br> `MANUAL_REJECT` | **System/Human Action:** The system or human detected fraud, anomalies, or strict ineligibility, closing the application loop. |
 | **`APPEALED`** | *None (Pending)* | **User Action:** Triggered by the citizen contesting a `REJECTED` status. Awaiting a new `governance_action`. |
@@ -145,7 +146,7 @@ While `governance_metadata` is a flexible `JSONB` column, we enforce strict payl
 * **`AUTO_APPROVE` / `MANUAL_APPROVE`** ➔ Transitions the application to **`APPROVED`**.
 * **`AUTO_REJECT` / `MANUAL_REJECT`** ➔ Transitions the application to **`REJECTED`**.
 * **`ROUTE_FOR_MANUAL_REVIEW`** ➔ Transitions the application to **`UNDER_REVIEW`**.
-* **`REQUEST_MORE_INFO`** ➔ Transitions the application to **`DRAFT`**.
+* **`REQUEST_MORE_INFO`** ➔ Transitions the application to **`INFO_REQUESTED`**.
 
 ---
 

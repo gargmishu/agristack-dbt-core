@@ -20,30 +20,35 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 
 ```
                         ┌──────────────┐
-                        │    DRAFT     │ <──────────────┐
-                        └──────┬───────┘                │
-                               │ Citizen Submits        │
-                               ▼                        │
-                        ┌──────────────┐                │
-                        │  SUBMITTED   │                │
-                        └──────┬───────┘                │ (REQUEST_MORE_INFO)
-                               │                        │
-         ┌─────────────────────┼─────────────────────┐  │
-         │                     │                     │  │
-         │ (High Confidence    │ (High Confidence    │ (Low Confidence /
-         │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)
-         │                     │  Double-Dip)        │  │
-         ▼                     ▼                     ▼  │
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┘
-└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
-         │                     ▲                     │ (Caseworker Action)
-         │                     │                     ├──────────────────────┐
-         ▼                     │                     ▼                      ▼
-┌──────────────────┐           │            ┌──────────────────┐  ┌──────────────────┐
-│   DISBURSEMENT   │           └────────────┤     REJECTED     │  │     APPROVED     │
-│    CHECKOUT      │                        └────────┬─────────┘  └──────────────────┘
-└──────────────────┘                                 │ Citizen Appeals
+                        │    DRAFT     │
+                        └──────┬───────┘
+                               │ Citizen Submits
+                               ▼
+                        ┌──────────────┐ <────────────────────────────────┐
+                        │  SUBMITTED   │                                  │
+                        └──────┬───────┘                                  │
+                               │                                          │ (Citizen Provides Info)
+         ┌─────────────────────┼─────────────────────┐                    │
+         │                     │                     │                    │
+         │ (High Confidence    │ (High Confidence    │ (Low Confidence /  │
+         │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)│
+         │                     │  Double-Dip)        │                    │
+         ▼                     ▼                     ▼                    │
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┐      │
+└────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘   │      │
+         │                     ▲                     │             │      │
+         │                     │                     │             ▼      │
+         ▼                     │                     │    ┌───────────────┴─┐
+┌──────────────────┐           │                     │    │  INFO_REQUESTED │
+│   DISBURSEMENT   │           │                     │    └─────────────────┘
+│    CHECKOUT      │           │                     │ (Caseworker Action)
+└──────────────────┘           │                     ├──────────────────────┐
+                               │                     ▼                      ▼
+                               │            ┌──────────────────┐  ┌──────────────────┐
+                               └────────────┤     REJECTED     │  │     APPROVED     │
+                                            └────────┬─────────┘  └──────────────────┘
+                                                     │ Citizen Appeals
                                                      ▼
                                             ┌──────────────────┐
                                             │     APPEALED     │
@@ -52,9 +57,10 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 
 | State | Trigger / Event | Associated `GovernanceAction` | Next Valid States |
 | :--- | :--- | :--- | :--- |
-| **`DRAFT`** | Citizen creates claim or officer requests info | `REQUEST_MORE_INFO` | `SUBMITTED` |
+| **`DRAFT`** | Citizen initiates claim (unsubmitted scratch state) | *None (Initial Creation)* | `SUBMITTED` |
 | **`SUBMITTED`** | Citizen submits extraction payload | *None (Pending Evaluation)* | `APPROVED`, `REJECTED`, `UNDER_REVIEW` |
-| **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `APPROVED`, `REJECTED`, `DRAFT` |
+| **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `APPROVED`, `REJECTED`, `INFO_REQUESTED` |
+| **`INFO_REQUESTED`** | Caseworker requests missing details or clarification | `REQUEST_MORE_INFO` | `SUBMITTED`, `UNDER_REVIEW` |
 | **`APPROVED`** | Claim approved automatically (eligible) or manually by officer | `AUTO_APPROVE`, `AUTOMATED_PAYOUT`, `MANUAL_APPROVE` | *(Terminal Application State; proceeds to clearing)* |
 | **`REJECTED`** | Claim rejected automatically (ineligible/double-dip) or manually | `AUTO_REJECT`, `MANUAL_REJECT` | `APPEALED` |
 | **`APPEALED`** | Citizen contests rejection | *None (Re-entering Queue)* | `UNDER_REVIEW`, `APPROVED`, `REJECTED` |
@@ -142,7 +148,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerReviewOutcomePayload`:
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
-   * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions back to `DRAFT` so citizen can re-engage over WhatsApp/USSD.
+   * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD for missing fields without corrupting historical submitted state.
 
 ---
 
