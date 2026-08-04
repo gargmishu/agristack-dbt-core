@@ -27,8 +27,8 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
                         ┌──────────────┐ <────────────────────────────────┐
                         │  SUBMITTED   │                                  │
                         └──────┬───────┘                                  │
-                               │                                          │ (Citizen Provides Info)
-         ┌─────────────────────┼─────────────────────┐                    │
+                               │                                          │ (Citizen Reply:
+         ┌─────────────────────┼─────────────────────┐                    │  Auto-Reevaluate)
          │                     │                     │                    │
          │ (High Confidence    │ (High Confidence    │ (Low Confidence /  │
          │  & Eligible)        │  & Ineligible /     │  Entity Discrepancy)│
@@ -37,10 +37,10 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
 │     APPROVED     │  │     REJECTED     │  │   UNDER_REVIEW   │───┐      │
 └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘   │      │
-         │                     ▲                     │             │      │
-         │                     │                     │             ▼      │
-         ▼                     │                     │    ┌───────────────┴─┐
-┌──────────────────┐           │                     │    │  INFO_REQUESTED │
+         │                     ▲                 ▲   │             │      │
+         │                     │ (Citizen Reply  │   │             ▼      │
+         ▼                     │  to Open Ticket)│   │    ┌───────────────┴─┐
+┌──────────────────┐           │                 └───┼────┤  INFO_REQUESTED │
 │   DISBURSEMENT   │           │                     │    └─────────────────┘
 │    CHECKOUT      │           │                     │ (Caseworker Action)
 └──────────────────┘           │                     ├──────────────────────┐
