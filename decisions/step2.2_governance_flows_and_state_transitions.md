@@ -98,21 +98,6 @@ Financial clearing states track the execution of funds transfer over national cl
 
 Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant automated adjudication without human intervention. High confidence can result in either an immediate automated **approval** or an immediate automated **rejection**.
 
-```
-[ Citizen Ingress ] ➔ [ Step 04: Entity Extraction ] ➔ [ Step 08: Confidence Evaluation (>=0.85) ]
-                                                                     │
-                                          ┌──────────────────────────┴──────────────────────────┐
-                                          ▼ (Eligible & No Double-Dip)                          ▼ (Ineligible or Double-Dip)
-                     [ Step 09 Router: AUTO_APPROVE / AUTOMATED_PAYOUT ]   [ Step 09 Router: AUTO_REJECT ]
-                                          │                                                     │
-                                          ▼                                                     ▼
-                            [ Application State: APPROVED ]                        [ Application State: REJECTED ]
-                            [ Disbursement State: PENDING ]                        [ Disbursement: N/A (Terminated) ]
-                                          │
-                                          ▼
-                      [ Step 10: Payment Dispatch (INITIATED) ]
-```
-
 1. **Confidence & Eligibility Evaluation:** Step 08 validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
 2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
    * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
