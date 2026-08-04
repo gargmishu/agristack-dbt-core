@@ -58,7 +58,7 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 | State | Trigger / Event | Associated `GovernanceAction` | Next Valid States |
 | :--- | :--- | :--- | :--- |
 | **`DRAFT`** | Citizen initiates claim (unsubmitted scratch state) | *None (Initial Creation)* | `SUBMITTED` |
-| **`SUBMITTED`** | Citizen submits extraction payload | *None (Pending Evaluation)* | `APPROVED`, `REJECTED`, `UNDER_REVIEW` |
+| **`SUBMITTED`** | Citizen confirms claim via chat/voice/USSD; system commits extracted details to ledger | *None (Pending Evaluation)* | `APPROVED`, `REJECTED`, `UNDER_REVIEW` |
 | **`UNDER_REVIEW`** | AI confidence $<0.85$ or anomaly detected | `ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` | `APPROVED`, `REJECTED`, `INFO_REQUESTED` |
 | **`INFO_REQUESTED`** | Caseworker requests missing details or clarification | `REQUEST_MORE_INFO` | `SUBMITTED`, `UNDER_REVIEW` |
 | **`APPROVED`** | Claim approved automatically (eligible) or manually by officer | `AUTO_APPROVE`, `AUTOMATED_PAYOUT`, `MANUAL_APPROVE` | *(Terminal Application State; proceeds to clearing)* |

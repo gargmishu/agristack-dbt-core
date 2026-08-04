@@ -22,7 +22,7 @@ class PayloadType(StrEnum):
 
 
 class StructureLevel(StrEnum):
-    """Input structure complexity level of incoming citizen payload."""
+    """Input structure complexity level of incoming citizen interaction or message."""
 
     FREE_TEXT = "free_text"
     MENU_SELECTION = "menu_selection"
