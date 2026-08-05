@@ -7,7 +7,7 @@ This document defines the authoritative project requirements, state machines, wo
 ### Core Architectural Guarantees:
 1. **Zero-PII Compliance:** Citizens are identified exclusively via 64-character SHA-256 HMAC tokens (`tokenized_citizen_id` / `tokenized_identity_hash`). Raw PII (Aadhaar numbers, cleartext phone numbers, unhashed names) is strictly prohibited across all governance schemas and database ledgers.
 2. **Monotonic Forward-Only State Machines:** Financial clearing states (`DisbursementStatus`) move strictly forward (`PENDING` $\rightarrow$ `INITIATED` $\rightarrow$ `SUCCESS`/`FAILED`/`RETURNED`). Reversion (e.g. `INITIATED` $\rightarrow$ `PENDING`) is strictly forbidden to prevent double-dipping and duplicate payouts.
-3. **Decoupled Governance vs. Financial Execution:** Governance decisions (`AUTO_APPROVE` / `MANUAL_APPROVE`) mark the claim as **approved** and assign an internal idempotent tracking key (`disbursement_txn_id`) with `disbursement_status = PENDING`. The actual money movement over sovereign payment rails (NPCI APBS / PFMS) occurs asynchronously downstream, upon which the bank returns an external transaction reference / UTR (`bank_reference_id`).
+3. **Decoupled Governance vs. Financial Execution:** Governance decisions (`AUTO_APPROVE` / `AUTOMATED_PAYOUT` / `MANUAL_APPROVE`) mark the claim as **approved** and assign an internal idempotent tracking key (`disbursement_txn_id`) with `disbursement_status = PENDING`. The actual money movement over sovereign payment rails (NPCI APBS / PFMS) occurs asynchronously downstream, upon which the bank returns an external transaction reference / UTR (`bank_reference_id`).
 4. **Mandatory Audit Traceability:** Every manual human intervention requires a `reviewer_id` (Officer UUID) and non-whitespace `review_notes` carried into the `application_governance_ledger_history`.
 
 ---
@@ -72,7 +72,7 @@ The formal lifecycle of a claim in the governance ledger (`application_governanc
 Financial clearing states track the execution of funds transfer over national clearing rails for **approved** claims only:
 
 ```
-[ Claim Approved (AUTO_APPROVE / MANUAL_APPROVE) ] ──> PENDING (Queued internally in batch ledger)
+[ Claim Approved (AUTO_APPROVE / AUTOMATED_PAYOUT / MANUAL_APPROVE) ] ──> PENDING (Queued internally in batch ledger)
                                                           │
                                                           │ Payment Dispatcher transmits instruction over wire
                                                           ▼
@@ -97,6 +97,18 @@ Financial clearing states track the execution of funds transfer over national cl
 ### 3.1 Flow 1: Straight-Through Automated Processing (STP: Approval & Rejection)
 
 Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant automated adjudication without human intervention. High confidence can result in either an immediate automated **approval** or an immediate automated **rejection**.
+
+```
+[ Evaluation (Score >= 0.85) ] ───(Check Eligibility & Ledger)───┐
+                                                                 │
+      ┌──────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────┐
+      ▼                                                                                                                     ▼
+[ Outcome A: ELIGIBLE ]                                                                                      [ Outcome B: INELIGIBLE / DUPLICATE ]
+      │                                                                                                                     │
+      ├─► Emit GovernanceOutcomePayload (AUTO_APPROVE / AUTOMATED_PAYOUT)                                                   ├─► Emit GovernanceOutcomePayload (AUTO_REJECT)
+      ├─► Transition Application Status ➔ APPROVED                                                                          ├─► Transition Application Status ➔ REJECTED
+      └─► Assign disbursement_txn_id & status = PENDING ──► [ Payment Rail ]                                                └─► Bypass Financial Clearing (No disbursement_txn_id)
+```
 
 1. **Confidence & Eligibility Evaluation:** The evaluation engine validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
 2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
@@ -131,7 +143,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
    * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD.
-     * **Clarification Resolution (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`):** When the citizen replies over their conversational channel with the requested details, the system captures the input, attaches it to the open escalation ticket (`SPP-CASE-YYYY-XXXX`), and transitions the status strictly back to **`UNDER_REVIEW`** (marked as *"Clarification Received"* in the caseworker dashboard) for final officer adjudication. Because an officer explicitly initiated the clarification inquiry against an open case, the claim remains in the caseworker queue until a terminal decision (`MANUAL_APPROVE` or `MANUAL_REJECT`) is reached.
+     * **Clarification Resolution (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`):** When the citizen replies over their conversational channel with the requested details, the system captures the input, attaches it to the open escalation ticket (`SPP-CASE-YYYY-XXXXXX`), and transitions the status strictly back to **`UNDER_REVIEW`** (marked as *"Clarification Received"* in the caseworker dashboard) for final officer adjudication. Because an officer explicitly initiated the clarification inquiry against an open case, the claim remains in the caseworker queue until a terminal decision (`MANUAL_APPROVE` or `MANUAL_REJECT`) is reached.
 
 ---
 
@@ -156,7 +168,7 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ## 4. Canonical Model Contracts & Validation Rules
 
-### 4.1 `GovernanceOutcomePayload` (`src/models/governance/governance_outcome_payload.py`)
+### 4.1 `GovernanceOutcomePayload` (`src/data_models/governance/governance_outcome_payload.py`)
 
 Emitted when Layer 4 automated evaluation or Caseworker Adjudication reaches an **approved** or **rejected** decision (or routes for manual review).
 
@@ -190,7 +202,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
 ---
 
-### 4.2 `CaseworkerCaseReviewPayload` (`src/models/caseworker/case_review_payload.py`)
+### 4.2 `CaseworkerCaseReviewPayload` (`src/data_models/caseworker/case_review_payload.py`)
 
 Emitted during incident ticket staging to transition an unresolved case into the Caseworker Review Dashboard.
 
@@ -218,7 +230,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
 ---
 
-### 4.3 `CaseworkerReviewOutcomePayload` (`src/models/caseworker/review_outcome_payload.py`)
+### 4.3 `CaseworkerReviewOutcomePayload` (`src/data_models/caseworker/review_outcome_payload.py`)
 
 Submitted by human officers adjudicating an escalated ticket.
 
