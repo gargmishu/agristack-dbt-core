@@ -166,115 +166,29 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ---
 
-## 4. Canonical Model Contracts & Validation Rules
+## 4. Workflow Payload Contracts & Idempotency Rationale
 
-### 4.1 `GovernanceOutcomePayload` (`src/data_models/governance/governance_outcome_payload.py`)
+To adhere to architectural DRY principles and eliminate documentation drift, the authoritative canonical Pydantic model definitions, field type annotations, and conditional validation rules are centrally standardized in **[Step 2.0: Canonical Domain Contracts & Data Schema Design](./step2.0_canonical_domain_schemas.md)**.
 
-Emitted when Layer 4 automated evaluation or Caseworker Adjudication reaches an **approved** or **rejected** decision (or routes for manual review).
+### 4.1 Workflow to Domain Schema Mapping
 
-```python
-class GovernanceOutcomePayload(StrictBaseModel):
-    session_id: SessionId
-    payload_id: ExtractionPayloadId
-    ai_confidence_score: AiConfidenceScore
-    eligibility_status: EligibilityStatus
-    governance_decision: GovernanceDecision
-    disbursement_txn_id: DisbursementTxnId | None = Field(
-        None,
-        description="Idempotency tracking key generated at approval time for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT",
-    )
-    disbursement_status: DisbursementStatus | None = Field(
-        None,
-        description="Initialized to PENDING/INITIATED at decision time; updated to SUCCESS/FAILED/RETURNED upon bank callback",
-    )
-    escalation_case_id: EscalationCaseId | None = None
-    rejection_reason: str | None = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
-    review_notes: str | None = Field(None, max_length=2000, description="Internal caseworker audit notes")
-    decided_at: UtcTimestamp
-```
+Every governance state transition defined in Section 2 and executed via the workflows in Section 3 binds directly to a validated domain payload contract from Step 2.0:
 
-#### Validation Rules:
-* **`AUTO_APPROVE` / `AUTOMATED_PAYOUT`:** `disbursement_txn_id` **required**; `disbursement_status` **required** (`PENDING`/`INITIATED`); `rejection_reason`, `escalation_case_id`, `review_notes` **must be `None`**.
-* **`MANUAL_APPROVE`:** `disbursement_txn_id` **required**; `disbursement_status` **required**; `escalation_case_id` **required** (`SPP-CASE-...`); `review_notes` **required** (non-whitespace); `rejection_reason` **must be `None`**.
-* **`AUTO_REJECT`:** `rejection_reason` **required**; `disbursement_txn_id`, `disbursement_status`, `escalation_case_id`, `review_notes` **must be `None`**.
-* **`MANUAL_REJECT`:** `rejection_reason` **required**; `escalation_case_id` **required**; `review_notes` **required** (non-whitespace); `disbursement_txn_id`, `disbursement_status` **must be `None`**.
-* **`ROUTE_FOR_MANUAL_REVIEW` / `HUMAN_REVIEW` / `REQUEST_MORE_INFO`:** `escalation_case_id` **required**; `disbursement_txn_id`, `disbursement_status`, `rejection_reason` **must be `None`**.
+| Governance Workflow / Execution Flow | Canonical Data Schema Contract | Implementation Repository Module |
+| :--- | :--- | :--- |
+| **Flow 1: Straight-Through Processing** | `GovernanceOutcomePayload` | [governance_outcome_payload.py](../src/data_models/governance/governance_outcome_payload.py) |
+| **Flow 2: Incident Ticket Staging** | `CaseworkerCaseReviewPayload` | [case_review_payload.py](../src/data_models/caseworker/case_review_payload.py) |
+| **Flow 2: Officer Adjudication** | `CaseworkerReviewOutcomePayload` | [review_outcome_payload.py](../src/data_models/caseworker/review_outcome_payload.py) |
+| **Flow 3: Treasury Payment Clearing** | `DisbursementCallbackPayload` | [disbursement_callback_payload.py](../src/data_models/disbursement/disbursement_callback_payload.py) |
 
 ---
 
-### 4.2 `CaseworkerCaseReviewPayload` (`src/data_models/caseworker/case_review_payload.py`)
+### 4.2 Financial Idempotency Rationale: `disbursement_txn_id` vs. `bank_reference_id`
 
-Emitted during incident ticket staging to transition an unresolved case into the Caseworker Review Dashboard.
+During Flow 3 (Asynchronous Treasury Payment Clearing), financial reconciliation across sovereign bank rails requires separating internal instruction keys from external banking proofs:
 
-```python
-class CaseworkerCaseReviewPayload(StrictBaseModel):
-    escalation_case_id: EscalationCaseId
-    session_id: SessionId
-    payload_id: ExtractionPayloadId
-    tokenized_citizen_id: HmacCitizenToken
-    application_intent: ApplicationIntent
-    extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
-        default_factory=dict,
-        description="Extracted domain parameters. May be empty ({}) if escalation was triggered by AI extraction failure.",
-    )
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
-    staged_at: UtcTimestamp
-```
-
-#### Validation Rules:
-* `escalation_case_id` **must** match pattern `^\w+-CASE-\d{4}-\d{6,}$`.
-* `tokenized_citizen_id` **must** be an exact 64-character SHA-256 HMAC token (Zero-PII).
-* `unprocessed_input_content` and `escalation_reason` **must not be empty or whitespace**.
-* `extracted_entities` **is intentionally allowed to be empty `{}`** to support cases where AI extraction failed completely.
-
----
-
-### 4.3 `CaseworkerReviewOutcomePayload` (`src/data_models/caseworker/review_outcome_payload.py`)
-
-Submitted by human officers adjudicating an escalated ticket.
-
-```python
-class CaseworkerReviewOutcomePayload(StrictBaseModel):
-    escalation_case_id: EscalationCaseId
-    reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID")
-    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
-    review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
-    approved_amount: float | None = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
-    rejection_reason: str | None = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
-    decided_at: UtcTimestamp
-```
-
-#### Validation Rules:
-* `governance_decision` **must** strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`.
-* `review_notes` **is strictly mandatory** (min length 5, non-whitespace).
-* **If `MANUAL_APPROVE`:** `approved_amount > 0.0` **required**; `rejection_reason` **must be `None`**.
-* **If `MANUAL_REJECT`:** `rejection_reason` (non-whitespace) **required**; `approved_amount` **must be `None`**.
-* **If `REQUEST_MORE_INFO`:** `approved_amount` and `rejection_reason` **must be `None`**.
-
----
-
-### 4.4 `DisbursementCallbackPayload` (`src/data_models/disbursement/disbursement_callback_payload.py`)
-
-Asynchronous payment clearing callback received from PFMS / NPCI APBS sovereign payment rails.
-
-#### Why two distinct transaction identifiers (`disbursement_txn_id` vs. `bank_reference_id`)?
 * **`disbursement_txn_id` (Internal Instruction Order Key):** Generated internally by AgriStack when a claim is **approved** (at Layer 4 auto-approval or caseworker manual approval) *before* dispatch to the bank. Acts as AgriStack's internal idempotency key so payment instructions can be retried across network interruptions without creating duplicate payouts. This is **not** the bank transaction ID.
 * **`bank_reference_id` (External Bank Transaction ID / UTR):** Generated autonomously by the bank / sovereign payment clearing rail (NPCI APBS or PFMS Treasury Gateway) upon financial wire clearing. Serves as the immutable bank-certified Unique Transaction Reference (UTR) or bank transaction ID for banking reconciliation and citizen payout receipts.
-
-```python
-class DisbursementCallbackPayload(StrictBaseModel):
-    disbursement_txn_id: DisbursementTxnId = Field(..., description="Internal idempotency instruction key")
-    bank_reference_id: str | None = Field(None, max_length=64, description="External banking UTR / clearing reference")
-    disbursement_status: DisbursementStatus = Field(..., description="Updated clearing state: SUCCESS, FAILED, RETURNED")
-    cleared_at: UtcTimestamp = Field(..., description="UTC timestamp of bank rail processing")
-    failure_reason_code: str | None = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
-```
-
-#### Validation Rules:
-* `disbursement_status` **must** be a terminal clearing state (`SUCCESS`, `FAILED`, `RETURNED`).
-* If status is `SUCCESS`: `bank_reference_id` (UTR) **is strictly required**; `failure_reason_code` **must be `None`**.
-* If status is `FAILED` or `RETURNED`: `failure_reason_code` **is strictly required** (non-whitespace).
 
 ---
 
