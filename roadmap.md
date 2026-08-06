@@ -48,7 +48,8 @@
       │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
       ├── orchestrator/                    # Layer 4 DPI Workflow Execution Brain
       │   ├── state_machine.py             # Deterministic workflow execution loop
-      │   └── governance_router.py         # Decision matrix (Payout vs Review vs Reject)
+      │   ├── governance_router.py         # Decision matrix (Payout vs Review vs Reject)
+      │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
       ├── services/                        # External Dependency Abstractions
       │   ├── ai/                          # Foundational & Sector AI Blocks
       │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks

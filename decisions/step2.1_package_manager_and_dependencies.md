@@ -83,4 +83,4 @@ Virtual environment verification performed against Python 3.11/3.13 `.venv`:
 
 ## 6. Next Steps
 
-With Step 2.1 complete, execution transitions to **Step 2.2: Scaffold 4-Layer Architecture Structure**, implementing the Python package modules (`src/models/`, `src/errors/`, `src/connectors/`, `src/intake/`, `src/orchestrator/`, `src/services/`) and test suites in `tests/`.
+With Step 2.1 complete, execution transitions to **Step 2.2: Scaffold 4-Layer Architecture Structure**, implementing the Python package modules (`src/data_models/`, `src/errors/`, `src/connectors/`, `src/public_agent/`, `src/orchestrator/`, `src/services/`) and test suites in `tests/`.

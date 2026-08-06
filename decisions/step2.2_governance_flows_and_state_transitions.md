@@ -112,12 +112,12 @@ Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant a
 
 1. **Confidence & Eligibility Evaluation:** The evaluation engine validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
 2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
-   * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
+   * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
    * Application status transitions to **`APPROVED`**.
    * System assigns an internal idempotency tracking key `disbursement_txn_id = "TXN-YYYY-XXXXXX"` and initializes `disbursement_status = PENDING`.
    * The governance router issues `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` to trigger wire dispatch over the NPCI Aadhaar Payment Bridge.
 3. **Outcome B — Automated Rejection (`REJECTED`):** If `eligibility_status == INELIGIBLE` OR a duplicate double-dipping claim is detected:
-   * Layer 4 emits `GovernanceOutcomePayload` with `governance_decision = AUTO_REJECT` and populates a descriptive `rejection_reason`.
+   * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_REJECT` and populates a descriptive `rejection_reason`.
    * Application status transitions directly to **`REJECTED`**.
    * `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` remain `None`. The financial clearing flow is bypassed entirely.
 

@@ -132,7 +132,7 @@ $$\text{evaluation\_passed} = (\text{ai\_confidence\_score} \ge 0.85) \land (\te
 
 ### 6.2 Governance Decisions & Payload Validation Contracts
 
-#### A. `GovernanceOutcomePayload` (`src/models/governance/governance_outcome_payload.py`)
+#### A. `GovernanceOutcomePayload` (`src/data_models/governance/governance_outcome_payload.py`)
 Emitted when Layer 4 or Caseworker Adjudication finalizes a governance decision.
 
 ```python
@@ -141,7 +141,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
     payload_id: ExtractionPayloadId
     ai_confidence_score: AiConfidenceScore
     eligibility_status: EligibilityStatus
-    governance_decision: GovernanceDecision
+    governance_action: GovernanceAction
     disbursement_txn_id: DisbursementTxnId | None = Field(
         None,
         description="Idempotency tracking key generated at approval time for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT",
@@ -180,7 +180,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
 ---
 
-#### B. `CaseworkerCaseReviewPayload` (`src/models/caseworker/case_review_payload.py`)
+#### B. `CaseworkerCaseReviewPayload` (`src/data_models/caseworker/case_review_payload.py`)
 Emitted by Step 11 (`caseworker_incident_staging`) to push case context to the District Officer Dashboard.
 
 ```python
@@ -207,22 +207,22 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
 ---
 
-#### C. `CaseworkerReviewOutcomePayload` (`src/models/caseworker/review_outcome_payload.py`)
+#### C. `CaseworkerReviewOutcomePayload` (`src/data_models/caseworker/review_outcome_payload.py`)
 Submitted by a human officer adjudicating an escalated incident ticket.
 
 ```python
 class CaseworkerReviewOutcomePayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID")
-    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
+    governance_action: GovernanceAction = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
     review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
     approved_amount: float | None = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
     rejection_reason: str | None = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
-    decided_at: UtcTimestamp
+    reviewed_at: UtcTimestamp
 ```
 
 ##### Validation Rules:
-* `governance_decision` **must** strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`.
+* `governance_action` **must** strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`.
 * `review_notes` **is strictly mandatory** (min length 5, non-whitespace).
 * **If `MANUAL_APPROVE`:** `approved_amount > 0.0` **required**; `rejection_reason` **must be `None`**.
 * **If `MANUAL_REJECT`:** `rejection_reason` (non-whitespace) **required**; `approved_amount` **must be `None`**.

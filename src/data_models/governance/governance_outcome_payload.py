@@ -24,7 +24,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
     To maintain a uniform pipeline interface without polymorphic schema fragmentation, this model
     implements an exhaustive state matrix where attributes specific to alternate states (such as
     disbursement tracking keys, escalation ticket IDs, and rejection reasons) are strictly forbidden
-    (`None`) when inapplicable to the evaluated `governance_decision`.
+    (`None`) when inapplicable to the evaluated `governance_action`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.1)

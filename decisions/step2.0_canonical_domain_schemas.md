@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/models/common/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
+This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/data_models/common/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
 
 ---
 
@@ -64,31 +64,31 @@ class StrictBaseModel(BaseModel):
 
 ---
 
-### 3.2 Standardized Enums (`src/models/enums.py`)
+### 3.2 Standardized Enums (`src/data_models/common/enums.py`)
 
 Standardized enums establish a single source of truth across all architectural layers, eliminating "magic strings", securing SLM entity extraction against uncalibrated outputs, and providing 1:1 mapping with database `ENUM` types:
 
 ```python
-from enum import Enum
+from enum import StrEnum
 
-class ChannelType(str, Enum):
+class ChannelType(StrEnum):
     WHATSAPP = "whatsapp"
     IVR_VOICE = "ivr_voice"
     USSD = "ussd"
     SMS = "sms"
 
-class PayloadType(str, Enum):
+class PayloadType(StrEnum):
     AUDIO = "audio"
     TEXT = "text"
     IMAGE = "image"
     DOCUMENT = "document"
 
-class StructureLevel(str, Enum):
+class StructureLevel(StrEnum):
     FREE_TEXT = "free_text"
     MENU_SELECTION = "menu_selection"
     DTMF_SELECTION = "dtmf_selection"
 
-class ApplicationIntent(str, Enum):
+class ApplicationIntent(StrEnum):
     APPLY_SUBSIDY = "apply_subsidy"
     CHECK_STATUS = "check_status"
     SUBMIT_APPEAL = "submit_appeal"
@@ -97,13 +97,13 @@ class ApplicationIntent(str, Enum):
     SCHEME_INQUIRY = "scheme_inquiry"
     UNKNOWN = "unknown"
 
-class EligibilityStatus(str, Enum):
+class EligibilityStatus(StrEnum):
     PENDING_VERIFICATION = "PENDING_VERIFICATION"
     ELIGIBLE = "ELIGIBLE"
     INELIGIBLE = "INELIGIBLE"
     REQUIRES_REVIEW = "REQUIRES_REVIEW"
 
-class GovernanceDecision(str, Enum):
+class GovernanceAction(StrEnum):
     AUTOMATED_PAYOUT = "AUTOMATED_PAYOUT"
     AUTO_APPROVE = "AUTO_APPROVE"
     AUTO_REJECT = "AUTO_REJECT"
@@ -162,12 +162,12 @@ To maintain consistency and avoid duplicate validation logic across services, th
 | **Auto Whitespace Trimming** | *All String Fields* | **All Payloads** | Enforced via `StrictBaseModel(str_strip_whitespace=True)`. Auto-trims leading/trailing spaces. |
 | **Strict Enum Coercion** | *All Enum Fields* | **All Payloads** | Enforced via `StrictBaseModel(use_enum_values=True)`. Validates string against declared `Enum`. |
 | **Payload Immutability** | *All Models* | **All Payloads** | Enforced via `StrictBaseModel(frozen=True)`. Attributes cannot be modified post-instantiation. |
-| **Session ID Bounds** | `session_id` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload**, **StandardizedIntakePayload**, **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
-| **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IVRIngressPayload**, **USSDIngressPayload** | Must match international E.164 format regex `^\+[1-9]\d{1,14}$`, e.g., `+919876543210`. |
-| **UTC Timestamp Freshness** | `received_at`, `intake_timestamp`, `decided_at_timestamp`, `staged_at_timestamp`, `decision_timestamp`, `cleared_at_timestamp` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
-| **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IVRIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
-| **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceRoutingPayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`min=0.0, max=1.0`). |
-| **Incident Ticket Pattern** | `escalation_case_id` | **GovernanceRoutingPayload**, **CaseworkerIncidentStagingPayload**, **CaseworkerReviewPayload** | Must match ticket format regex `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`). |
+| **Session ID Bounds** | `session_id` | **WhatsAppIngressPayload**, **IvrIngressPayload**, **UssdIngressPayload**, **PublicAgentStandardizedIntakePayload**, **GovernanceOutcomePayload**, **CaseworkerCaseReviewPayload** | Must be a non‑blank string, `min_length=8, max_length=128`. **min=8:** entropy floor — 8 alphanumeric chars ≈ 48 bits, sufficient to prevent brute-force session guessing; all real carrier IDs are ≥8 chars. **max=128:** hard ceiling covering the widest known carrier format (Meta wmid: 64–100 chars, SIP Call-ID: 36–72 chars, USSD telco session: 8–20 chars) while rejecting oversized injected strings. |
+| **E.164 Phone Format** | `originating_phone_number` | **WhatsAppIngressPayload**, **IvrIngressPayload**, **UssdIngressPayload** | Must match international E.164 format regex `^\+[1-9]\d{1,14}$`, e.g., `+919876543210`. |
+| **UTC Timestamp Freshness** | `received_at`, `reviewed_at`, `staged_at`, `cleared_at`, `decided_at` | **All Event Payloads** | Must be valid ISO‑8601 UTC datetime; reject timestamps >5 s in the future (clock‑skew allowance). |
+| **Audio URL Validation** | `audio_recording_url` | **WhatsAppIngressPayload**, **IvrIngressPayload** | Must be a valid HTTP/HTTPS URL (`HttpUrl`) pointing to a signed audio file. |
+| **AI Score Bounds** | `ai_confidence_score` | **ExtractedEntityPayload**, **GovernanceOutcomePayload** | Float strictly constrained between `0.0` and `1.0` inclusive (`min=0.0, max=1.0`). |
+| **Incident Ticket Pattern** | `escalation_case_id` | **GovernanceOutcomePayload**, **CaseworkerCaseReviewPayload**, **CaseworkerReviewOutcomePayload** | Must match ticket format regex `^\w+-CASE-\d{4}-\d{6,}$` (e.g. `SPP-CASE-2026-981245`). |
 
 #### 4.0.1 Shared Audio Boundary & Stream Decoding Validations (WhatsApp Voice Notes & IVR Telephony)
 
@@ -184,7 +184,7 @@ To maintain consistency and avoid duplicate validation logic across services, th
 
 ---
 
-### 4.1 Carrier Ingress Payloads (`src/models/ingress.py`)
+### 4.1 Carrier Ingress Payloads (`src/data_models/raw_ingress/`)
 
 Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1 and Layer 2 and MUST be tokenized before passing into Layer 3. Here we define the **Layer 1 -> Layer 2** Schema:
 
@@ -282,7 +282,7 @@ class UssdIngressPayload(StrictBaseModel):
 
 ---
 
-### 4.2 Public Agent Payload (`src/models/public_agent/standardized_intake_payload.py`)
+### 4.2 Public Agent Payload (`src/data_models/public_agent/standardized_intake_payload.py`)
 
 This is the **immutable contract payload** submitted to `PublicAgentApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
 
@@ -337,7 +337,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
 
 ---
 
-### 4.3 Intent & Governance Schemas (`src/models/governance.py`)
+### 4.3 Intent & Governance Schemas (`src/data_models/governance/`)
 
 Here we define the **Layer 3 -> Layer 4** Schema:
 
@@ -384,7 +384,7 @@ class ExtractedEntityPayload(StrictBaseModel):
    - **Automatic Confidence Zeroing:** Even if the underlying SLM generated a high confidence classification (e.g., `0.95`), the Pydantic `@model_validator` strictly enforces `ai_confidence_score = 0.0` whenever `is_adversarial_attempt == True`.
    - **Entity Neutralization:** `domain_entities` is wiped to `{}` to prevent any hallucinated or injected parameters (e.g., `disbursement_amount: 50000`) from contaminating the state.
    - **Downstream Governance Decision (Layer 4):** Layer 4 receives `ai_confidence_score = 0.0`. Since `0.0` is strictly below the auto-approval threshold (`score >= 0.85`), the governance rules engine automatically routes the request to:
-     - `governance_decision: GovernanceDecision.ROUTE_FOR_MANUAL_REVIEW`
+     - `governance_action: GovernanceAction.ROUTE_FOR_MANUAL_REVIEW`
      - `assigned_caseworker_id: "sec_queue_flagged"`
      - Emits a high-priority security telemetry alert to `SessionTelemetryLog`.
 
@@ -425,66 +425,78 @@ class ExtractedEntityPayload(StrictBaseModel):
 #### Governance Outcome Payload
 ```python
 class GovernanceOutcomePayload(StrictBaseModel):
-    session_id: str = Field(..., min_length=8, max_length=128, description="Unified channel session ID")
-    payload_id: str = Field(..., description="Foreign key referencing extraction payload (session_extraction_details.payload_id)")
-    ai_confidence_score: float = Field(..., min=0.0, max=1.0, description="Governance confidence score evaluated against threshold gates")
-    eligibility_status: EligibilityStatus = Field(..., description="Computed citizen scheme eligibility status from DPI registry cross-matching (ELIGIBLE, INELIGIBLE, PENDING_VERIFICATION, REQUIRES_REVIEW)")
-    governance_decision: GovernanceDecision = Field(..., description="Automated or manual governance routing action")
-    disbursement_txn_id: Optional[str] = Field(None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT")
-    disbursement_status: Optional[DisbursementStatus] = Field(None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise")
-    escalation_case_id: Optional[str] = Field(None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW")
+    session_id: SessionId
+    payload_id: ExtractionPayloadId
+    ai_confidence_score: AiConfidenceScore
+    eligibility_status: EligibilityStatus = Field(
+        ..., description="Computed citizen scheme eligibility status from DPI registry cross-matching"
+    )
+    governance_action: GovernanceAction = Field(
+        ..., description="Automated or manual governance routing action"
+    )
+    disbursement_txn_id: Optional[DisbursementTxnId] = Field(
+        None, description="Populated for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT"
+    )
+    disbursement_status: Optional[DisbursementStatus] = Field(
+        None, description="Initialized to PENDING/INITIATED for approved payouts; None otherwise"
+    )
+    escalation_case_id: Optional[EscalationCaseId] = Field(
+        None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW"
+    )
     rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
-    review_notes: Optional[str] = Field(None, max_length=2000, description="Internal caseworker audit notes carried from manual adjudication")
-    decided_at: datetime = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
+    review_notes: Optional[str] = Field(
+        None, max_length=2000, description="Internal caseworker audit notes carried from manual adjudication"
+    )
+    decided_at: UtcTimestamp = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
 ```
 
 ##### Governance Routing Decision Specific Validations:
 1. **Payload UUID Foreign Key:** `payload_id` must be a valid UUID string referencing `session_extraction_details.payload_id`.
 2. **DPI Eligibility Status Source:** `eligibility_status` is computed during Layer 4 execution by cross-matching citizen HMAC identity tokens (`tokenized_citizen_id`), land cadastral records (`survey_number`, `district`), and seasonal crop survey data against sovereign DPI registries.
 3. **Conditional Field Population Rules:**
-   - If `governance_decision` is `AUTO_APPROVE` or `AUTOMATED_PAYOUT`:
+   - If `governance_action` is `AUTO_APPROVE` or `AUTOMATED_PAYOUT`:
      - `disbursement_txn_id` **must** be populated.
      - `disbursement_status` **must** be `PENDING` or `INITIATED`.
      - `rejection_reason` and `escalation_case_id` **must** be `None`.
-   - If `governance_decision` is `MANUAL_APPROVE`:
+   - If `governance_action` is `MANUAL_APPROVE`:
      - `disbursement_txn_id` **must** be populated.
      - `disbursement_status` **must** be `PENDING` or `INITIATED`.
      - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
      - `review_notes` **must** be populated (non-empty caseworker audit note).
      - `rejection_reason` **must** be `None`.
-   - If `governance_decision` is `AUTO_REJECT`:
+   - If `governance_action` is `AUTO_REJECT`:
      - `rejection_reason` **must** be populated.
      - `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` **must** be `None`.
-   - If `governance_decision` is `MANUAL_REJECT`:
+   - If `governance_action` is `MANUAL_REJECT`:
      - `rejection_reason` **must** be populated.
      - `escalation_case_id` **must** be populated (`SPP-CASE-YYYY-XXXXXX`).
      - `review_notes` **must** be populated (non-empty caseworker audit note).
      - `disbursement_txn_id` and `disbursement_status` **must** be `None`.
-   - If `governance_decision` is `ROUTE_FOR_MANUAL_REVIEW`, `HUMAN_REVIEW`, or `REQUEST_MORE_INFO`:
+   - If `governance_action` is `ROUTE_FOR_MANUAL_REVIEW`, `HUMAN_REVIEW`, or `REQUEST_MORE_INFO`:
      - `escalation_case_id` **must** be a valid incident case ticket string (`SPP-CASE-YYYY-XXXXXX`).
      - `disbursement_txn_id`, `disbursement_status`, and `rejection_reason` **must** be `None`.
 
 ---
 
-### 4.4 Caseworker Incident Staging & Review Schemas (`src/models/caseworker.py`)
+### 4.4 Caseworker Incident Staging & Review Schemas (`src/data_models/caseworker/`)
 
 #### 4.4.1 Case Review Payload
 Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
 
 ```python
-class CaseReviewPayload(StrictBaseModel):
+class CaseworkerCaseReviewPayload(StrictBaseModel):
     """
-    Payload emitted by Step 11 to stage an escalated case review inside the Caseworker Review Dashboard.
+    Payload emitted to stage an escalated case review inside the Caseworker Review Dashboard.
     """
-    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
-    session_id: str = Field(..., min_length=8, max_length=128, description="Parent communication session ID")
-    payload_id: str = Field(..., description="Foreign key referencing original extraction payload (session_extraction_details.payload_id)")
-    tokenized_citizen_id: str = Field(..., min_length=64, max_length=64, description="SHA-256 HMAC citizen identity token")
+    escalation_case_id: EscalationCaseId = Field(..., description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
+    session_id: SessionId = Field(..., description="Parent communication session ID")
+    payload_id: ExtractionPayloadId = Field(..., description="Foreign key referencing original extraction payload")
+    tokenized_citizen_id: HmacCitizenToken = Field(..., description="SHA-256 HMAC citizen identity token")
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
     unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation (e.g. LOW_CONFIDENCE, ADVERSARIAL_FLAG, REGISTRY_DISCREPANCY)")
-    staged_at: datetime = Field(..., description="UTC timestamp when staged into caseworker queue")
+    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
+    staged_at: UtcTimestamp = Field(..., description="UTC timestamp when staged into caseworker queue")
 ```
 
 ##### Caseworker Incident Staging Specific Validations:
@@ -497,26 +509,26 @@ class CaseReviewPayload(StrictBaseModel):
 Manual decision submitted by a human caseworker or agricultural officer reviewing an escalated incident ticket from the District Review Ledger Dashboard:
 
 ```python
-class CaseworkerReviewPayload(StrictBaseModel):
+class CaseworkerReviewOutcomePayload(StrictBaseModel):
     """
     Manual decision submitted by a human caseworker/officer reviewing an escalated case.
     """
-    escalation_case_id: str = Field(..., min_length=8, max_length=128, description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
+    escalation_case_id: EscalationCaseId = Field(..., description="Unique incident case ticket ID (e.g. SPP-CASE-2026-981245)")
     reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID of the caseworker submitting decision")
-    governance_decision: GovernanceDecision = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
+    governance_action: GovernanceAction = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
     review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note or information request details")
     approved_amount: Optional[float] = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
     rejection_reason: Optional[str] = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
-    decided_at: datetime = Field(..., description="UTC timestamp when officer submitted decision")
+    reviewed_at: UtcTimestamp = Field(..., description="UTC timestamp when officer submitted review outcome")
 ```
 
 ##### Caseworker Review Specific Validations:
-1. **Case Ticket Match:** `escalation_case_id` must match a staged case ticket generated during `step_11_caseworker_incident_staging` (`SPP-CASE-...`).
-2. **Decision Enum Restriction:** `governance_decision` must strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`. Automated routing decisions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
+1. **Case Ticket Match:** `escalation_case_id` must match a staged case ticket (`SPP-CASE-...`).
+2. **Action Enum Restriction:** `governance_action` must strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`. Automated actions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
 3. **Conditional Field Population Rules:**
-   - If `governance_decision == MANUAL_APPROVE`: `approved_amount` **must** be populated (> 0.0); `rejection_reason` **must** be `None`.
-   - If `governance_decision == MANUAL_REJECT`: `rejection_reason` **must** be a non-empty string explaining rejection grounds; `approved_amount` **must** be `None`.
-   - If `governance_decision == REQUEST_MORE_INFO`: `review_notes` **must** specify missing details; `approved_amount` and `rejection_reason` **must** be `None`.
+   - If `governance_action == MANUAL_APPROVE`: `approved_amount` **must** be populated (> 0.0); `rejection_reason` **must** be `None`.
+   - If `governance_action == MANUAL_REJECT`: `rejection_reason` **must** be a non-empty string explaining rejection grounds; `approved_amount` **must** be `None`.
+   - If `governance_action == REQUEST_MORE_INFO`: `review_notes` **must** specify missing details; `approved_amount` and `rejection_reason` **must** be `None`.
 
 ---
 
@@ -582,67 +594,87 @@ Step 2.0 establishes the following physical file structure and model export hier
 ```text
 agristack-dbt-core/
 ├── src/
-│   ├── models/
+│   ├── data_models/
 │   │   ├── __init__.py             <-- Centralized model exports for package-level imports
-│   │   ├── base.py                 <-- StrictBaseModel base configuration class
-│   │   ├── enums.py                <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceDecision, DisbursementStatus
-│   │   ├── validators.py           <-- Cross-cutting field type annotations & UtcTimestamp clock-skew freshness validator
+│   │   ├── common/                 <-- Foundational primitives, enums, and constrained types
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py             <-- StrictBaseModel base configuration class
+│   │   │   ├── enums.py            <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceAction, DisbursementStatus
+│   │   │   └── field_types.py      <-- Constrained Annotated type aliases & UtcTimestamp clock-skew freshness validator
 │   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
-│   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IVRIngressPayload, USSDIngressPayload
+│   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload
 │   │   │   ├── whatsapp_payload.py <-- WhatsAppIngressPayload
-│   │   │   ├── ivr_payload.py      <-- IVRIngressPayload
-│   │   │   └── ussd_payload.py     <-- USSDIngressPayload
-│   │   ├── public_agent_payload.py <-- StandardizedPublicAgentPayload
+│   │   │   ├── ivr_payload.py      <-- IvrIngressPayload
+│   │   │   └── ussd_payload.py     <-- UssdIngressPayload
+│   │   ├── public_agent/           <-- Subpackage for Layer 2 -> Layer 3 normalized intake contracts
+│   │   │   ├── __init__.py
+│   │   │   └── standardized_intake_payload.py <-- PublicAgentStandardizedIntakePayload
 │   │   ├── governance/             <-- Subpackage for Layer 3 -> Layer 4 governance schemas
-│   │   │   ├── __init__.py         <-- Exports ExtractedEntityPayload, GovernanceRoutingPayload
-│   │   │   ├── extracted_entity_payload.py <-- ExtractedEntityPayload
-│   │   │   └── routing_payload.py  <-- GovernanceRoutingPayload
+│   │   │   ├── __init__.py         <-- Exports ExtractedEntityPayload, GovernanceOutcomePayload
+│   │   │   ├── extracted_entity_payload.py    <-- ExtractedEntityPayload
+│   │   │   └── governance_outcome_payload.py  <-- GovernanceOutcomePayload
 │   │   ├── caseworker/             <-- Subpackage for Step 11 manual escalation schemas
-│   │   │   ├── __init__.py         <-- Exports CaseworkerEscalationTicketPayload, CaseworkerReviewOutcomePayload
-│   │   │   ├── escalation_ticket_payload.py <-- CaseworkerEscalationTicketPayload
-│   │   │   └── review_outcome_payload.py   <-- CaseworkerReviewOutcomePayload
-│   │   └── disbursement_payload.py <-- DisbursementCallbackPayload
+│   │   │   ├── __init__.py         <-- Exports CaseworkerCaseReviewPayload, CaseworkerReviewOutcomePayload
+│   │   │   ├── case_review_payload.py         <-- CaseworkerCaseReviewPayload
+│   │   │   └── review_outcome_payload.py      <-- CaseworkerReviewOutcomePayload
+│   │   └── disbursement/           <-- Subpackage for financial clearing callback schemas
+│   │       ├── __init__.py
+│   │       └── disbursement_callback_payload.py <-- DisbursementCallbackPayload
 │   └── errors/
 │       ├── __init__.py             <-- Error handler package exports
 │       └── handlers.py             <-- RFC 7807 validation_exception_handler implementation
 └── tests/
-    ├── models/
-    │   ├── test_raw_ingress_payload.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
-    │   ├── test_public_agent_payload.py    <-- 2-type tuple validation & zero-PII HMAC token format tests
-    │   ├── test_governance_payload.py      <-- Adversarial confidence zeroing, menu bypass, & governance decision tests
-    │   ├── test_caseworker_payload.py      <-- Escalation ticket staging & caseworker review decision tests
-    │   └── test_disbursement_payload.py    <-- Bank clearing callback & terminal failure reason tests
+    ├── data_models/
+    │   ├── common/
+    │   │   ├── test_base.py
+    │   │   ├── test_enums.py
+    │   │   └── test_field_types.py
+    │   ├── raw_ingress/
+    │   │   ├── test_raw_ingress_payload.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
+    │   │   ├── test_ivr_payload.py
+    │   │   ├── test_ussd_payload.py
+    │   │   └── test_whatsapp_payload.py
+    │   ├── public_agent/
+    │   │   └── test_standardized_intake_payload.py <-- 2-type tuple validation & zero-PII HMAC token format tests
+    │   ├── governance/
+    │   │   ├── test_governance_outcome_payload.py  <-- Adversarial confidence zeroing, menu bypass, & governance action tests
+    │   │   └── test_extracted_entity_payload.py
+    │   ├── caseworker/
+    │   │   ├── test_case_review_payload.py         <-- Escalation ticket staging tests
+    │   │   └── test_review_outcome_payload.py      <-- Caseworker review action tests
+    │   └── disbursement/
+    │       └── test_disbursement_callback_payload.py <-- Bank clearing callback & terminal failure reason tests
     └── errors/
-        └── test_handlers.py                <-- RFC 7807 error format compliance & stack trace sanitization tests
+        └── test_handlers.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
 ```
 
 ### Module Responsibilities & Model Exports
 
-1. **`src/models/base.py` (`StrictBaseModel`):**
+1. **`src/data_models/common/base.py` (`StrictBaseModel`):**
    Inherits from Pydantic `BaseModel`. Configures `extra="forbid"`, `str_strip_whitespace=True`, `use_enum_values=True`, and `frozen=True` (immutability). All payload classes inherit from `StrictBaseModel`.
 
-2. **`src/models/enums.py`:**
-   Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceDecision`, `DisbursementStatus`).
+2. **`src/data_models/common/enums.py`:**
+   Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceAction`, `DisbursementStatus`).
 
-3. **`src/models/validators.py`:**
+3. **`src/data_models/common/field_types.py`:**
    Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
 
-4. **`src/models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
-   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IvrIngressPayload`, and `UssdIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/models/raw_ingress/__init__.py`.
+4. **`src/data_models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
+   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IvrIngressPayload`, and `UssdIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/data_models/raw_ingress/__init__.py`.
 
-5. **`src/models/public_agent_payload.py`:**
-   Contains Layer 2 -> Layer 3 public agent payload: `StandardizedPublicAgentPayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
+5. **`src/data_models/public_agent/standardized_intake_payload.py`:**
+   Contains Layer 2 -> Layer 3 public agent payload: `PublicAgentStandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
 
-6. **`src/models/governance/` Subpackage (`extracted_entity_payload.py`, `routing_payload.py`):**
-   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceRoutingPayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes. Re-exported via `src/models/governance/__init__.py`.
+6. **`src/data_models/governance/` Subpackage (`extracted_entity_payload.py`, `governance_outcome_payload.py`):**
+   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceOutcomePayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes. Re-exported via `src/data_models/governance/__init__.py`.
 
-7. **`src/models/caseworker/` Subpackage (`escalation_ticket_payload.py`, `review_outcome_payload.py`):**
-   Contains Step 11 manual escalation schemas: `CaseworkerEscalationTicketPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerReviewOutcomePayload` (manual adjudication review outcome submitted by human officer). Re-exported via `src/models/caseworker/__init__.py`.
+7. **`src/data_models/caseworker/` Subpackage (`case_review_payload.py`, `review_outcome_payload.py`):**
+   Contains Step 11 manual escalation schemas: `CaseworkerCaseReviewPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerReviewOutcomePayload` (manual adjudication review outcome submitted by human officer). Re-exported via `src/data_models/caseworker/__init__.py`.
 
-8. **`src/models/disbursement_payload.py`:**
+8. **`src/data_models/disbursement/disbursement_callback_payload.py`:**
    Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
 
-8. **`src/errors/handlers.py`:**
+9. **`src/errors/handlers.py`:**
    Implements `validation_exception_handler` to convert Pydantic validation failures into RFC 7807 problem details payloads, sanitizing internal implementation details while returning machine-readable `invalid_params` error arrays.
 
 ---
