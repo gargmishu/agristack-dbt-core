@@ -333,4 +333,4 @@ WHERE session_status = 'ACTIVE';
 | **Strict Type Safety** | Pydantic `StrictBaseModel` & `str_strip_whitespace=True` | Ruff + Mypy strict type checking; pytest model validation. |
 | **Error Format Standard** | RFC 7807 Problem Details (`application/problem+json`) | Validated API error handlers hiding internal stack traces. |
 | **Deduplication Compaction** | dbt-core `stg_session_extraction_details` model | Executable `dbt run` compilation clearing multi-attempt mutations. |
-| **Automated Test Suite** | 41 unit tests in `tests/models/` | `pytest` 100% pass rate across all schema contracts. |
+| **Automated Test Suite** | Unit tests in `tests/data_models/` | `pytest` 100% pass rate across all schema contracts. |

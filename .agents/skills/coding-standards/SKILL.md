@@ -244,7 +244,7 @@ class StrictBaseModel(BaseModel):
     )
 ```
 
-### 4.2 Reusable Constrained Types (`src/models/common/field_types.py`)
+### 4.2 Reusable Constrained Types (`src/data_models/common/field_types.py`)
 * Use `Annotated` type aliases with Pydantic `Field` constraints and `AfterValidator` functions for reusable domain types (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `UtcTimestamp`, `AudioDurationSeconds`, `AiConfidenceScore`).
 
 ### 4.3 Strict Dependency Injection & Non-Nullable Constructors
