@@ -76,8 +76,11 @@ src/
 ├── gateway/                         # Layer 2 Gateway & Perimeter Security
 │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
 │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
+│   ├── pii_purge_guard.py           # In-memory Zero-PII assertion sentinel
+│   ├── adversarial_firewall.py      # Adversarial prompt injection & override defense
 │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
-│   └── rate_limiter.py              # Token bucket rate limiter & quota guard
+│   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
+│   └── ingestion_firewall.py        # Unified Layer 2 perimeter firewall facade
 ├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
 │   ├── public_agent_api.py          # Public Agent Gateway API Surface
 │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
@@ -127,8 +130,11 @@ tests/
 ├── gateway/
 │   ├── test_carrier_auth_validator.py
 │   ├── test_zero_trust_identity_tokenizer.py
+│   ├── test_pii_purge_guard.py
+│   ├── test_adversarial_firewall.py
 │   ├── test_payload_canonicalizer.py
-│   └── test_rate_limiter.py
+│   ├── test_rate_limiter.py
+│   └── test_ingestion_firewall.py
 ├── public_agent/
 │   ├── test_public_agent_api.py
 │   └── test_intake_payload_evaluator.py
