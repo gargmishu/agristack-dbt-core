@@ -55,11 +55,13 @@ The DPI Services module (`src/services/dpi/`) simulates cross-matching and clear
   * Evaluates citizen identity tokens against simulated cadastral land records (`LAND-REC-1002`, `LAND-REC-2004`, `LAND-REC-3006`).
   * Verifies parcel ownership matching (district, taluka, village, survey number) and seasonal crop entitlements.
 
-### 3.3 Social Welfare Registry & Case Staging (`SocialRegistryService`)
-* **Module:** `src/services/dpi/social_registry_service.py`
-* **Capabilities:**
-  * Simulates OpenSPP district officer incident case ticket staging (`SPP-CASE-YYYY-XXXXXX`).
+### 3.3 OpenSPP Social Welfare Registry (`SocialRegistryService`) & Internal Case Management (`CaseManagementService`)
+* **External DPI Connector Module:** `src/services/dpi/social_registry_service.py` (`SocialRegistryService`)
+  * Simulates external OpenSPP registry synchronization for incident review tickets (`SPP-CASE-YYYY-XXXXXX`) and social protection scheme eligibility queries.
   * Provides deterministic failure routing on simulated rejection prefixes (`MOCK_CASE_REJECT_PREFIX`) to verify error handling pathways in Layer 4 orchestrators.
+* **Internal Caseworker Domain Service:** `src/services/caseworker/case_management_service.py` (`CaseManagementService`)
+  * Coordinates internal caseworker queue staging, officer adjudication review processing (`CaseworkerReviewOutcomePayload`), and citizen clarification resolution loops (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`).
+  * Injects `SocialRegistryService` for external OpenSPP synchronization.
 
 ### 3.4 Sovereign Payment Rails (`PaymentRailService`)
 * **Module:** `src/services/dpi/payment_rail_service.py`
