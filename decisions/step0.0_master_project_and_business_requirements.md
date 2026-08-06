@@ -294,16 +294,16 @@ CREATE TABLE application_governance_ledger (
     tokenized_identity_hash VARCHAR(64) NOT NULL,
     application_status application_status_enum NOT NULL,
     claimant_eligibility_status eligibility_status_enum NOT NULL,
-    governance_decision governance_decision_enum,
+    governance_action governance_action_enum,
     decided_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
     
     CONSTRAINT chk_approval_requires_amount CHECK (
-        governance_decision NOT IN ('AUTO_APPROVE', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
+        governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
     ),
     CONSTRAINT chk_rejection_requires_reason CHECK (
-        governance_decision NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
+        governance_action NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
     )
 );
 
@@ -313,7 +313,7 @@ CREATE TABLE application_governance_ledger_history (
     claim_id UUID NOT NULL REFERENCES application_governance_ledger(claim_id) ON DELETE CASCADE,
     previous_application_status application_status_enum NULL,
     new_application_status application_status_enum NOT NULL,
-    governance_decision governance_decision_enum,
+    governance_action governance_action_enum,
     actor_id VARCHAR(100) NOT NULL,
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

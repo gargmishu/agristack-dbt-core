@@ -66,7 +66,7 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `claim_id` | `UUID` | Foreign Key referencing `application_governance_ledger` (`ON DELETE CASCADE`). |
 | `previous_application_status` | `application_status_enum` | The state of the claim *before* the update. **Constraint:** Must allow `NULL` (required for the initial `DRAFT` insert). |
 | `new_application_status` | `application_status_enum` | The state of the claim *after* the update. |
-| `governance_decision` | `governance_decision_enum` | The action that triggered this state change. |
+| `governance_action` | `governance_action_enum` | The action that triggered this state change. |
 | `actor_id` | `VARCHAR(100)` | The entity responsible for the change (`SYSTEM:v1.2` or the human agent's UUID). |
 | `changed_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp of the exact moment the transition occurred. |
 
@@ -103,8 +103,8 @@ To ensure strict data integrity and predictable routing, the following native Po
 
 #### Governance & Ledger Enums
 *   **`application_status_enum`**: `DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `INFO_REQUESTED`, `APPROVED`, `REJECTED`, `APPEALED`
-*   **`eligibility_status_enum`**: `PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`
-*   **`governance_decision_enum`**: `AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`
+*   **`eligibility_status_enum`**: `PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`, `REQUIRES_REVIEW`
+*   **`governance_action_enum`**: `AUTOMATED_PAYOUT`, `AUTO_APPROVE`, `AUTO_REJECT`, `HUMAN_REVIEW`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`
 *   **`disbursement_status_enum`**: `PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`
 
 #### Consent Enums
@@ -114,7 +114,7 @@ To ensure strict data integrity and predictable routing, the following native Po
 
 ### 2.3 Governance Metadata JSONB Schema
 
-While `governance_metadata` is a flexible `JSONB` column, we enforce strict payload expectations, both at the application layer and at the database layer using Postgres `CHECK` constraints based on the specific `governance_decision`. To guarantee a 100% strict audit trail, every terminal decision (approval or rejection) must log an actor and a rationale. For automated decisions, `reviewer_id` must be populated with the system identifier (e.g., `SYSTEM:v1.2.0`).
+While `governance_metadata` is a flexible `JSONB` column, we enforce strict payload expectations, both at the application layer and at the database layer using Postgres `CHECK` constraints based on the specific `governance_action`. To guarantee a 100% strict audit trail, every terminal decision (approval or rejection) must log an actor and a rationale. For automated decisions, `reviewer_id` must be populated with the system identifier (e.g., `SYSTEM:v1.2.0`).
 
 | Target Key | Data Type | Status/Decision Trigger | Requirement Level | Purpose & Architectural Context |
 | :--- | :--- | :--- | :--- | :--- |
@@ -237,7 +237,7 @@ In accordance with DBT best practices, we utilize views to handle JSON unpacking
     *   *Cons:* Lack of native type enforcement and a larger storage footprint.
 
 **Decision: The Hybrid Approach**
-We elected to store core routing state fields (`governance_decision`, `application_status`) as standard relational columns, while storing all variable edge-case data in a unified `governance_metadata JSONB` column. 
+We elected to store core routing state fields (`governance_action`, `application_status`) as standard relational columns, while storing all variable edge-case data in a unified `governance_metadata JSONB` column. 
 
 **Rationale:**
 *   **Operational Agility:** The policy team can dynamically introduce new metadata keys without database migrations or downtime.
@@ -250,7 +250,7 @@ We elected to store core routing state fields (`governance_decision`, `applicati
 *   **Avoiding the "NULL Matrix":** Splitting columns by state guarantees empty, dead columns for every row. Furthermore, other states like `UNDER_REVIEW` (which tracks `reviewer_id`) or `DRAFT` (which tracks `missing_info`) would require even more column splits, leading to severe schema bloat.
 *   **Downstream Analytics (DBT) Ergonomics:** A single column allows data engineers to query `governance_metadata` directly. Splitting columns would force analysts to write complex `COALESCE(approval_metadata, rejection_metadata, ...)` logic in every staging model to find the relevant payload.
 *   **Context Accumulation Across State Transitions:** Claims are not static. An application might enter `UNDER_REVIEW` (logging a `reviewer_id`) and later be `REJECTED` (logging a `rejection_reason`). A unified JSONB acts as an accumulating document that preserves the entire lifecycle context without overwriting or jumping between columns.
-*   **Constraint Enforcement:** We ensure database-level safety (e.g., ensuring an approved claim *must* have an amount) via Postgres `CHECK` constraints (e.g., `CHECK (governance_decision != 'AUTO_APPROVE' OR (governance_metadata ? 'approval_amount'))`), granting strict safety without the structural downsides of split columns.
+*   **Constraint Enforcement:** We ensure database-level safety (e.g., ensuring an approved claim *must* have an amount) via Postgres `CHECK` constraints (e.g., `CHECK (governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount'))`), granting strict safety without the structural downsides of split columns.
 
 ### Decision 5.3: Boundary Definitions for JSONB vs. Top-Level Columns
 **Context:** With the adoption of the Hybrid JSONB approach (Decision 5.1), we needed a strict framework to determine which new fields belong inside the flexible `governance_metadata` JSONB blob, and which must be promoted to standard, top-level relational columns (like `disbursement_status` or `application_status`).
@@ -265,7 +265,7 @@ We elected to store core routing state fields (`governance_decision`, `applicati
 **Decision:** While application-layer validation (Pydantic/Zod) is the primary defense, we added lightweight SQL `CHECK` constraints (e.g., `jsonb_typeof(governance_metadata->'approval_amount') = 'number'`) directly to the `schema.sql` definition as an un-bypassable database safety net.
 
 ### Decision 5.5: Storing Core Routing Logic as Native Enums vs. VARCHARs
-**Context:** The system needs strict guarantees around valid states for routing (`governance_decision`), application lifecycle (`application_status`), telemetry phases (`session_status`), and financial clearing (`disbursement_status`).
+**Context:** The system needs strict guarantees around valid states for routing (`governance_action`), application lifecycle (`application_status`), telemetry phases (`session_status`), and financial clearing (`disbursement_status`).
 **Decision:** We chose to implement all state-machine fields as native Postgres `ENUM` types rather than `VARCHAR` columns with `CHECK` constraints. 
 **Rationale:** While `VARCHAR` is more portable across different SQL dialects, native Postgres `ENUM`s provide superior type safety, occupy far less disk space (4 bytes vs text length), and ensure clean application-layer integration by mapping perfectly to strict Pydantic or SQLAlchemy enum classes.
 
