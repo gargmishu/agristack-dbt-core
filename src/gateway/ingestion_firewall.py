@@ -12,7 +12,6 @@ import logging
 
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
-    IvrIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )

@@ -15,10 +15,12 @@ from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
 
+SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
+
 # Patterns matching cleartext 10/12-digit numbers and international E.164 phone numbers
 _E164_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\+[1-9]\d{1,14}$")
 _AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\b\d{4}\s?\d{4}\s?\d{4}\b")
-_INDIAN_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\b[6-9]\d{9}\b")
+_INDIAN_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"(?:\+91|91)?[6-9]\d{9}")
 
 
 class PiiPurgeGuard:
@@ -50,10 +52,10 @@ class PiiPurgeGuard:
             ValueError: If cleartext MSISDN or Aadhaar is detected in non-token fields.
         """
         # Token must be strictly a 64-char SHA-256 HMAC hash
-        if len(payload.tokenized_citizen_id) != 64:
+        if len(payload.tokenized_citizen_id) != SHA256_HEX_TOKEN_LENGTH:
             raise ValueError(
-                f"tokenized_citizen_id must be a 64-character SHA-256 HMAC token, "
-                f"got length {len(payload.tokenized_citizen_id)}"
+                f"tokenized_citizen_id must be a {SHA256_HEX_TOKEN_LENGTH}-character "
+                f"SHA-256 HMAC token, got length {len(payload.tokenized_citizen_id)}"
             )
 
         # Ensure citizen token is not a cleartext phone number
