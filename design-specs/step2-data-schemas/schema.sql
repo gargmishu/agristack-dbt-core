@@ -19,7 +19,7 @@ CREATE TYPE application_status_enum AS ENUM (
 );
 
 CREATE TYPE eligibility_status_enum AS ENUM (
-    'PENDING_VERIFICATION', 'ELIGIBLE', 'INELIGIBLE'
+    'PENDING_VERIFICATION', 'ELIGIBLE', 'INELIGIBLE', 'REQUIRES_REVIEW'
 );
 
 CREATE TYPE governance_action_enum AS ENUM (
@@ -101,7 +101,7 @@ CREATE TABLE application_governance_ledger (
     
     -- Business Logic: Terminal Decision Constraints
     CONSTRAINT chk_approval_requires_amount CHECK (
-        governance_action NOT IN ('AUTO_APPROVE', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
+        governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
     ),
     CONSTRAINT chk_rejection_requires_reason CHECK (
         governance_action NOT IN ('AUTO_REJECT', 'MANUAL_REJECT') OR (governance_metadata ? 'rejection_reason')
