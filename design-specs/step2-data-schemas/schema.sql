@@ -284,7 +284,7 @@ SELECT
     t.completed_at AS session_completed_at,
     e.payload_id,
     e.extracted_district,
-    e.crop_type,
+    e.extracted_crop_type,
     e.reported_anomaly,
     e.extraction_confidence,
     g.claim_id,
