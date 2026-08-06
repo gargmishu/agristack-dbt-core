@@ -1,16 +1,17 @@
-"""Internal Case Management Service.
+"""Layer 4 Governance Engine: Caseworker Case Management Service.
 
 Coordinates incident review ticket lifecycle, district caseworker review queues,
 and officer adjudication workflows for escalated claims.
 
-Why separate CaseManagementService from SocialRegistryService?
-CaseManagementService manages internal domain case staging, caseworker review queues,
-officer audit logging, and citizen clarification resolution loops within AgriStack.
-SocialRegistryService acts exclusively as the external Digital Public Infrastructure (DPI)
-boundary client for OpenSPP / Social Welfare registries.
+Why locate CaseManagementService in Layer 4 Orchestrator?
+CaseManagementService governs internal domain escalation staging (Flow 2), caseworker
+review queues, officer audit logging, and citizen clarification resolution loops within
+AgriStack's Layer 4 Governance Engine. It injects SocialRegistryService (from src/services/dpi/)
+strictly as an external DPI boundary client for OpenSPP synchronization.
 
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
+See: roadmap.md (Phase 3 Step 3.3 Layer 4 Brain)
 """
 
 import logging
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 class CaseManagementService:
-    """Internal domain service orchestrating caseworker incident review queues and adjudication.
+    """Layer 4 orchestrator service governing caseworker incident review queues and adjudication.
 
     Maintains lifecycle state transitions for manual review tickets and interfaces
     with the external OpenSPP SocialRegistryService for registry synchronization.

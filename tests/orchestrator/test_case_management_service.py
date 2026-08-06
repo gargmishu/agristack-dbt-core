@@ -1,4 +1,4 @@
-"""Unit tests for CaseManagementService."""
+"""Unit tests for CaseManagementService in Layer 4 Orchestrator."""
 
 from datetime import UTC, datetime
 
@@ -9,7 +9,7 @@ from src.data_models.caseworker import (
     CaseworkerReviewOutcomePayload,
 )
 from src.data_models.common import ApplicationIntent, GovernanceAction
-from src.services.caseworker import CaseManagementService
+from src.orchestrator import CaseManagementService
 from src.services.dpi import SocialRegistryService
 
 

@@ -81,17 +81,19 @@ src/
 ├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
 │   ├── public_agent_api.py          # Public Agent Gateway API Surface
 │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
-├── services/                        # Authoritative DPI Registries & AI Services
+├── orchestrator/                    # Layer 4 Orchestrator Brain & Governance Engine
+│   ├── governance_router.py         # Decision matrix & threshold routing
+│   ├── state_machine.py             # Deterministic state transitions & gates
+│   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
+├── services/                        # External DPI Registries & AI Adapter Services ONLY
 │   ├── ai/
 │   │   ├── bhashini_service.py
 │   │   └── slm_extractor.py
-│   ├── dpi/
-│   │   ├── agri_registry_service.py
-│   │   ├── identity_verification_service.py
-│   │   ├── payment_rail_service.py
-│   │   └── social_registry_service.py # External OpenSPP registry client
-│   └── caseworker/
-│       └── case_management_service.py # Internal caseworker queue & review service
+│   └── dpi/
+│       ├── agri_registry_service.py
+│       ├── identity_verification_service.py
+│       ├── payment_rail_service.py
+│       └── social_registry_service.py # External OpenSPP registry boundary client
 ├── data_models/                     # Domain data contracts & Pydantic validation schemas
 │   ├── common/                      # Shared foundational primitives & type annotations
 │   │   ├── base.py                  # StrictBaseModel definition
@@ -130,17 +132,19 @@ tests/
 ├── public_agent/
 │   ├── test_public_agent_api.py
 │   └── test_intake_payload_evaluator.py
+├── orchestrator/
+│   ├── test_governance_router.py
+│   ├── test_state_machine.py
+│   └── test_case_management_service.py
 ├── services/
 │   ├── ai/
 │   │   ├── test_bhashini_service.py
 │   │   └── test_slm_extractor.py
-│   ├── dpi/
-│   │   ├── test_agri_registry_service.py
-│   │   ├── test_identity_verification_service.py
-│   │   ├── test_payment_rail_service.py
-│   │   └── test_social_registry_service.py
-│   └── caseworker/
-│       └── test_case_management_service.py
+│   └── dpi/
+│       ├── test_agri_registry_service.py
+│       ├── test_identity_verification_service.py
+│       ├── test_payment_rail_service.py
+│       └── test_social_registry_service.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py

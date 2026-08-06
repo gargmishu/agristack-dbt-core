@@ -59,7 +59,7 @@ The DPI Services module (`src/services/dpi/`) simulates cross-matching and clear
 * **External DPI Connector Module:** `src/services/dpi/social_registry_service.py` (`SocialRegistryService`)
   * Simulates external OpenSPP registry synchronization for incident review tickets (`SPP-CASE-YYYY-XXXXXX`) and social protection scheme eligibility queries.
   * Provides deterministic failure routing on simulated rejection prefixes (`MOCK_CASE_REJECT_PREFIX`) to verify error handling pathways in Layer 4 orchestrators.
-* **Internal Caseworker Domain Service:** `src/services/caseworker/case_management_service.py` (`CaseManagementService`)
+* **Internal Layer 4 Caseworker Service:** `src/orchestrator/case_management_service.py` (`CaseManagementService`)
   * Coordinates internal caseworker queue staging, officer adjudication review processing (`CaseworkerReviewOutcomePayload`), and citizen clarification resolution loops (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`).
   * Injects `SocialRegistryService` for external OpenSPP synchronization.
 

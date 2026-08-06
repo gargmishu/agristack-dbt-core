@@ -1,6 +1,5 @@
-"""Service package for Foundational AI Blocks, DPI Registries, and Caseworker services."""
+"""External Service Abstractions package for Foundational AI Blocks and DPI Registries."""
 
-from src.services.caseworker import CaseManagementService
 from src.services.dpi import (
     AgriRegistryService,
     IdentityVerificationService,
@@ -10,7 +9,6 @@ from src.services.dpi import (
 
 __all__ = [
     "AgriRegistryService",
-    "CaseManagementService",
     "IdentityVerificationService",
     "PaymentRailService",
     "SocialRegistryService",
