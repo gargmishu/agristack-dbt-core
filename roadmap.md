@@ -62,6 +62,8 @@
       │       ├── identity_verification_service.py # Aadhaar/MOSIP zero-PII token verification
       │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
       │       └── payment_rail_service.py      # NPCI APBS / PFMS Treasury disbursement
+      ├── errors/                          # RFC 7807 problem details exception handlers
+      │   └── handlers.py                  # FastAPI ValidationError handler
       └── data_models/                     # Domain data contracts & Pydantic schemas
           ├── common/                      # Foundational base schemas & enums
           ├── raw_ingress/                 # Layer 1 -> Layer 2 ingress payloads
