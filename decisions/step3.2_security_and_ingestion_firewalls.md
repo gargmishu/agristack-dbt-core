@@ -8,16 +8,16 @@ This document defines the security architecture, threat mitigation protocols, an
 [ Carrier Ingress (WhatsApp / IVR / USSD) ]
                    │
                    ▼ (Raw Carrier Payload with PII)
-  ┌─────────────────────────────────────────────────────────────┐
-  │                 LAYER 2: INGESTION FIREWALL                 │
-  │                                                             │
-  │  1. Carrier Signature & Bearer Auth (CarrierAuthValidator)  │
-  │  2. Ingress Token-Bucket Rate Limiter (RateLimiter)         │
-  │  3. RAM-Only Zero-Trust Tokenizer (ZeroTrustIdentityTokenizer)│
-  │  4. In-Memory PII Purge Sentinel (PiiPurgeGuard)            │
-  │  5. Adversarial Prompt Injection Defense (AdversarialPromptFirewall)│
-  │  6. Ingress Canonicalization (PayloadCanonicalizer)          │
-  └─────────────────────────────────────────────────────────────┘
+  ┌───────────────────────────────────────────────────────────────────────┐
+  │                      LAYER 2: INGESTION FIREWALL                      │
+  │                                                                       │
+  │  1. Carrier Signature & Bearer Auth (CarrierAuthValidator)            │
+  │  2. Ingress Token-Bucket Rate Limiter (RateLimiter)                   │
+  │  3. RAM-Only Zero-Trust Tokenizer (ZeroTrustIdentityTokenizer)        │
+  │  4. In-Memory PII Purge Sentinel (PiiPurgeGuard)                      │
+  │  5. Adversarial Prompt Injection Defense (AdversarialPromptFirewall)  │
+  │  6. Ingress Canonicalization (PayloadCanonicalizer)                    │
+  └───────────────────────────────────────────────────────────────────────┘
                    │
                    ▼ (Normalized, Zero-PII Standardized Intake Payload)
 [ Layer 3: Public Agent Intake Gateway ]
