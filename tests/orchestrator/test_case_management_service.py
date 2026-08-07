@@ -40,3 +40,13 @@ async def test_case_management_resolve_citizen_clarification() -> None:
     # Empty inputs should fail
     assert await service.resolve_citizen_clarification("", "Note") is False
     assert await service.resolve_citizen_clarification("SPP-CASE-2026-100200", "  ") is False
+
+
+@pytest.mark.asyncio
+async def test_case_management_process_citizen_response_workflow() -> None:
+    service = CaseManagementService()
+    resolved = await service.process_citizen_response_workflow(
+        escalation_case_id="SPP-CASE-2026-100200",
+        citizen_clarification_text="Updated crop survey number is 402/A",
+    )
+    assert resolved is True

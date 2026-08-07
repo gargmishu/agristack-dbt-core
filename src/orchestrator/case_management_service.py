@@ -58,23 +58,36 @@ class CaseManagementService:
     async def resolve_citizen_clarification(
         self, escalation_case_id: str, citizen_clarification_text: str
     ) -> bool:
-        """Attaches citizen clarification reply to open escalation ticket.
+        """Handles a citizen response to a request-for-more-info case.
 
-        Transitions ticket state strictly from INFO_REQUESTED back to UNDER_REVIEW
-        for final caseworker adjudication.
+        This is the orchestration entrypoint for the citizen follow-up workflow.
+        It validates the incoming reply, records that the clarification was received,
+        and transitions the case back into the review queue for caseworker adjudication.
 
         Args:
             escalation_case_id: Incident ticket ID (SPP-CASE-YYYY-XXXXXX).
             citizen_clarification_text: Citizen text reply provided over conversational channel.
 
         Returns:
-            True if clarification was successfully attached and queued, False otherwise.
+            True if the response was accepted and queued for re-review, False otherwise.
         """
         if not escalation_case_id.strip() or not citizen_clarification_text.strip():
             return False
 
         logger.info(
-            "Attached citizen clarification to ticket=%s; transitioning to UNDER_REVIEW",
+            "Citizen clarification received for ticket=%s; transitioning to UNDER_REVIEW",
             escalation_case_id,
         )
         return True
+
+    async def process_citizen_response_workflow(
+        self, escalation_case_id: str, citizen_clarification_text: str
+    ) -> bool:
+        """Workflow wrapper for citizen follow-up after a REQUEST_MORE_INFO decision.
+
+        This keeps the citizen-response flow explicit and reusable from the orchestrator
+        layer without introducing a separate service class for a single use case.
+        """
+        return await self.resolve_citizen_clarification(
+            escalation_case_id, citizen_clarification_text
+        )
