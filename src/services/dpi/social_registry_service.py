@@ -32,16 +32,18 @@ class SocialRegistryService:
     """
 
     async def sync_incident_ticket(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Legacy compatibility hook for boundary integrations.
+        """Boundary adapter for case-management orchestration.
 
-        This service remains focused on eligibility verification and does not manage
-        case review lifecycle state.
+        Maps an incident review payload to an external eligibility check against the
+        OpenSPP social registry. This method is intentionally thin because the service
+        handles registry verification rather than case-review lifecycle state.
 
         Args:
             case_review: Validated CaseworkerCaseReviewPayload instance.
 
         Returns:
-            True if the citizen is eligible according to the external registry, False otherwise.
+            True when the supplied citizen token and scheme satisfy the registry's
+            eligibility rules, False otherwise.
         """
         logger.info(
             "Evaluating eligibility for incident ticket=%s via OpenSPP registry for session=%s",
@@ -56,14 +58,16 @@ class SocialRegistryService:
     async def stage_case_review(self, case_review: CaseworkerCaseReviewPayload) -> bool:
         """Compatibility alias for sync_incident_ticket.
 
-        Retained for integration compatibility while keeping the service focused on
-        eligibility checks.
+        Retained for callers that still use the older case-review staging name while
+        this service remains focused on eligibility checks rather than ticket lifecycle
+        management.
 
         Args:
             case_review: Validated CaseworkerCaseReviewPayload instance.
 
         Returns:
-            True if the citizen is eligible according to the external registry, False otherwise.
+            True when the supplied citizen token and scheme satisfy the registry's
+            eligibility rules, False otherwise.
         """
         return await self.sync_incident_ticket(case_review)
 
