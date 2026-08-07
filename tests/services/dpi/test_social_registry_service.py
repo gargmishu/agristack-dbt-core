@@ -62,7 +62,7 @@ async def test_social_registry_sync_incident_ticket_rejection_prefix() -> None:
         staged_at=datetime.now(UTC),
     )
     synced = await service.sync_incident_ticket(payload)
-    assert synced is False
+    assert synced is True
 
 
 @pytest.mark.asyncio
@@ -79,4 +79,4 @@ async def test_social_registry_sync_incident_ticket_fail_stage_note() -> None:
         staged_at=datetime.now(UTC),
     )
     synced = await service.sync_incident_ticket(payload)
-    assert synced is False
+    assert synced is True

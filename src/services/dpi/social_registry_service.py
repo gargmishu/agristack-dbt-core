@@ -1,13 +1,10 @@
 """Authoritative DPI Registry: OpenSPP Social Registry Service.
 
 Provides the external Digital Public Infrastructure (DPI) boundary connector for
-OpenSPP (Open Social Protection Platform) and Sovereign Social Welfare registries.
+OpenSPP (Open Social Protection Platform) and sovereign social welfare registries.
 
-Why separate SocialRegistryService from CaseManagementService?
-SocialRegistryService acts strictly as the external network boundary client interfacing
-with sovereign OpenSPP registries to register incident tickets (`SPP-CASE-...`) and verify
-social protection program entitlement. CaseManagementService handles internal domain
-caseworker queues and review lifecycles within AgriStack.
+This service is dedicated to checking citizen social protection eligibility against
+the external registry boundary. It does not own case review lifecycle state.
 
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
@@ -18,8 +15,6 @@ import logging
 
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.services.dpi.dpi_mock_fixtures import (
-    MOCK_CASE_REJECT_PREFIX,
-    MOCK_FAIL_STAGE_NOTE,
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
@@ -28,41 +23,47 @@ logger = logging.getLogger(__name__)
 
 
 class SocialRegistryService:
-    """External DPI client for OpenSPP social protection and beneficiary registry integration.
+    """External DPI client for citizen social protection eligibility checks.
 
-    Manages remote synchronization of incident review cases (`SPP-CASE-YYYY-XXXXXX`)
-    and citizen social protection eligibility queries.
+    Queries the OpenSPP social registry for beneficiary entitlement under a specific
+    scheme and exposes compatibility hooks for boundary integrations.
 
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
     """
 
     async def sync_incident_ticket(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Synchronizes an escalated case review ticket into external OpenSPP registry.
+        """Legacy compatibility hook for boundary integrations.
+
+        This service remains focused on eligibility verification and does not manage
+        case review lifecycle state.
 
         Args:
             case_review: Validated CaseworkerCaseReviewPayload instance.
 
         Returns:
-            True if OpenSPP accepted the ticket, False if rejected or malformed.
+            True if the citizen is eligible according to the external registry, False otherwise.
         """
         logger.info(
-            "Syncing incident ticket=%s to OpenSPP registry for session=%s",
+            "Evaluating eligibility for incident ticket=%s via OpenSPP registry for session=%s",
             case_review.escalation_case_id,
             case_review.session_id,
         )
-        return not (
-            case_review.escalation_case_id.startswith(MOCK_CASE_REJECT_PREFIX)
-            or MOCK_FAIL_STAGE_NOTE in (case_review.escalation_reason or "").lower()
+        return await self.query_beneficiary_eligibility(
+            case_review.tokenized_citizen_id,
+            case_review.application_intent.value,
         )
 
     async def stage_case_review(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Alias for sync_incident_ticket to maintain interface compatibility.
+        """Compatibility alias for sync_incident_ticket.
+
+        Retained for integration compatibility while keeping the service focused on
+        eligibility checks.
 
         Args:
             case_review: Validated CaseworkerCaseReviewPayload instance.
 
         Returns:
-            True if case sync succeeded, False otherwise.
+            True if the citizen is eligible according to the external registry, False otherwise.
         """
         return await self.sync_incident_ticket(case_review)
 

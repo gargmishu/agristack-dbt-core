@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 class CaseManagementService:
     """Layer 4 orchestrator service governing caseworker incident review queues and adjudication.
 
-    Maintains lifecycle state transitions for manual review tickets and interfaces
-    with the external OpenSPP SocialRegistryService for registry synchronization.
+    Maintains lifecycle state transitions for manual review tickets and delegates
+    beneficiary eligibility checks to the external OpenSPP SocialRegistryService.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
     """
