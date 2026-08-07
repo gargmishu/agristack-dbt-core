@@ -80,20 +80,22 @@ class IngestionFirewall:
         # 3. PII Purge Sentinel Assertion
         PiiPurgeGuard.assert_zero_pii(standardized_payload)
 
-        # 4. Adversarial Prompt Injection Pre-Inspection
+        # 4. Adversarial Prompt Injection Pre-Inspection (Text Modalities Only)
+        is_adversarial = False
         raw_text = None
-        if isinstance(payload, WhatsAppIngressPayload):
+        if isinstance(payload, WhatsAppIngressPayload) and payload.text_body:
             raw_text = payload.text_body
-        elif isinstance(payload, UssdIngressPayload):
+        elif isinstance(payload, UssdIngressPayload) and payload.ussd_user_digit_selection:
             raw_text = payload.ussd_user_digit_selection
 
-        is_adversarial, threat_category = AdversarialPromptFirewall.inspect(raw_text)
-        if is_adversarial:
-            logger.warning(
-                "Adversarial pattern detected during ingress session=%s category=%s",
-                payload.session_id,
-                threat_category,
-            )
+        if raw_text is not None:
+            is_adversarial, threat_category = AdversarialPromptFirewall.inspect(raw_text)
+            if is_adversarial:
+                logger.warning(
+                    "Adversarial pattern detected during ingress session=%s category=%s",
+                    payload.session_id,
+                    threat_category,
+                )
 
         return standardized_payload, is_adversarial
 
