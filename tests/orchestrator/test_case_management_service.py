@@ -4,10 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.data_models.caseworker import (
-    CaseworkerCaseReviewPayload,
-    CaseworkerReviewOutcomePayload,
-)
+from src.data_models.caseworker import CaseworkerReviewOutcomePayload
 from src.data_models.common import GovernanceAction
 from src.orchestrator import CaseManagementService
 
