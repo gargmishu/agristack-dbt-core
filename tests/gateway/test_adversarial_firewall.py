@@ -70,10 +70,9 @@ def test_adversarial_prompt_firewall_flags_attacks(
         "1*2*101",
         "",
         "   ",
-        None,
     ],
 )
-def test_adversarial_prompt_firewall_allows_benign_text(benign_text: str | None) -> None:
+def test_adversarial_prompt_firewall_allows_benign_text(benign_text: str) -> None:
     is_flagged, category = AdversarialPromptFirewall.inspect(benign_text)
     assert is_flagged is False
     assert category is None

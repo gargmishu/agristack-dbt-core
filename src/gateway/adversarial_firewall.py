@@ -65,7 +65,7 @@ class AdversarialPromptFirewall:
     """Security firewall inspecting citizen inputs against adversarial prompt injections."""
 
     @classmethod
-    def inspect(cls, input_text: str | None) -> tuple[bool, ThreatCategory | None]:
+    def inspect(cls, input_text: str) -> tuple[bool, ThreatCategory | None]:
         """Inspects input text for adversarial injection patterns.
 
         Args:
@@ -74,10 +74,10 @@ class AdversarialPromptFirewall:
         Returns:
             Tuple of (is_adversarial: bool, threat_category: ThreatCategory | None).
         """
-        if not input_text or not input_text.strip():
+        cleaned_text = input_text.strip()
+        if not cleaned_text:
             return False, None
 
-        cleaned_text = input_text.strip()
         for category, pattern in _PROMPT_INJECTION_PATTERNS:
             if pattern.search(cleaned_text):
                 logger.warning(
@@ -89,7 +89,7 @@ class AdversarialPromptFirewall:
         return False, None
 
     @classmethod
-    def is_adversarial(cls, input_text: str | None) -> bool:
+    def is_adversarial(cls, input_text: str) -> bool:
         """Convenience method returning True if text contains adversarial patterns."""
         flagged, _ = cls.inspect(input_text)
         return flagged
