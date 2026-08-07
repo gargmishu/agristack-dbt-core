@@ -16,12 +16,8 @@ See: roadmap.md (Phase 3 Step 3.3 Layer 4 Brain)
 
 import logging
 
-from src.data_models.caseworker import (
-    CaseworkerCaseReviewPayload,
-    CaseworkerReviewOutcomePayload,
-)
+from src.data_models.caseworker import CaseworkerReviewOutcomePayload
 from src.data_models.common import GovernanceAction
-from src.services.dpi.social_registry_service import SocialRegistryService
 
 logger = logging.getLogger(__name__)
 
@@ -29,43 +25,11 @@ logger = logging.getLogger(__name__)
 class CaseManagementService:
     """Layer 4 orchestrator service governing caseworker incident review queues and adjudication.
 
-    Maintains lifecycle state transitions for manual review tickets and delegates
-    beneficiary eligibility checks to the external OpenSPP SocialRegistryService.
+    Maintains lifecycle state transitions for manual review tickets and adjudication
+    workflows for escalated claims.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
     """
-
-    def __init__(self, social_registry_service: SocialRegistryService) -> None:
-        """Initializes CaseManagementService with injected external DPI social registry client.
-
-        Args:
-            social_registry_service: Non-nullable SocialRegistryService instance.
-        """
-        self._social_registry_service = social_registry_service
-
-    @classmethod
-    def from_default(cls) -> "CaseManagementService":
-        """Factory method to construct CaseManagementService with default dependencies."""
-        return cls(social_registry_service=SocialRegistryService())
-
-    async def stage_case_review(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Stages an incident review ticket into the district caseworker review queue.
-
-        Coordinates local ticket staging and synchronizes the ticket into the external OpenSPP
-        social protection registry.
-
-        Args:
-            case_review: Validated CaseworkerCaseReviewPayload instance.
-
-        Returns:
-            True if staging succeeded locally and was accepted by OpenSPP, False otherwise.
-        """
-        logger.info(
-            "Staging caseworker review ticket=%s for session=%s",
-            case_review.escalation_case_id,
-            case_review.session_id,
-        )
-        return await self._social_registry_service.sync_incident_ticket(case_review)
 
     async def process_officer_review(self, review_outcome: CaseworkerReviewOutcomePayload) -> bool:
         """Processes officer review outcome submitted from the caseworker dashboard.

@@ -13,7 +13,6 @@ See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 
 import logging
 
-from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
@@ -30,46 +29,6 @@ class SocialRegistryService:
 
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
     """
-
-    async def sync_incident_ticket(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Boundary adapter for case-management orchestration.
-
-        Maps an incident review payload to an external eligibility check against the
-        OpenSPP social registry. This method is intentionally thin because the service
-        handles registry verification rather than case-review lifecycle state.
-
-        Args:
-            case_review: Validated CaseworkerCaseReviewPayload instance.
-
-        Returns:
-            True when the supplied citizen token and scheme satisfy the registry's
-            eligibility rules, False otherwise.
-        """
-        logger.info(
-            "Evaluating eligibility for incident ticket=%s via OpenSPP registry for session=%s",
-            case_review.escalation_case_id,
-            case_review.session_id,
-        )
-        return await self.query_beneficiary_eligibility(
-            case_review.tokenized_citizen_id,
-            case_review.application_intent.value,
-        )
-
-    async def stage_case_review(self, case_review: CaseworkerCaseReviewPayload) -> bool:
-        """Compatibility alias for sync_incident_ticket.
-
-        Retained for callers that still use the older case-review staging name while
-        this service remains focused on eligibility checks rather than ticket lifecycle
-        management.
-
-        Args:
-            case_review: Validated CaseworkerCaseReviewPayload instance.
-
-        Returns:
-            True when the supplied citizen token and scheme satisfy the registry's
-            eligibility rules, False otherwise.
-        """
-        return await self.sync_incident_ticket(case_review)
 
     async def query_beneficiary_eligibility(
         self, tokenized_citizen_id: str, scheme_id: str
