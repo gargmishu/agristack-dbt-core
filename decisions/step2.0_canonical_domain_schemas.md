@@ -113,14 +113,14 @@ class GovernanceAction(StrEnum):
     MANUAL_APPROVE = "MANUAL_APPROVE"
     MANUAL_REJECT = "MANUAL_REJECT"
 
-class SessionStatus(str, Enum):
+class SessionStatus(StrEnum):
     ACTIVE = "ACTIVE"
     PENDING = "PENDING"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"
     TIMEOUT = "TIMEOUT"
 
-class ApplicationStatus(str, Enum):
+class ApplicationStatus(StrEnum):
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
     UNDER_REVIEW = "UNDER_REVIEW"
@@ -129,14 +129,14 @@ class ApplicationStatus(str, Enum):
     REJECTED = "REJECTED"
     APPEALED = "APPEALED"
 
-class DisbursementStatus(str, Enum):
+class DisbursementStatus(StrEnum):
     PENDING = "PENDING"
     INITIATED = "INITIATED"
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     RETURNED = "RETURNED"
 
-class DomainEntityKey(str, Enum):
+class DomainEntityKey(StrEnum):
     DISTRICT = "district"
     TALUKA = "taluka"
     VILLAGE = "village"
@@ -146,6 +146,13 @@ class DomainEntityKey(str, Enum):
     SUBSIDY_SCHEME_ID = "subsidy_scheme_id"
     SURVEY_NUMBER = "survey_number"
     BANK_ACCOUNT_LAST4 = "bank_account_last4"
+
+class ThreatCategory(StrEnum):
+    SYSTEM_OVERRIDE = "SYSTEM_OVERRIDE"
+    ROLE_USURPATION = "ROLE_USURPATION"
+    DELIMITER_HIJACKING = "DELIMITER_HIJACKING"
+    DATABASE_INJECTION = "DATABASE_INJECTION"
+    PAYOUT_MANIPULATION = "PAYOUT_MANIPULATION"
 ```
 
 ---
