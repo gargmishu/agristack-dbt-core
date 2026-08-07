@@ -93,3 +93,10 @@ class AdversarialPromptFirewall:
         """Convenience method returning True if text contains adversarial patterns."""
         flagged, _ = cls.inspect(input_text)
         return flagged
+
+    @classmethod
+    def get_threat_category(cls, input_text: str) -> ThreatCategory | None:
+        """Convenience method returning ThreatCategory if text is adversarial, else None."""
+        _, category = cls.inspect(input_text)
+        return category
+
