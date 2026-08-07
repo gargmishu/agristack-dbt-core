@@ -1,0 +1,83 @@
+workflow: farmer_benefit_service
+version: "1.0"
+use_case: "Farmer Subsidy Application (Voice)"
+sector: "Livelihoods"
+region: "🌐 All regions"
+complexity: "High"
+
+public_agent:
+  name: "PublicAgent"
+  model: "claude-sonnet-4"
+  model_provider: "Anthropic"
+  model_hosting: "Cloud / On-prem"
+  channels: [WhatsApp, USSD, Voice / IVR]
+  languages: [National official]
+  escalation:
+    method: human_caseworker
+    label: "Human caseworker"
+    always_available: true
+    case_id_issued: true
+  constraints:
+    approved_workflows_only: true
+    consent_before_data_access: true
+    human_recourse_always_offered: true
+    full_audit_trail: true
+
+governance:
+  audit: true
+  human_escalation: required
+  confidence_threshold: 0.85
+  pii_redaction: true
+  fallback_channel: ussd
+
+workflow_steps:
+  - step_2:
+      block: speech_to_text
+      inputs: [voice_note, lang]
+      outputs: [text, confidence]
+      dpi_system: AI Block
+  - step_3:
+      block: translate
+      inputs: [text, source_lang, target_lang]
+      outputs: [translated_text]
+      dpi_system: AI Block
+  - step_4:
+      block: structured_extract
+      inputs: [text, schema]
+      outputs: [fields, confidence]
+      dpi_system: AI Block
+  - step_5:
+      block: identity_verify
+      inputs: [national_id]
+      outputs: [verified_name, dob, status]
+      dpi_system: Digital ID System
+  - step_6:
+      block: eligibility_verify
+      inputs: [national_id, program_id]
+      outputs: [eligible, criteria, case_ref]
+      dpi_system: Social Registry
+  - step_7:
+      block: submit_application
+      inputs: [applicant_id, program_ref, docs]
+      outputs: [case_id, status]
+      dpi_system: Social Registry
+  - step_8:
+      block: payment_disburse
+      inputs: [amount, account_ref]
+      outputs: [transfer_ref, status]
+      dpi_system: Payments Rail
+  - step_9:
+      block: notify
+      inputs: [user_id, message, channel]
+      outputs: [delivery_status]
+      dpi_system: Notification Service
+  - step_10:
+      block: audit_log
+      inputs: [session_id, actions, outcome]
+      outputs: [log_ref]
+      dpi_system: Audit System
+  - step_11:
+      block: human_review
+      inputs: [decision_context, confidence_score, citizen_id]
+      outputs: [case_id, review_status, reviewer_decision, timestamp]
+      dpi_system: Safeguard

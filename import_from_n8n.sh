@@ -4,7 +4,7 @@ set -e
 # Configuration Tracking Matrices
 WORKFLOW_DIR="./n8n-config/workflows"
 CREDENTIAL_DIR="./n8n-config/credentials"
-SRC_DIR="./src"
+SRC_DIR="./src-legacy"
 USER_FOLDER="/home/codespace/.n8n"
 MASTER_DUMP="${WORKFLOW_DIR}/all_exported_workflows.json"
 

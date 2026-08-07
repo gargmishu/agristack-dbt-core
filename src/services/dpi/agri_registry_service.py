@@ -18,6 +18,7 @@ from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
     INVALID_SURVEY_NUMBER,
     MOCK_CADASTRAL_REGISTRY,
+    UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
 
@@ -53,7 +54,10 @@ class AgriRegistryService:
             or INVALID_SURVEY_NUMBER in land_record_id
         ):
             return False
-        if tokenized_citizen_id == UNVERIFIED_IDENTITY_TOKEN_ZERO:
+        if (
+            tokenized_citizen_id == UNVERIFIED_IDENTITY_TOKEN_ZERO
+            or tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
+        ):
             return False
         if land_record_id in MOCK_CADASTRAL_REGISTRY:
             return MOCK_CADASTRAL_REGISTRY[land_record_id].is_entitled

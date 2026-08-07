@@ -2,6 +2,7 @@ import pytest
 
 from src.data_models.common import ApplicationIntent, DomainEntityKey
 from src.services.ai import SlmExtractor
+from src.services.ai.ai_mock_fixtures import MOCK_SLM_RULES
 
 EXPECTED_MIN_CONFIDENCE = 0.90
 
@@ -38,3 +39,40 @@ async def test_slm_extractor_empty_or_error_returns_none() -> None:
         "sess_12345678", "Unexpected internal error occurred", "hi-IN"
     )
     assert result is None
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_status_check_rule() -> None:
+    extractor = SlmExtractor()
+    expected = MOCK_SLM_RULES["status_check"]
+    result = await extractor.extract_entities(
+        "sess_12345678", "Mere aavedan ka status kya hai", "hi-IN"
+    )
+    assert result is not None
+    assert result.application_intent == expected.intent
+    assert result.ai_confidence_score == expected.confidence_score
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_missing_entity_rule() -> None:
+    extractor = SlmExtractor()
+    expected = MOCK_SLM_RULES["missing_entity"]
+    result = await extractor.extract_entities(
+        "sess_12345678", "Aavedan me information missing hai", "hi-IN"
+    )
+    assert result is not None
+    assert result.application_intent == expected.intent
+    assert result.ai_confidence_score == expected.confidence_score
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_fallback_rule() -> None:
+    extractor = SlmExtractor()
+    expected = MOCK_SLM_RULES["default_fallback"]
+    result = await extractor.extract_entities(
+        "sess_12345678", "Random general farming inquiry text", "hi-IN"
+    )
+    assert result is not None
+    assert result.application_intent == expected.intent
+    assert result.ai_confidence_score == expected.confidence_score
+    assert result.domain_entities[DomainEntityKey.DISTRICT] == "Karnal"

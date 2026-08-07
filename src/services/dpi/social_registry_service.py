@@ -20,6 +20,7 @@ from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.services.dpi.dpi_mock_fixtures import (
     MOCK_CASE_REJECT_PREFIX,
     MOCK_FAIL_STAGE_NOTE,
+    UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
 
@@ -84,5 +85,6 @@ class SocialRegistryService:
         )
         return bool(
             tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO
+            and not tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
             and scheme_id.strip()
         )

@@ -153,7 +153,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId | None = None
     rejection_reason: str | None = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
     review_notes: str | None = Field(None, max_length=2000, description="Internal caseworker audit notes")
-    decided_at: UtcTimestamp
+    evaluated_at: UtcTimestamp
 ```
 
 ##### Decision Validation Matrix:
@@ -295,7 +295,7 @@ CREATE TABLE application_governance_ledger (
     application_status application_status_enum NOT NULL,
     claimant_eligibility_status eligibility_status_enum NOT NULL,
     governance_action governance_action_enum,
-    decided_at TIMESTAMPTZ,
+    evaluated_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
     

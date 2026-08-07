@@ -3,7 +3,7 @@ set -e
 
 WORKFLOW_DIR="./n8n-config/workflows"
 CREDENTIAL_DIR="./n8n-config/credentials"
-SRC_DIR="./src"
+SRC_DIR="./src-legacy"
 
 if [ ! -d "$WORKFLOW_DIR" ]; then
     echo "❌ Error: Master configuration layout path does not exist."

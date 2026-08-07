@@ -19,7 +19,7 @@ def test_dpi_mock_fixtures_integrity() -> None:
     assert UNVERIFIED_IDENTITY_PREFIX == "ffff0000"
     assert INVALID_LAND_RECORD_PREFIX == "INVALID"
     assert INVALID_SURVEY_NUMBER == "000/0"
-    assert MOCK_CASE_REJECT_PREFIX == "SPP-CASE-REJECT"
+    assert MOCK_CASE_REJECT_PREFIX == "REJECT"
     assert MOCK_FAIL_STAGE_NOTE == "fail_stage"
     assert MOCK_PAYMENT_FAIL_TRIGGER == "FAIL"
     assert MOCK_PAYMENT_FAILURE_REASON == "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"

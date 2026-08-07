@@ -27,3 +27,54 @@ async def test_governance_router_auto_approve() -> None:
 
     result = await router.route_governance_outcome(payload)
     assert result.governance_action == GovernanceAction.AUTO_APPROVE
+
+
+@pytest.mark.asyncio
+async def test_governance_router_auto_reject() -> None:
+    router = GovernanceRouter()
+    payload = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.40,
+        eligibility_status=EligibilityStatus.INELIGIBLE,
+        governance_action=GovernanceAction.AUTO_REJECT,
+        rejection_reason="Cadastral plot not registered for seasonal crop",
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await router.route_governance_outcome(payload)
+    assert result.governance_action == GovernanceAction.AUTO_REJECT
+
+
+@pytest.mark.asyncio
+async def test_governance_router_manual_review_routing() -> None:
+    router = GovernanceRouter()
+    payload = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.72,
+        eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
+        governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
+        escalation_case_id="SPP-CASE-2026-100200",
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await router.route_governance_outcome(payload)
+    assert result.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
+
+
+@pytest.mark.asyncio
+async def test_governance_router_manual_approve() -> None:
+    router = GovernanceRouter()
+    payload = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.75,
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        governance_action=GovernanceAction.MANUAL_APPROVE,
+        disbursement_txn_id="TXN-2026-MANUAL-001",
+        disbursement_status=DisbursementStatus.PENDING,
+        escalation_case_id="SPP-CASE-2026-100200",
+        review_notes="Officer verified field report",
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await router.route_governance_outcome(payload)
+    assert result.governance_action == GovernanceAction.MANUAL_APPROVE

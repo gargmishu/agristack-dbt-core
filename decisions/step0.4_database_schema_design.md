@@ -41,8 +41,8 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `standardized_english_text` | `TEXT` | NMT-translated and standardized English text for processing. |
 | `extraction_confidence` | `DECIMAL(4, 3)` | Precision decimal constrained between `0.000` and `1.000`. |
 | `extracted_district` | `VARCHAR(100)` | Bounded string capturing NER model output for the district. |
-| `crop_type` | `VARCHAR(100)` | Bounded string capturing NER model output for the crop. |
-| `anomaly` | `VARCHAR(200)` | Bounded string capturing identified anomalies. |
+| `extracted_crop_type` | `VARCHAR(100)` | Bounded string capturing NER model output for the crop. |
+| `reported_anomaly` | `VARCHAR(200)` | Bounded string capturing identified anomalies. |
 | `processing_state` | `processing_state_enum` | Native Postgres `ENUM` (`STAGED`, `SUPERSEDED`, `COMMITTED`) to handle overwrites. |
 
 #### `application_governance_ledger`
@@ -53,8 +53,8 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `payload_id` | `UUID` | Foreign Key anchoring the claim back to the specific extraction attempt. |
 | `tokenized_identity_hash` | `VARCHAR(64)` | SHA-256 hash of the National ID / Identity. |
 | `application_status` | `application_status_enum` | Native Postgres `ENUM` (`DRAFT`, `SUBMITTED`, `UNDER_REVIEW`, `INFO_REQUESTED`, `APPROVED`, `REJECTED`, `APPEALED`). |
-| `claimant_eligibility_status`| `eligibility_status_enum` | Native Postgres `ENUM` (`PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`). |
-| `governance_action` | `governance_action_enum` | Native Postgres `ENUM` (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`). |
+| `claimant_eligibility_status`| `eligibility_status_enum` | Native Postgres `ENUM` (`PENDING_VERIFICATION`, `ELIGIBLE`, `INELIGIBLE`, `REQUIRES_REVIEW`). |
+| `governance_action` | `governance_action_enum` | Native Postgres `ENUM` (`AUTOMATED_PAYOUT`, `AUTO_APPROVE`, `AUTO_REJECT`, `HUMAN_REVIEW`, `ROUTE_FOR_MANUAL_REVIEW`, `REQUEST_MORE_INFO`, `MANUAL_APPROVE`, `MANUAL_REJECT`). |
 | `evaluated_at` | `TIMESTAMPTZ` | Standard timezone-aware timestamp capturing the exact moment the governance action was executed. |
 | `disbursement_status` | `disbursement_status_enum` | Native Postgres `ENUM` (`PENDING`, `INITIATED`, `SUCCESS`, `FAILED`, `RETURNED`) tracking the financial clearing state. |
 | `governance_metadata` | `JSONB` | Flexible payload for sparse edge-case data (rejection reasons, notes). |
@@ -172,12 +172,12 @@ Indexes were designed based on expected query access patterns from real-time API
    - *Business Reason:* **Data Accuracy & Payout Integrity.** Citizens frequently correct the AI (e.g., "No, I meant 5 acres, not 50"). This ensures the business only ever processes the final, citizen-approved payload, preventing incorrect financial disbursements.
    - *Technical Rationale:* Facilitates window functions (`ROW_NUMBER()`) and fast retrieval of the most recent extraction attempt within a specific session.
    - *Analytics Impact:* DBT models deduplicate payload history using this index. By natively storing `attempt_id` in descending order, we eliminate the need for expensive "filesort" operations when partitioning millions of extraction attempts.
-3. **`idx_application_governance_session` (`session_id`, `decided_at DESC`)**
+3. **`idx_application_governance_session` (`session_id`, `evaluated_at DESC`)**
    - *Table:* **application_governance_ledger**
    - *Business Reason:* **Operational Visibility.** Leadership needs daily funnel dashboards showing the exact drop-off rate between a citizen starting a WhatsApp chat and receiving a finalized claim. This index makes building those daily executive dashboards possible.
-   - *Technical Rationale:* Optimizes analytical joins between the final governance outcomes and the parent session telemetry logs (`session_id`). It pre-sorts by `decided_at` to instantly surface the latest decision if a claim was appealed.
+   - *Technical Rationale:* Optimizes analytical joins between the final governance outcomes and the parent session telemetry logs (`session_id`). It pre-sorts by `evaluated_at` to instantly surface the latest decision if a claim was appealed.
    - *Analytics Impact:* By acting as a direct lookup map, this index prevents the database from scanning the entire historical ledger when joining data. This drastically reduces query time and ensures daily incremental DBT runs remain highly performant.
-4. **`idx_governance_identity_lookup` (`tokenized_identity_hash`, `decided_at DESC`)**
+4. **`idx_governance_identity_lookup` (`tokenized_identity_hash`, `evaluated_at DESC`)**
    - *Table:* **application_governance_ledger**
    - *Business Reason:* **Fraud Prevention & Customer Service.** Strictly prevents "double-dipping" by ensuring a single citizen cannot receive duplicate payouts in the same season, while also allowing the chatbot to instantly answer the most common support question: "What is the status of my claim?"
    - *Technical Rationale:* The primary lookup vector for fraud validation and real-time API status checks. 

@@ -67,9 +67,7 @@ class CaseManagementService:
         )
         return await self._social_registry_service.sync_incident_ticket(case_review)
 
-    async def process_officer_review(
-        self, review_outcome: CaseworkerReviewOutcomePayload
-    ) -> bool:
+    async def process_officer_review(self, review_outcome: CaseworkerReviewOutcomePayload) -> bool:
         """Processes officer review outcome submitted from the caseworker dashboard.
 
         Validates review action constraints, updates case lifecycle state, and records

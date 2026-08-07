@@ -118,9 +118,7 @@ def test_ingestion_firewall_verifies_webhook_signature() -> None:
     payload_body = b'{"object": "whatsapp_business_account"}'
     sample_hmac_signing_key = "meta_test_webhook_signing_key"
 
-    sig_hash = hmac.new(
-        sample_hmac_signing_key.encode("utf-8"), payload_body, sha256
-    ).hexdigest()
+    sig_hash = hmac.new(sample_hmac_signing_key.encode("utf-8"), payload_body, sha256).hexdigest()
     valid_header = f"sha256={sig_hash}"
 
     assert (
@@ -143,7 +141,6 @@ def test_ingestion_firewall_verifies_bearer_token() -> None:
         is True
     )
     assert (
-        IngestionFirewall.verify_carrier_bearer("Bearer invalid_key", "valid_carrier_key")
-        is False
+        IngestionFirewall.verify_carrier_bearer("Bearer invalid_key", "valid_carrier_key") is False
     )
     assert IngestionFirewall.verify_carrier_bearer(None, "valid_carrier_key") is False
