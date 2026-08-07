@@ -7,9 +7,9 @@ complexity: "High"
 
 public_agent:
   name: "PublicAgent"
-  model: "claude-sonnet-4"
-  model_provider: "Anthropic"
-  model_hosting: "Cloud / On-prem"
+  model: "on-prem-local-slm-v1"
+  model_provider: "vLLM / Sovereign Local Inference"
+  model_hosting: "On-prem / Sovereign Cloud"
   channels: [WhatsApp, USSD, Voice / IVR]
   languages: [National official]
   escalation:
@@ -31,6 +31,11 @@ governance:
   fallback_channel: ussd
 
 workflow_steps:
+  - step_1:
+      block: consent_verify
+      inputs: [session_id, channel_type]
+      outputs: [consent_granted, scope, timestamp]
+      dpi_system: Safeguard
   - step_2:
       block: speech_to_text
       inputs: [voice_note, lang]
