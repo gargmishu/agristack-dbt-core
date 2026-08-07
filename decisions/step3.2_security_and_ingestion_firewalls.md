@@ -15,7 +15,7 @@ This document defines the security architecture, threat mitigation protocols, an
   │  2. Ingress Token-Bucket Rate Limiter (RateLimiter)         │
   │  3. RAM-Only Zero-Trust Tokenizer (ZeroTrustIdentityTokenizer)│
   │  4. In-Memory PII Purge Sentinel (PiiPurgeGuard)            │
-  │  5. Adversarial Prompt Injection Defense (AdversarialFirewall)│
+  │  5. Adversarial Prompt Injection Defense (AdversarialPromptFirewall)│
   │  6. Ingress Canonicalization (PayloadCanonicalizer)          │
   └─────────────────────────────────────────────────────────────┘
                    │
