@@ -11,12 +11,14 @@ import logging
 import re
 from typing import Final
 
+from src.data_models.common import ThreatCategory
+
 logger = logging.getLogger(__name__)
 
 # Pre-compiled high-performance security regex patterns
-_PROMPT_INJECTION_PATTERNS: Final[list[tuple[str, re.Pattern[str]]]] = [
+_PROMPT_INJECTION_PATTERNS: Final[list[tuple[ThreatCategory, re.Pattern[str]]]] = [
     (
-        "SYSTEM_OVERRIDE",
+        ThreatCategory.SYSTEM_OVERRIDE,
         re.compile(
             r"(?i)\b(ignore\s+(all\s+)?(previous|prior)\s+instructions|"
             r"disregard\s+(all\s+)?instructions|"
@@ -26,7 +28,7 @@ _PROMPT_INJECTION_PATTERNS: Final[list[tuple[str, re.Pattern[str]]]] = [
         ),
     ),
     (
-        "ROLE_USURPATION",
+        ThreatCategory.ROLE_USURPATION,
         re.compile(
             r"(?i)\b(you\s+are\s+now\s+(in\s+)?(developer\s+mode|dan\s+mode|root)|"
             r"i\s+am\s+(the\s+)?(district\s+(agricultural\s+)?officer|administrator|superadmin)|"
@@ -35,20 +37,20 @@ _PROMPT_INJECTION_PATTERNS: Final[list[tuple[str, re.Pattern[str]]]] = [
         ),
     ),
     (
-        "DELIMITER_HIJACKING",
+        ThreatCategory.DELIMITER_HIJACKING,
         re.compile(
             r"(?i)(---\s*end\s+user\s*---|###\s*(system|instruction|admin)\s*:|```\s*(system|admin))"
         ),
     ),
     (
-        "DATABASE_INJECTION",
+        ThreatCategory.DATABASE_INJECTION,
         re.compile(
             r"(?i)\b(drop\s+table|union\s+select|insert\s+into|delete\s+from|"
             r"or\s+1\s*=\s*1|--\s*$|;\s*drop\b)"
         ),
     ),
     (
-        "PAYOUT_MANIPULATION",
+        ThreatCategory.PAYOUT_MANIPULATION,
         re.compile(
             r"(?i)\b(set\s+(payout\s+)?(payout|amount|disbursement)\s+to\s+\d+|"
             r"disburse\s+maximum(\s+amount)?|"
@@ -63,14 +65,14 @@ class AdversarialPromptFirewall:
     """Security firewall inspecting citizen inputs against adversarial prompt injections."""
 
     @classmethod
-    def inspect(cls, input_text: str | None) -> tuple[bool, str | None]:
+    def inspect(cls, input_text: str | None) -> tuple[bool, ThreatCategory | None]:
         """Inspects input text for adversarial injection patterns.
 
         Args:
             input_text: Raw citizen text or transcribed speech string.
 
         Returns:
-            Tuple of (is_adversarial: bool, threat_category: str | None).
+            Tuple of (is_adversarial: bool, threat_category: ThreatCategory | None).
         """
         if not input_text or not input_text.strip():
             return False, None

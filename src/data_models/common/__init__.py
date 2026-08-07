@@ -12,6 +12,7 @@ from src.data_models.common.enums import (
     PayloadType,
     SessionStatus,
     StructureLevel,
+    ThreatCategory,
 )
 from src.data_models.common.field_types import (
     AiConfidenceScore,
@@ -45,5 +46,6 @@ __all__ = [
     "SessionStatus",
     "StrictBaseModel",
     "StructureLevel",
+    "ThreatCategory",
     "UtcTimestamp",
 ]

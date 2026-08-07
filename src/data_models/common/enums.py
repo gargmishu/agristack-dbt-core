@@ -113,3 +113,13 @@ class DomainEntityKey(StrEnum):
     SUBSIDY_SCHEME_ID = "subsidy_scheme_id"
     SURVEY_NUMBER = "survey_number"
     BANK_ACCOUNT_LAST4 = "bank_account_last4"
+
+
+class ThreatCategory(StrEnum):
+    """Classification categories for detected adversarial prompt injection attacks."""
+
+    SYSTEM_OVERRIDE = "SYSTEM_OVERRIDE"
+    ROLE_USURPATION = "ROLE_USURPATION"
+    DELIMITER_HIJACKING = "DELIMITER_HIJACKING"
+    DATABASE_INJECTION = "DATABASE_INJECTION"
+    PAYOUT_MANIPULATION = "PAYOUT_MANIPULATION"
