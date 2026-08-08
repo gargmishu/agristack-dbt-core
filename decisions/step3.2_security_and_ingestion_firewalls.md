@@ -27,7 +27,7 @@ This document defines the security architecture, threat mitigation protocols, an
 1. **The Identity Invariant (Zero Cleartext PII):** Raw citizen identifiers (MSISDN, Aadhaar numbers, unhashed names) must be tokenized into 64-character SHA-256 HMAC tokens exclusively in volatile RAM at the Layer 2 perimeter. Cleartext PII is strictly forbidden from escaping into Layer 3 payloads, persistent disk logs, or downstream microservices.
 2. **The Security Zeroing Invariant:** When an adversarial prompt injection, jailbreak attempt, or instruction override is detected in raw or translated citizen input, the system strictly sets `is_adversarial_attempt = True`, forces `ai_confidence_score = 0.0`, wipes extracted `domain_entities = {}`, and routes the claim directly to the human security review queue (`ROUTE_FOR_MANUAL_REVIEW`, `assigned_caseworker_id = "sec_queue_flagged"`).
 3. **Fail-Fast Secrets Invariant:** All cryptographic pepper keys, carrier webhook secrets, and bearer tokens must be explicitly configured. Fallback defaults or hardcoded dummy secrets are strictly rejected at startup.
-4. **Transport Perimeter Gatekeeping:** Requests with missing/invalid HMAC webhook signatures (`X-Hub-Signature-256`), invalid bearer tokens, or rates exceeding token bucket allowances are rejected at the edge prior to JSON parsing or AI invocation.
+4. **Transport Perimeter Gatekeeping:** Requests with missing/invalid (`None`) HMAC webhook signatures (`X-Hub-Signature-256`), missing/invalid bearer tokens, or rates exceeding token bucket allowances are rejected safely at the perimeter (`False`) without throwing runtime exceptions prior to JSON parsing or AI invocation.
 
 ---
 
