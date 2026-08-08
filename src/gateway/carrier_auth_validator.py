@@ -10,6 +10,7 @@ See: decisions/step2.0_canonical_domain_schemas.md
 import hmac
 import secrets
 from hashlib import sha256
+from typing import Final
 
 
 class CarrierAuthValidator:
@@ -18,8 +19,8 @@ class CarrierAuthValidator:
     See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
-    SIGNATURE_PREFIX = "sha256="
-    BEARER_PREFIX = "Bearer "
+    SIGNATURE_PREFIX: Final[str] = "sha256="
+    BEARER_PREFIX: Final[str] = "Bearer "
 
     @classmethod
     def validate_whatsapp_signature(

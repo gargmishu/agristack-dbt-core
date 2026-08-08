@@ -9,12 +9,13 @@ See: decisions/step0.3_zero_trust_tokenization.md
 import hmac
 import os
 from hashlib import sha256
+from typing import Final
 
 
 class ZeroTrustIdentityTokenizer:
     """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance."""
 
-    DEFAULT_PEPPER_ENV_VAR = "AGRISTACK_PEPPER_SECRET"
+    DEFAULT_PEPPER_ENV_VAR: Final[str] = "AGRISTACK_PEPPER_SECRET"
 
     def __init__(self, pepper_key: str) -> None:
         """Initializes tokenizer with an explicit cryptographic pepper key."""
