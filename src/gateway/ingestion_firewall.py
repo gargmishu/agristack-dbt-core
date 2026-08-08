@@ -80,7 +80,9 @@ class IngestionFirewall:
         # 3. PII Purge Sentinel Assertion
         PiiPurgeGuard.assert_zero_pii(standardized_payload)
 
-        # 4. Adversarial Prompt Injection Pre-Inspection (Text Modalities Only)
+        # 4. Adversarial Prompt Injection Pre-Inspection
+        # Note: Pre-inspects text bodies and USSD selections at the ingress boundary.
+        # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
         is_adversarial = False
         raw_text = None
         if isinstance(payload, WhatsAppIngressPayload) and payload.text_body:
