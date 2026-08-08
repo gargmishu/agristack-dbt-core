@@ -3,17 +3,28 @@ from datetime import UTC, datetime
 import pytest
 
 from src.data_models.common import (
+    ApplicationIntent,
     DisbursementStatus,
+    DomainEntityKey,
     EligibilityStatus,
     GovernanceAction,
 )
-from src.data_models.governance import GovernanceOutcomePayload
-from src.orchestrator.governance_router import GovernanceRouter
+from src.data_models.governance import (
+    ExtractedEntityPayload,
+    GovernanceOutcomePayload,
+)
+from src.orchestrator.governance_router import (
+    ClaimEvaluationContext,
+    GovernanceRouter,
+)
+from src.services.dpi.dpi_mock_fixtures import UNVERIFIED_IDENTITY_PREFIX
+
+MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
 
 @pytest.mark.asyncio
 async def test_governance_router_auto_approve() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -31,7 +42,7 @@ async def test_governance_router_auto_approve() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_auto_reject() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -47,7 +58,7 @@ async def test_governance_router_auto_reject() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_review_routing() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -63,7 +74,7 @@ async def test_governance_router_manual_review_routing() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_approve() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -82,7 +93,7 @@ async def test_governance_router_manual_approve() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_reject() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -100,7 +111,7 @@ async def test_governance_router_manual_reject() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_request_more_info() -> None:
-    router = GovernanceRouter()
+    router = GovernanceRouter.from_default()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -112,3 +123,93 @@ async def test_governance_router_request_more_info() -> None:
     )
     result = await router.route_governance_outcome(payload)
     assert result.governance_action == GovernanceAction.REQUEST_MORE_INFO
+
+
+@pytest.mark.asyncio
+async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -> None:
+    router = GovernanceRouter.from_default()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.92,
+        domain_entities={
+            DomainEntityKey.DISTRICT: "Karnal",
+            DomainEntityKey.CROP_NAME: "Wheat",
+            DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
+        },
+    )
+    context = ClaimEvaluationContext(
+        session_id="sess_eval_1",
+        payload_id="ext_eval_1",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await router.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_APPROVE
+    assert outcome.disbursement_txn_id is not None
+    assert outcome.disbursement_status == DisbursementStatus.PENDING
+
+
+@pytest.mark.asyncio
+async def test_governance_router_evaluate_claim_low_confidence_escalation() -> None:
+    router = GovernanceRouter.from_default()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.70,
+        domain_entities={
+            DomainEntityKey.DISTRICT: "Karnal",
+            DomainEntityKey.CROP_NAME: "Wheat",
+        },
+    )
+    context = ClaimEvaluationContext(
+        session_id="sess_eval_2",
+        payload_id="ext_eval_2",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await router.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
+    assert outcome.escalation_case_id is not None
+
+
+@pytest.mark.asyncio
+async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
+    router = GovernanceRouter.from_default()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.95,
+        domain_entities={DomainEntityKey.DISTRICT: "Karnal"},
+        is_adversarial_attempt=True,
+    )
+    context = ClaimEvaluationContext(
+        session_id="sess_eval_3",
+        payload_id="ext_eval_3",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await router.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
+    assert outcome.ai_confidence_score == 0.0
+
+
+@pytest.mark.asyncio
+async def test_governance_router_evaluate_claim_unverified_identity() -> None:
+    router = GovernanceRouter.from_default()
+    unverified_token = UNVERIFIED_IDENTITY_PREFIX + "a" * (64 - len(UNVERIFIED_IDENTITY_PREFIX))
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.92,
+        domain_entities={DomainEntityKey.DISTRICT: "Karnal"},
+    )
+    context = ClaimEvaluationContext(
+        session_id="sess_eval_4",
+        payload_id="ext_eval_4",
+        tokenized_citizen_id=unverified_token,
+        extracted_payload=extracted,
+    )
+
+    outcome = await router.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_REJECT
+    assert "Unverified citizen identity token" in str(outcome.rejection_reason)
