@@ -56,15 +56,14 @@ class RateLimiter:
         if clean_key not in self._tokens:
             self._tokens[clean_key] = float(self.capacity)
             self._last_update[clean_key] = now
-
-        elapsed = now - self._last_update[clean_key]
-        self._last_update[clean_key] = now
-
-        # Refill tokens based on elapsed time capped at maximum burst capacity
-        self._tokens[clean_key] = min(
-            float(self.capacity),
-            self._tokens[clean_key] + elapsed * self.rate_per_second,
-        )
+        else:
+            elapsed = now - self._last_update[clean_key]
+            self._last_update[clean_key] = now
+            # Refill tokens based on elapsed time capped at maximum burst capacity
+            self._tokens[clean_key] = min(
+                float(self.capacity),
+                self._tokens[clean_key] + elapsed * self.rate_per_second,
+            )
 
         if self._tokens[clean_key] >= 1.0:
             self._tokens[clean_key] -= 1.0
