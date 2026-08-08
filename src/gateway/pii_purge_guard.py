@@ -19,7 +19,7 @@ SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
 
 # Patterns matching cleartext 10/12-digit numbers and international E.164 phone numbers
 _E164_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\+[1-9]\d{1,14}$")
-_AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\b\d{4}\s?\d{4}\s?\d{4}\b")
+_AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}\s?\d{4}\s?\d{4}")
 _INDIAN_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"(?:\+91|91)?[6-9]\d{9}")
 
 
@@ -64,7 +64,6 @@ class PiiPurgeGuard:
 
         if cls.contains_cleartext_aadhaar(payload.tokenized_citizen_id):
             raise ValueError("Cleartext Aadhaar number detected in tokenized_citizen_id field")
-
 
         logger.debug(
             "Zero-PII compliance verified for session=%s token=%s",

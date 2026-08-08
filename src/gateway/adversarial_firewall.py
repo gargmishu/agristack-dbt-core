@@ -99,4 +99,3 @@ class AdversarialPromptFirewall:
         """Convenience method returning ThreatCategory if text is adversarial, else None."""
         _, category = cls.inspect(input_text)
         return category
-

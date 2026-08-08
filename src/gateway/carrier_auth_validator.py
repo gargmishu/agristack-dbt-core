@@ -2,6 +2,9 @@
 
 Validates webhook signatures (e.g. Meta X-Hub-Signature-256 for WhatsApp)
 and carrier gateway bearer tokens for both IVR (SIP) and USSD (SS7) edge integrations.
+
+See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 2)
+See: decisions/step2.0_canonical_domain_schemas.md
 """
 
 import hmac
@@ -10,7 +13,10 @@ from hashlib import sha256
 
 
 class CarrierAuthValidator:
-    """Security validator enforcing cryptographic signature & token verification for webhooks."""
+    """Security validator enforcing cryptographic signature & token verification for webhooks.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    """
 
     SIGNATURE_PREFIX = "sha256="
     BEARER_PREFIX = "Bearer "

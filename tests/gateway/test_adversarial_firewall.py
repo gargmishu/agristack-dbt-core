@@ -79,4 +79,3 @@ def test_adversarial_prompt_firewall_allows_benign_text(benign_text: str) -> Non
     assert category is None
     assert AdversarialPromptFirewall.is_adversarial(benign_text) is False
     assert AdversarialPromptFirewall.get_threat_category(benign_text) is None
-

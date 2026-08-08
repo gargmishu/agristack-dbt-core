@@ -78,3 +78,37 @@ async def test_governance_router_manual_approve() -> None:
     )
     result = await router.route_governance_outcome(payload)
     assert result.governance_action == GovernanceAction.MANUAL_APPROVE
+
+
+@pytest.mark.asyncio
+async def test_governance_router_manual_reject() -> None:
+    router = GovernanceRouter()
+    payload = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.55,
+        eligibility_status=EligibilityStatus.INELIGIBLE,
+        governance_action=GovernanceAction.MANUAL_REJECT,
+        escalation_case_id="SPP-CASE-2026-100200",
+        rejection_reason="Ineligible crop acreage under state relief rules",
+        review_notes="Officer reviewed satellite and revenue record mismatch",
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await router.route_governance_outcome(payload)
+    assert result.governance_action == GovernanceAction.MANUAL_REJECT
+
+
+@pytest.mark.asyncio
+async def test_governance_router_request_more_info() -> None:
+    router = GovernanceRouter()
+    payload = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.68,
+        eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
+        governance_action=GovernanceAction.REQUEST_MORE_INFO,
+        escalation_case_id="SPP-CASE-2026-100200",
+        evaluated_at=datetime.now(UTC),
+    )
+    result = await router.route_governance_outcome(payload)
+    assert result.governance_action == GovernanceAction.REQUEST_MORE_INFO

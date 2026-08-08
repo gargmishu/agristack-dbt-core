@@ -334,7 +334,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
    - **Aadhaar-Sourced Channels & Legal Constraint:** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits storing or hashing raw Aadhaar numbers without UIDAI Authentication User Agency (AUA) registration. For Aadhaar-authenticated channels, Layer 2 must call UIDAI e-KYC/OTP API, obtain the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`.
    - **Other Identity Sources (Voter ID, PAN):** May serve as HMAC input only where lawful purpose and explicit citizen consent exist under the DPDP Act.
 2. **Choice & Purpose of `structure_level`:**
-   - **Pipeline Routing:** Bypasses SLM entity extraction for `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp buttons), routing directly to deterministic lookup tables while directing `FREE_TEXT` to the Ollama NLU/STT pipeline.
+   - **Pipeline Routing:** Bypasses SLM entity extraction for `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp buttons), routing directly to deterministic lookup tables while directing `FREE_TEXT` to the SLM/NLU extraction pipeline.
    - **Confidence Baseline:** Automatically assigns `ai_confidence_score = 1.0` for deterministic selections (`DTMF_SELECTION` / `MENU_SELECTION`), whereas `FREE_TEXT` requires dynamic SLM scoring and prompt-injection checks.
 3. **Content Representation in `unprocessed_input_content`:**
    - **For `PayloadType.TEXT` (WhatsApp text, USSD, SMS):** Stores the raw text string or concatenated DTMF menu digits (e.g., `"1*2*10"`).
@@ -637,7 +637,6 @@ agristack-dbt-core/
     │   │   ├── test_enums.py
     │   │   └── test_field_types.py
     │   ├── raw_ingress/
-    │   │   ├── test_raw_ingress_payload.py     <-- Validation tests for WhatsApp, IVR (audio duration ceiling), & USSD shortcode regex
     │   │   ├── test_ivr_payload.py
     │   │   ├── test_ussd_payload.py
     │   │   └── test_whatsapp_payload.py
@@ -664,7 +663,7 @@ agristack-dbt-core/
    Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceAction`, `DisbursementStatus`).
 
 3. **`src/data_models/common/field_types.py`:**
-   Contains cross-cutting field type annotations (`ChannelSessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
+   Contains cross-cutting field type annotations (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
 
 4. **`src/data_models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
    Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IvrIngressPayload`, and `UssdIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/data_models/raw_ingress/__init__.py`.

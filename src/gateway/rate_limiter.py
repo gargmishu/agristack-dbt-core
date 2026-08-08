@@ -2,6 +2,9 @@
 
 Implements in-memory token bucket rate limiting to protect Layer 3 Intake Gateway
 from DDoS, spam, and brute-force ingress attacks across carrier channels.
+
+See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 4.1)
+See: decisions/step0.0_master_project_and_business_requirements.md
 """
 
 import time
@@ -9,7 +12,10 @@ from collections import defaultdict
 
 
 class RateLimiter:
-    """Token bucket rate limiter tracking requests per identifier/channel."""
+    """Token bucket rate limiter tracking requests per identifier/channel.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    """
 
     def __init__(self, rate_per_minute: int = 60, capacity: int = 10) -> None:
         """Initializes rate limiter with refill rate and burst capacity.

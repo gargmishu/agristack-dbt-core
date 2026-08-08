@@ -88,4 +88,3 @@ def test_pii_purge_guard_rejects_raw_aadhaar_in_token_field() -> None:
     )
     with pytest.raises(ValueError, match="Cleartext Aadhaar number detected"):
         PiiPurgeGuard.assert_zero_pii(payload)
-
