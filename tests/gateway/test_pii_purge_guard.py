@@ -71,3 +71,21 @@ def test_pii_purge_guard_rejects_raw_phone_in_token_field() -> None:
     )
     with pytest.raises(ValueError, match="Cleartext phone number detected"):
         PiiPurgeGuard.assert_zero_pii(payload)
+
+
+def test_pii_purge_guard_rejects_raw_aadhaar_in_token_field() -> None:
+    # A 64-char string starting with raw Aadhaar number (all valid hex digits)
+    raw_aadhaar_padded = "123456789012" + "a" * 52
+    payload = PublicAgentStandardizedIntakePayload(
+        session_id="session-12345678",
+        tokenized_citizen_id=raw_aadhaar_padded,
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale="hi-IN",
+        unprocessed_input_content="Gehu subsidy claim",
+        received_at=datetime.now(UTC),
+    )
+    with pytest.raises(ValueError, match="Cleartext Aadhaar number detected"):
+        PiiPurgeGuard.assert_zero_pii(payload)
+

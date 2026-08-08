@@ -58,9 +58,13 @@ class PiiPurgeGuard:
                 f"SHA-256 HMAC token, got length {len(payload.tokenized_citizen_id)}"
             )
 
-        # Ensure citizen token is not a cleartext phone number
+        # Ensure citizen token is not a cleartext phone number or Aadhaar UID
         if cls.contains_cleartext_phone(payload.tokenized_citizen_id):
             raise ValueError("Cleartext phone number detected in tokenized_citizen_id field")
+
+        if cls.contains_cleartext_aadhaar(payload.tokenized_citizen_id):
+            raise ValueError("Cleartext Aadhaar number detected in tokenized_citizen_id field")
+
 
         logger.debug(
             "Zero-PII compliance verified for session=%s token=%s",
