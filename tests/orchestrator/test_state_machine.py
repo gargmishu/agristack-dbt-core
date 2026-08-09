@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -14,6 +15,7 @@ from src.data_models.common import (
 from src.data_models.governance import ExtractedEntityPayload
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.state_machine import StateMachine
+from src.services.ai import BhashiniService, SlmExtractor
 
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
@@ -98,6 +100,33 @@ async def test_state_machine_gate1_audio_transcription() -> None:
 
 
 @pytest.mark.asyncio
+async def test_state_machine_gate1_audio_transcription_failure_and_slm_none() -> None:
+    mock_bhashini = BhashiniService()
+    mock_bhashini.transcribe_audio = AsyncMock(side_effect=RuntimeError("ASR Timeout"))  # type: ignore[method-assign]
+    mock_slm = SlmExtractor()
+    mock_slm.extract_entities = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+    state_machine = StateMachine(
+        bhashini_service=mock_bhashini,
+        slm_extractor=mock_slm,
+    )
+    intake = PublicAgentStandardizedIntakePayload(
+        session_id="sess_ivr_fail_1",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        channel_type=ChannelType.IVR_VOICE,
+        payload_type=PayloadType.AUDIO,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale="hi-IN",
+        unprocessed_input_content="https://sip-gateway.telecom.in/audio/voice_call.wav",
+        received_at=datetime.now(UTC),
+    )
+
+    extracted = await state_machine.evaluate_gate1_ingress_structure(intake)
+    assert extracted.application_intent == ApplicationIntent.UNKNOWN
+    assert extracted.ai_confidence_score == 0.40  # noqa: PLR2004
+
+
+@pytest.mark.asyncio
 async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
     state_machine = StateMachine.from_default()
     extracted = ExtractedEntityPayload(
@@ -118,6 +147,42 @@ async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
         extracted, attempt_count=3
     )
     assert requires_reprompt_3 is False
+
+    # Non-subsidy intent -> no reprompt
+    status_extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.CHECK_STATUS,
+        ai_confidence_score=0.92,
+        domain_entities={},
+    )
+    assert state_machine.evaluate_gate2_intake_validation(status_extracted)[0] is False
+
+
+@pytest.mark.asyncio
+async def test_state_machine_full_cycle_reprompt() -> None:
+    mock_slm = SlmExtractor()
+    partial_extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.90,
+        domain_entities={DomainEntityKey.DISTRICT: "Karnal"},  # Missing crop_name
+    )
+    mock_slm.extract_entities = AsyncMock(return_value=partial_extracted)  # type: ignore[method-assign]
+
+    state_machine = StateMachine(slm_extractor=mock_slm)
+    intake = PublicAgentStandardizedIntakePayload(
+        session_id="sess_reprompt_1",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale="hi-IN",
+        unprocessed_input_content="Sirf Karnal district me khet hai",
+        received_at=datetime.now(UTC),
+    )
+
+    result = await state_machine.execute_orchestration_cycle(intake, attempt_count=1)
+    assert result.requires_reprompt is True
+    assert "crop_name" in str(result.reprompt_message)
+    assert result.governance_outcome.governance_action == GovernanceAction.REQUEST_MORE_INFO
 
 
 @pytest.mark.asyncio

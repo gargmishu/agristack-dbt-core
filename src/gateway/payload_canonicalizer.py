@@ -13,6 +13,7 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
+from src.gateway.pii_text_redactor import PiiTextRedactor
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
 IngressPayloadUnion = WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
@@ -44,13 +45,14 @@ class PayloadCanonicalizer:
         Returns:
             PublicAgentStandardizedIntakePayload normalized for Layer 3 Intake Gateway.
         """
-        tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
-
         if isinstance(payload, WhatsAppIngressPayload):
+            tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
             return self._canonicalize_whatsapp(payload, tokenized_id, language_locale)
         elif isinstance(payload, IvrIngressPayload):
+            tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
             return self._canonicalize_ivr(payload, tokenized_id, language_locale)
         elif isinstance(payload, UssdIngressPayload):
+            tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
             return self._canonicalize_ussd(payload, tokenized_id, language_locale)
         else:
             raise ValueError(f"Unsupported ingress payload type: {type(payload)}")
@@ -65,7 +67,10 @@ class PayloadCanonicalizer:
             unprocessed_content = str(payload.audio_recording_url)
             structure_level = StructureLevel.FREE_TEXT
         else:
-            unprocessed_content = payload.text_body or ""
+            raw_text = payload.text_body or ""
+            unprocessed_content = PiiTextRedactor.redact_all(
+                raw_text, session_id=payload.session_id
+            )
             structure_level = StructureLevel.FREE_TEXT
 
         return PublicAgentStandardizedIntakePayload(

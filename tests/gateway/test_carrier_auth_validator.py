@@ -16,13 +16,23 @@ def test_whatsapp_signature_valid() -> None:
     )
 
 
-def test_whatsapp_signature_invalid() -> None:
+def test_whatsapp_signature_invalid_and_missing() -> None:
     app_secret = "meta_app_secret_12345"  # noqa: S105
     payload_bytes = b'{"object": "whatsapp_business_account", "entry": []}'
-    header_val = "sha256=invalid_signature_hex_digest"
 
     assert (
-        CarrierAuthValidator.validate_whatsapp_signature(payload_bytes, header_val, app_secret)
+        CarrierAuthValidator.validate_whatsapp_signature(
+            payload_bytes, "sha256=invalid_sig", app_secret
+        )
+        is False
+    )
+    assert (
+        CarrierAuthValidator.validate_whatsapp_signature(payload_bytes, None, app_secret) is False
+    )
+    assert (
+        CarrierAuthValidator.validate_whatsapp_signature(
+            payload_bytes, "invalid_prefix", app_secret
+        )
         is False
     )
 
@@ -34,8 +44,11 @@ def test_carrier_bearer_token_valid() -> None:
     assert CarrierAuthValidator.validate_carrier_bearer_token(auth_header, bearer_key) is True
 
 
-def test_carrier_bearer_token_invalid() -> None:
+def test_carrier_bearer_token_invalid_and_missing() -> None:
     bearer_key = "secret_carrier_token_9988"  # noqa: S105
-    auth_header = "Bearer wrong_token"
-
-    assert CarrierAuthValidator.validate_carrier_bearer_token(auth_header, bearer_key) is False
+    assert (
+        CarrierAuthValidator.validate_carrier_bearer_token("Bearer wrong_token", bearer_key)
+        is False
+    )
+    assert CarrierAuthValidator.validate_carrier_bearer_token(None, bearer_key) is False
+    assert CarrierAuthValidator.validate_carrier_bearer_token("Basic 12345", bearer_key) is False

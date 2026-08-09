@@ -9,6 +9,7 @@ from src.gateway.carrier_auth_validator import CarrierAuthValidator
 from src.gateway.ingestion_firewall import IngestionFirewall
 from src.gateway.payload_canonicalizer import PayloadCanonicalizer
 from src.gateway.pii_purge_guard import PiiPurgeGuard
+from src.gateway.pii_text_redactor import PiiTextRedactor
 from src.gateway.rate_limiter import RateLimiter
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
@@ -18,6 +19,7 @@ __all__ = [
     "IngestionFirewall",
     "PayloadCanonicalizer",
     "PiiPurgeGuard",
+    "PiiTextRedactor",
     "RateLimiter",
     "ZeroTrustIdentityTokenizer",
 ]

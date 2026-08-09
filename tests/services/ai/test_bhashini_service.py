@@ -40,6 +40,16 @@ async def test_bhashini_service_translate() -> None:
 
 
 @pytest.mark.asyncio
+async def test_bhashini_service_translate_fallback_and_other_locales() -> None:
+    service = BhashiniService()
+    fallback = await service.translate_text("Anjaan vakya bina keyword ke", "hi-IN", "en-IN")
+    assert "PM KISAN installment" in fallback
+
+    other_locale = await service.translate_text("Vanakkam", "ta-IN", "hi-IN")
+    assert other_locale == "[Translated to hi-IN] Vanakkam"
+
+
+@pytest.mark.asyncio
 async def test_bhashini_service_translate_same_locale() -> None:
     service = BhashiniService()
     text = "Already English text"

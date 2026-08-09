@@ -213,3 +213,27 @@ async def test_governance_router_evaluate_claim_unverified_identity() -> None:
     outcome = await router.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert "Unverified citizen identity token" in str(outcome.rejection_reason)
+
+
+@pytest.mark.asyncio
+async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
+    router = GovernanceRouter.from_default()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.92,
+        domain_entities={
+            DomainEntityKey.DISTRICT: "Karnal",
+            DomainEntityKey.CROP_NAME: "Wheat",
+            DomainEntityKey.SURVEY_NUMBER: "INVALID_LAND_REC_9999",
+        },
+    )
+    context = ClaimEvaluationContext(
+        session_id="sess_eval_5",
+        payload_id="ext_eval_5",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await router.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_REJECT
+    assert "Cadastral land parcel record" in str(outcome.rejection_reason)

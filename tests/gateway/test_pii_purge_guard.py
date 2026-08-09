@@ -19,12 +19,15 @@ def test_pii_purge_guard_detects_cleartext_phone() -> None:
         is False
     )
     assert PiiPurgeGuard.contains_cleartext_phone(None) is False
+    assert PiiPurgeGuard.contains_cleartext_phone("   ") is False
 
 
 def test_pii_purge_guard_detects_cleartext_aadhaar() -> None:
     assert PiiPurgeGuard.contains_cleartext_aadhaar("1234 5678 9012") is True
     assert PiiPurgeGuard.contains_cleartext_aadhaar("123456789012") is True
     assert PiiPurgeGuard.contains_cleartext_aadhaar("Survey number 1002") is False
+    assert PiiPurgeGuard.contains_cleartext_aadhaar(None) is False
+    assert PiiPurgeGuard.contains_cleartext_aadhaar("   ") is False
 
 
 def test_pii_purge_guard_asserts_valid_payload() -> None:
@@ -43,17 +46,19 @@ def test_pii_purge_guard_asserts_valid_payload() -> None:
 
 
 def test_pii_purge_guard_rejects_invalid_token_length() -> None:
-    with pytest.raises(ValueError):
-        PublicAgentStandardizedIntakePayload(
-            session_id="session-12345678",
-            tokenized_citizen_id="short_token_12345",
-            channel_type=ChannelType.WHATSAPP,
-            payload_type=PayloadType.TEXT,
-            structure_level=StructureLevel.FREE_TEXT,
-            language_locale="hi-IN",
-            unprocessed_input_content="Gehu subsidy claim",
-            received_at=datetime.now(UTC),
-        )
+    valid_payload = PublicAgentStandardizedIntakePayload(
+        session_id="session-12345678",
+        tokenized_citizen_id="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale="hi-IN",
+        unprocessed_input_content="Gehu subsidy claim",
+        received_at=datetime.now(UTC),
+    )
+    object.__setattr__(valid_payload, "tokenized_citizen_id", "short_token_12345")
+    with pytest.raises(ValueError, match="must be a 64-character SHA-256 HMAC token"):
+        PiiPurgeGuard.assert_zero_pii(valid_payload)
 
 
 def test_pii_purge_guard_rejects_raw_phone_in_token_field() -> None:

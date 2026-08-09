@@ -29,6 +29,12 @@ def firewall() -> IngestionFirewall:
     return IngestionFirewall(tokenizer=tokenizer, rate_limiter=rate_limiter)
 
 
+def test_ingestion_firewall_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", TEST_PEPPER)
+    fw = IngestionFirewall.from_env()
+    assert isinstance(fw, IngestionFirewall)
+
+
 def test_ingestion_firewall_processes_valid_whatsapp_payload(firewall: IngestionFirewall) -> None:
     raw_payload = WhatsAppIngressPayload(
         session_id="session-wa-123456",

@@ -73,6 +73,28 @@ def test_caseworker_review_outcome_valid_reject() -> None:
     assert payload.approved_amount is None
 
 
+def test_caseworker_review_outcome_approve_missing_amount() -> None:
+    with pytest.raises(ValidationError, match="approved_amount > 0.0 is required"):
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_action=GovernanceAction.MANUAL_APPROVE,
+            review_notes="Approved after manual re-verification of land deed",
+            approved_amount=None,
+            reviewed_at=datetime.now(UTC),
+        )
+
+    with pytest.raises(ValidationError, match="approved_amount > 0.0 is required"):
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_action=GovernanceAction.MANUAL_APPROVE,
+            review_notes="Approved after manual re-verification of land deed",
+            approved_amount=0.0,
+            reviewed_at=datetime.now(UTC),
+        )
+
+
 def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None:
     with pytest.raises(ValidationError) as exc:
         CaseworkerReviewOutcomePayload(
@@ -85,6 +107,18 @@ def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None
             reviewed_at=datetime.now(UTC),
         )
     assert "rejection_reason must be None for MANUAL_APPROVE" in str(exc.value)
+
+
+def test_caseworker_review_outcome_reject_missing_rejection_reason() -> None:
+    with pytest.raises(ValidationError, match="rejection_reason is required for MANUAL_REJECT"):
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_action=GovernanceAction.MANUAL_REJECT,
+            review_notes="Rejected due to invalid cadastral survey match",
+            rejection_reason=None,
+            reviewed_at=datetime.now(UTC),
+        )
 
 
 def test_caseworker_review_outcome_reject_with_approved_amount_fails() -> None:
@@ -112,3 +146,16 @@ def test_caseworker_review_outcome_request_info_with_terminal_fields_fails() -> 
             reviewed_at=datetime.now(UTC),
         )
     assert "approved_amount must be None for REQUEST_MORE_INFO" in str(exc.value)
+
+    with pytest.raises(
+        ValidationError,
+        match="rejection_reason must be None for REQUEST_MORE_INFO",
+    ):
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-981245",
+            reviewer_id="OFFICER-991",
+            governance_action=GovernanceAction.REQUEST_MORE_INFO,
+            review_notes="Please upload a higher resolution photograph of the passbook",
+            rejection_reason="Some rejection reason",
+            reviewed_at=datetime.now(UTC),
+        )

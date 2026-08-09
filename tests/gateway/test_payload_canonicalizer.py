@@ -92,3 +92,9 @@ def test_canonicalize_ussd() -> None:
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.DTMF_SELECTION
     assert intake.unprocessed_input_content == "1*2*9876543210"
+
+
+def test_canonicalize_unsupported_payload_type() -> None:
+    canonicalizer = PayloadCanonicalizer.from_env()
+    with pytest.raises(ValueError, match="Unsupported ingress payload type"):
+        canonicalizer.canonicalize("invalid_payload")  # type: ignore[arg-type]
