@@ -67,9 +67,9 @@ class PayloadCanonicalizer:
             unprocessed_content = str(payload.audio_recording_url)
             structure_level = StructureLevel.FREE_TEXT
         else:
-            raw_text = payload.text_body or ""
+            assert payload.text_body is not None  # Guaranteed by WhatsAppIngressPayload validator
             unprocessed_content = PiiTextRedactor.redact_all(
-                raw_text, session_id=payload.session_id
+                payload.text_body, session_id=payload.session_id
             )
             structure_level = StructureLevel.FREE_TEXT
 

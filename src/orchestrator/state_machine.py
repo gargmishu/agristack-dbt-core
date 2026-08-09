@@ -262,7 +262,7 @@ class StateMachine:
             tokenized_citizen_id=intake.tokenized_citizen_id,
             extracted_payload=extracted,
             active_season=active_season,
-            approved_payouts_ledger=approved_payouts_ledger,
+            approved_payouts_ledger=approved_payouts_ledger or set(),
         )
         governance_outcome = await self._governance_router.evaluate_claim(context)
 

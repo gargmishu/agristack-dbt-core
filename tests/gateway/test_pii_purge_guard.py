@@ -18,7 +18,7 @@ def test_pii_purge_guard_detects_cleartext_phone() -> None:
         )
         is False
     )
-    assert PiiPurgeGuard.contains_cleartext_phone(None) is False
+    assert PiiPurgeGuard.contains_cleartext_phone("") is False
     assert PiiPurgeGuard.contains_cleartext_phone("   ") is False
 
 
@@ -26,7 +26,7 @@ def test_pii_purge_guard_detects_cleartext_aadhaar() -> None:
     assert PiiPurgeGuard.contains_cleartext_aadhaar("1234 5678 9012") is True
     assert PiiPurgeGuard.contains_cleartext_aadhaar("123456789012") is True
     assert PiiPurgeGuard.contains_cleartext_aadhaar("Survey number 1002") is False
-    assert PiiPurgeGuard.contains_cleartext_aadhaar(None) is False
+    assert PiiPurgeGuard.contains_cleartext_aadhaar("") is False
     assert PiiPurgeGuard.contains_cleartext_aadhaar("   ") is False
 
 

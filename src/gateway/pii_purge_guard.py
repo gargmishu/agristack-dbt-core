@@ -28,17 +28,17 @@ class PiiPurgeGuard:
     """In-memory security sentinel asserting zero-PII compliance on canonicalized contracts."""
 
     @classmethod
-    def contains_cleartext_phone(cls, text: str | None) -> bool:
+    def contains_cleartext_phone(cls, text: str) -> bool:
         """Checks if a string contains raw E.164 or 10-digit Indian phone numbers."""
-        if not text or not text.strip():
+        if not text.strip():
             return False
         clean = text.strip()
         return bool(_E164_PHONE_PATTERN.match(clean) or _INDIAN_PHONE_PATTERN.search(clean))
 
     @classmethod
-    def contains_cleartext_aadhaar(cls, text: str | None) -> bool:
+    def contains_cleartext_aadhaar(cls, text: str) -> bool:
         """Checks if a string contains a 12-digit Aadhaar number pattern."""
-        if not text or not text.strip():
+        if not text.strip():
             return False
         return bool(_AADHAAR_PATTERN.search(text.strip()))
 

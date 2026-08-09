@@ -13,7 +13,7 @@ See: roadmap.md (Phase 3 Step 3.3 Layer 4 Governance Router)
 
 import logging
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Final
 
@@ -47,7 +47,7 @@ class ClaimEvaluationContext:
     tokenized_citizen_id: str
     extracted_payload: ExtractedEntityPayload
     active_season: str = DEFAULT_ACTIVE_SEASON
-    approved_payouts_ledger: set[tuple[str, str]] | None = None
+    approved_payouts_ledger: set[tuple[str, str]] = field(default_factory=set)
 
 
 class GovernanceRouter:
