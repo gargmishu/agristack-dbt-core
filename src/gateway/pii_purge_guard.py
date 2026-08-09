@@ -11,6 +11,7 @@ import logging
 import re
 from typing import Final
 
+from src.data_models.common import PayloadType
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,14 @@ class PiiPurgeGuard:
 
         if cls.contains_cleartext_aadhaar(payload.tokenized_citizen_id):
             raise ValueError("Cleartext Aadhaar number detected in tokenized_citizen_id field")
+
+        # Scan unprocessed_input_content for cleartext phone or Aadhaar leak (for text payloads)
+        if payload.payload_type == PayloadType.TEXT:
+            if cls.contains_cleartext_phone(payload.unprocessed_input_content):
+                raise ValueError("Cleartext phone number detected in unprocessed_input_content")
+            if cls.contains_cleartext_aadhaar(payload.unprocessed_input_content):
+                raise ValueError("Cleartext Aadhaar number detected in unprocessed_input_content")
+
 
         logger.debug(
             "Zero-PII compliance verified for session=%s token=%s",
