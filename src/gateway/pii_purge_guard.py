@@ -73,7 +73,6 @@ class PiiPurgeGuard:
             if cls.contains_cleartext_aadhaar(payload.unprocessed_input_content):
                 raise ValueError("Cleartext Aadhaar number detected in unprocessed_input_content")
 
-
         logger.debug(
             "Zero-PII compliance verified for session=%s token=%s",
             payload.session_id,

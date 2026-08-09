@@ -91,7 +91,7 @@ def test_pii_purge_guard_rejects_raw_aadhaar_in_token_field() -> None:
 
 
 def test_pii_purge_guard_rejects_raw_pii_in_unprocessed_input_content() -> None:
-    valid_token = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    valid_token = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"  # noqa: S105
 
     phone_leaked_payload = PublicAgentStandardizedIntakePayload(
         session_id="session-12345678",
@@ -103,7 +103,10 @@ def test_pii_purge_guard_rejects_raw_pii_in_unprocessed_input_content() -> None:
         unprocessed_input_content="Mera phone number 9876543210 par call karo",
         received_at=datetime.now(UTC),
     )
-    with pytest.raises(ValueError, match="Cleartext phone number detected in unprocessed_input_content"):
+    with pytest.raises(
+        ValueError,
+        match="Cleartext phone number detected in unprocessed_input_content",
+    ):
         PiiPurgeGuard.assert_zero_pii(phone_leaked_payload)
 
     aadhaar_leaked_payload = PublicAgentStandardizedIntakePayload(
@@ -116,6 +119,8 @@ def test_pii_purge_guard_rejects_raw_pii_in_unprocessed_input_content() -> None:
         unprocessed_input_content="Aadhaar number 1234 5678 9012 linked hai",
         received_at=datetime.now(UTC),
     )
-    with pytest.raises(ValueError, match="Cleartext Aadhaar number detected in unprocessed_input_content"):
+    with pytest.raises(
+        ValueError,
+        match="Cleartext Aadhaar number detected in unprocessed_input_content",
+    ):
         PiiPurgeGuard.assert_zero_pii(aadhaar_leaked_payload)
-
