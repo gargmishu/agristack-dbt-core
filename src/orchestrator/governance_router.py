@@ -22,6 +22,7 @@ from src.data_models.common import (
     DomainEntityKey,
     EligibilityStatus,
     GovernanceAction,
+    RejectionReasonCode,
 )
 from src.data_models.governance import (
     ExtractedEntityPayload,
@@ -130,10 +131,7 @@ class GovernanceRouter:
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
-                rejection_reason=(
-                    f"Duplicate claim detected for citizen in active season "
-                    f"'{context.active_season}' (anti-double-dipping gate)"
-                ),
+                rejection_reason=RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON,
                 evaluated_at=now,
             )
 
@@ -152,7 +150,7 @@ class GovernanceRouter:
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
-                rejection_reason="Unverified citizen identity token in sovereign identity registry",
+                rejection_reason=RejectionReasonCode.IDENTITY_NOT_VERIFIED,
                 evaluated_at=now,
             )
 
@@ -175,10 +173,7 @@ class GovernanceRouter:
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
-                rejection_reason=(
-                    f"Cadastral land parcel record '{survey_number}' mismatch "
-                    "or unentitled crop plot"
-                ),
+                rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
                 evaluated_at=now,
             )
 

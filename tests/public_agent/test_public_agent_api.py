@@ -3,7 +3,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.public_agent import PublicAgentApi
 from src.public_agent.intake_payload_evaluator import (
@@ -21,7 +26,7 @@ async def test_public_agent_api_submit_valid_payload() -> None:
         channel_type=ChannelType.IVR_VOICE,
         payload_type=PayloadType.AUDIO,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="https://sip-gateway.telecom.in/audio/voice_call.wav",
         received_at=datetime.now(UTC),
     )
@@ -48,7 +53,7 @@ async def test_public_agent_api_rejects_invalid_evaluator_outcome() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Mera khet",
         received_at=datetime.now(UTC),
     )

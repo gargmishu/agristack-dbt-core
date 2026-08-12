@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
-from src.data_models.common import ApplicationIntent
+from src.data_models.common import ApplicationIntent, EscalationReasonCode
 
 
 def test_case_review_payload_valid() -> None:
@@ -15,10 +15,11 @@ def test_case_review_payload_valid() -> None:
         tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         unprocessed_input_content="Voice note transcript",
-        escalation_reason="LOW_CONFIDENCE",
+        escalation_reason=EscalationReasonCode.LOW_AI_CONFIDENCE,
         staged_at=datetime.now(UTC),
     )
     assert payload.escalation_case_id == "SPP-CASE-2026-981245"
+    assert payload.escalation_reason == EscalationReasonCode.LOW_AI_CONFIDENCE
 
 
 def test_case_review_payload_empty_content_rejected() -> None:
@@ -30,13 +31,13 @@ def test_case_review_payload_empty_content_rejected() -> None:
             tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
             application_intent=ApplicationIntent.APPLY_SUBSIDY,
             unprocessed_input_content="   ",
-            escalation_reason="LOW_CONFIDENCE",
+            escalation_reason=EscalationReasonCode.LOW_AI_CONFIDENCE,
             staged_at=datetime.now(UTC),
         )
-    assert "unprocessed_input_content cannot be empty or whitespace" in str(exc.value)
+    assert "String should have at least 1 character" in str(exc.value)
 
 
-def test_case_review_payload_empty_reason_rejected() -> None:
+def test_case_review_payload_invalid_enum_reason_rejected() -> None:
     with pytest.raises(ValidationError) as exc:
         CaseworkerCaseReviewPayload(
             escalation_case_id="SPP-CASE-2026-981245",
@@ -45,7 +46,7 @@ def test_case_review_payload_empty_reason_rejected() -> None:
             tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
             application_intent=ApplicationIntent.APPLY_SUBSIDY,
             unprocessed_input_content="Voice note transcript",
-            escalation_reason="    ",
+            escalation_reason="INVALID_REASON",  # type: ignore[arg-type]
             staged_at=datetime.now(UTC),
         )
-    assert "escalation_reason cannot be empty or whitespace" in str(exc.value)
+    assert "Input should be 'LOW_AI_CONFIDENCE'" in str(exc.value)

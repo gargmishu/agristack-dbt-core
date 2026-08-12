@@ -1,11 +1,12 @@
 """Caseworker incident review staging payload schema."""
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from src.data_models.common import (
     ApplicationIntent,
     DomainEntityKey,
     EscalationCaseId,
+    EscalationReasonCode,
     ExtractionPayloadId,
     HmacCitizenToken,
     SessionId,
@@ -40,24 +41,18 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
             "triggered by AI entity extraction failure or unparseable input."
         ),
     )
+    # min_length=1 allows single-digit USSD DTMF selections or single-character menu inputs
+    # (e.g., "1", "2", "Y") that failed downstream processing to be staged for caseworker review.
     unprocessed_input_content: str = Field(
-        ..., max_length=5000, description="Raw citizen text or signed audio URL"
+        ...,
+        min_length=1,
+        max_length=5000,
+        description="Raw citizen text, single-digit menu selection, or signed audio URL",
     )
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
+    escalation_reason: EscalationReasonCode = Field(
+        ...,
+        description="Canonical escalation classification code",
+    )
     staged_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when incident ticket was staged into review dashboard"
     )
-
-    @model_validator(mode="after")
-    def validate_non_empty_fields(self) -> "CaseworkerCaseReviewPayload":
-        """Enforces non-empty, non-whitespace text fields.
-
-        Note: extracted_entities is intentionally allowed to be empty ({}) as
-        escalation often occurs due to AI extraction failure, requiring the
-        caseworker to review raw unprocessed_input_content.
-        """
-        if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
-            raise ValueError("unprocessed_input_content cannot be empty or whitespace")
-        if not self.escalation_reason or not self.escalation_reason.strip():
-            raise ValueError("escalation_reason cannot be empty or whitespace")
-        return self

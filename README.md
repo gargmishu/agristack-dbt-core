@@ -86,7 +86,8 @@ agristack-dbt-core/
 │   ├── step2.1_package_manager_and_dependencies.md
 │   ├── step2.2_governance_flows_and_state_transitions.md
 │   ├── step3.1_foundational_mock_boundaries.md
-│   └── step3.2_security_and_ingestion_firewalls.md
+│   ├── step3.2_security_and_ingestion_firewalls.md
+│   └── step3.3_layer4_orchestrator_brain.md
 ├── design-specs/                    # Declarative system specs & workflow schemas
 │   ├── step0-env-readiness/
 │   ├── step1-journey-channels/
@@ -154,12 +155,18 @@ source .venv/bin/activate
 | ADR Reference | Topic | Summary |
 | :--- | :--- | :--- |
 | [`step0.0`](decisions/step0.0_master_project_and_business_requirements.md) | Business Requirements | Master business rules and straight-through processing requirements. |
+| [`step0.1`](decisions/step0.1_database_evaluation.md) | Database Evaluation | Relational DB evaluation against free-tier, JSONB, and DBT requirements. |
+| [`step0.2`](decisions/step0.2_data_model_design.md) | Data Model Design | Entity normalization, cardinality, and physical table naming standards. |
 | [`step0.3`](decisions/step0.3_zero_trust_tokenization.md) | Zero-Trust Tokenization | RAM-only cryptographic tokenization and zero-retention logging. |
 | [`step0.4`](decisions/step0.4_database_schema_design.md) | Database Schema | Normalization, indexing strategies, audit triggers, and DBT analytical views. |
+| [`step1.1`](decisions/step1.1_tech_stack_evaluation.md) | Tech Stack Selection | Application framework, SLM engine, and runtime evaluation. |
+| [`step1.2`](decisions/step1.2_runtime_strictness_linting.md) | Runtime Strictness & Linting | Ruff, Mypy strict configuration, and code quality boundaries. |
 | [`step2.0`](decisions/step2.0_canonical_domain_schemas.md) | Domain Contracts | Pydantic v2 domain schemas, constrained types, and truth tables. |
+| [`step2.1`](decisions/step2.1_package_manager_and_dependencies.md) | Dependencies & Tooling | Package manager configuration, virtual environment, and dependency pins. |
 | [`step2.2`](decisions/step2.2_governance_flows_and_state_transitions.md) | Governance Flows | 3-gate state machine, decision routing matrix, and caseworker lifecycle. |
 | [`step3.1`](decisions/step3.1_foundational_mock_boundaries.md) | Mock Boundaries | Deterministic offline simulation fixtures for AI and DPI services. |
 | [`step3.2`](decisions/step3.2_security_and_ingestion_firewalls.md) | Security Firewalls | Layer 2 perimeter firewall, rate limiting, and adversarial defense. |
+| [`step3.3`](decisions/step3.3_layer4_orchestrator_brain.md) | Orchestrator Brain | 3-Gate evaluation pipeline, decision routing, and caseworker staging. |
 
 ---
 

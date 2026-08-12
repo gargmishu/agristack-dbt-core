@@ -10,6 +10,7 @@ from src.data_models.common import (
     ApplicationIntent,
     DomainEntityKey,
     EligibilityStatus,
+    EscalationReasonCode,
     GovernanceAction,
     PayloadType,
     StructureLevel,
@@ -295,9 +296,9 @@ class StateMachine:
                 extracted_entities=extracted.domain_entities,
                 unprocessed_input_content=intake.unprocessed_input_content,
                 escalation_reason=(
-                    "Low AI confidence score or adversarial attempt flagged"
+                    EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
                     if extracted.is_adversarial_attempt
-                    else "Missing mandatory entities or policy review required"
+                    else EscalationReasonCode.MISSING_MANDATORY_ENTITIES
                 ),
                 staged_at=datetime.now(UTC),
             )

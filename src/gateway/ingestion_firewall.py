@@ -10,6 +10,7 @@ See: decisions/step0.3_zero_trust_tokenization.md
 
 import logging
 
+from src.data_models.common import LanguageLocale
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
     UssdIngressPayload,
@@ -51,7 +52,7 @@ class IngestionFirewall:
     def validate_and_canonicalize(
         self,
         payload: IngressPayloadUnion,
-        language_locale: str = "hi-IN",
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
     ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
         """Ingests, rate-limits, tokenizes PII in RAM, and scans for adversarial patterns.
 

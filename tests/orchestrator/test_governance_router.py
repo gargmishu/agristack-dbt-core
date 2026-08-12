@@ -8,6 +8,7 @@ from src.data_models.common import (
     DomainEntityKey,
     EligibilityStatus,
     GovernanceAction,
+    RejectionReasonCode,
 )
 from src.data_models.governance import (
     ExtractedEntityPayload,
@@ -49,7 +50,7 @@ async def test_governance_router_auto_reject() -> None:
         ai_confidence_score=0.40,
         eligibility_status=EligibilityStatus.INELIGIBLE,
         governance_action=GovernanceAction.AUTO_REJECT,
-        rejection_reason="Cadastral plot not registered for seasonal crop",
+        rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
         evaluated_at=datetime.now(UTC),
     )
     result = await router.route_governance_outcome(payload)
@@ -101,7 +102,7 @@ async def test_governance_router_manual_reject() -> None:
         eligibility_status=EligibilityStatus.INELIGIBLE,
         governance_action=GovernanceAction.MANUAL_REJECT,
         escalation_case_id="SPP-CASE-2026-100200",
-        rejection_reason="Ineligible crop acreage under state relief rules",
+        rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
         review_notes="Officer reviewed satellite and revenue record mismatch",
         evaluated_at=datetime.now(UTC),
     )
@@ -212,7 +213,7 @@ async def test_governance_router_evaluate_claim_unverified_identity() -> None:
 
     outcome = await router.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
-    assert "Unverified citizen identity token" in str(outcome.rejection_reason)
+    assert outcome.rejection_reason == RejectionReasonCode.IDENTITY_NOT_VERIFIED
 
 
 @pytest.mark.asyncio
@@ -236,4 +237,4 @@ async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
 
     outcome = await router.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
-    assert "Cadastral land parcel record" in str(outcome.rejection_reason)
+    assert outcome.rejection_reason == RejectionReasonCode.LAND_RECORD_NOT_FOUND

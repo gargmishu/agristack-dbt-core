@@ -7,6 +7,7 @@ from pydantic import Field, HttpUrl, TypeAdapter, model_validator
 from src.data_models.common import (
     ChannelType,
     HmacCitizenToken,
+    LanguageLocale,
     PayloadType,
     SessionId,
     StrictBaseModel,
@@ -49,26 +50,21 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     structure_level: StructureLevel = Field(
         ..., description="Input structure: free_text, menu_selection, dtmf_selection"
     )
-    language_locale: str = Field(
-        "hi-IN",
-        pattern=r"^[a-z]{2}-[A-Z]{2}$",
-        description="BCP 47 language code (defaults to hi-IN)",
+    language_locale: LanguageLocale = Field(
+        LanguageLocale.HINDI,
+        description="Supported BCP 47 language code (defaults to hi-IN)",
     )
+    # min_length=1 allows single-digit USSD DTMF selections (e.g. "1", "2") and single-character
+    # chatbot replies (e.g. "Y", "N") while whitespace-only strings are rejected by StrictBaseModel.
     unprocessed_input_content: str = Field(
         ...,
+        min_length=1,
         max_length=5000,
-        description="Raw citizen text or signed audio URL pointer",
+        description="Raw citizen text, single-digit menu selection, or signed audio URL pointer",
     )
     received_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when canonicalized payload reached Layer 3 intake gateway"
     )
-
-    @model_validator(mode="after")
-    def validate_non_empty_content(self) -> "PublicAgentStandardizedIntakePayload":
-        """Ensures unprocessed_input_content is non-empty and non-whitespace."""
-        if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
-            raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
-        return self
 
     @model_validator(mode="after")
     def validate_channel_structure_matrix(self) -> "PublicAgentStandardizedIntakePayload":
@@ -99,7 +95,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
                 raise ValueError(
                     "SMS channel strictly requires TEXT payload_type with FREE_TEXT structure_level"
                 )
-        elif self.channel_type == ChannelType.WHATSAPP:
+        else:  # ChannelType.WHATSAPP
             if (
                 self.payload_type == PayloadType.AUDIO
                 and self.structure_level != StructureLevel.FREE_TEXT

@@ -3,7 +3,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import HttpUrl
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
     UssdIngressPayload,
@@ -30,7 +35,7 @@ def test_canonicalize_whatsapp_text() -> None:
         received_at=datetime.now(UTC),
     )
 
-    intake = canonicalizer.canonicalize(payload, language_locale="hi-IN")
+    intake = canonicalizer.canonicalize(payload, language_locale=LanguageLocale.HINDI)
     assert intake.session_id == "sess_12345678"
     assert intake.channel_type == ChannelType.WHATSAPP
     assert intake.payload_type == PayloadType.TEXT

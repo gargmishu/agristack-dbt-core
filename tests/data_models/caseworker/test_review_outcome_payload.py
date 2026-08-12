@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.data_models.caseworker import CaseworkerReviewOutcomePayload
-from src.data_models.common import GovernanceAction
+from src.data_models.common import GovernanceAction, RejectionReasonCode
 
 
 def test_caseworker_review_outcome_valid_approve() -> None:
@@ -65,11 +65,11 @@ def test_caseworker_review_outcome_valid_reject() -> None:
         reviewer_id="OFFICER-991",
         governance_action=GovernanceAction.MANUAL_REJECT,
         review_notes="Ineligible under current land parcel rules",
-        rejection_reason="Land parcel area exceeds maximum scheme eligibility allowance",
+        rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
         reviewed_at=datetime.now(UTC),
     )
     assert payload.governance_action == GovernanceAction.MANUAL_REJECT
-    assert payload.rejection_reason is not None
+    assert payload.rejection_reason == RejectionReasonCode.INELIGIBLE_LAND_SIZE
     assert payload.approved_amount is None
 
 
@@ -103,7 +103,7 @@ def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None
             governance_action=GovernanceAction.MANUAL_APPROVE,
             review_notes="Approved after manual re-verification of land deed",
             approved_amount=5000.0,  # noqa: PLR2004
-            rejection_reason="Leftover reason",
+            rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
             reviewed_at=datetime.now(UTC),
         )
     assert "rejection_reason must be None for MANUAL_APPROVE" in str(exc.value)
@@ -129,7 +129,7 @@ def test_caseworker_review_outcome_reject_with_approved_amount_fails() -> None:
             governance_action=GovernanceAction.MANUAL_REJECT,
             review_notes="Rejected due to invalid cadastral survey match",
             approved_amount=5000.0,  # noqa: PLR2004
-            rejection_reason="Survey number verification failed",
+            rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
             reviewed_at=datetime.now(UTC),
         )
     assert "approved_amount must be None for MANUAL_REJECT" in str(exc.value)
@@ -156,6 +156,6 @@ def test_caseworker_review_outcome_request_info_with_terminal_fields_fails() -> 
             reviewer_id="OFFICER-991",
             governance_action=GovernanceAction.REQUEST_MORE_INFO,
             review_notes="Please upload a higher resolution photograph of the passbook",
-            rejection_reason="Some rejection reason",
+            rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
             reviewed_at=datetime.now(UTC),
         )

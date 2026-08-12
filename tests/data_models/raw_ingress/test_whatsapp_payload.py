@@ -81,7 +81,7 @@ def test_whatsapp_ingress_invalid_audio_with_text_body() -> None:
 
 
 def test_whatsapp_ingress_invalid_text_missing_or_empty() -> None:
-    with pytest.raises(ValidationError, match="text_body must be a non-empty string"):
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
         WhatsAppIngressPayload(
             session_id="sess_12345678",
             originating_phone_number="+919876543210",
@@ -89,6 +89,16 @@ def test_whatsapp_ingress_invalid_text_missing_or_empty() -> None:
             payload_type=PayloadType.TEXT,
             received_at=datetime.now(UTC),
             text_body="",
+        )
+
+    with pytest.raises(ValidationError, match="text_body is required when payload_type is TEXT"):
+        WhatsAppIngressPayload(
+            session_id="sess_12345678",
+            originating_phone_number="+919876543210",
+            channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
+            payload_type=PayloadType.TEXT,
+            received_at=datetime.now(UTC),
+            text_body=None,
         )
 
 

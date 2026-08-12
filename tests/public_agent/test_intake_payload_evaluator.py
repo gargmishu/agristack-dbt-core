@@ -1,6 +1,11 @@
 from datetime import UTC, datetime
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.public_agent import IntakePayloadEvaluator
 
@@ -15,7 +20,7 @@ def test_intake_payload_evaluator_dtmf_structured_bypass() -> None:
         channel_type=ChannelType.USSD,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.DTMF_SELECTION,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="1*2*9876543210",
         received_at=datetime.now(UTC),
     )
@@ -34,7 +39,7 @@ def test_intake_payload_evaluator_free_text_requires_nlu() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Mera khet Karnal me hai aur fasal kharab ho gayi hai",
         received_at=datetime.now(UTC),
     )
@@ -53,7 +58,7 @@ def test_intake_payload_evaluator_empty_content_rejected() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Valid before mutate",
         received_at=datetime.now(UTC),
     )

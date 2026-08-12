@@ -8,6 +8,7 @@ from src.data_models.common import (
     EscalationCaseId,
     ExtractionPayloadId,
     GovernanceAction,
+    RejectionReasonCode,
     SessionId,
     StrictBaseModel,
     UtcTimestamp,
@@ -62,11 +63,13 @@ class GovernanceOutcomePayload(StrictBaseModel):
             "manual review routing, info requests, and caseworker adjudications"
         ),
     )
-    rejection_reason: str | None = Field(
-        None, description="Populated for AUTO_REJECT / MANUAL_REJECT"
+    rejection_reason: RejectionReasonCode | None = Field(
+        None,
+        description="Populated for AUTO_REJECT / MANUAL_REJECT",
     )
     review_notes: str | None = Field(
         None,
+        min_length=5,
         max_length=2000,
         description="Internal caseworker audit notes carried from manual adjudication",
     )
@@ -129,8 +132,6 @@ class GovernanceOutcomePayload(StrictBaseModel):
                 raise ValueError("rejection_reason must be None for MANUAL_APPROVE")
             if self.review_notes is None:
                 raise ValueError("review_notes is required for MANUAL_APPROVE")
-            if not self.review_notes.strip():
-                raise ValueError("review_notes cannot be empty or whitespace for MANUAL_APPROVE")
         return self
 
     @model_validator(mode="after")
@@ -143,7 +144,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
         state transitions or accidental financial clearing.
         """
         if self.governance_action == GovernanceAction.AUTO_REJECT:
-            if not self.rejection_reason:
+            if self.rejection_reason is None:
                 raise ValueError("rejection_reason is required for AUTO_REJECT")
             if self.disbursement_txn_id is not None:
                 raise ValueError("disbursement_txn_id must be None for AUTO_REJECT")
@@ -165,7 +166,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
         keys remain strictly forbidden.
         """
         if self.governance_action == GovernanceAction.MANUAL_REJECT:
-            if not self.rejection_reason:
+            if self.rejection_reason is None:
                 raise ValueError("rejection_reason is required for MANUAL_REJECT")
             if not self.escalation_case_id:
                 raise ValueError("escalation_case_id is required for MANUAL_REJECT")
@@ -175,8 +176,6 @@ class GovernanceOutcomePayload(StrictBaseModel):
                 raise ValueError("disbursement_status must be None for MANUAL_REJECT")
             if self.review_notes is None:
                 raise ValueError("review_notes is required for MANUAL_REJECT")
-            if not self.review_notes.strip():
-                raise ValueError("review_notes cannot be empty or whitespace for MANUAL_REJECT")
         return self
 
     @model_validator(mode="after")

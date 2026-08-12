@@ -7,6 +7,7 @@ from src.data_models.common import (
     DisbursementStatus,
     EligibilityStatus,
     GovernanceAction,
+    RejectionReasonCode,
 )
 from src.data_models.governance import GovernanceOutcomePayload
 
@@ -62,7 +63,7 @@ def test_governance_routing_auto_approve_with_rejection_reason() -> None:
             governance_action=GovernanceAction.AUTO_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
-            rejection_reason="Invalid reason on approve",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             evaluated_at=datetime.now(UTC),
         )
 
@@ -142,7 +143,7 @@ def test_governance_routing_review_decision_with_disbursement_keys() -> None:
             ai_confidence_score=0.45,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
             governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
-            rejection_reason="Some reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             evaluated_at=datetime.now(UTC),
         )
 
@@ -186,7 +187,7 @@ def test_governance_routing_manual_approve_missing_fields() -> None:
             eligibility_status=EligibilityStatus.ELIGIBLE,
             governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_status=DisbursementStatus.PENDING,
-            review_notes="Note",
+            review_notes="Valid officer review note",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -199,7 +200,7 @@ def test_governance_routing_manual_approve_missing_fields() -> None:
             eligibility_status=EligibilityStatus.ELIGIBLE,
             governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
-            review_notes="Note",
+            review_notes="Valid officer review note",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -213,8 +214,36 @@ def test_governance_routing_manual_approve_missing_fields() -> None:
             governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
-            rejection_reason="Invalid rejection reason",
-            review_notes="Note",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+            review_notes="Valid officer review note",
+            evaluated_at=datetime.now(UTC),
+        )
+
+    with pytest.raises(ValidationError, match="review_notes is required"):
+        GovernanceOutcomePayload(
+            session_id="sess_12345678",
+            payload_id="550e8400-e29b-41d4-a716-446655440000",
+            escalation_case_id="SPP-CASE-2026-981245",
+            ai_confidence_score=0.78,
+            eligibility_status=EligibilityStatus.ELIGIBLE,
+            governance_action=GovernanceAction.MANUAL_APPROVE,
+            disbursement_txn_id="TXN-2026-987654",
+            disbursement_status=DisbursementStatus.PENDING,
+            review_notes=None,
+            evaluated_at=datetime.now(UTC),
+        )
+
+    with pytest.raises(ValidationError, match="String should have at least 5 characters"):
+        GovernanceOutcomePayload(
+            session_id="sess_12345678",
+            payload_id="550e8400-e29b-41d4-a716-446655440000",
+            escalation_case_id="SPP-CASE-2026-981245",
+            ai_confidence_score=0.78,
+            eligibility_status=EligibilityStatus.ELIGIBLE,
+            governance_action=GovernanceAction.MANUAL_APPROVE,
+            disbursement_txn_id="TXN-2026-987654",
+            disbursement_status=DisbursementStatus.PENDING,
+            review_notes="   ",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -227,7 +256,7 @@ def test_governance_routing_manual_approve_missing_fields() -> None:
             governance_action=GovernanceAction.MANUAL_APPROVE,
             disbursement_txn_id="TXN-2026-987654",
             disbursement_status=DisbursementStatus.PENDING,
-            review_notes="Note",
+            review_notes="Valid officer review note",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -239,7 +268,7 @@ def test_governance_routing_auto_reject_valid_and_invalid() -> None:
         ai_confidence_score=0.40,
         eligibility_status=EligibilityStatus.INELIGIBLE,
         governance_action=GovernanceAction.AUTO_REJECT,
-        rejection_reason="Cadastral plot not registered",
+        rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
         evaluated_at=datetime.now(UTC),
     )
     assert valid.governance_action == GovernanceAction.AUTO_REJECT
@@ -261,7 +290,7 @@ def test_governance_routing_auto_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.AUTO_REJECT,
-            rejection_reason="Reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             disbursement_txn_id="TXN-2026-987654",
             evaluated_at=datetime.now(UTC),
         )
@@ -273,7 +302,7 @@ def test_governance_routing_auto_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.AUTO_REJECT,
-            rejection_reason="Reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             disbursement_status=DisbursementStatus.PENDING,
             evaluated_at=datetime.now(UTC),
         )
@@ -285,7 +314,7 @@ def test_governance_routing_auto_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.AUTO_REJECT,
-            rejection_reason="Reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             escalation_case_id="SPP-CASE-2026-981245",
             evaluated_at=datetime.now(UTC),
         )
@@ -297,7 +326,7 @@ def test_governance_routing_auto_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.AUTO_REJECT,
-            rejection_reason="Reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             review_notes="Some review note",
             evaluated_at=datetime.now(UTC),
         )
@@ -311,7 +340,7 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
         ai_confidence_score=0.40,
         eligibility_status=EligibilityStatus.INELIGIBLE,
         governance_action=GovernanceAction.MANUAL_REJECT,
-        rejection_reason="Land deed mismatch",
+        rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
         review_notes="Officer verified records",
         evaluated_at=datetime.now(UTC),
     )
@@ -325,7 +354,7 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.MANUAL_REJECT,
-            review_notes="Note",
+            review_notes="Valid officer review note",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -336,8 +365,8 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.MANUAL_REJECT,
-            rejection_reason="Reason",
-            review_notes="Note",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+            review_notes="Valid officer review note",
             evaluated_at=datetime.now(UTC),
         )
 
@@ -349,8 +378,8 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.MANUAL_REJECT,
-            rejection_reason="Reason",
-            review_notes="Note",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+            review_notes="Valid officer review note",
             disbursement_txn_id="TXN-2026-987654",
             evaluated_at=datetime.now(UTC),
         )
@@ -363,13 +392,13 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.MANUAL_REJECT,
-            rejection_reason="Reason",
-            review_notes="Note",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+            review_notes="Valid officer review note",
             disbursement_status=DisbursementStatus.PENDING,
             evaluated_at=datetime.now(UTC),
         )
 
-    with pytest.raises(ValidationError, match="review_notes cannot be empty or whitespace"):
+    with pytest.raises(ValidationError, match="review_notes is required"):
         GovernanceOutcomePayload(
             session_id="sess_12345678",
             payload_id="550e8400-e29b-41d4-a716-446655440000",
@@ -377,7 +406,20 @@ def test_governance_routing_manual_reject_valid_and_invalid() -> None:
             ai_confidence_score=0.40,
             eligibility_status=EligibilityStatus.INELIGIBLE,
             governance_action=GovernanceAction.MANUAL_REJECT,
-            rejection_reason="Reason",
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+            review_notes=None,
+            evaluated_at=datetime.now(UTC),
+        )
+
+    with pytest.raises(ValidationError, match="String should have at least 5 characters"):
+        GovernanceOutcomePayload(
+            session_id="sess_12345678",
+            payload_id="550e8400-e29b-41d4-a716-446655440000",
+            escalation_case_id="SPP-CASE-2026-981245",
+            ai_confidence_score=0.40,
+            eligibility_status=EligibilityStatus.INELIGIBLE,
+            governance_action=GovernanceAction.MANUAL_REJECT,
+            rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
             review_notes="   ",
             evaluated_at=datetime.now(UTC),
         )

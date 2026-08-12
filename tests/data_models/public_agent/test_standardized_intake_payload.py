@@ -3,7 +3,12 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 VALID_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
@@ -16,12 +21,12 @@ def test_standardized_intake_payload_valid() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Mujhe PM KISAN kist ki jankari chahiye",
         received_at=datetime.now(UTC),
     )
     assert payload.channel_type == ChannelType.WHATSAPP
-    assert payload.language_locale == "hi-IN"
+    assert payload.language_locale == LanguageLocale.HINDI
 
 
 def test_standardized_intake_payload_invalid_hmac_length() -> None:
@@ -193,7 +198,7 @@ def test_standardized_intake_payload_menu_selection_limits() -> None:
 
 
 def test_standardized_intake_payload_empty_content() -> None:
-    with pytest.raises(ValidationError, match="cannot be empty or whitespace-only"):
+    with pytest.raises(ValidationError, match="String should have at least 1 character"):
         PublicAgentStandardizedIntakePayload(
             session_id="sess_12345678",
             tokenized_citizen_id=VALID_CITIZEN_TOKEN,
@@ -201,5 +206,34 @@ def test_standardized_intake_payload_empty_content() -> None:
             payload_type=PayloadType.TEXT,
             structure_level=StructureLevel.FREE_TEXT,
             unprocessed_input_content="   ",  # Whitespace-only
+            received_at=datetime.now(UTC),
+        )
+
+
+def test_standardized_intake_payload_valid_whatsapp_audio() -> None:
+    payload = PublicAgentStandardizedIntakePayload(
+        session_id="sess_12345678",
+        tokenized_citizen_id=VALID_CITIZEN_TOKEN,
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.AUDIO,
+        structure_level=StructureLevel.FREE_TEXT,
+        unprocessed_input_content="https://storage.agristack.gov.in/audio/whatsapp_note.ogg",
+        received_at=datetime.now(UTC),
+    )
+    assert payload.channel_type == ChannelType.WHATSAPP
+    assert payload.payload_type == PayloadType.AUDIO
+
+
+def test_standardized_intake_payload_whatsapp_invalid_modality() -> None:
+    with pytest.raises(
+        ValidationError, match="WHATSAPP channel requires AUDIO or TEXT payload_type"
+    ):
+        PublicAgentStandardizedIntakePayload(
+            session_id="sess_12345678",
+            tokenized_citizen_id=VALID_CITIZEN_TOKEN,
+            channel_type=ChannelType.WHATSAPP,
+            payload_type=PayloadType.IMAGE,
+            structure_level=StructureLevel.FREE_TEXT,
+            unprocessed_input_content="https://storage.agristack.gov.in/images/photo.jpg",
             received_at=datetime.now(UTC),
         )

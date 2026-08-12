@@ -8,7 +8,11 @@ from src.data_models.caseworker import (
     CaseworkerCaseReviewPayload,
     CaseworkerReviewOutcomePayload,
 )
-from src.data_models.common import ApplicationIntent, GovernanceAction
+from src.data_models.common import (
+    ApplicationIntent,
+    EscalationReasonCode,
+    GovernanceAction,
+)
 from src.orchestrator import CaseManagementService
 
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
@@ -25,7 +29,7 @@ async def test_case_management_stage_incident_ticket() -> None:
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         extracted_entities={},
         unprocessed_input_content="Raw text for manual review",
-        escalation_reason="Low AI confidence",
+        escalation_reason=EscalationReasonCode.LOW_AI_CONFIDENCE,
         staged_at=datetime.now(UTC),
     )
 

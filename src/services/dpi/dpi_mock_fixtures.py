@@ -15,6 +15,8 @@ See: roadmap.md (Phase 3 Step 3.1)
 
 from typing import NamedTuple
 
+from src.data_models.common import DisbursementFailureCode
+
 UNVERIFIED_IDENTITY_TOKEN_ZERO = "0" * 64
 UNVERIFIED_IDENTITY_PREFIX = "ffff0000"
 
@@ -25,7 +27,7 @@ MOCK_CASE_REJECT_PREFIX = "REJECT"
 MOCK_FAIL_STAGE_NOTE = "fail_stage"
 
 MOCK_PAYMENT_FAIL_TRIGGER = "FAIL"
-MOCK_PAYMENT_FAILURE_REASON = "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"
+MOCK_PAYMENT_FAILURE_REASON = DisbursementFailureCode.ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING
 
 
 class MockCadastralParcel(NamedTuple):

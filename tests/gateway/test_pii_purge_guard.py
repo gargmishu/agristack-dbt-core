@@ -4,7 +4,12 @@ from datetime import UTC, datetime
 
 import pytest
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.gateway.pii_purge_guard import PiiPurgeGuard
 
@@ -37,7 +42,7 @@ def test_pii_purge_guard_asserts_valid_payload() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Gehu subsidy claim",
         received_at=datetime.now(UTC),
     )
@@ -52,7 +57,7 @@ def test_pii_purge_guard_rejects_invalid_token_length() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Gehu subsidy claim",
         received_at=datetime.now(UTC),
     )
@@ -70,7 +75,7 @@ def test_pii_purge_guard_rejects_raw_phone_in_token_field() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Gehu subsidy claim",
         received_at=datetime.now(UTC),
     )
@@ -87,7 +92,7 @@ def test_pii_purge_guard_rejects_raw_aadhaar_in_token_field() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Gehu subsidy claim",
         received_at=datetime.now(UTC),
     )
@@ -104,7 +109,7 @@ def test_pii_purge_guard_rejects_raw_pii_in_unprocessed_input_content() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Mera phone number 9876543210 par call karo",
         received_at=datetime.now(UTC),
     )
@@ -120,7 +125,7 @@ def test_pii_purge_guard_rejects_raw_pii_in_unprocessed_input_content() -> None:
         channel_type=ChannelType.WHATSAPP,
         payload_type=PayloadType.TEXT,
         structure_level=StructureLevel.FREE_TEXT,
-        language_locale="hi-IN",
+        language_locale=LanguageLocale.HINDI,
         unprocessed_input_content="Aadhaar number 1234 5678 9012 linked hai",
         received_at=datetime.now(UTC),
     )

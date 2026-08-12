@@ -5,6 +5,7 @@ from pydantic import Field, model_validator
 from src.data_models.common import (
     EscalationCaseId,
     GovernanceAction,
+    RejectionReasonCode,
     StrictBaseModel,
     UtcTimestamp,
 )
@@ -45,8 +46,8 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         description="Mandatory audit justification note or information request details",
     )
     approved_amount: float | None = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
-    rejection_reason: str | None = Field(
-        None, max_length=512, description="Populated for MANUAL_REJECT"
+    rejection_reason: RejectionReasonCode | None = Field(
+        None, description="Populated for MANUAL_REJECT"
     )
     reviewed_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when officer submitted review outcome on dashboard"
@@ -72,9 +73,6 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
                 "CaseworkerReviewOutcomePayload action must be MANUAL_APPROVE, "
                 f"MANUAL_REJECT, or REQUEST_MORE_INFO, got {self.governance_action}"
             )
-
-        if not self.review_notes or not self.review_notes.strip():
-            raise ValueError("review_notes cannot be empty or whitespace")
 
         return self
 

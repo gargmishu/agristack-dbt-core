@@ -6,6 +6,7 @@ from src.data_models.common import (
     DisbursementStatus,
     EligibilityStatus,
     GovernanceAction,
+    RejectionReasonCode,
 )
 from src.data_models.governance import GovernanceOutcomePayload
 from src.services.dpi import PaymentRailService
@@ -58,7 +59,7 @@ async def test_payment_rail_skips_when_txn_id_is_none() -> None:
         ai_confidence_score=0.45,
         eligibility_status=EligibilityStatus.INELIGIBLE,
         governance_action=GovernanceAction.AUTO_REJECT,
-        rejection_reason="Ineligible land registry status",
+        rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
         disbursement_txn_id=None,
         disbursement_status=None,
         evaluated_at=datetime.now(UTC),

@@ -45,8 +45,11 @@ class WhatsAppIngressPayload(StrictBaseModel):
     duration_seconds: AudioDurationSeconds | None = Field(
         None, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)"
     )
+    # min_length=1 allows single-digit menu selections or quick affirmative replies
+    # (e.g., "1", "2", "Y", "हाँ") while empty strings are stripped and rejected.
     text_body: str | None = Field(
         None,
+        min_length=1,
         max_length=1000,
         description="Raw text message (populated for TEXT)",
     )
@@ -83,8 +86,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
         optimal CPU/GPU resource utilization and deterministic routing.
         """
         if self.payload_type == PayloadType.TEXT:
-            if self.text_body is None or not self.text_body.strip():
-                raise ValueError("text_body must be a non-empty string when payload_type is TEXT")
+            if self.text_body is None:
+                raise ValueError("text_body is required when payload_type is TEXT")
             if self.audio_recording_url is not None:
                 raise ValueError("audio_recording_url must be None when payload_type is TEXT")
             if self.duration_seconds is not None:

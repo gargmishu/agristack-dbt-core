@@ -6,7 +6,12 @@ zero-PII PublicAgentStandardizedIntakePayload contracts ready for Layer 3 Intake
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 """
 
-from src.data_models.common import ChannelType, PayloadType, StructureLevel
+from src.data_models.common import (
+    ChannelType,
+    LanguageLocale,
+    PayloadType,
+    StructureLevel,
+)
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
@@ -34,7 +39,7 @@ class PayloadCanonicalizer:
     def canonicalize(
         self,
         payload: IngressPayloadUnion,
-        language_locale: str = "hi-IN",
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
     ) -> PublicAgentStandardizedIntakePayload:
         """Canonicalizes any raw ingress payload into PublicAgentStandardizedIntakePayload.
 
@@ -61,7 +66,7 @@ class PayloadCanonicalizer:
         self,
         payload: WhatsAppIngressPayload,
         tokenized_id: str,
-        language_locale: str,
+        language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
         if payload.payload_type == PayloadType.AUDIO:
             unprocessed_content = str(payload.audio_recording_url)
@@ -88,7 +93,7 @@ class PayloadCanonicalizer:
         self,
         payload: IvrIngressPayload,
         tokenized_id: str,
-        language_locale: str,
+        language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
@@ -105,7 +110,7 @@ class PayloadCanonicalizer:
         self,
         payload: UssdIngressPayload,
         tokenized_id: str,
-        language_locale: str,
+        language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
