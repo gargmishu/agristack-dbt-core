@@ -29,6 +29,8 @@ SessionId = Annotated[
 PhoneNumberE164 = Annotated[
     str,
     Field(
+        min_length=2,
+        max_length=16,
         pattern=r"^\+[1-9]\d{1,14}$",
         description="Originating E.164 international phone number format (+919876543210)",
     ),
@@ -40,14 +42,18 @@ PhoneNumberE164 = Annotated[
 HmacCitizenToken = Annotated[
     str,
     Field(
+        min_length=64,
+        max_length=64,
         pattern=r"^[a-fA-F0-9]{64}$",
-        description="Zero-PII SHA-256 HMAC citizen identity token (64-char hex)",
+        description="Zero-PII SHA-256 HMAC citizen identity token (exact 64-char hex string)",
     ),
 ]
 
 EscalationCaseId = Annotated[
     str,
     Field(
+        min_length=16,
+        max_length=64,
         pattern=r"^\w+-CASE-\d{4}-\d{6,}$",
         description="Incident ticket ID pattern (e.g. SPP-CASE-2026-981245)",
     ),
