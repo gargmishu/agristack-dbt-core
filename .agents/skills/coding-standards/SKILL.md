@@ -261,8 +261,36 @@ class StrictBaseModel(BaseModel):
     )
 ```
 
-### 4.2 Reusable Constrained Types (`src/data_models/common/field_types.py`)
-* Use `Annotated` type aliases with Pydantic `Field` constraints and `AfterValidator` functions for reusable domain types (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `UtcTimestamp`, `AudioDurationSeconds`, `AiConfidenceScore`).
+### 4.2 Reusable Constrained Types (`src/data_models/common/field_types.py`) vs. Inline Model Fields
+
+#### 4.2.1 When to Promote to `field_types.py` (Centralized Type Aliases)
+Promote a field to `src/data_models/common/field_types.py` as an `Annotated[T, Field(...)]` type alias when:
+* **Cross-Cutting Identifiers & Keys**: The field crosses **2 or more architecture layers, channels, or lifecycle states** (e.g. `SessionId`, `PhoneNumberE164`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`). Centralization prevents schema and validation drift across microservices.
+* **System-Wide Security & Compliance Invariants**: The field enforces non-negotiable platform-level constraints:
+  * Zero-Trust anonymity (`HmacCitizenToken`: exact 64-character SHA-256 hex digest under Aadhaar Act §29).
+  * Anti-replay / clock-skew freshness (`UtcTimestamp`: 5-second maximum future skew check via `AfterValidator`).
+  * Resource protection ceilings (`AudioDurationSeconds`: bounded $[1, 600]$ seconds to protect SLM/ASR GPU workers from Out-Of-Memory crashes).
+  * Confidence scoring bounds (`AiConfidenceScore`: bounded $[0.0, 1.0]$).
+
+#### 4.2.2 When to Keep Field Definitions Inline in Domain Models
+Keep field constraints inline within their specific domain model class when:
+* **Protocol / Channel-Specific Framing**: The field belongs strictly to a single transport adapter or carrier protocol (e.g. `channel_message_id` for WhatsApp `wamid` deduplication; `ussd_service_code` for GSM SS7 `*147#` shortcodes).
+* **Stage-Specific Lifecycle Metadata**: The attribute exists only at a single adjudication step (e.g. `reviewer_id` in caseworker review; `bank_reference_id` in bank callback).
+* **Context-Varying Free Text**: The length bounds depend on the specific business role (e.g. `text_body` $\le 1000$ chars, `review_notes` $5 \le \text{len} \le 2000$, `unprocessed_input_content` $\le 5000$).
+
+#### 4.2.3 Pydantic v2 Metadata Inheritance & Avoiding Redundant `Field(...)`
+* **Rely on Centralized Metadata**: When a model field uses a type alias from `field_types.py`, declare it cleanly as `field_name: FieldType` without redundant `Field(...)` wrapping:
+  ```python
+  # CORRECT: Clean, relies on centralized bounds and default description in field_types.py
+  session_id: SessionId
+  tokenized_citizen_id: HmacCitizenToken
+
+  # INCORRECT: Redundant duplicate description / empty Field wrapping
+  tokenized_citizen_id: HmacCitizenToken = Field(
+      ..., description="Zero-PII SHA-256 HMAC citizen identity token"
+  )
+  ```
+* **Contextual Override Only**: Use `Field(..., description="...")` on a typed field *only* when providing domain-specific documentation that intentionally overrides the generic base description in generated OpenAPI schemas.
 
 ### 4.3 Strict Dependency Injection & Non-Nullable Constructors
 * **No Magic `None` Fallbacks in Constructors**: Never accept `None` as a default parameter value in class constructors (`__init__`) to implicitly trigger default instantiation or environment variable reads. Doing so obscures dependency contracts and masks upstream configuration bugs.
