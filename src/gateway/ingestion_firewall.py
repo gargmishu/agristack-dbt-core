@@ -16,7 +16,7 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.gateway.adversarial_firewall import AdversarialPromptFirewall
+from src.gateway.adversarial_prompt_firewall import AdversarialPromptFirewall
 from src.gateway.carrier_auth_validator import CarrierAuthValidator
 from src.gateway.payload_canonicalizer import IngressPayloadUnion, PayloadCanonicalizer
 from src.gateway.pii_purge_guard import PiiPurgeGuard

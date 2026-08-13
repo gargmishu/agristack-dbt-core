@@ -3,7 +3,7 @@
 import pytest
 
 from src.data_models.common import ThreatCategory
-from src.gateway.adversarial_firewall import AdversarialPromptFirewall
+from src.gateway.adversarial_prompt_firewall import AdversarialPromptFirewall
 
 
 @pytest.mark.parametrize(
