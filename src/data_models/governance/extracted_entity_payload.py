@@ -19,10 +19,7 @@ class ExtractedEntityPayload(StrictBaseModel):
     application_intent: ApplicationIntent = Field(
         ..., description="Classified citizen intent (e.g. apply_subsidy, check_status)"
     )
-    ai_confidence_score: AiConfidenceScore = Field(
-        ...,
-        description="SLM extraction confidence score evaluated against Layer 4 threshold gates",
-    )
+    ai_confidence_score: AiConfidenceScore
     domain_entities: dict[DomainEntityKey, str | float | int] = Field(
         default_factory=dict,
         description="Parsed domain fields keyed by canonical DomainEntityKey",

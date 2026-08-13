@@ -22,10 +22,8 @@ class UssdIngressPayload(StrictBaseModel):
     StandardizedIntakePayload.unprocessed_input_content.
     """
 
-    session_id: SessionId = Field(..., description="Transient GSM signaling session identifier")
-    originating_phone_number: PhoneNumberE164 = Field(
-        ..., description="Citizen mobile subscriber E.164 phone number"
-    )
+    session_id: SessionId
+    originating_phone_number: PhoneNumberE164
     ussd_service_code: str = Field(
         ...,
         pattern=r"^\*\d+(\*\d+)*#$",

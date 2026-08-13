@@ -23,10 +23,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
     GSM signaling session, respectively).
     """
 
-    session_id: SessionId = Field(..., description="Unified channel messaging session identifier")
-    originating_phone_number: PhoneNumberE164 = Field(
-        ..., description="Citizen WhatsApp Business E.164 mobile account number"
-    )
+    session_id: SessionId
+    originating_phone_number: PhoneNumberE164
     channel_message_id: str = Field(
         ...,
         min_length=8,

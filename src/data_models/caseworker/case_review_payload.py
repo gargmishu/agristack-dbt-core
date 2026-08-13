@@ -21,18 +21,10 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
     """
 
-    escalation_case_id: EscalationCaseId = Field(
-        ..., description="Unique escalation incident ticket identifier"
-    )
-    session_id: SessionId = Field(
-        ..., description="Primary session key tracking citizen interaction context"
-    )
-    payload_id: ExtractionPayloadId = Field(
-        ..., description="Foreign key referencing upstream NLU extraction payload"
-    )
-    tokenized_citizen_id: HmacCitizenToken = Field(
-        ..., description="Zero-PII SHA-256 HMAC citizen identity token"
-    )
+    escalation_case_id: EscalationCaseId
+    session_id: SessionId
+    payload_id: ExtractionPayloadId
+    tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
         default_factory=dict,

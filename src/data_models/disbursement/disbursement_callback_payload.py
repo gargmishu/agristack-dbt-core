@@ -17,10 +17,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.5)
     """
 
-    disbursement_txn_id: DisbursementTxnId = Field(
-        ...,
-        description="Internal idempotency order ID matching Layer 4 governance approval key",
-    )
+    disbursement_txn_id: DisbursementTxnId
     bank_reference_id: str | None = Field(
         None,
         min_length=5,

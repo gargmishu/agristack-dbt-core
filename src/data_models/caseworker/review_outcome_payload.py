@@ -27,9 +27,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
     """
 
-    escalation_case_id: EscalationCaseId = Field(
-        ..., description="Upstream incident ticket ID being adjudicated by caseworker"
-    )
+    escalation_case_id: EscalationCaseId
     reviewer_id: str = Field(
         ...,
         min_length=5,
