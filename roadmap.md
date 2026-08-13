@@ -42,6 +42,7 @@
       │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
       │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
       │   ├── pii_purge_guard.py           # In-memory Zero-PII assertion sentinel
+      │   ├── pii_text_redactor.py         # In-memory regex PII scanner and text redactor
       │   ├── adversarial_prompt_firewall.py # Regex prompt injection & override defense
       │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
       │   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
@@ -55,13 +56,15 @@
       │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
       ├── services/                        # External Dependency Abstractions
       │   ├── ai/                          # Foundational & Sector AI Blocks
+      │   │   ├── ai_mock_fixtures.py      # Deterministic AI simulation fixtures
       │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
       │   │   └── slm_extractor.py         # Sovereign structured entity extractor
       │   └── dpi/                         # Authoritative DPI Registries
-      │       ├── agri_registry_service.py     # AgriStack cadastral & crop cross-match
+      │       ├── dpi_mock_fixtures.py     # Deterministic registry simulation fixtures
+      │       ├── agri_registry_service.py # AgriStack cadastral & crop cross-match
       │       ├── identity_verification_service.py # Aadhaar/MOSIP zero-PII token verification
       │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
-      │       └── payment_rail_service.py      # NPCI APBS / PFMS Treasury disbursement
+      │       └── payment_rail_service.py  # NPCI APBS / PFMS Treasury disbursement
       ├── errors/                          # RFC 7807 problem details exception handlers
       │   └── handlers.py                  # FastAPI ValidationError handler
       └── data_models/                     # Domain data contracts & Pydantic schemas

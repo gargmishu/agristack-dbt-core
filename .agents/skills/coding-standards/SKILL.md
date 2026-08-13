@@ -77,6 +77,7 @@ src/
 │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
 │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
 │   ├── pii_purge_guard.py           # In-memory Zero-PII assertion sentinel
+│   ├── pii_text_redactor.py         # In-memory regex PII scanner and text redactor
 │   ├── adversarial_prompt_firewall.py # Adversarial prompt injection & override defense
 │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
 │   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
@@ -90,13 +91,17 @@ src/
 │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
 ├── services/                        # External DPI Registries & AI Adapter Services ONLY
 │   ├── ai/
+│   │   ├── ai_mock_fixtures.py
 │   │   ├── bhashini_service.py
 │   │   └── slm_extractor.py
 │   └── dpi/
+│       ├── dpi_mock_fixtures.py
 │       ├── agri_registry_service.py
 │       ├── identity_verification_service.py
 │       ├── payment_rail_service.py
 │       └── social_registry_service.py # External OpenSPP registry boundary client
+├── errors/                          # RFC 7807 problem details exception handlers
+│   └── handlers.py
 ├── data_models/                     # Domain data contracts & Pydantic validation schemas
 │   ├── common/                      # Shared foundational primitives & type annotations
 │   │   ├── base.py                  # StrictBaseModel definition
@@ -131,6 +136,7 @@ tests/
 │   ├── test_carrier_auth_validator.py
 │   ├── test_zero_trust_identity_tokenizer.py
 │   ├── test_pii_purge_guard.py
+│   ├── test_pii_text_redactor.py
 │   ├── test_adversarial_prompt_firewall.py
 │   ├── test_payload_canonicalizer.py
 │   ├── test_rate_limiter.py
@@ -144,13 +150,17 @@ tests/
 │   └── test_case_management_service.py
 ├── services/
 │   ├── ai/
+│   │   ├── test_ai_mock_fixtures.py
 │   │   ├── test_bhashini_service.py
 │   │   └── test_slm_extractor.py
 │   └── dpi/
+│       ├── test_dpi_mock_fixtures.py
 │       ├── test_agri_registry_service.py
 │       ├── test_identity_verification_service.py
 │       ├── test_payment_rail_service.py
 │       └── test_social_registry_service.py
+├── errors/
+│   └── test_handlers.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py
@@ -163,6 +173,7 @@ tests/
 │   ├── public_agent/
 │   │   └── test_standardized_intake_payload.py
 │   ├── governance/
+│   │   ├── test_extracted_entity_payload.py
 │   │   └── test_governance_outcome_payload.py
 │   ├── caseworker/
 │   │   ├── test_case_review_payload.py
