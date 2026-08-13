@@ -42,7 +42,7 @@
       │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
       │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
       │   ├── pii_purge_guard.py           # In-memory Zero-PII assertion sentinel
-      │   ├── adversarial_firewall.py      # Regex prompt injection & override defense
+      │   ├── adversarial_prompt_firewall.py # Regex prompt injection & override defense
       │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
       │   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
       │   └── ingestion_firewall.py        # Unified Layer 2 perimeter firewall facade

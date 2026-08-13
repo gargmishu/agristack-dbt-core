@@ -153,6 +153,49 @@ class ThreatCategory(StrEnum):
     DELIMITER_HIJACKING = "DELIMITER_HIJACKING"
     DATABASE_INJECTION = "DATABASE_INJECTION"
     PAYOUT_MANIPULATION = "PAYOUT_MANIPULATION"
+
+class LanguageLocale(StrEnum):
+    HINDI = "hi-IN"
+    ENGLISH = "en-IN"
+    MARATHI = "mr-IN"
+    TELUGU = "te-IN"
+    TAMIL = "ta-IN"
+    GUJARATI = "gu-IN"
+    KANNADA = "kn-IN"
+    BENGALI = "bn-IN"
+    PUNJABI = "pa-IN"
+    ODIA = "or-IN"
+    MALAYALAM = "ml-IN"
+
+class RejectionReasonCode(StrEnum):
+    INELIGIBLE_LAND_SIZE = "INELIGIBLE_LAND_SIZE"
+    INELIGIBLE_CROP_TYPE = "INELIGIBLE_CROP_TYPE"
+    DUPLICATE_CLAIM_ACTIVE_SEASON = "DUPLICATE_CLAIM_ACTIVE_SEASON"
+    LAND_RECORD_NOT_FOUND = "LAND_RECORD_NOT_FOUND"
+    IDENTITY_NOT_VERIFIED = "IDENTITY_NOT_VERIFIED"
+    INSUFFICIENT_DOCUMENTATION = "INSUFFICIENT_DOCUMENTATION"
+    POLICY_EXCLUSION = "POLICY_EXCLUSION"
+    ADVERSARIAL_ATTEMPT = "ADVERSARIAL_ATTEMPT"
+    OTHER = "OTHER"
+
+class EscalationReasonCode(StrEnum):
+    LOW_AI_CONFIDENCE = "LOW_AI_CONFIDENCE"
+    ADVERSARIAL_ATTEMPT_FLAGGED = "ADVERSARIAL_ATTEMPT_FLAGGED"
+    MISSING_MANDATORY_ENTITIES = "MISSING_MANDATORY_ENTITIES"
+    LAND_RECORD_MISMATCH = "LAND_RECORD_MISMATCH"
+    IDENTITY_VERIFICATION_FAILED = "IDENTITY_VERIFICATION_FAILED"
+    DOUBLE_DIP_SUSPECTED = "DOUBLE_DIP_SUSPECTED"
+    POLICY_REVIEW_REQUIRED = "POLICY_REVIEW_REQUIRED"
+    CITIZEN_CLARIFICATION_RECEIVED = "CITIZEN_CLARIFICATION_RECEIVED"
+
+class DisbursementFailureCode(StrEnum):
+    ACCOUNT_BLOCKED = "ACCOUNT_BLOCKED"
+    INVALID_IFSC = "INVALID_IFSC"
+    NAME_MISMATCH = "NAME_MISMATCH"
+    ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING = "ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING"
+    ACCOUNT_INACTIVE = "ACCOUNT_INACTIVE"
+    AADHAAR_DELINKED = "AADHAAR_DELINKED"
+    NETWORK_TIMEOUT = "NETWORK_TIMEOUT"
 ```
 
 ---
@@ -303,9 +346,9 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     channel_type: ChannelType = Field(..., description="Ingress channel source: whatsapp, ivr_voice, ussd, sms")
     payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
     structure_level: StructureLevel = Field(..., description="Structure level: free_text, menu_selection, dtmf_selection")
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
+    language_locale: LanguageLocale = Field(LanguageLocale.HINDI, description="Supported BCP 47 language code")
+    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
     received_at: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
-    language_locale: str = Field("hi-IN", pattern=r"^[a-z]{2}-[A-Z]{2}$", description="BCP 47 language code")
 ```
 
 ##### Standardized Intake Specific Validations:
@@ -450,9 +493,9 @@ class GovernanceOutcomePayload(StrictBaseModel):
     escalation_case_id: Optional[EscalationCaseId] = Field(
         None, description="Populated as SPP-CASE-YYYY-XXXXXX for ROUTE_FOR_MANUAL_REVIEW / HUMAN_REVIEW"
     )
-    rejection_reason: Optional[str] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
+    rejection_reason: Optional[RejectionReasonCode] = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
     review_notes: Optional[str] = Field(
-        None, max_length=2000, description="Internal caseworker audit notes carried from manual adjudication"
+        None, min_length=5, max_length=2000, description="Internal caseworker audit notes carried from manual adjudication"
     )
     evaluated_at: UtcTimestamp = Field(..., description="UTC timestamp when Layer 4 finalized the governance decision")
 ```
@@ -501,8 +544,8 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     tokenized_citizen_id: HmacCitizenToken = Field(..., description="SHA-256 HMAC citizen identity token")
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
+    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="Raw citizen text or signed audio URL")
+    escalation_reason: EscalationReasonCode = Field(..., description="Structured reason enum for escalation")
     staged_at: UtcTimestamp = Field(..., description="UTC timestamp when staged into caseworker queue")
 ```
 
@@ -525,7 +568,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
     governance_action: GovernanceAction = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
     review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note or information request details")
     approved_amount: Optional[float] = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
-    rejection_reason: Optional[str] = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
+    rejection_reason: Optional[RejectionReasonCode] = Field(None, description="Populated for MANUAL_REJECT")
     reviewed_at: UtcTimestamp = Field(..., description="UTC timestamp when officer submitted review outcome")
 ```
 
@@ -534,7 +577,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
 2. **Action Enum Restriction:** `governance_action` must strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`. Automated actions (`AUTO_APPROVE`, `AUTO_REJECT`, `ROUTE_FOR_MANUAL_REVIEW`) are rejected.
 3. **Conditional Field Population Rules:**
    - If `governance_action == MANUAL_APPROVE`: `approved_amount` **must** be populated (> 0.0); `rejection_reason` **must** be `None`.
-   - If `governance_action == MANUAL_REJECT`: `rejection_reason` **must** be a non-empty string explaining rejection grounds; `approved_amount` **must** be `None`.
+   - If `governance_action == MANUAL_REJECT`: `rejection_reason` **must** be a valid RejectionReasonCode enum explaining rejection grounds; `approved_amount` **must** be `None`.
    - If `governance_action == REQUEST_MORE_INFO`: `review_notes` **must** specify missing details; `approved_amount` and `rejection_reason` **must** be `None`.
 
 ---
@@ -549,10 +592,10 @@ class DisbursementCallbackPayload(StrictBaseModel):
     Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
     """
     disbursement_txn_id: str = Field(..., min_length=8, max_length=128, description="Unique internal instructional payment clearing order ID")
-    bank_reference_id: Optional[str] = Field(None, max_length=64, description="External banking UTR or clearing reference generated by NPCI/PFMS bank rail (required on SUCCESS)")
+    bank_reference_id: Optional[str] = Field(None, min_length=5, max_length=64, description="External banking UTR or clearing reference generated by NPCI/PFMS bank rail (required on SUCCESS)")
     disbursement_status: DisbursementStatus = Field(..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED")
     cleared_at: datetime = Field(..., description="UTC timestamp when payment gateway processed transaction")
-    failure_reason_code: Optional[str] = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
+    failure_reason_code: Optional[DisbursementFailureCode] = Field(None, description="Populated if status is FAILED or RETURNED")
 ```
 
 ##### Payment Clearing Callback Specific Validations:
@@ -606,7 +649,7 @@ agristack-dbt-core/
 │   │   ├── common/                 <-- Foundational primitives, enums, and constrained types
 │   │   │   ├── __init__.py
 │   │   │   ├── base.py             <-- StrictBaseModel base configuration class
-│   │   │   ├── enums.py            <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceAction, DisbursementStatus
+│   │   │   ├── enums.py            <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceAction, SessionStatus, ApplicationStatus, DisbursementStatus, ThreatCategory, LanguageLocale, RejectionReasonCode, EscalationReasonCode, DisbursementFailureCode
 │   │   │   └── field_types.py      <-- Constrained Annotated type aliases & UtcTimestamp clock-skew freshness validator
 │   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
 │   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload
