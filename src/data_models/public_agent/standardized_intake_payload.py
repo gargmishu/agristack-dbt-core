@@ -12,6 +12,7 @@ from src.data_models.common import (
     SessionId,
     StrictBaseModel,
     StructureLevel,
+    UnprocessedInputContent,
     UtcTimestamp,
 )
 
@@ -54,14 +55,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
         LanguageLocale.HINDI,
         description="Supported BCP 47 language code (defaults to hi-IN)",
     )
-    # min_length=1 allows single-digit USSD DTMF selections (e.g. "1", "2") and single-character
-    # chatbot replies (e.g. "Y", "N") while whitespace-only strings are rejected by StrictBaseModel.
-    unprocessed_input_content: str = Field(
-        ...,
-        min_length=1,
-        max_length=5000,
-        description="Raw citizen text, single-digit menu selection, or signed audio URL pointer",
-    )
+    unprocessed_input_content: UnprocessedInputContent
     received_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when canonicalized payload reached Layer 3 intake gateway"
     )

@@ -265,7 +265,7 @@ class StrictBaseModel(BaseModel):
 
 #### 4.2.1 When to Promote to `field_types.py` (Centralized Type Aliases)
 Promote a field to `src/data_models/common/field_types.py` as an `Annotated[T, Field(...)]` type alias when:
-* **Cross-Cutting Identifiers & Keys**: The field crosses **2 or more architecture layers, channels, or lifecycle states** (e.g. `SessionId`, `PhoneNumberE164`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`). Centralization prevents schema and validation drift across microservices.
+* **Cross-Cutting Identifiers & Keys**: The field crosses **2 or more architecture layers, channels, or lifecycle states** (e.g. `SessionId`, `PhoneNumberE164`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `UnprocessedInputContent`). Centralization prevents schema and validation drift across microservices.
 * **System-Wide Security & Compliance Invariants**: The field enforces non-negotiable platform-level constraints:
   * Zero-Trust anonymity (`HmacCitizenToken`: exact 64-character SHA-256 hex digest under Aadhaar Act §29).
   * Anti-replay / clock-skew freshness (`UtcTimestamp`: 5-second maximum future skew check via `AfterValidator`).

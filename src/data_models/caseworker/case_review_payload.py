@@ -11,6 +11,7 @@ from src.data_models.common import (
     HmacCitizenToken,
     SessionId,
     StrictBaseModel,
+    UnprocessedInputContent,
     UtcTimestamp,
 )
 
@@ -33,14 +34,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
             "triggered by AI entity extraction failure or unparseable input."
         ),
     )
-    # min_length=1 allows single-digit USSD DTMF selections or single-character menu inputs
-    # (e.g., "1", "2", "Y") that failed downstream processing to be staged for caseworker review.
-    unprocessed_input_content: str = Field(
-        ...,
-        min_length=1,
-        max_length=5000,
-        description="Raw citizen text, single-digit menu selection, or signed audio URL",
-    )
+    unprocessed_input_content: UnprocessedInputContent
     escalation_reason: EscalationReasonCode = Field(
         ...,
         description="Canonical escalation classification code",

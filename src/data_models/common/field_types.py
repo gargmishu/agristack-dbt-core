@@ -77,6 +77,20 @@ ExtractionPayloadId = Annotated[
     ),
 ]
 
+# Raw citizen input content (1 to 5000 chars):
+# - min=1: Allows single-digit USSD DTMF selections or single-character menu inputs ("1", "Y")
+#   while whitespace-only strings are stripped and rejected by StrictBaseModel.
+# - max=5000: Bounded ceiling accommodating long citizen text descriptions, multi-turn transcripts,
+#   or signed audio URLs while preventing memory exhaustion attacks.
+UnprocessedInputContent = Annotated[
+    str,
+    Field(
+        min_length=1,
+        max_length=5000,
+        description="Raw citizen text, single-digit menu selection, or signed audio URL pointer",
+    ),
+]
+
 # Fail-fast audio duration gatekeeper (1s to 600s / 10 min):
 # - min=1: Rejects dropped calls with duration=0 before allocating ASR resources.
 # - max=600: Prevents Out-Of-Memory (OOM) GPU crashes and context truncation hallucinations

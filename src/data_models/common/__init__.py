@@ -27,6 +27,7 @@ from src.data_models.common.field_types import (
     HmacCitizenToken,
     PhoneNumberE164,
     SessionId,
+    UnprocessedInputContent,
     UtcTimestamp,
 )
 
@@ -55,5 +56,6 @@ __all__ = [
     "StrictBaseModel",
     "StructureLevel",
     "ThreatCategory",
+    "UnprocessedInputContent",
     "UtcTimestamp",
 ]

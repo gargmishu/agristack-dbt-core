@@ -29,6 +29,7 @@ from src.data_models.common import (
     StrictBaseModel,
     StructureLevel,
     ThreatCategory,
+    UnprocessedInputContent,
     UtcTimestamp,
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
@@ -75,6 +76,7 @@ __all__ = [
     "StrictBaseModel",
     "StructureLevel",
     "ThreatCategory",
+    "UnprocessedInputContent",
     "UssdIngressPayload",
     "UtcTimestamp",
     "WhatsAppIngressPayload",
