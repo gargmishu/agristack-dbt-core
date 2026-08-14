@@ -4,7 +4,7 @@ from pydantic import Field
 
 from src.data_models.common import (
     ApplicationIntent,
-    DomainEntityKey,
+    DomainEntities,
     EscalationCaseId,
     EscalationReasonCode,
     ExtractionPayloadId,
@@ -27,7 +27,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     payload_id: ExtractionPayloadId
     tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
-    extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
+    extracted_entities: DomainEntities = Field(
         default_factory=dict,
         description=(
             "Extracted domain parameters. May be empty ({}) if escalation was "

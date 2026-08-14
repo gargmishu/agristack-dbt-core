@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 from src.data_models.common import (
     AiConfidenceScore,
     ApplicationIntent,
-    DomainEntityKey,
+    DomainEntities,
     StrictBaseModel,
 )
 
@@ -20,7 +20,7 @@ class ExtractedEntityPayload(StrictBaseModel):
         ..., description="Classified citizen intent (e.g. apply_subsidy, check_status)"
     )
     ai_confidence_score: AiConfidenceScore
-    domain_entities: dict[DomainEntityKey, str | float | int] = Field(
+    domain_entities: DomainEntities = Field(
         default_factory=dict,
         description="Parsed domain fields keyed by canonical DomainEntityKey",
     )

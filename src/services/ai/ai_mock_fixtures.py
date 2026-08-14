@@ -15,7 +15,7 @@ See: roadmap.md (Phase 3 Step 3.1)
 
 from typing import NamedTuple
 
-from src.data_models.common import ApplicationIntent, DomainEntityKey
+from src.data_models.common import ApplicationIntent, DomainEntities, DomainEntityKey
 
 MOCK_ASR_TRANSCRIPTIONS: dict[str, str] = {
     "hi-IN": "Mujhe PM KISAN ki kist nahi mili hai, mera village Hadoli hai.",
@@ -50,7 +50,7 @@ class MockExtractionRule(NamedTuple):
     """Configuration rule for deterministic SLM entity extraction simulation."""
 
     intent: ApplicationIntent
-    entities: dict[DomainEntityKey, str | float | int]
+    entities: DomainEntities
     confidence_score: float
 
 

@@ -9,6 +9,8 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field
 
+from src.data_models.common.enums import DomainEntityKey
+
 # Allow 5 seconds of clock skew between edge connectors and core services to handle
 # minor network latency and NTP drift while preventing replay attacks and future-dated payloads.
 MAX_CLOCK_SKEW_SECONDS = 5.0
@@ -132,4 +134,17 @@ UtcTimestamp = Annotated[
     datetime,
     Field(description="Valid ISO-8601 UTC timestamp with freshness check"),
     AfterValidator(validate_utc_freshness),
+]
+
+DomainEntityScalar = str | float | int
+
+# Canonical domain parameters mapped to primitive scalars (str, float, int):
+# Enforces key membership in DomainEntityKey and value primitive scalar strictness (str, float, int),
+# preventing nested dictionary injection attacks and type drift across SLM extraction and caseworker review.
+DomainEntities = Annotated[
+    dict[DomainEntityKey, DomainEntityScalar],
+    Field(
+        default_factory=dict,
+        description="Canonical domain parameters mapped to primitive scalars (str, float, int)",
+    ),
 ]
