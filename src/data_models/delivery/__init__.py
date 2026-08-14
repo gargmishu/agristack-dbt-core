@@ -1,6 +1,6 @@
 """Outbound notification and delivery models package."""
 
-from src.data_models.delivery.outbound_delivery_payload import (
+from src.data_models.delivery.outbound_confirmation_payload import (
     MAX_USSD_CHARACTERS,
     OutboundConfirmationPayload,
 )
