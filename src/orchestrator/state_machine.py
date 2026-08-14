@@ -8,6 +8,7 @@ from typing import Final
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.data_models.common import (
     ApplicationIntent,
+    DomainEntities,
     DomainEntityKey,
     EligibilityStatus,
     EscalationReasonCode,
@@ -115,7 +116,7 @@ class StateMachine:
                 intake.channel_type,
             )
             # Deterministic mapping for structured menu keypresses (e.g. 1*2*101)
-            entities: dict[DomainEntityKey, str | float | int] = {
+            entities: DomainEntities = {
                 DomainEntityKey.DISTRICT: "Karnal",
                 DomainEntityKey.CROP_NAME: "Wheat",
                 DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",

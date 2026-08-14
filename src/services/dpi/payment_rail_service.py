@@ -60,7 +60,7 @@ class PaymentRailService:
         if MOCK_PAYMENT_FAIL_TRIGGER in str(outcome.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED
             reason = MOCK_PAYMENT_FAILURE_REASON
-            bank_ref = None
+            bank_ref = f"NPCI-REJ-{str(outcome.disbursement_txn_id)[-6:]}"
         else:
             status = DisbursementStatus.SUCCESS
             reason = None

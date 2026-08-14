@@ -9,7 +9,6 @@ from src.data_models.common import ApplicationIntent, EscalationReasonCode
 from src.services.dpi import SocialRegistryService
 from src.services.dpi.dpi_mock_fixtures import (
     MOCK_CASE_REJECT_PREFIX,
-    MOCK_FAIL_STAGE_NOTE,
     UNVERIFIED_IDENTITY_PREFIX,
 )
 

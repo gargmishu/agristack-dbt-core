@@ -5,7 +5,6 @@ from src.data_models.common.base import StrictBaseModel
 from src.data_models.common.enums import DomainEntityKey
 from src.data_models.common.field_types import (
     DomainEntities,
-    DomainEntityScalar,
     HmacCitizenToken,
     PhoneNumberE164,
     SessionId,
@@ -22,6 +21,8 @@ class DummyValidatorModel(StrictBaseModel):
 
 
 def test_validators_valid() -> None:
+    expected_acres = 2.5
+    expected_survey_num = 102
     model = DummyValidatorModel(
         session_id="sess_12345678",
         phone="+919876543210",
@@ -29,15 +30,15 @@ def test_validators_valid() -> None:
         input_content="Gehu subsidy registration",
         entities={
             DomainEntityKey.DISTRICT: "Pune",
-            DomainEntityKey.LAND_SIZE_ACRES: 2.5,
-            DomainEntityKey.SURVEY_NUMBER: 102,
+            DomainEntityKey.LAND_SIZE_ACRES: expected_acres,
+            DomainEntityKey.SURVEY_NUMBER: expected_survey_num,
         },
     )
     assert model.session_id == "sess_12345678"
     assert model.input_content == "Gehu subsidy registration"
     assert model.entities[DomainEntityKey.DISTRICT] == "Pune"
-    assert model.entities[DomainEntityKey.LAND_SIZE_ACRES] == 2.5
-    assert model.entities[DomainEntityKey.SURVEY_NUMBER] == 102
+    assert model.entities[DomainEntityKey.LAND_SIZE_ACRES] == expected_acres
+    assert model.entities[DomainEntityKey.SURVEY_NUMBER] == expected_survey_num
 
 
 def test_domain_entities_default_empty() -> None:

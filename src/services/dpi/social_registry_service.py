@@ -32,7 +32,9 @@ class SocialRegistryService:
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
     """
 
-    async def verify_incident_ticket_eligibility(self, case_review: CaseworkerCaseReviewPayload) -> bool:
+    async def verify_incident_ticket_eligibility(
+        self, case_review: CaseworkerCaseReviewPayload
+    ) -> bool:
         """Queries the external registry for beneficiary eligibility.
 
         Args:
@@ -48,7 +50,7 @@ class SocialRegistryService:
         )
         return await self.query_beneficiary_eligibility(
             case_review.tokenized_citizen_id,
-            case_review.application_intent.value,
+            str(case_review.application_intent),
         )
 
     async def query_beneficiary_eligibility(
