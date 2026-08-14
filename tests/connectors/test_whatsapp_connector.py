@@ -78,7 +78,9 @@ async def test_whatsapp_connector_invalid_message_id_short() -> None:
 
 @pytest.mark.asyncio
 async def test_whatsapp_connector_send_outbound_confirmation() -> None:
-    connector = WhatsAppConnector()
+    connector = WhatsAppConnector(interface_id="CUSTOM_META_WHATSAPP_API")
+    assert connector.interface_id == "CUSTOM_META_WHATSAPP_API"
+
     payload = OutboundConfirmationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
@@ -89,7 +91,17 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_confirmation(payload)
+    assert result["interface_id"] == "CUSTOM_META_WHATSAPP_API"
     assert result["messaging_product"] == "whatsapp"
     assert result["session_id"] == "sess_12345678"
     assert result["status"] == DeliveryStatus.DELIVERED
     assert result["message"] == "Claim Approved"
+
+
+def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
+    default_conn = WhatsAppConnector.from_default()
+    assert default_conn.interface_id == "META_WHATSAPP_BUSINESS_API"
+
+    monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "ENV_WHATSAPP_API")
+    env_conn = WhatsAppConnector.from_env()
+    assert env_conn.interface_id == "ENV_WHATSAPP_API"

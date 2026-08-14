@@ -57,7 +57,9 @@ async def test_ivr_connector_invalid_duration_zero() -> None:
 
 @pytest.mark.asyncio
 async def test_ivr_connector_send_outbound_confirmation() -> None:
-    connector = IvrConnector()
+    connector = IvrConnector(interface_id="CUSTOM_SIP_TRUNK_01")
+    assert connector.interface_id == "CUSTOM_SIP_TRUNK_01"
+
     payload = OutboundConfirmationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.IVR_VOICE,
@@ -69,7 +71,16 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_confirmation(payload)
-    assert result["telephony_gateway"] == "SIP_TRUNK_BSNL_HAR_08"
+    assert result["telephony_gateway"] == "CUSTOM_SIP_TRUNK_01"
     assert result["session_id"] == "sess_12345678"
     assert result["audio_playback_url"] == "https://bhashini.ai/audio_1.wav"
     assert result["tts_spoken_text"] == "Aapka aavedan swikrit ho gaya hai."
+
+
+def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
+    default_conn = IvrConnector.from_default()
+    assert default_conn.interface_id == "SIP_TRUNK_BSNL_HAR_08"
+
+    monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "ENV_SIP_TRUNK_02")
+    env_conn = IvrConnector.from_env()
+    assert env_conn.interface_id == "ENV_SIP_TRUNK_02"

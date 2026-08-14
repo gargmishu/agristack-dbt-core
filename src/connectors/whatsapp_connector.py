@@ -8,16 +8,42 @@ Information (zero-PII) security rules.
 """
 
 import logging
-from typing import Any
+import os
+from typing import Any, Final
 
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_WHATSAPP_INTERFACE: Final[str] = "META_WHATSAPP_BUSINESS_API"
+
 
 class WhatsAppConnector:
     """Processes WhatsApp cleartext/audio webhooks and passes canonical ingress payload."""
+
+    def __init__(self, interface_id: str = DEFAULT_WHATSAPP_INTERFACE) -> None:
+        """Initializes WhatsAppConnector with carrier interface identifier.
+
+        Args:
+            interface_id: Carrier webhook interface identifier.
+        """
+        self._interface_id = interface_id
+
+    @property
+    def interface_id(self) -> str:
+        """Returns the configured carrier interface identifier."""
+        return self._interface_id
+
+    @classmethod
+    def from_default(cls) -> "WhatsAppConnector":
+        """Factory method to instantiate WhatsAppConnector with default interface."""
+        return cls(interface_id=DEFAULT_WHATSAPP_INTERFACE)
+
+    @classmethod
+    def from_env(cls) -> "WhatsAppConnector":
+        """Factory method to instantiate WhatsAppConnector from environment variables."""
+        return cls(interface_id=os.getenv("WHATSAPP_INTERFACE_ID", DEFAULT_WHATSAPP_INTERFACE))
 
     async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.
@@ -50,11 +76,13 @@ class WhatsAppConnector:
             Simulated carrier dispatch acknowledgment response.
         """
         logger.info(
-            "Transmitting outbound WhatsApp message for session=%s, length=%d",
+            "Transmitting outbound WhatsApp message for session=%s, interface=%s, length=%d",
             payload.session_id,
+            self._interface_id,
             len(payload.formatted_message),
         )
         return {
+            "interface_id": self._interface_id,
             "messaging_product": "whatsapp",
             "session_id": payload.session_id,
             "status": payload.delivery_status,

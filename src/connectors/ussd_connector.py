@@ -8,16 +8,42 @@ concatenated user digit selections.
 """
 
 import logging
-from typing import Any
+import os
+from typing import Any, Final
 
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import UssdIngressPayload
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SIGTRAN_INTERFACE: Final[str] = "SS7_SIGTRAN_CARRIER_GATEWAY"
+
 
 class UssdConnector:
     """Processes USSD menu signaling codes and passes canonical ingress payload."""
+
+    def __init__(self, interface_id: str = DEFAULT_SIGTRAN_INTERFACE) -> None:
+        """Initializes UssdConnector with SS7/SIGTRAN carrier interface identifier.
+
+        Args:
+            interface_id: SS7/SIGTRAN signaling interface identifier.
+        """
+        self._interface_id = interface_id
+
+    @property
+    def interface_id(self) -> str:
+        """Returns the configured SIGTRAN signaling interface identifier."""
+        return self._interface_id
+
+    @classmethod
+    def from_default(cls) -> "UssdConnector":
+        """Factory method to instantiate UssdConnector with default interface."""
+        return cls(interface_id=DEFAULT_SIGTRAN_INTERFACE)
+
+    @classmethod
+    def from_env(cls) -> "UssdConnector":
+        """Factory method to instantiate UssdConnector from environment variables."""
+        return cls(interface_id=os.getenv("USSD_SIGTRAN_INTERFACE_ID", DEFAULT_SIGTRAN_INTERFACE))
 
     async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
         """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.
@@ -49,12 +75,13 @@ class UssdConnector:
             Simulated SS7/SIGTRAN USSD menu termination response.
         """
         logger.info(
-            "Pushing outbound USSD string for session=%s, length=%d",
+            "Pushing outbound USSD string for session=%s, interface=%s, length=%d",
             payload.session_id,
+            self._interface_id,
             len(payload.formatted_message),
         )
         return {
-            "sigtran_interface": "SS7_SIGTRAN_CARRIER_GATEWAY",
+            "sigtran_interface": self._interface_id,
             "session_id": payload.session_id,
             "status": payload.delivery_status,
             "ussd_menu_response": payload.formatted_message,

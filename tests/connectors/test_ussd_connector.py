@@ -55,7 +55,9 @@ async def test_ussd_connector_invalid_empty_digits() -> None:
 
 @pytest.mark.asyncio
 async def test_ussd_connector_send_outbound_confirmation() -> None:
-    connector = UssdConnector()
+    connector = UssdConnector(interface_id="CUSTOM_SS7_GATEWAY_01")
+    assert connector.interface_id == "CUSTOM_SS7_GATEWAY_01"
+
     payload = OutboundConfirmationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.USSD,
@@ -66,7 +68,16 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_confirmation(payload)
-    assert result["sigtran_interface"] == "SS7_SIGTRAN_CARRIER_GATEWAY"
+    assert result["sigtran_interface"] == "CUSTOM_SS7_GATEWAY_01"
     assert result["session_id"] == "sess_12345678"
     assert result["status"] == DeliveryStatus.DELIVERED
     assert result["ussd_menu_response"] == "AgriStack: Claim Approved."
+
+
+def test_ussd_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
+    default_conn = UssdConnector.from_default()
+    assert default_conn.interface_id == "SS7_SIGTRAN_CARRIER_GATEWAY"
+
+    monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "ENV_SS7_GATEWAY_02")
+    env_conn = UssdConnector.from_env()
+    assert env_conn.interface_id == "ENV_SS7_GATEWAY_02"
