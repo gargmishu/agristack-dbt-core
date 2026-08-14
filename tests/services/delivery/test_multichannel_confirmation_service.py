@@ -2,6 +2,7 @@
 
 import pytest
 
+from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
@@ -162,7 +163,84 @@ async def test_prepare_sms_delivery(
     assert "DBT" in payload.formatted_message
 
 
-def test_custom_bhashini_injection() -> None:
-    custom_bhashini = BhashiniService()
-    service = MultichannelConfirmationService(bhashini_service=custom_bhashini)
-    assert service._bhashini_service is custom_bhashini
+@pytest.mark.asyncio
+async def test_dispatch_confirmation_whatsapp(
+    delivery_service: MultichannelConfirmationService,
+) -> None:
+    req = ConfirmationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.WHATSAPP,
+        governance_action=GovernanceAction.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-981245",
+    )
+    result = await delivery_service.dispatch_confirmation(req)
+    assert result["payload"].session_id == "sess_12345678"
+    assert result["transmission_ack"]["messaging_product"] == "whatsapp"
+    assert result["transmission_ack"]["status"] == DeliveryStatus.DELIVERED
+
+
+@pytest.mark.asyncio
+async def test_dispatch_confirmation_ivr_voice(
+    delivery_service: MultichannelConfirmationService,
+) -> None:
+    req = ConfirmationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.IVR_VOICE,
+        governance_action=GovernanceAction.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-981245",
+    )
+    result = await delivery_service.dispatch_confirmation(req)
+    assert result["transmission_ack"]["telephony_gateway"] == "SIP_TRUNK_BSNL_HAR_08"
+    assert result["transmission_ack"]["audio_playback_url"] is not None
+
+
+@pytest.mark.asyncio
+async def test_dispatch_confirmation_ussd(
+    delivery_service: MultichannelConfirmationService,
+) -> None:
+    req = ConfirmationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.USSD,
+        governance_action=GovernanceAction.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-981245",
+    )
+    result = await delivery_service.dispatch_confirmation(req)
+    assert result["transmission_ack"]["sigtran_interface"] == "SS7_SIGTRAN_CARRIER_GATEWAY"
+
+
+@pytest.mark.asyncio
+async def test_dispatch_confirmation_sms(
+    delivery_service: MultichannelConfirmationService,
+) -> None:
+    req = ConfirmationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.SMS,
+        governance_action=GovernanceAction.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-981245",
+    )
+    result = await delivery_service.dispatch_confirmation(req)
+    assert result["transmission_ack"]["sms_gateway"] == "NIC_SMS_SERVICES_IN"
+
+
+def test_factories_and_custom_injection(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "CUSTOM_WHATSAPP_ENV")
+    monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "CUSTOM_IVR_ENV")
+    monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "CUSTOM_USSD_ENV")
+
+    env_service = MultichannelConfirmationService.from_env()
+    assert env_service.whatsapp_connector.interface_id == "CUSTOM_WHATSAPP_ENV"
+    assert env_service.ivr_connector.interface_id == "CUSTOM_IVR_ENV"
+    assert env_service.ussd_connector.interface_id == "CUSTOM_USSD_ENV"
+
+    custom_whatsapp = WhatsAppConnector(interface_id="MANUAL_WHATSAPP")
+    custom_ivr = IvrConnector(interface_id="MANUAL_IVR")
+    custom_ussd = UssdConnector(interface_id="MANUAL_USSD")
+    custom_service = MultichannelConfirmationService(
+        bhashini_service=BhashiniService(),
+        whatsapp_connector=custom_whatsapp,
+        ivr_connector=custom_ivr,
+        ussd_connector=custom_ussd,
+    )
+    assert custom_service.whatsapp_connector.interface_id == "MANUAL_WHATSAPP"
+    assert custom_service.ivr_connector.interface_id == "MANUAL_IVR"
+    assert custom_service.ussd_connector.interface_id == "MANUAL_USSD"

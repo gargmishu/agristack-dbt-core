@@ -9,9 +9,11 @@ See: roadmap.md (Phase 3 Step 3.5)
 
 import logging
 from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import HttpUrl
 
+from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
@@ -51,18 +53,60 @@ class MultichannelConfirmationService:
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
 
-    def __init__(self, bhashini_service: BhashiniService) -> None:
-        """Initializes MultichannelConfirmationService with explicit BhashiniService dependency.
+    def __init__(
+        self,
+        bhashini_service: BhashiniService,
+        whatsapp_connector: WhatsAppConnector | None = None,
+        ivr_connector: IvrConnector | None = None,
+        ussd_connector: UssdConnector | None = None,
+    ) -> None:
+        """Initializes MultichannelConfirmationService with injected dependencies.
 
         Args:
             bhashini_service: Injected BhashiniService instance for TTS voice synthesis.
+            whatsapp_connector: Optional WhatsApp connector instance.
+            ivr_connector: Optional IVR voice connector instance.
+            ussd_connector: Optional USSD signaling connector instance.
         """
         self._bhashini_service = bhashini_service
+        self._whatsapp_connector = whatsapp_connector or WhatsAppConnector.from_default()
+        self._ivr_connector = ivr_connector or IvrConnector.from_default()
+        self._ussd_connector = ussd_connector or UssdConnector.from_default()
+
+    @property
+    def whatsapp_connector(self) -> WhatsAppConnector:
+        """Returns the configured WhatsApp connector."""
+        return self._whatsapp_connector
+
+    @property
+    def ivr_connector(self) -> IvrConnector:
+        """Returns the configured IVR connector."""
+        return self._ivr_connector
+
+    @property
+    def ussd_connector(self) -> UssdConnector:
+        """Returns the configured USSD connector."""
+        return self._ussd_connector
 
     @classmethod
     def from_default(cls) -> "MultichannelConfirmationService":
         """Factory method instantiating MultichannelConfirmationService with default services."""
-        return cls(bhashini_service=BhashiniService())
+        return cls(
+            bhashini_service=BhashiniService(),
+            whatsapp_connector=WhatsAppConnector.from_default(),
+            ivr_connector=IvrConnector.from_default(),
+            ussd_connector=UssdConnector.from_default(),
+        )
+
+    @classmethod
+    def from_env(cls) -> "MultichannelConfirmationService":
+        """Factory method instantiating MultichannelConfirmationService from environment configs."""
+        return cls(
+            bhashini_service=BhashiniService(),
+            whatsapp_connector=WhatsAppConnector.from_env(),
+            ivr_connector=IvrConnector.from_env(),
+            ussd_connector=UssdConnector.from_env(),
+        )
 
     def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
@@ -230,3 +274,40 @@ class MultichannelConfirmationService:
             escalation_case_id=request.escalation_case_id,
             delivered_at=datetime.now(UTC),
         )
+
+    async def dispatch_confirmation(self, request: ConfirmationRequestPayload) -> dict[str, Any]:
+        """Prepares and dispatches confirmation through the appropriate edge connector.
+
+        Args:
+            request: Validated ConfirmationRequestPayload specifying channel and determination.
+
+        Returns:
+            Dict containing outbound confirmation payload and connector transmission acknowledgment.
+        """
+        payload = await self.prepare_confirmation(request)
+
+        transmission_ack: dict[str, Any]
+        if request.channel_type == ChannelType.WHATSAPP:
+            transmission_ack = await self._whatsapp_connector.send_outbound_confirmation(payload)
+        elif request.channel_type == ChannelType.IVR_VOICE:
+            transmission_ack = await self._ivr_connector.send_outbound_confirmation(payload)
+        elif request.channel_type == ChannelType.USSD:
+            transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
+        else:  # SMS
+            transmission_ack = {
+                "sms_gateway": "NIC_SMS_SERVICES_IN",
+                "session_id": payload.session_id,
+                "status": payload.delivery_status,
+                "message": payload.formatted_message,
+            }
+
+        logger.info(
+            "Dispatched confirmation for session=%s across channel=%s with status=%s",
+            payload.session_id,
+            payload.channel_type,
+            payload.delivery_status,
+        )
+        return {
+            "payload": payload,
+            "transmission_ack": transmission_ack,
+        }
