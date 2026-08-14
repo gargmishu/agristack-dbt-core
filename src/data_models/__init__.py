@@ -35,7 +35,10 @@ from src.data_models.common import (
     UnprocessedInputContent,
     UtcTimestamp,
 )
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.delivery import (
+    ConfirmationRequestPayload,
+    OutboundConfirmationPayload,
+)
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
     ExtractedEntityPayload,
@@ -56,6 +59,7 @@ __all__ = [
     "CaseworkerCaseReviewPayload",
     "CaseworkerReviewOutcomePayload",
     "ChannelType",
+    "ConfirmationRequestPayload",
     "DeliveryStatus",
     "DisbursementCallbackPayload",
     "DisbursementFailureCode",

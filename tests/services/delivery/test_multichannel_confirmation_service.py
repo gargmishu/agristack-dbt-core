@@ -8,12 +8,12 @@ from src.data_models.common import (
     GovernanceAction,
     LanguageLocale,
 )
-from src.data_models.delivery import MAX_USSD_CHARACTERS
-from src.services.ai.bhashini_service import BhashiniService
-from src.services.delivery import (
-    ConfirmationRequest,
-    MultichannelConfirmationService,
+from src.data_models.delivery import (
+    MAX_USSD_CHARACTERS,
+    ConfirmationRequestPayload,
 )
+from src.services.ai.bhashini_service import BhashiniService
+from src.services.delivery import MultichannelConfirmationService
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def delivery_service() -> MultichannelConfirmationService:
 async def test_prepare_whatsapp_auto_approve(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -45,7 +45,7 @@ async def test_prepare_whatsapp_auto_approve(
 async def test_prepare_whatsapp_manual_review(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
@@ -62,7 +62,7 @@ async def test_prepare_whatsapp_manual_review(
 async def test_prepare_whatsapp_auto_reject(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_REJECT,
@@ -77,7 +77,7 @@ async def test_prepare_whatsapp_auto_reject(
 async def test_prepare_whatsapp_reprompt_clarification(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.REQUEST_MORE_INFO,
@@ -92,7 +92,7 @@ async def test_prepare_whatsapp_reprompt_clarification(
 async def test_prepare_ivr_voice_hindi_synthesis(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.IVR_VOICE,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -110,7 +110,7 @@ async def test_prepare_ivr_voice_hindi_synthesis(
 async def test_prepare_ivr_voice_english_synthesis(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.IVR_VOICE,
         governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
@@ -132,7 +132,7 @@ async def test_prepare_ussd_length_boundary(
         GovernanceAction.AUTO_REJECT,
         GovernanceAction.REQUEST_MORE_INFO,
     ):
-        req = ConfirmationRequest(
+        req = ConfirmationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.USSD,
             governance_action=action,
@@ -150,7 +150,7 @@ async def test_prepare_ussd_length_boundary(
 async def test_prepare_sms_delivery(
     delivery_service: MultichannelConfirmationService,
 ) -> None:
-    req = ConfirmationRequest(
+    req = ConfirmationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.SMS,
         governance_action=GovernanceAction.AUTO_APPROVE,

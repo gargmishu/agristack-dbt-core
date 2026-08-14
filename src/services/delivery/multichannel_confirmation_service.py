@@ -8,7 +8,6 @@ See: roadmap.md (Phase 3 Step 3.5)
 """
 
 import logging
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from pydantic import HttpUrl
@@ -17,10 +16,10 @@ from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
     GovernanceAction,
-    LanguageLocale,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
+    ConfirmationRequestPayload,
     OutboundConfirmationPayload,
 )
 from src.services.ai.bhashini_service import BhashiniService
@@ -40,20 +39,6 @@ REJECT_ACTIONS = {
     GovernanceAction.AUTO_REJECT,
     GovernanceAction.MANUAL_REJECT,
 }
-
-
-@dataclass(frozen=True)
-class ConfirmationRequest:
-    """Input request context for generating outbound multichannel confirmation."""
-
-    session_id: str
-    channel_type: ChannelType
-    governance_action: GovernanceAction
-    language_locale: LanguageLocale = LanguageLocale.ENGLISH
-    disbursement_txn_id: str | None = None
-    escalation_case_id: str | None = None
-    rejection_reason: str | None = None
-    missing_entity: str | None = None
 
 
 class MultichannelConfirmationService:
@@ -79,7 +64,7 @@ class MultichannelConfirmationService:
         """Factory method instantiating MultichannelConfirmationService with default services."""
         return cls(bhashini_service=BhashiniService())
 
-    def _format_whatsapp_message(self, request: ConfirmationRequest) -> str:
+    def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
         if request.governance_action in APPROVE_ACTIONS:
             txn = request.disbursement_txn_id or "TXN-PENDING"
@@ -115,7 +100,7 @@ class MultichannelConfirmationService:
             "Reply directly to this message with the requested details."
         )
 
-    def _format_spoken_voice_text(self, request: ConfirmationRequest) -> str:
+    def _format_spoken_voice_text(self, request: ConfirmationRequestPayload) -> str:
         """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
         is_hindi = str(request.language_locale).startswith("hi")
         if request.governance_action in APPROVE_ACTIONS:
@@ -157,7 +142,7 @@ class MultichannelConfirmationService:
             else f"Please provide your {entity} to complete your claim."
         )
 
-    def _format_ussd_message(self, request: ConfirmationRequest) -> str:
+    def _format_ussd_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats compact USSD plain text string strictly under 160 characters."""
         if request.governance_action in APPROVE_ACTIONS:
             txn = request.disbursement_txn_id or "PENDING"
@@ -175,7 +160,7 @@ class MultichannelConfirmationService:
         # Enforce hard 160 character boundary
         return msg[:MAX_USSD_CHARACTERS]
 
-    def _format_sms_message(self, request: ConfirmationRequest) -> str:
+    def _format_sms_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats concise transactional SMS message."""
         if request.governance_action in APPROVE_ACTIONS:
             txn = request.disbursement_txn_id or "PENDING"
@@ -199,12 +184,12 @@ class MultichannelConfirmationService:
         return f"AgriStack: Clarification required for {entity}. Please submit details to proceed."
 
     async def prepare_confirmation(
-        self, request: ConfirmationRequest
+        self, request: ConfirmationRequestPayload
     ) -> OutboundConfirmationPayload:
         """Prepares channel-adapted OutboundConfirmationPayload with synthesized audio if voice.
 
         Args:
-            request: Validated ConfirmationRequest specifying channel, action, and identifiers.
+            request: Validated ConfirmationRequestPayload specifying channel, action, and fields.
 
         Returns:
             Validated OutboundConfirmationPayload ready for channel transmission.

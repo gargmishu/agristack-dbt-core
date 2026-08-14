@@ -1,11 +1,11 @@
 """Outbound notification delivery services package."""
 
+from src.data_models.delivery import ConfirmationRequestPayload
 from src.services.delivery.multichannel_confirmation_service import (
-    ConfirmationRequest,
     MultichannelConfirmationService,
 )
 
 __all__ = [
-    "ConfirmationRequest",
+    "ConfirmationRequestPayload",
     "MultichannelConfirmationService",
 ]
