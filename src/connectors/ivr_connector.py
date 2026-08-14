@@ -10,6 +10,7 @@ Automatic Number Identification (ANI) phone numbers.
 import logging
 from typing import Any
 
+from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -35,3 +36,29 @@ class IvrConnector:
             validated_payload.duration_seconds,
         )
         return validated_payload
+
+    async def send_outbound_confirmation(
+        self, payload: OutboundConfirmationPayload
+    ) -> dict[str, Any]:
+        """Dispatches outbound audio playback instruction to SIP telephony gateway.
+
+        Args:
+            payload: Validated OutboundConfirmationPayload with synthesized audio URL.
+
+        Returns:
+            Simulated SIP trunk audio playback instruction response.
+        """
+        logger.info(
+            "Transmitting outbound IVR voice audio for session=%s, audio_url=%s",
+            payload.session_id,
+            payload.audio_playback_url,
+        )
+        return {
+            "telephony_gateway": "SIP_TRUNK_BSNL_HAR_08",
+            "session_id": payload.session_id,
+            "status": payload.delivery_status,
+            "audio_playback_url": (
+                str(payload.audio_playback_url) if payload.audio_playback_url else None
+            ),
+            "tts_spoken_text": payload.formatted_message,
+        }

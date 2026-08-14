@@ -10,6 +10,7 @@ Information (zero-PII) security rules.
 import logging
 from typing import Any
 
+from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -36,3 +37,26 @@ class WhatsAppConnector:
             validated_payload.payload_type,
         )
         return validated_payload
+
+    async def send_outbound_confirmation(
+        self, payload: OutboundConfirmationPayload
+    ) -> dict[str, Any]:
+        """Dispatches outbound confirmation response to Meta WhatsApp Cloud API.
+
+        Args:
+            payload: Validated OutboundConfirmationPayload.
+
+        Returns:
+            Simulated carrier dispatch acknowledgment response.
+        """
+        logger.info(
+            "Transmitting outbound WhatsApp message for session=%s, length=%d",
+            payload.session_id,
+            len(payload.formatted_message),
+        )
+        return {
+            "messaging_product": "whatsapp",
+            "session_id": payload.session_id,
+            "status": payload.delivery_status,
+            "message": payload.formatted_message,
+        }

@@ -178,3 +178,12 @@ class DisbursementFailureCode(StrEnum):
     ACCOUNT_INACTIVE = "ACCOUNT_INACTIVE"
     AADHAAR_DELINKED = "AADHAAR_DELINKED"
     NETWORK_TIMEOUT = "NETWORK_TIMEOUT"
+
+
+class DeliveryStatus(StrEnum):
+    """Lifecycle status of outbound multichannel notification dispatch."""
+
+    PENDING = "PENDING"
+    SENT = "SENT"
+    DELIVERED = "DELIVERED"
+    FAILED = "FAILED"

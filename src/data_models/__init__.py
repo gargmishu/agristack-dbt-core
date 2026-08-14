@@ -10,6 +10,7 @@ from src.data_models.common import (
     ApplicationStatus,
     AudioDurationSeconds,
     ChannelType,
+    DeliveryStatus,
     DisbursementFailureCode,
     DisbursementStatus,
     DisbursementTxnId,
@@ -34,6 +35,7 @@ from src.data_models.common import (
     UnprocessedInputContent,
     UtcTimestamp,
 )
+from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
     ExtractedEntityPayload,
@@ -54,6 +56,7 @@ __all__ = [
     "CaseworkerCaseReviewPayload",
     "CaseworkerReviewOutcomePayload",
     "ChannelType",
+    "DeliveryStatus",
     "DisbursementCallbackPayload",
     "DisbursementFailureCode",
     "DisbursementStatus",
@@ -71,6 +74,7 @@ __all__ = [
     "HmacCitizenToken",
     "IvrIngressPayload",
     "LanguageLocale",
+    "OutboundConfirmationPayload",
     "PayloadType",
     "PhoneNumberE164",
     "PublicAgentStandardizedIntakePayload",
