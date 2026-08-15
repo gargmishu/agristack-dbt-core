@@ -8,7 +8,7 @@ ingress payloads into Layer 2 security pipelines, and transmits outbound SMS con
 """
 
 import logging
-from typing import Any
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_sms_interface_id
@@ -35,16 +35,21 @@ class SmsConnector:
         """Returns the configured carrier interface identifier."""
         return self._interface_id
 
-    async def process_inbound_sms(self, payload: dict[str, Any]) -> SmsIngressPayload:
+    async def process_inbound_sms(
+        self, payload: bytes | str | Mapping[str, object]
+    ) -> SmsIngressPayload:
         """Validates and processes raw incoming SMS webhook into SmsIngressPayload.
 
         Args:
-            payload: Raw dict payload received from carrier SMS gateway webhook.
+            payload: Raw bytes, JSON string, or mapping received from carrier SMS gateway webhook.
 
         Returns:
             Validated SmsIngressPayload.
         """
-        validated_payload = SmsIngressPayload.model_validate(payload)
+        if isinstance(payload, bytes | str):
+            validated_payload = SmsIngressPayload.model_validate_json(payload)
+        else:
+            validated_payload = SmsIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated SMS webhook for session=%s, message_id=%s",

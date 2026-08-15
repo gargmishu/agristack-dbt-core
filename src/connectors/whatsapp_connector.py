@@ -8,7 +8,7 @@ Information (zero-PII) security rules.
 """
 
 import logging
-from typing import Any
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_whatsapp_interface_id
@@ -35,16 +35,21 @@ class WhatsAppConnector:
         """Returns the configured carrier interface identifier."""
         return self._interface_id
 
-    async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
+    async def process_webhook(
+        self, payload: bytes | str | Mapping[str, object]
+    ) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.
 
         Args:
-            payload: Raw dict payload received from Meta WhatsApp API webhook.
+            payload: Raw bytes, JSON string, or mapping received from Meta WhatsApp API webhook.
 
         Returns:
             Validated WhatsAppIngressPayload.
         """
-        validated_payload = WhatsAppIngressPayload.model_validate(payload)
+        if isinstance(payload, bytes | str):
+            validated_payload = WhatsAppIngressPayload.model_validate_json(payload)
+        else:
+            validated_payload = WhatsAppIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated WhatsApp webhook for session=%s, message_id=%s, type=%s",

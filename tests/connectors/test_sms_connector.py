@@ -29,6 +29,25 @@ async def test_sms_connector_process_inbound_sms_valid() -> None:
 
 
 @pytest.mark.asyncio
+async def test_sms_connector_process_inbound_sms_json_string_and_bytes() -> None:
+    connector = SmsConnector()
+    payload_json = (
+        '{"session_id": "sess_12345678", '
+        '"originating_phone_number": "+919876543210", '
+        '"channel_message_id": "sms_msg_998877", '
+        '"text_body": "STATUS PM-KISAN", '
+        f'"received_at": "{datetime.now(UTC).isoformat()}"}}'
+    )
+    result_str = await connector.process_inbound_sms(payload_json)
+    assert isinstance(result_str, SmsIngressPayload)
+    assert result_str.text_body == "STATUS PM-KISAN"
+
+    result_bytes = await connector.process_inbound_sms(payload_json.encode("utf-8"))
+    assert isinstance(result_bytes, SmsIngressPayload)
+    assert result_bytes.text_body == "STATUS PM-KISAN"
+
+
+@pytest.mark.asyncio
 async def test_sms_connector_process_inbound_sms_invalid() -> None:
     connector = SmsConnector()
     invalid_payload = {

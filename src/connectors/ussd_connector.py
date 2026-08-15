@@ -8,7 +8,7 @@ concatenated user digit selections.
 """
 
 import logging
-from typing import Any
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_ussd_interface_id
@@ -35,16 +35,21 @@ class UssdConnector:
         """Returns the configured SIGTRAN signaling interface identifier."""
         return self._interface_id
 
-    async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
-        """Validates and processes raw USSD menu payload into canonical拍摄 UssdIngressPayload.
+    async def process_ussd_session(
+        self, payload: bytes | str | Mapping[str, object]
+    ) -> UssdIngressPayload:
+        """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.
 
         Args:
-            payload: Raw dict payload received from USSD SS7/SIGTRAN gateway.
+            payload: Raw bytes, JSON string, or mapping received from USSD SS7/SIGTRAN gateway.
 
         Returns:
             Validated UssdIngressPayload.
         """
-        validated_payload = UssdIngressPayload.model_validate(payload)
+        if isinstance(payload, bytes | str):
+            validated_payload = UssdIngressPayload.model_validate_json(payload)
+        else:
+            validated_payload = UssdIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated USSD session for session=%s, service_code=%s",

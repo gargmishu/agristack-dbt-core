@@ -29,6 +29,29 @@ async def test_ivr_connector_valid_session() -> None:
 
 
 @pytest.mark.asyncio
+async def test_ivr_connector_json_string_and_bytes() -> None:
+    connector = IvrConnector()
+    payload_json = (
+        '{"session_id": "sess_12345678", '
+        '"originating_phone_number": "+919876543210", '
+        '"audio_recording_url": "https://sip-gateway.telecom.in/audio/call_987.wav", '
+        f'"duration_seconds": {EXPECTED_DURATION}, '
+        f'"received_at": "{datetime.now(UTC).isoformat()}"}}'
+    )
+    result_str = await connector.process_call_session(payload_json)
+    assert isinstance(result_str, IvrIngressPayload)
+    assert (
+        str(result_str.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
+    )
+
+    result_bytes = await connector.process_call_session(payload_json.encode("utf-8"))
+    assert isinstance(result_bytes, IvrIngressPayload)
+    assert (
+        str(result_bytes.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
+    )
+
+
+@pytest.mark.asyncio
 async def test_ivr_connector_invalid_audio_url() -> None:
     connector = IvrConnector()
     invalid_payload = {
