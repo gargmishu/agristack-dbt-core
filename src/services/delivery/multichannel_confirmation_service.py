@@ -66,26 +66,6 @@ class MultichannelConfirmationService:
         self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_gateway_id = sms_gateway_id
 
-    @property
-    def whatsapp_connector(self) -> WhatsAppConnector:
-        """Returns the configured WhatsApp connector."""
-        return self._whatsapp_connector
-
-    @property
-    def ivr_connector(self) -> IvrConnector:
-        """Returns the configured IVR connector."""
-        return self._ivr_connector
-
-    @property
-    def ussd_connector(self) -> UssdConnector:
-        """Returns the configured USSD connector."""
-        return self._ussd_connector
-
-    @property
-    def sms_gateway_id(self) -> str:
-        """Returns the configured SMS gateway identifier."""
-        return self._sms_gateway_id
-
     @classmethod
     def from_env(cls) -> "MultichannelConfirmationService":
         """Factory method instantiating MultichannelConfirmationService from environment configs."""
