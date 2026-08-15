@@ -1,4 +1,4 @@
-"""Unit tests for Layer 2 PII Purge Guard Sentinel."""
+"""Unit tests for Layer 2 PII Purge Guard (Sanitizer & Sentinel)."""
 
 from datetime import UTC, datetime
 
@@ -33,6 +33,45 @@ def test_pii_purge_guard_detects_cleartext_aadhaar() -> None:
     assert PiiPurgeGuard.contains_cleartext_aadhaar("Survey number 1002") is False
     assert PiiPurgeGuard.contains_cleartext_aadhaar("") is False
     assert PiiPurgeGuard.contains_cleartext_aadhaar("   ") is False
+
+
+def test_pii_purge_guard_redacts_indian_mobile_numbers() -> None:
+    text = "Mera phone 9876543210 hai aur dusra 919876543211 hai."
+    sanitized = PiiPurgeGuard.redact_phone_numbers(text)
+    assert "[REDACTED]" in sanitized
+    assert "9876543210" not in sanitized
+    assert "919876543211" not in sanitized
+
+
+def test_pii_purge_guard_redacts_e164_numbers() -> None:
+    text = "Contact me at +919876543210 or +14155552671."
+    sanitized = PiiPurgeGuard.redact_phone_numbers(text)
+    assert "[REDACTED]" in sanitized
+    assert "+919876543210" not in sanitized
+    assert "+14155552671" not in sanitized
+
+
+def test_pii_purge_guard_redacts_aadhaar_numbers() -> None:
+    text = "Aadhaar 1234 5678 9012 or 123456789012."
+    sanitized = PiiPurgeGuard.redact_aadhaar_numbers(text)
+    assert "[REDACTED]" in sanitized
+    assert "1234 5678 9012" not in sanitized
+    assert "123456789012" not in sanitized
+
+
+def test_pii_purge_guard_redact_all() -> None:
+    text = "Kisan Ramesh, phone +919876543210, Aadhaar 1234 5678 9012, 2 acre wheat damage."
+    sanitized = PiiPurgeGuard.redact_all(text, session_id="sess_test_123")
+    assert "+919876543210" not in sanitized
+    assert "1234 5678 9012" not in sanitized
+    assert "wheat damage" in sanitized
+
+
+def test_pii_purge_guard_redact_all_handles_empty_and_whitespace() -> None:
+    assert PiiPurgeGuard.redact_all("") == ""
+    assert PiiPurgeGuard.redact_all("   ") == "   "
+    clean_text = "Sirf gehu ki kheti hai."
+    assert PiiPurgeGuard.redact_all(clean_text) == clean_text
 
 
 def test_pii_purge_guard_asserts_valid_payload() -> None:

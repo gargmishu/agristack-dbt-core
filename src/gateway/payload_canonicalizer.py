@@ -19,7 +19,7 @@ from src.data_models.raw_ingress import (
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
-from src.gateway.pii_text_redactor import PiiTextRedactor
+from src.gateway.pii_purge_guard import PiiPurgeGuard
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
 IngressPayloadUnion = (
@@ -80,7 +80,7 @@ class PayloadCanonicalizer:
             structure_level = StructureLevel.FREE_TEXT
         else:
             assert payload.text_body is not None  # Guaranteed by WhatsAppIngressPayload validator
-            unprocessed_content = PiiTextRedactor.redact_all(
+            unprocessed_content = PiiPurgeGuard.redact_all(
                 payload.text_body, session_id=payload.session_id
             )
             structure_level = StructureLevel.FREE_TEXT
@@ -136,7 +136,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        unprocessed_content = PiiTextRedactor.redact_all(
+        unprocessed_content = PiiPurgeGuard.redact_all(
             payload.text_body, session_id=payload.session_id
         )
         return PublicAgentStandardizedIntakePayload(

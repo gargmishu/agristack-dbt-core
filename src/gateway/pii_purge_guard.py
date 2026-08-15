@@ -1,7 +1,8 @@
-"""Layer 2 Zero-Trust PII Purge Guard (In-Memory Privacy Sentinel).
+"""Layer 2 Zero-Trust PII Purge Guard (In-Memory Privacy Sanitizer & Sentinel).
 
-Verifies that incoming cleartext PII (raw phone numbers, 12-digit Aadhaar IDs) is tokenized
-in volatile RAM and that no raw PII leaks into downstream standardized contracts.
+Combines free-text PII sanitization (redacting cleartext phone numbers and 12-digit Aadhaar
+numbers) with downstream compliance assertions (verifying that all citizen identifiers are
+strictly SHA-256 HMAC tokens in volatile RAM).
 
 See: decisions/step3.2_security_and_ingestion_firewalls.md
 See: decisions/step0.3_zero_trust_tokenization.md
@@ -17,30 +18,100 @@ from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 logger = logging.getLogger(__name__)
 
 SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
+_REDACTION_MARKER: Final[str] = "[REDACTED]"
 
-# Patterns matching cleartext 10/12-digit numbers and international E.164 phone numbers
-_E164_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"^\+[1-9]\d{1,14}$")
-_AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}\s?\d{4}\s?\d{4}")
+# E.164 international phone numbers embedded in free text or discrete fields
+_E164_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\+[1-9]\d{1,14}")
+
+# 10-digit Indian mobile numbers with optional +91/91 prefix
 _INDIAN_PHONE_PATTERN: Final[re.Pattern[str]] = re.compile(r"(?:\+91|91)?[6-9]\d{9}")
+
+# 12-digit Aadhaar UID with optional spaces (e.g., "1234 5678 9012" or "123456789012")
+_AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}\s?\d{4}\s?\d{4}")
 
 
 class PiiPurgeGuard:
-    """In-memory security sentinel asserting zero-PII compliance on canonicalized contracts."""
+    """Unified in-memory PII redactor and zero-PII contract compliance sentinel."""
 
     @classmethod
     def contains_cleartext_phone(cls, text: str) -> bool:
-        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers."""
-        if not text.strip():
+        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers.
+
+        Args:
+            text: String to inspect.
+
+        Returns:
+            True if any cleartext phone pattern is found.
+        """
+        if not text or not text.strip():
             return False
         clean = text.strip()
-        return bool(_E164_PHONE_PATTERN.match(clean) or _INDIAN_PHONE_PATTERN.search(clean))
+        return bool(_E164_PHONE_PATTERN.search(clean) or _INDIAN_PHONE_PATTERN.search(clean))
 
     @classmethod
     def contains_cleartext_aadhaar(cls, text: str) -> bool:
-        """Checks if a string contains a 12-digit Aadhaar number pattern."""
-        if not text.strip():
+        """Checks if a string contains a 12-digit Aadhaar number pattern.
+
+        Args:
+            text: String to inspect.
+
+        Returns:
+            True if 12-digit Aadhaar pattern is found.
+        """
+        if not text or not text.strip():
             return False
         return bool(_AADHAAR_PATTERN.search(text.strip()))
+
+    @classmethod
+    def redact_phone_numbers(cls, text: str) -> str:
+        """Replaces cleartext E.164 and 10-digit Indian phone numbers with [REDACTED].
+
+        Args:
+            text: Raw free-text input string.
+
+        Returns:
+            Text with phone number patterns replaced by [REDACTED].
+        """
+        result = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
+        result = _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, result)
+        return result
+
+    @classmethod
+    def redact_aadhaar_numbers(cls, text: str) -> str:
+        """Replaces cleartext 12-digit Aadhaar UID patterns with [REDACTED].
+
+        Args:
+            text: Raw free-text input string.
+
+        Returns:
+            Text with Aadhaar number patterns replaced by [REDACTED].
+        """
+        return _AADHAAR_PATTERN.sub(_REDACTION_MARKER, text)
+
+    @classmethod
+    def redact_all(cls, text: str, session_id: str | None = None) -> str:
+        """Applies all PII redaction rules in sequence and returns sanitized text.
+
+        Args:
+            text: Raw free-text input string to sanitize.
+            session_id: Optional session identifier for audit logging.
+
+        Returns:
+            Sanitized text with all detected PII replaced by [REDACTED].
+        """
+        if not text or not text.strip():
+            return text
+
+        redacted = cls.redact_phone_numbers(text)
+        redacted = cls.redact_aadhaar_numbers(redacted)
+
+        if redacted != text:
+            logger.warning(
+                "PII redacted from free-text input for session=%s",
+                session_id or "unknown",
+            )
+
+        return redacted
 
     @classmethod
     def assert_zero_pii(cls, payload: PublicAgentStandardizedIntakePayload) -> None:
