@@ -18,8 +18,11 @@ class TransmissionAck(StrictBaseModel):
 
     interface_id: str = Field(
         ...,
-        min_length=1,
-        description="Configured carrier interface or gateway identifier",
+        min_length=3,
+        max_length=128,
+        description=(
+            "Configured carrier interface or gateway identifier (e.g. WHATSAPP_GATEWAY_DEFAULT)"
+        ),
     )
     channel_type: ChannelType = Field(
         ...,
@@ -35,7 +38,8 @@ class TransmissionAck(StrictBaseModel):
     )
     carrier_reference_id: str = Field(
         ...,
-        min_length=1,
+        min_length=4,
+        max_length=128,
         description=(
             "Unique carrier dispatch reference ID "
             "(e.g. wamid.xxx, sip-call-id, ussd-sig-id, sms-dr-id)"

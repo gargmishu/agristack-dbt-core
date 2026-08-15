@@ -41,21 +41,34 @@ def test_transmission_ack_all_channels() -> None:
         assert ack.carrier_reference_id == f"ref-{channel.value}"
 
 
-def test_transmission_ack_invalid_empty_interface() -> None:
+def test_transmission_ack_invalid_short_interface() -> None:
+    # min_length is 3
     with pytest.raises(ValidationError):
         TransmissionAck(
-            interface_id="",
+            interface_id="GW",  # 2 chars < 3
             channel_type=ChannelType.SMS,
             session_id="sess_12345678",
             carrier_reference_id="sms-dr-123",
         )
 
 
-def test_transmission_ack_invalid_empty_carrier_ref() -> None:
+def test_transmission_ack_invalid_short_carrier_ref() -> None:
+    # min_length is 4
     with pytest.raises(ValidationError):
         TransmissionAck(
             interface_id="SMS_GATEWAY_DEFAULT",
             channel_type=ChannelType.SMS,
             session_id="sess_12345678",
-            carrier_reference_id="",
+            carrier_reference_id="123",  # 3 chars < 4
+        )
+
+
+def test_transmission_ack_invalid_exceeds_max_length() -> None:
+    # max_length is 128
+    with pytest.raises(ValidationError):
+        TransmissionAck(
+            interface_id="A" * 129,
+            channel_type=ChannelType.SMS,
+            session_id="sess_12345678",
+            carrier_reference_id="sms-dr-123",
         )
