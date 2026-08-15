@@ -9,7 +9,7 @@ See: roadmap.md (Phase 3 Step 3.5)
 
 import logging
 from datetime import UTC, datetime
-from typing import Any, Final
+from typing import Final
 
 from pydantic import HttpUrl
 
@@ -27,8 +27,10 @@ from src.data_models.common import (
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
+    ConfirmationDispatchResult,
     ConfirmationRequestPayload,
     OutboundConfirmationPayload,
+    TransmissionAck,
 )
 from src.services.ai.bhashini_service import BhashiniService
 
@@ -223,18 +225,20 @@ class MultichannelConfirmationService:
             delivered_at=datetime.now(UTC),
         )
 
-    async def dispatch_confirmation(self, request: ConfirmationRequestPayload) -> dict[str, Any]:
+    async def dispatch_confirmation(
+        self, request: ConfirmationRequestPayload
+    ) -> ConfirmationDispatchResult:
         """Prepares and dispatches confirmation through the appropriate edge connector.
 
         Args:
             request: Validated ConfirmationRequestPayload specifying channel and determination.
 
         Returns:
-            Dict containing outbound confirmation payload and connector transmission acknowledgment.
+            ConfirmationDispatchResult with payload and carrier TransmissionAck receipt.
         """
         payload = await self.prepare_confirmation(request)
 
-        transmission_ack: dict[str, Any]
+        transmission_ack: TransmissionAck
         if request.channel_type == ChannelType.WHATSAPP:
             transmission_ack = await self._whatsapp_connector.send_outbound_confirmation(payload)
         elif request.channel_type == ChannelType.IVR_VOICE:
@@ -250,7 +254,7 @@ class MultichannelConfirmationService:
             payload.channel_type,
             payload.delivery_status,
         )
-        return {
-            "payload": payload,
-            "transmission_ack": transmission_ack,
-        }
+        return ConfirmationDispatchResult(
+            payload=payload,
+            transmission_ack=transmission_ack,
+        )

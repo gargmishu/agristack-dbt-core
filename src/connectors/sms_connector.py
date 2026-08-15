@@ -8,10 +8,10 @@ telecom SMS gateway interfaces.
 """
 
 import logging
-from typing import Any
 
 from src.config import get_sms_interface_id
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.common import ChannelType
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +34,14 @@ class SmsConnector:
 
     async def send_outbound_confirmation(
         self, payload: OutboundConfirmationPayload
-    ) -> dict[str, Any]:
+    ) -> TransmissionAck:
         """Dispatches outbound SMS message to carrier SMS gateway.
 
         Args:
             payload: Validated OutboundConfirmationPayload.
 
         Returns:
-            Simulated carrier dispatch acknowledgment response.
+            Strict TransmissionAck receipt.
         """
         logger.info(
             "Transmitting outbound SMS for session=%s, interface=%s, length=%d",
@@ -49,10 +49,10 @@ class SmsConnector:
             self._interface_id,
             len(payload.formatted_message),
         )
-        return {
-            "interface_id": self._interface_id,
-            "messaging_product": "sms",
-            "session_id": payload.session_id,
-            "status": payload.delivery_status,
-            "message": payload.formatted_message,
-        }
+        return TransmissionAck(
+            interface_id=self._interface_id,
+            channel_type=ChannelType.SMS,
+            session_id=payload.session_id,
+            status=payload.delivery_status,
+            message=payload.formatted_message,
+        )

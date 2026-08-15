@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.config import DEFAULT_WHATSAPP_INTERFACE
 from src.connectors import WhatsAppConnector
 from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction, PayloadType
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 EXPECTED_DURATION = 15
@@ -92,11 +92,14 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_confirmation(payload)
-    assert result["interface_id"] == "CUSTOM_META_WHATSAPP_API"
-    assert result["messaging_product"] == "whatsapp"
-    assert result["session_id"] == "sess_12345678"
-    assert result["status"] == DeliveryStatus.DELIVERED
-    assert result["message"] == "Claim Approved"
+    assert isinstance(result, TransmissionAck)
+    assert result.interface_id == "CUSTOM_META_WHATSAPP_API"
+    assert result.channel_type == ChannelType.WHATSAPP
+    assert result.session_id == "sess_12345678"
+    assert result.status == DeliveryStatus.DELIVERED
+    assert result.message == "Claim Approved"
+    assert result.message_id is not None
+    assert result.message_id.startswith("wamid.")
 
 
 def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:

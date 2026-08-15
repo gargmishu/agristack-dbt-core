@@ -11,7 +11,8 @@ import logging
 from typing import Any
 
 from src.config import get_ivr_interface_id
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.common import ChannelType
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -53,14 +54,14 @@ class IvrConnector:
 
     async def send_outbound_confirmation(
         self, payload: OutboundConfirmationPayload
-    ) -> dict[str, Any]:
+    ) -> TransmissionAck:
         """Dispatches outbound audio playback instruction to SIP telephony gateway.
 
         Args:
             payload: Validated OutboundConfirmationPayload with synthesized audio URL.
 
         Returns:
-            Simulated SIP trunk audio playback instruction response.
+            Strict TransmissionAck receipt.
         """
         logger.info(
             "Transmitting outbound IVR voice audio for session=%s, interface=%s, audio_url=%s",
@@ -68,12 +69,11 @@ class IvrConnector:
             self._interface_id,
             payload.audio_playback_url,
         )
-        return {
-            "telephony_gateway": self._interface_id,
-            "session_id": payload.session_id,
-            "status": payload.delivery_status,
-            "audio_playback_url": (
-                str(payload.audio_playback_url) if payload.audio_playback_url else None
-            ),
-            "tts_spoken_text": payload.formatted_message,
-        }
+        return TransmissionAck(
+            interface_id=self._interface_id,
+            channel_type=ChannelType.IVR_VOICE,
+            session_id=payload.session_id,
+            status=payload.delivery_status,
+            audio_playback_url=payload.audio_playback_url,
+            message=payload.formatted_message,
+        )

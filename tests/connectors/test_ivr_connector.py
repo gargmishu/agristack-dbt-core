@@ -6,7 +6,7 @@ from pydantic import HttpUrl, ValidationError
 from src.config import DEFAULT_IVR_INTERFACE
 from src.connectors import IvrConnector
 from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
 EXPECTED_DURATION = 45
@@ -72,10 +72,13 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_confirmation(payload)
-    assert result["telephony_gateway"] == "CUSTOM_SIP_TRUNK_01"
-    assert result["session_id"] == "sess_12345678"
-    assert result["audio_playback_url"] == "https://bhashini.ai/audio_1.wav"
-    assert result["tts_spoken_text"] == "Aapka aavedan swikrit ho gaya hai."
+    assert isinstance(result, TransmissionAck)
+    assert result.interface_id == "CUSTOM_SIP_TRUNK_01"
+    assert result.channel_type == ChannelType.IVR_VOICE
+    assert result.session_id == "sess_12345678"
+    assert result.status == DeliveryStatus.DELIVERED
+    assert result.audio_playback_url == HttpUrl("https://bhashini.ai/audio_1.wav")
+    assert result.message == "Aapka aavedan swikrit ho gaya hai."
 
 
 def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:

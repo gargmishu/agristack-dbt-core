@@ -9,9 +9,11 @@ Information (zero-PII) security rules.
 
 import logging
 from typing import Any
+from uuid import uuid4
 
 from src.config import get_whatsapp_interface_id
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.common import ChannelType
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -54,14 +56,14 @@ class WhatsAppConnector:
 
     async def send_outbound_confirmation(
         self, payload: OutboundConfirmationPayload
-    ) -> dict[str, Any]:
+    ) -> TransmissionAck:
         """Dispatches outbound confirmation response to Meta WhatsApp Cloud API.
 
         Args:
             payload: Validated OutboundConfirmationPayload.
 
         Returns:
-            Simulated carrier dispatch acknowledgment response.
+            Strict TransmissionAck receipt.
         """
         logger.info(
             "Transmitting outbound WhatsApp message for session=%s, interface=%s, length=%d",
@@ -69,10 +71,11 @@ class WhatsAppConnector:
             self._interface_id,
             len(payload.formatted_message),
         )
-        return {
-            "interface_id": self._interface_id,
-            "messaging_product": "whatsapp",
-            "session_id": payload.session_id,
-            "status": payload.delivery_status,
-            "message": payload.formatted_message,
-        }
+        return TransmissionAck(
+            interface_id=self._interface_id,
+            channel_type=ChannelType.WHATSAPP,
+            session_id=payload.session_id,
+            status=payload.delivery_status,
+            message_id=f"wamid.{uuid4().hex[:16]}",
+            message=payload.formatted_message,
+        )

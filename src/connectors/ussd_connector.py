@@ -11,7 +11,8 @@ import logging
 from typing import Any
 
 from src.config import get_ussd_interface_id
-from src.data_models.delivery import OutboundConfirmationPayload
+from src.data_models.common import ChannelType
+from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import UssdIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -53,14 +54,14 @@ class UssdConnector:
 
     async def send_outbound_confirmation(
         self, payload: OutboundConfirmationPayload
-    ) -> dict[str, Any]:
+    ) -> TransmissionAck:
         """Pushes final USSD signaling response string back to carrier gateway.
 
         Args:
             payload: Validated OutboundConfirmationPayload (strictly <=160 chars).
 
         Returns:
-            Simulated SS7/SIGTRAN USSD menu termination response.
+            Strict TransmissionAck receipt.
         """
         logger.info(
             "Pushing outbound USSD string for session=%s, interface=%s, length=%d",
@@ -68,9 +69,10 @@ class UssdConnector:
             self._interface_id,
             len(payload.formatted_message),
         )
-        return {
-            "sigtran_interface": self._interface_id,
-            "session_id": payload.session_id,
-            "status": payload.delivery_status,
-            "ussd_menu_response": payload.formatted_message,
-        }
+        return TransmissionAck(
+            interface_id=self._interface_id,
+            channel_type=ChannelType.USSD,
+            session_id=payload.session_id,
+            status=payload.delivery_status,
+            message=payload.formatted_message,
+        )
