@@ -9,7 +9,7 @@ See: roadmap.md (Phase 3 Step 3.5)
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Final
 
 from pydantic import HttpUrl
 
@@ -31,6 +31,18 @@ from src.data_models.delivery import (
 from src.services.ai.bhashini_service import BhashiniService
 
 logger = logging.getLogger(__name__)
+
+HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
+    DomainEntityKey.DISTRICT: "zila",
+    DomainEntityKey.TALUKA: "taluka ya tehsil",
+    DomainEntityKey.VILLAGE: "gaon",
+    DomainEntityKey.CROP_NAME: "fasal ka naam",
+    DomainEntityKey.CROP_VARIETY: "fasal ki kism",
+    DomainEntityKey.LAND_SIZE_ACRES: "zameen ka aakar (acres)",
+    DomainEntityKey.SUBSIDY_SCHEME_ID: "yojana ID",
+    DomainEntityKey.SURVEY_NUMBER: "khasra sankhya",
+    DomainEntityKey.BANK_ACCOUNT_LAST4: "bank khate ke aakhiri 4 ank",
+}
 
 
 class MultichannelConfirmationService:
@@ -74,18 +86,7 @@ class MultichannelConfirmationService:
         if entity is None:
             return "kripya vivaran" if is_hindi else "required details"
         if is_hindi:
-            hindi_labels: dict[DomainEntityKey, str] = {
-                DomainEntityKey.DISTRICT: "zila",
-                DomainEntityKey.TALUKA: "taluka ya tehsil",
-                DomainEntityKey.VILLAGE: "gaon",
-                DomainEntityKey.CROP_NAME: "fasal ka naam",
-                DomainEntityKey.CROP_VARIETY: "fasal ki kism",
-                DomainEntityKey.LAND_SIZE_ACRES: "zameen ka aakar (acres)",
-                DomainEntityKey.SUBSIDY_SCHEME_ID: "yojana ID",
-                DomainEntityKey.SURVEY_NUMBER: "khasra sankhya",
-                DomainEntityKey.BANK_ACCOUNT_LAST4: "bank khate ke aakhiri 4 ank",
-            }
-            return hindi_labels.get(entity, entity.value.replace("_", " "))
+            return HINDI_ENTITY_LABELS.get(entity, entity.value.replace("_", " "))
         return entity.value.replace("_", " ")
 
     def _format_rich_card(self, request: ConfirmationRequestPayload) -> str:
