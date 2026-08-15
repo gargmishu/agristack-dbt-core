@@ -77,8 +77,7 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
     assert result.channel_type == ChannelType.IVR_VOICE
     assert result.session_id == "sess_12345678"
     assert result.status == DeliveryStatus.DELIVERED
-    assert result.audio_playback_url == HttpUrl("https://bhashini.ai/audio_1.wav")
-    assert result.message == "Aapka aavedan swikrit ho gaya hai."
+    assert result.carrier_reference_id.startswith("sip-call-")
 
 
 def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:

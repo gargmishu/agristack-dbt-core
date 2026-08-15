@@ -193,8 +193,7 @@ async def test_dispatch_confirmation_whatsapp(
     assert isinstance(result.transmission_ack, TransmissionAck)
     assert result.transmission_ack.channel_type == ChannelType.WHATSAPP
     assert result.transmission_ack.status == DeliveryStatus.DELIVERED
-    assert result.transmission_ack.message_id is not None
-    assert result.transmission_ack.message_id.startswith("wamid.")
+    assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
 
 
 @pytest.mark.asyncio
@@ -211,7 +210,8 @@ async def test_dispatch_confirmation_ivr_voice(
     assert isinstance(result, ConfirmationDispatchResult)
     assert result.transmission_ack.interface_id == DEFAULT_IVR_INTERFACE
     assert result.transmission_ack.channel_type == ChannelType.IVR_VOICE
-    assert result.transmission_ack.audio_playback_url is not None
+    assert result.transmission_ack.carrier_reference_id.startswith("sip-call-")
+    assert result.payload.audio_playback_url is not None
 
 
 @pytest.mark.asyncio

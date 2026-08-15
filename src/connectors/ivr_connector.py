@@ -9,6 +9,7 @@ Automatic Number Identification (ANI) phone numbers.
 
 import logging
 from typing import Any
+from uuid import uuid4
 
 from src.config import get_ivr_interface_id
 from src.data_models.common import ChannelType
@@ -61,19 +62,19 @@ class IvrConnector:
             payload: Validated OutboundConfirmationPayload with synthesized audio URL.
 
         Returns:
-            Strict TransmissionAck receipt.
+            Strict TransmissionAck receipt with carrier reference ID.
         """
+        carrier_ref = f"sip-call-{uuid4().hex[:12]}"
         logger.info(
-            "Transmitting outbound IVR voice audio for session=%s, interface=%s, audio_url=%s",
+            "Transmitting outbound IVR voice audio for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            payload.audio_playback_url,
+            carrier_ref,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.IVR_VOICE,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            audio_playback_url=payload.audio_playback_url,
-            message=payload.formatted_message,
+            carrier_reference_id=carrier_ref,
         )

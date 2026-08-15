@@ -74,7 +74,7 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
     assert result.channel_type == ChannelType.USSD
     assert result.session_id == "sess_12345678"
     assert result.status == DeliveryStatus.DELIVERED
-    assert result.message == "AgriStack: Claim Approved."
+    assert result.carrier_reference_id.startswith("ussd-sig-")
 
 
 def test_ussd_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:

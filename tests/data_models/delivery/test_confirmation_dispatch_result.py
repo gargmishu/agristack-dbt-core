@@ -31,8 +31,7 @@ def test_confirmation_dispatch_result_valid() -> None:
         channel_type=ChannelType.WHATSAPP,
         session_id="sess_12345678",
         status=DeliveryStatus.DELIVERED,
-        message_id="wamid.12345",
-        message="Claim Approved",
+        carrier_reference_id="wamid.12345",
     )
     result = ConfirmationDispatchResult(
         payload=payload,
@@ -40,4 +39,4 @@ def test_confirmation_dispatch_result_valid() -> None:
     )
     assert result.payload.session_id == "sess_12345678"
     assert result.transmission_ack.interface_id == "WHATSAPP_GATEWAY_DEFAULT"
-    assert result.transmission_ack.message_id == "wamid.12345"
+    assert result.transmission_ack.carrier_reference_id == "wamid.12345"

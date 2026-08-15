@@ -9,6 +9,7 @@ concatenated user digit selections.
 
 import logging
 from typing import Any
+from uuid import uuid4
 
 from src.config import get_ussd_interface_id
 from src.data_models.common import ChannelType
@@ -35,7 +36,7 @@ class UssdConnector:
         return self._interface_id
 
     async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
-        """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.
+        """Validates and processes raw USSD menu payload into canonical拍摄 UssdIngressPayload.
 
         Args:
             payload: Raw dict payload received from USSD SS7/SIGTRAN gateway.
@@ -61,18 +62,19 @@ class UssdConnector:
             payload: Validated OutboundConfirmationPayload (strictly <=160 chars).
 
         Returns:
-            Strict TransmissionAck receipt.
+            Strict TransmissionAck receipt with carrier reference ID.
         """
+        carrier_ref = f"ussd-sig-{uuid4().hex[:12]}"
         logger.info(
-            "Pushing outbound USSD string for session=%s, interface=%s, length=%d",
+            "Pushing outbound USSD string for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            len(payload.formatted_message),
+            carrier_ref,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.USSD,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            message=payload.formatted_message,
+            carrier_reference_id=carrier_ref,
         )

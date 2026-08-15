@@ -97,9 +97,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
     assert result.channel_type == ChannelType.WHATSAPP
     assert result.session_id == "sess_12345678"
     assert result.status == DeliveryStatus.DELIVERED
-    assert result.message == "Claim Approved"
-    assert result.message_id is not None
-    assert result.message_id.startswith("wamid.")
+    assert result.carrier_reference_id.startswith("wamid.")
 
 
 def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:

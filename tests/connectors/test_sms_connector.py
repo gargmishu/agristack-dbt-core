@@ -28,7 +28,7 @@ async def test_sms_connector_send_outbound_confirmation() -> None:
     assert result.channel_type == ChannelType.SMS
     assert result.session_id == "sess_12345678"
     assert result.status == DeliveryStatus.DELIVERED
-    assert result.message == "AgriStack: Claim Approved. Txn: TXN-2026-981245."
+    assert result.carrier_reference_id.startswith("sms-dr-")
 
 
 def test_sms_connector_defaults_and_env(monkeypatch: pytest.MonkeyPatch) -> None:

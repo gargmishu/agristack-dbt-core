@@ -8,6 +8,7 @@ telecom SMS gateway interfaces.
 """
 
 import logging
+from uuid import uuid4
 
 from src.config import get_sms_interface_id
 from src.data_models.common import ChannelType
@@ -41,18 +42,19 @@ class SmsConnector:
             payload: Validated OutboundConfirmationPayload.
 
         Returns:
-            Strict TransmissionAck receipt.
+            Strict TransmissionAck receipt with carrier reference ID.
         """
+        carrier_ref = f"sms-dr-{uuid4().hex[:12]}"
         logger.info(
-            "Transmitting outbound SMS for session=%s, interface=%s, length=%d",
+            "Transmitting outbound SMS for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            len(payload.formatted_message),
+            carrier_ref,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.SMS,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            message=payload.formatted_message,
+            carrier_reference_id=carrier_ref,
         )

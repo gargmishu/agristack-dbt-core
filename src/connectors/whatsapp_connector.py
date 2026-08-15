@@ -63,19 +63,19 @@ class WhatsAppConnector:
             payload: Validated OutboundConfirmationPayload.
 
         Returns:
-            Strict TransmissionAck receipt.
+            Strict TransmissionAck receipt with carrier reference ID.
         """
+        carrier_ref = f"wamid.{uuid4().hex[:16]}"
         logger.info(
-            "Transmitting outbound WhatsApp message for session=%s, interface=%s, length=%d",
+            "Transmitting outbound WhatsApp message for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            len(payload.formatted_message),
+            carrier_ref,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.WHATSAPP,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            message_id=f"wamid.{uuid4().hex[:16]}",
-            message=payload.formatted_message,
+            carrier_reference_id=carrier_ref,
         )
