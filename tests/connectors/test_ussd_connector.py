@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from src.config import DEFAULT_SIGTRAN_INTERFACE
+from src.config import DEFAULT_USSD_INTERFACE
 from src.connectors import UssdConnector
 from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction
 from src.data_models.delivery import OutboundConfirmationPayload
@@ -77,8 +77,8 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
 
 def test_ussd_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     default_conn = UssdConnector()
-    assert default_conn.interface_id == DEFAULT_SIGTRAN_INTERFACE
+    assert default_conn.interface_id == DEFAULT_USSD_INTERFACE
 
-    monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "ENV_SS7_GATEWAY_02")
+    monkeypatch.setenv("USSD_INTERFACE_ID", "ENV_SS7_GATEWAY_02")
     env_conn = UssdConnector()
     assert env_conn.interface_id == "ENV_SS7_GATEWAY_02"

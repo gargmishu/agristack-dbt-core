@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import HttpUrl, ValidationError
 
-from src.config import DEFAULT_SIP_TRUNK_INTERFACE
+from src.config import DEFAULT_IVR_INTERFACE
 from src.connectors import IvrConnector
 from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction
 from src.data_models.delivery import OutboundConfirmationPayload
@@ -80,8 +80,8 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
 
 def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     default_conn = IvrConnector()
-    assert default_conn.interface_id == DEFAULT_SIP_TRUNK_INTERFACE
+    assert default_conn.interface_id == DEFAULT_IVR_INTERFACE
 
-    monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "ENV_SIP_TRUNK_02")
+    monkeypatch.setenv("IVR_INTERFACE_ID", "ENV_SIP_TRUNK_02")
     env_conn = IvrConnector()
     assert env_conn.interface_id == "ENV_SIP_TRUNK_02"

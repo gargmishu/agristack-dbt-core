@@ -10,7 +10,7 @@ Automatic Number Identification (ANI) phone numbers.
 import logging
 from typing import Any
 
-from src.config import get_sip_trunk_interface_id
+from src.config import get_ivr_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import IvrIngressPayload
 
@@ -24,9 +24,9 @@ class IvrConnector:
         """Initializes IvrConnector with SIP telephony gateway interface identifier.
 
         Args:
-            interface_id: Optional SIP trunk interface identifier (defaults to env or config).
+            interface_id: Optional IVR interface identifier (defaults to env or config).
         """
-        self._interface_id = interface_id or get_sip_trunk_interface_id()
+        self._interface_id = interface_id or get_ivr_interface_id()
 
     @property
     def interface_id(self) -> str:

@@ -10,7 +10,7 @@ concatenated user digit selections.
 import logging
 from typing import Any
 
-from src.config import get_sigtran_interface_id
+from src.config import get_ussd_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import UssdIngressPayload
 
@@ -24,9 +24,9 @@ class UssdConnector:
         """Initializes UssdConnector with SS7/SIGTRAN carrier interface identifier.
 
         Args:
-            interface_id: Optional SS7/SIGTRAN interface identifier (defaults to env or config).
+            interface_id: Optional USSD interface identifier (defaults to env or config).
         """
-        self._interface_id = interface_id or get_sigtran_interface_id()
+        self._interface_id = interface_id or get_ussd_interface_id()
 
     @property
     def interface_id(self) -> str:

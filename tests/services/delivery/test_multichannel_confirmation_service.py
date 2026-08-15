@@ -3,9 +3,9 @@
 import pytest
 
 from src.config import (
-    DEFAULT_SIGTRAN_INTERFACE,
-    DEFAULT_SIP_TRUNK_INTERFACE,
-    DEFAULT_SMS_GATEWAY,
+    DEFAULT_IVR_INTERFACE,
+    DEFAULT_SMS_INTERFACE,
+    DEFAULT_USSD_INTERFACE,
 )
 from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
@@ -197,7 +197,7 @@ async def test_dispatch_confirmation_ivr_voice(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_confirmation(req)
-    assert result["transmission_ack"]["telephony_gateway"] == DEFAULT_SIP_TRUNK_INTERFACE
+    assert result["transmission_ack"]["telephony_gateway"] == DEFAULT_IVR_INTERFACE
     assert result["transmission_ack"]["audio_playback_url"] is not None
 
 
@@ -212,7 +212,7 @@ async def test_dispatch_confirmation_ussd(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_confirmation(req)
-    assert result["transmission_ack"]["sigtran_interface"] == DEFAULT_SIGTRAN_INTERFACE
+    assert result["transmission_ack"]["sigtran_interface"] == DEFAULT_USSD_INTERFACE
 
 
 @pytest.mark.asyncio
@@ -226,7 +226,8 @@ async def test_dispatch_confirmation_sms(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_confirmation(req)
-    assert result["transmission_ack"]["sms_gateway"] == DEFAULT_SMS_GATEWAY
+    assert result["transmission_ack"]["sms_gateway"] == DEFAULT_SMS_INTERFACE
+    assert result["transmission_ack"]["interface_id"] == DEFAULT_SMS_INTERFACE
 
 
 @pytest.mark.asyncio
@@ -234,9 +235,9 @@ async def test_env_and_custom_injection_dispatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "CUSTOM_WHATSAPP_ENV")
-    monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "CUSTOM_IVR_ENV")
-    monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "CUSTOM_USSD_ENV")
-    monkeypatch.setenv("SMS_GATEWAY_INTERFACE_ID", "CUSTOM_SMS_ENV")
+    monkeypatch.setenv("IVR_INTERFACE_ID", "CUSTOM_IVR_ENV")
+    monkeypatch.setenv("USSD_INTERFACE_ID", "CUSTOM_USSD_ENV")
+    monkeypatch.setenv("SMS_INTERFACE_ID", "CUSTOM_SMS_ENV")
 
     env_service = MultichannelConfirmationService()
 
@@ -274,7 +275,7 @@ async def test_env_and_custom_injection_dispatch(
         disbursement_txn_id="TXN-2026-981245",
     )
     sms_res = await env_service.dispatch_confirmation(sms_req)
-    assert sms_res["transmission_ack"]["sms_gateway"] == "CUSTOM_SMS_ENV"
+    assert sms_res["transmission_ack"]["interface_id"] == "CUSTOM_SMS_ENV"
 
     custom_whatsapp = WhatsAppConnector(interface_id="MANUAL_WHATSAPP")
     custom_ivr = IvrConnector(interface_id="MANUAL_IVR")
@@ -284,7 +285,7 @@ async def test_env_and_custom_injection_dispatch(
         whatsapp_connector=custom_whatsapp,
         ivr_connector=custom_ivr,
         ussd_connector=custom_ussd,
-        sms_gateway_id="MANUAL_SMS",
+        sms_interface_id="MANUAL_SMS",
     )
     res_custom_wa = await custom_service.dispatch_confirmation(wa_req)
     assert res_custom_wa["transmission_ack"]["interface_id"] == "MANUAL_WHATSAPP"
@@ -296,4 +297,4 @@ async def test_env_and_custom_injection_dispatch(
     assert res_custom_ussd["transmission_ack"]["sigtran_interface"] == "MANUAL_USSD"
 
     res_custom_sms = await custom_service.dispatch_confirmation(sms_req)
-    assert res_custom_sms["transmission_ack"]["sms_gateway"] == "MANUAL_SMS"
+    assert res_custom_sms["transmission_ack"]["interface_id"] == "MANUAL_SMS"

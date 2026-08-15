@@ -15,7 +15,7 @@ from pydantic import HttpUrl
 
 from src.config import (
     get_helpline_number,
-    get_sms_gateway_id,
+    get_sms_interface_id,
 )
 from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
@@ -49,7 +49,7 @@ class MultichannelConfirmationService:
         whatsapp_connector: WhatsAppConnector | None = None,
         ivr_connector: IvrConnector | None = None,
         ussd_connector: UssdConnector | None = None,
-        sms_gateway_id: str | None = None,
+        sms_interface_id: str | None = None,
     ) -> None:
         """Initializes MultichannelConfirmationService with injected dependencies.
 
@@ -58,13 +58,13 @@ class MultichannelConfirmationService:
             whatsapp_connector: Optional WhatsApp connector instance.
             ivr_connector: Optional IVR voice connector instance.
             ussd_connector: Optional USSD signaling connector instance.
-            sms_gateway_id: Optional SMS carrier gateway identifier (defaults to env or config).
+            sms_interface_id: Optional SMS carrier interface identifier (defaults to env/config).
         """
         self._bhashini_service = bhashini_service or BhashiniService()
         self._whatsapp_connector = whatsapp_connector or WhatsAppConnector()
         self._ivr_connector = ivr_connector or IvrConnector()
         self._ussd_connector = ussd_connector or UssdConnector()
-        self._sms_gateway_id = sms_gateway_id or get_sms_gateway_id()
+        self._sms_interface_id = sms_interface_id or get_sms_interface_id()
 
     @staticmethod
     def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:
@@ -266,7 +266,8 @@ class MultichannelConfirmationService:
             transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
         else:  # SMS
             transmission_ack = {
-                "sms_gateway": self._sms_gateway_id,
+                "interface_id": self._sms_interface_id,
+                "sms_gateway": self._sms_interface_id,
                 "session_id": payload.session_id,
                 "status": payload.delivery_status,
                 "message": payload.formatted_message,
