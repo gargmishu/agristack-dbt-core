@@ -11,7 +11,7 @@ DEFAULT_WHATSAPP_INTERFACE: Final[str] = "WHATSAPP_GATEWAY_DEFAULT"
 DEFAULT_IVR_INTERFACE: Final[str] = "IVR_GATEWAY_DEFAULT"
 DEFAULT_USSD_INTERFACE: Final[str] = "USSD_GATEWAY_DEFAULT"
 DEFAULT_SMS_INTERFACE: Final[str] = "SMS_GATEWAY_DEFAULT"
-DEFAULT_HELPLINE_TOLL_FREE: Final[str] = "1800-180-1551"
+DEFAULT_HELPLINE_NUMBER: Final[str] = "1800-180-1551"
 
 
 def get_whatsapp_interface_id() -> str:
@@ -35,5 +35,5 @@ def get_sms_interface_id() -> str:
 
 
 def get_helpline_number() -> str:
-    """Returns configured toll-free grievance helpline number from environment or default."""
-    return os.getenv("HELPLINE_TOLL_FREE_NUMBER", DEFAULT_HELPLINE_TOLL_FREE)
+    """Returns configured grievance helpline number from environment or default."""
+    return os.getenv("HELPLINE_NUMBER", DEFAULT_HELPLINE_NUMBER)

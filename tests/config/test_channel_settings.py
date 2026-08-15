@@ -3,7 +3,7 @@
 import pytest
 
 from src.config import (
-    DEFAULT_HELPLINE_TOLL_FREE,
+    DEFAULT_HELPLINE_NUMBER,
     DEFAULT_IVR_INTERFACE,
     DEFAULT_SMS_INTERFACE,
     DEFAULT_USSD_INTERFACE,
@@ -21,7 +21,7 @@ def test_channel_settings_defaults() -> None:
     assert get_ivr_interface_id() == DEFAULT_IVR_INTERFACE
     assert get_ussd_interface_id() == DEFAULT_USSD_INTERFACE
     assert get_sms_interface_id() == DEFAULT_SMS_INTERFACE
-    assert get_helpline_number() == DEFAULT_HELPLINE_TOLL_FREE
+    assert get_helpline_number() == DEFAULT_HELPLINE_NUMBER
 
 
 def test_channel_settings_environment_overrides(
@@ -31,7 +31,7 @@ def test_channel_settings_environment_overrides(
     monkeypatch.setenv("IVR_INTERFACE_ID", "CUSTOM_IVR_GW")
     monkeypatch.setenv("USSD_INTERFACE_ID", "CUSTOM_USSD_GW")
     monkeypatch.setenv("SMS_INTERFACE_ID", "CUSTOM_SMS_GW")
-    monkeypatch.setenv("HELPLINE_TOLL_FREE_NUMBER", "1800-000-0000")
+    monkeypatch.setenv("HELPLINE_NUMBER", "1800-000-0000")
 
     assert get_whatsapp_interface_id() == "CUSTOM_WHATSAPP_GW"
     assert get_ivr_interface_id() == "CUSTOM_IVR_GW"

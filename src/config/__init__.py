@@ -1,7 +1,7 @@
 """Global AgriStack Core configuration package."""
 
 from src.config.channel_settings import (
-    DEFAULT_HELPLINE_TOLL_FREE,
+    DEFAULT_HELPLINE_NUMBER,
     DEFAULT_IVR_INTERFACE,
     DEFAULT_SMS_INTERFACE,
     DEFAULT_USSD_INTERFACE,
@@ -14,7 +14,7 @@ from src.config.channel_settings import (
 )
 
 __all__ = [
-    "DEFAULT_HELPLINE_TOLL_FREE",
+    "DEFAULT_HELPLINE_NUMBER",
     "DEFAULT_IVR_INTERFACE",
     "DEFAULT_SMS_INTERFACE",
     "DEFAULT_USSD_INTERFACE",
