@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
+from src.config import DEFAULT_WHATSAPP_INTERFACE
 from src.connectors import WhatsAppConnector
 from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction, PayloadType
 from src.data_models.delivery import OutboundConfirmationPayload
@@ -100,7 +101,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
 
 def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     default_conn = WhatsAppConnector.from_default()
-    assert default_conn.interface_id == "META_WHATSAPP_BUSINESS_API"
+    assert default_conn.interface_id == DEFAULT_WHATSAPP_INTERFACE
 
     monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "ENV_WHATSAPP_API")
     env_conn = WhatsAppConnector.from_env()

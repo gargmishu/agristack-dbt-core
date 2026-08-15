@@ -13,6 +13,11 @@ from typing import Any
 
 from pydantic import HttpUrl
 
+from src.config import (
+    DEFAULT_SMS_GATEWAY,
+    get_helpline_number,
+    get_sms_gateway_id,
+)
 from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
@@ -59,6 +64,7 @@ class MultichannelConfirmationService:
         whatsapp_connector: WhatsAppConnector | None = None,
         ivr_connector: IvrConnector | None = None,
         ussd_connector: UssdConnector | None = None,
+        sms_gateway_id: str = DEFAULT_SMS_GATEWAY,
     ) -> None:
         """Initializes MultichannelConfirmationService with injected dependencies.
 
@@ -67,11 +73,13 @@ class MultichannelConfirmationService:
             whatsapp_connector: Optional WhatsApp connector instance.
             ivr_connector: Optional IVR voice connector instance.
             ussd_connector: Optional USSD signaling connector instance.
+            sms_gateway_id: Configured SMS carrier gateway identifier.
         """
         self._bhashini_service = bhashini_service
         self._whatsapp_connector = whatsapp_connector or WhatsAppConnector.from_default()
         self._ivr_connector = ivr_connector or IvrConnector.from_default()
         self._ussd_connector = ussd_connector or UssdConnector.from_default()
+        self._sms_gateway_id = sms_gateway_id
 
     @property
     def whatsapp_connector(self) -> WhatsAppConnector:
@@ -88,6 +96,11 @@ class MultichannelConfirmationService:
         """Returns the configured USSD connector."""
         return self._ussd_connector
 
+    @property
+    def sms_gateway_id(self) -> str:
+        """Returns the configured SMS gateway identifier."""
+        return self._sms_gateway_id
+
     @classmethod
     def from_default(cls) -> "MultichannelConfirmationService":
         """Factory method instantiating MultichannelConfirmationService with default services."""
@@ -96,6 +109,7 @@ class MultichannelConfirmationService:
             whatsapp_connector=WhatsAppConnector.from_default(),
             ivr_connector=IvrConnector.from_default(),
             ussd_connector=UssdConnector.from_default(),
+            sms_gateway_id=DEFAULT_SMS_GATEWAY,
         )
 
     @classmethod
@@ -106,6 +120,7 @@ class MultichannelConfirmationService:
             whatsapp_connector=WhatsAppConnector.from_env(),
             ivr_connector=IvrConnector.from_env(),
             ussd_connector=UssdConnector.from_env(),
+            sms_gateway_id=get_sms_gateway_id(),
         )
 
     def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
@@ -130,11 +145,12 @@ class MultichannelConfirmationService:
             )
         if request.governance_action in REJECT_ACTIONS:
             reason = request.rejection_reason or "Policy exclusion or eligibility mismatch"
+            helpline = get_helpline_number()
             return (
                 "❌ *AgriStack Claim Determination*\n\n"
                 "Your subsidy application could not be approved at this time.\n\n"
                 f"• *Reason:* {reason}\n"
-                "• *Helpline:* Dial toll-free 1800-180-1551 to file an appeal or inquiry."
+                f"• *Helpline:* Dial toll-free {helpline} to file an appeal or inquiry."
             )
         # REQUEST_MORE_INFO / Clarification
         entity = request.missing_entity or "required domain details"
@@ -195,8 +211,9 @@ class MultichannelConfirmationService:
             case = request.escalation_case_id or "PENDING"
             msg = f"AgriStack: Claim Under Review. Ticket: {case}. Officer review pending."
         elif request.governance_action in REJECT_ACTIONS:
-            reason = (request.rejection_reason or "Ineligible")[:40]
-            msg = f"AgriStack: Claim Rejected ({reason}). Help: 18001801551."
+            reason = (request.rejection_reason or "Ineligible")[:30]
+            helpline = get_helpline_number()
+            msg = f"AgriStack: Claim Rejected ({reason}). Help: {helpline}."
         else:
             entity = (request.missing_entity or "details")[:30]
             msg = f"AgriStack: Missing {entity}. Reply to update."
@@ -220,9 +237,10 @@ class MultichannelConfirmationService:
             )
         if request.governance_action in REJECT_ACTIONS:
             reason = request.rejection_reason or "Ineligible"
+            helpline = get_helpline_number()
             return (
                 f"AgriStack: Your subsidy claim was rejected ({reason}). "
-                "Call toll-free 1800-180-1551 for queries."
+                f"Call toll-free {helpline} for queries."
             )
         entity = request.missing_entity or "required details"
         return f"AgriStack: Clarification required for {entity}. Please submit details to proceed."
@@ -295,7 +313,7 @@ class MultichannelConfirmationService:
             transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
         else:  # SMS
             transmission_ack = {
-                "sms_gateway": "NIC_SMS_SERVICES_IN",
+                "sms_gateway": self._sms_gateway_id,
                 "session_id": payload.session_id,
                 "status": payload.delivery_status,
                 "message": payload.formatted_message,

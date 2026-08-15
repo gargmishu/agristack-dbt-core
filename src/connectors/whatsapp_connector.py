@@ -8,15 +8,13 @@ Information (zero-PII) security rules.
 """
 
 import logging
-import os
-from typing import Any, Final
+from typing import Any
 
+from src.config import DEFAULT_WHATSAPP_INTERFACE, get_whatsapp_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_WHATSAPP_INTERFACE: Final[str] = "META_WHATSAPP_BUSINESS_API"
 
 
 class WhatsAppConnector:
@@ -43,7 +41,7 @@ class WhatsAppConnector:
     @classmethod
     def from_env(cls) -> "WhatsAppConnector":
         """Factory method to instantiate WhatsAppConnector from environment variables."""
-        return cls(interface_id=os.getenv("WHATSAPP_INTERFACE_ID", DEFAULT_WHATSAPP_INTERFACE))
+        return cls(interface_id=get_whatsapp_interface_id())
 
     async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.

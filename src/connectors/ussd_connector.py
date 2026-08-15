@@ -8,15 +8,13 @@ concatenated user digit selections.
 """
 
 import logging
-import os
-from typing import Any, Final
+from typing import Any
 
+from src.config import DEFAULT_SIGTRAN_INTERFACE, get_sigtran_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import UssdIngressPayload
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_SIGTRAN_INTERFACE: Final[str] = "SS7_SIGTRAN_CARRIER_GATEWAY"
 
 
 class UssdConnector:
@@ -43,7 +41,7 @@ class UssdConnector:
     @classmethod
     def from_env(cls) -> "UssdConnector":
         """Factory method to instantiate UssdConnector from environment variables."""
-        return cls(interface_id=os.getenv("USSD_SIGTRAN_INTERFACE_ID", DEFAULT_SIGTRAN_INTERFACE))
+        return cls(interface_id=get_sigtran_interface_id())
 
     async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
         """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.

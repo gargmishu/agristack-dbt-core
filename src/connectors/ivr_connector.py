@@ -8,15 +8,13 @@ Automatic Number Identification (ANI) phone numbers.
 """
 
 import logging
-import os
-from typing import Any, Final
+from typing import Any
 
+from src.config import DEFAULT_SIP_TRUNK_INTERFACE, get_sip_trunk_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_SIP_TRUNK_INTERFACE: Final[str] = "SIP_TRUNK_BSNL_HAR_08"
 
 
 class IvrConnector:
@@ -43,9 +41,7 @@ class IvrConnector:
     @classmethod
     def from_env(cls) -> "IvrConnector":
         """Factory method to instantiate IvrConnector from environment variables."""
-        return cls(
-            interface_id=os.getenv("IVR_SIP_TRUNK_INTERFACE_ID", DEFAULT_SIP_TRUNK_INTERFACE)
-        )
+        return cls(interface_id=get_sip_trunk_interface_id())
 
     async def process_call_session(self, payload: dict[str, Any]) -> IvrIngressPayload:
         """Validates and processes raw IVR telephony payload into canonical IvrIngressPayload.
