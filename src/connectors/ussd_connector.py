@@ -34,11 +34,6 @@ class UssdConnector:
         return self._interface_id
 
     @classmethod
-    def from_default(cls) -> "UssdConnector":
-        """Factory method to instantiate UssdConnector with default interface."""
-        return cls(interface_id=DEFAULT_SIGTRAN_INTERFACE)
-
-    @classmethod
     def from_env(cls) -> "UssdConnector":
         """Factory method to instantiate UssdConnector from environment variables."""
         return cls(interface_id=get_sigtran_interface_id())

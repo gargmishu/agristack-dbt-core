@@ -100,7 +100,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
 
 
 def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
-    default_conn = WhatsAppConnector.from_default()
+    default_conn = WhatsAppConnector()
     assert default_conn.interface_id == DEFAULT_WHATSAPP_INTERFACE
 
     monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "ENV_WHATSAPP_API")

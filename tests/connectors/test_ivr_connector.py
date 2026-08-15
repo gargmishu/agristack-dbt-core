@@ -79,7 +79,7 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
 
 
 def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
-    default_conn = IvrConnector.from_default()
+    default_conn = IvrConnector()
     assert default_conn.interface_id == DEFAULT_SIP_TRUNK_INTERFACE
 
     monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "ENV_SIP_TRUNK_02")

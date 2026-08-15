@@ -76,7 +76,7 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
 
 
 def test_ussd_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
-    default_conn = UssdConnector.from_default()
+    default_conn = UssdConnector()
     assert default_conn.interface_id == DEFAULT_SIGTRAN_INTERFACE
 
     monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "ENV_SS7_GATEWAY_02")

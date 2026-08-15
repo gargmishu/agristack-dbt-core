@@ -24,7 +24,7 @@ from src.services.delivery import MultichannelConfirmationService
 
 @pytest.fixture
 def delivery_service() -> MultichannelConfirmationService:
-    return MultichannelConfirmationService.from_default()
+    return MultichannelConfirmationService()
 
 
 @pytest.mark.asyncio

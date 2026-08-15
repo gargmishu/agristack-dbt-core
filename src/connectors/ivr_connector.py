@@ -34,11 +34,6 @@ class IvrConnector:
         return self._interface_id
 
     @classmethod
-    def from_default(cls) -> "IvrConnector":
-        """Factory method to instantiate IvrConnector with default interface."""
-        return cls(interface_id=DEFAULT_SIP_TRUNK_INTERFACE)
-
-    @classmethod
     def from_env(cls) -> "IvrConnector":
         """Factory method to instantiate IvrConnector from environment variables."""
         return cls(interface_id=get_sip_trunk_interface_id())

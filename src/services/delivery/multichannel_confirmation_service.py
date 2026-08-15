@@ -45,7 +45,7 @@ class MultichannelConfirmationService:
 
     def __init__(
         self,
-        bhashini_service: BhashiniService,
+        bhashini_service: BhashiniService | None = None,
         whatsapp_connector: WhatsAppConnector | None = None,
         ivr_connector: IvrConnector | None = None,
         ussd_connector: UssdConnector | None = None,
@@ -54,16 +54,16 @@ class MultichannelConfirmationService:
         """Initializes MultichannelConfirmationService with injected dependencies.
 
         Args:
-            bhashini_service: Injected BhashiniService instance for TTS voice synthesis.
+            bhashini_service: Optional BhashiniService instance for TTS voice synthesis.
             whatsapp_connector: Optional WhatsApp connector instance.
             ivr_connector: Optional IVR voice connector instance.
             ussd_connector: Optional USSD signaling connector instance.
             sms_gateway_id: Configured SMS carrier gateway identifier.
         """
-        self._bhashini_service = bhashini_service
-        self._whatsapp_connector = whatsapp_connector or WhatsAppConnector.from_default()
-        self._ivr_connector = ivr_connector or IvrConnector.from_default()
-        self._ussd_connector = ussd_connector or UssdConnector.from_default()
+        self._bhashini_service = bhashini_service or BhashiniService()
+        self._whatsapp_connector = whatsapp_connector or WhatsAppConnector()
+        self._ivr_connector = ivr_connector or IvrConnector()
+        self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_gateway_id = sms_gateway_id
 
     @property
@@ -85,17 +85,6 @@ class MultichannelConfirmationService:
     def sms_gateway_id(self) -> str:
         """Returns the configured SMS gateway identifier."""
         return self._sms_gateway_id
-
-    @classmethod
-    def from_default(cls) -> "MultichannelConfirmationService":
-        """Factory method instantiating MultichannelConfirmationService with default services."""
-        return cls(
-            bhashini_service=BhashiniService(),
-            whatsapp_connector=WhatsAppConnector.from_default(),
-            ivr_connector=IvrConnector.from_default(),
-            ussd_connector=UssdConnector.from_default(),
-            sms_gateway_id=DEFAULT_SMS_GATEWAY,
-        )
 
     @classmethod
     def from_env(cls) -> "MultichannelConfirmationService":

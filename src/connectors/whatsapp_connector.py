@@ -34,11 +34,6 @@ class WhatsAppConnector:
         return self._interface_id
 
     @classmethod
-    def from_default(cls) -> "WhatsAppConnector":
-        """Factory method to instantiate WhatsAppConnector with default interface."""
-        return cls(interface_id=DEFAULT_WHATSAPP_INTERFACE)
-
-    @classmethod
     def from_env(cls) -> "WhatsAppConnector":
         """Factory method to instantiate WhatsAppConnector from environment variables."""
         return cls(interface_id=get_whatsapp_interface_id())
