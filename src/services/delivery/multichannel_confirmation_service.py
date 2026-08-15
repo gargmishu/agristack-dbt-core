@@ -14,7 +14,6 @@ from typing import Any
 from pydantic import HttpUrl
 
 from src.config import (
-    DEFAULT_SMS_GATEWAY,
     get_helpline_number,
     get_sms_gateway_id,
 )
@@ -49,7 +48,7 @@ class MultichannelConfirmationService:
         whatsapp_connector: WhatsAppConnector | None = None,
         ivr_connector: IvrConnector | None = None,
         ussd_connector: UssdConnector | None = None,
-        sms_gateway_id: str = DEFAULT_SMS_GATEWAY,
+        sms_gateway_id: str | None = None,
     ) -> None:
         """Initializes MultichannelConfirmationService with injected dependencies.
 
@@ -58,24 +57,13 @@ class MultichannelConfirmationService:
             whatsapp_connector: Optional WhatsApp connector instance.
             ivr_connector: Optional IVR voice connector instance.
             ussd_connector: Optional USSD signaling connector instance.
-            sms_gateway_id: Configured SMS carrier gateway identifier.
+            sms_gateway_id: Optional SMS carrier gateway identifier (defaults to env or config).
         """
         self._bhashini_service = bhashini_service or BhashiniService()
         self._whatsapp_connector = whatsapp_connector or WhatsAppConnector()
         self._ivr_connector = ivr_connector or IvrConnector()
         self._ussd_connector = ussd_connector or UssdConnector()
-        self._sms_gateway_id = sms_gateway_id
-
-    @classmethod
-    def from_env(cls) -> "MultichannelConfirmationService":
-        """Factory method instantiating MultichannelConfirmationService from environment configs."""
-        return cls(
-            bhashini_service=BhashiniService(),
-            whatsapp_connector=WhatsAppConnector.from_env(),
-            ivr_connector=IvrConnector.from_env(),
-            ussd_connector=UssdConnector.from_env(),
-            sms_gateway_id=get_sms_gateway_id(),
-        )
+        self._sms_gateway_id = sms_gateway_id or get_sms_gateway_id()
 
     def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""

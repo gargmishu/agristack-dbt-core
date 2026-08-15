@@ -10,7 +10,7 @@ Information (zero-PII) security rules.
 import logging
 from typing import Any
 
-from src.config import DEFAULT_WHATSAPP_INTERFACE, get_whatsapp_interface_id
+from src.config import get_whatsapp_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
@@ -20,23 +20,18 @@ logger = logging.getLogger(__name__)
 class WhatsAppConnector:
     """Processes WhatsApp cleartext/audio webhooks and passes canonical ingress payload."""
 
-    def __init__(self, interface_id: str = DEFAULT_WHATSAPP_INTERFACE) -> None:
+    def __init__(self, interface_id: str | None = None) -> None:
         """Initializes WhatsAppConnector with carrier interface identifier.
 
         Args:
-            interface_id: Carrier webhook interface identifier.
+            interface_id: Optional carrier webhook interface identifier (defaults to env or config).
         """
-        self._interface_id = interface_id
+        self._interface_id = interface_id or get_whatsapp_interface_id()
 
     @property
     def interface_id(self) -> str:
         """Returns the configured carrier interface identifier."""
         return self._interface_id
-
-    @classmethod
-    def from_env(cls) -> "WhatsAppConnector":
-        """Factory method to instantiate WhatsAppConnector from environment variables."""
-        return cls(interface_id=get_whatsapp_interface_id())
 
     async def process_webhook(self, payload: dict[str, Any]) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.

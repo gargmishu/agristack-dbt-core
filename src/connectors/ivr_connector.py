@@ -10,7 +10,7 @@ Automatic Number Identification (ANI) phone numbers.
 import logging
 from typing import Any
 
-from src.config import DEFAULT_SIP_TRUNK_INTERFACE, get_sip_trunk_interface_id
+from src.config import get_sip_trunk_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import IvrIngressPayload
 
@@ -20,23 +20,18 @@ logger = logging.getLogger(__name__)
 class IvrConnector:
     """Processes IVR voice SIP gateway streams and passes canonical ingress payload."""
 
-    def __init__(self, interface_id: str = DEFAULT_SIP_TRUNK_INTERFACE) -> None:
+    def __init__(self, interface_id: str | None = None) -> None:
         """Initializes IvrConnector with SIP telephony gateway interface identifier.
 
         Args:
-            interface_id: SIP trunk telephony gateway interface identifier.
+            interface_id: Optional SIP trunk interface identifier (defaults to env or config).
         """
-        self._interface_id = interface_id
+        self._interface_id = interface_id or get_sip_trunk_interface_id()
 
     @property
     def interface_id(self) -> str:
         """Returns the configured telephony gateway interface identifier."""
         return self._interface_id
-
-    @classmethod
-    def from_env(cls) -> "IvrConnector":
-        """Factory method to instantiate IvrConnector from environment variables."""
-        return cls(interface_id=get_sip_trunk_interface_id())
 
     async def process_call_session(self, payload: dict[str, Any]) -> IvrIngressPayload:
         """Validates and processes raw IVR telephony payload into canonical IvrIngressPayload.

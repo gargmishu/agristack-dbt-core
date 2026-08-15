@@ -104,5 +104,5 @@ def test_whatsapp_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     assert default_conn.interface_id == DEFAULT_WHATSAPP_INTERFACE
 
     monkeypatch.setenv("WHATSAPP_INTERFACE_ID", "ENV_WHATSAPP_API")
-    env_conn = WhatsAppConnector.from_env()
+    env_conn = WhatsAppConnector()
     assert env_conn.interface_id == "ENV_WHATSAPP_API"

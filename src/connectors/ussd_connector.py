@@ -10,7 +10,7 @@ concatenated user digit selections.
 import logging
 from typing import Any
 
-from src.config import DEFAULT_SIGTRAN_INTERFACE, get_sigtran_interface_id
+from src.config import get_sigtran_interface_id
 from src.data_models.delivery import OutboundConfirmationPayload
 from src.data_models.raw_ingress import UssdIngressPayload
 
@@ -20,23 +20,18 @@ logger = logging.getLogger(__name__)
 class UssdConnector:
     """Processes USSD menu signaling codes and passes canonical ingress payload."""
 
-    def __init__(self, interface_id: str = DEFAULT_SIGTRAN_INTERFACE) -> None:
+    def __init__(self, interface_id: str | None = None) -> None:
         """Initializes UssdConnector with SS7/SIGTRAN carrier interface identifier.
 
         Args:
-            interface_id: SS7/SIGTRAN signaling interface identifier.
+            interface_id: Optional SS7/SIGTRAN interface identifier (defaults to env or config).
         """
-        self._interface_id = interface_id
+        self._interface_id = interface_id or get_sigtran_interface_id()
 
     @property
     def interface_id(self) -> str:
         """Returns the configured SIGTRAN signaling interface identifier."""
         return self._interface_id
-
-    @classmethod
-    def from_env(cls) -> "UssdConnector":
-        """Factory method to instantiate UssdConnector from environment variables."""
-        return cls(interface_id=get_sigtran_interface_id())
 
     async def process_ussd_session(self, payload: dict[str, Any]) -> UssdIngressPayload:
         """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.

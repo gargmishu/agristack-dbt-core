@@ -83,5 +83,5 @@ def test_ivr_connector_factories(monkeypatch: pytest.MonkeyPatch) -> None:
     assert default_conn.interface_id == DEFAULT_SIP_TRUNK_INTERFACE
 
     monkeypatch.setenv("IVR_SIP_TRUNK_INTERFACE_ID", "ENV_SIP_TRUNK_02")
-    env_conn = IvrConnector.from_env()
+    env_conn = IvrConnector()
     assert env_conn.interface_id == "ENV_SIP_TRUNK_02"

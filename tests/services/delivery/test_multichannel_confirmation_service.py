@@ -236,7 +236,7 @@ async def test_env_and_custom_injection_dispatch(
     monkeypatch.setenv("USSD_SIGTRAN_INTERFACE_ID", "CUSTOM_USSD_ENV")
     monkeypatch.setenv("SMS_GATEWAY_INTERFACE_ID", "CUSTOM_SMS_ENV")
 
-    env_service = MultichannelConfirmationService.from_env()
+    env_service = MultichannelConfirmationService()
 
     wa_req = ConfirmationRequestPayload(
         session_id="sess_12345678",
