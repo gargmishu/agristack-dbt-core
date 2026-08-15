@@ -11,6 +11,7 @@ from src.data_models.common import (
 )
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
+    SmsIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
@@ -97,6 +98,25 @@ def test_canonicalize_ussd() -> None:
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.DTMF_SELECTION
     assert intake.unprocessed_input_content == "1*2*9876543210"
+
+
+def test_canonicalize_sms() -> None:
+    canonicalizer = PayloadCanonicalizer.from_env()
+    payload = SmsIngressPayload(
+        session_id="sess_12345678",
+        originating_phone_number="+919876543210",
+        channel_message_id="sms_msg_12345",
+        text_body="Mujhe PM KISAN kist ki jankari chahiye",
+        received_at=datetime.now(UTC),
+    )
+
+    intake = canonicalizer.canonicalize(payload, language_locale=LanguageLocale.HINDI)
+    assert intake.session_id == "sess_12345678"
+    assert intake.channel_type == ChannelType.SMS
+    assert intake.payload_type == PayloadType.TEXT
+    assert intake.structure_level == StructureLevel.FREE_TEXT
+    assert intake.unprocessed_input_content == "Mujhe PM KISAN kist ki jankari chahiye"
+    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LEN
 
 
 def test_canonicalize_unsupported_payload_type() -> None:

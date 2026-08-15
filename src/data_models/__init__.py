@@ -39,8 +39,10 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 from src.data_models.delivery import (
+    ConfirmationDispatchResult,
     ConfirmationRequestPayload,
     OutboundConfirmationPayload,
+    TransmissionAck,
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
@@ -50,6 +52,7 @@ from src.data_models.governance import (
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
+    SmsIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
@@ -63,6 +66,7 @@ __all__ = [
     "CaseworkerCaseReviewPayload",
     "CaseworkerReviewOutcomePayload",
     "ChannelType",
+    "ConfirmationDispatchResult",
     "ConfirmationRequestPayload",
     "DeliveryStatus",
     "DisbursementCallbackPayload",
@@ -91,9 +95,11 @@ __all__ = [
     "RejectionReasonCode",
     "SessionId",
     "SessionStatus",
+    "SmsIngressPayload",
     "StrictBaseModel",
     "StructureLevel",
     "ThreatCategory",
+    "TransmissionAck",
     "UnprocessedInputContent",
     "UssdIngressPayload",
     "UtcTimestamp",

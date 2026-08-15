@@ -1,6 +1,6 @@
 """Layer 2 Payload Canonicalizer (Layer 2 -> Layer 3 Transport Shim).
 
-Transforms raw channel-specific ingress payloads (WhatsApp, IVR, USSD) into normalized,
+Transforms raw channel-specific ingress payloads (WhatsApp, IVR, USSD, SMS) into normalized,
 zero-PII PublicAgentStandardizedIntakePayload contracts ready for Layer 3 Intake Gateway.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
@@ -15,13 +15,16 @@ from src.data_models.common import (
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
+    SmsIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
 from src.gateway.pii_text_redactor import PiiTextRedactor
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
-IngressPayloadUnion = WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload
+IngressPayloadUnion = (
+    WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload | SmsIngressPayload
+)
 
 
 class PayloadCanonicalizer:
@@ -44,7 +47,8 @@ class PayloadCanonicalizer:
         """Canonicalizes any raw ingress payload into PublicAgentStandardizedIntakePayload.
 
         Args:
-            payload: WhatsAppIngressPayload, IvrIngressPayload, or UssdIngressPayload.
+            payload: WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload,
+                or SmsIngressPayload.
             language_locale: Target BCP-47 language code (defaults to hi-IN).
 
         Returns:
@@ -59,6 +63,9 @@ class PayloadCanonicalizer:
         elif isinstance(payload, UssdIngressPayload):
             tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
             return self._canonicalize_ussd(payload, tokenized_id, language_locale)
+        elif isinstance(payload, SmsIngressPayload):
+            tokenized_id = self._tokenizer.tokenize_phone_number(payload.originating_phone_number)
+            return self._canonicalize_sms(payload, tokenized_id, language_locale)
         else:
             raise ValueError(f"Unsupported ingress payload type: {type(payload)}")
 
@@ -120,5 +127,25 @@ class PayloadCanonicalizer:
             structure_level=StructureLevel.DTMF_SELECTION,
             language_locale=language_locale,
             unprocessed_input_content=payload.ussd_user_digit_selection,
+            received_at=payload.received_at,
+        )
+
+    def _canonicalize_sms(
+        self,
+        payload: SmsIngressPayload,
+        tokenized_id: str,
+        language_locale: LanguageLocale,
+    ) -> PublicAgentStandardizedIntakePayload:
+        unprocessed_content = PiiTextRedactor.redact_all(
+            payload.text_body, session_id=payload.session_id
+        )
+        return PublicAgentStandardizedIntakePayload(
+            session_id=payload.session_id,
+            tokenized_citizen_id=tokenized_id,
+            channel_type=ChannelType.SMS,
+            payload_type=PayloadType.TEXT,
+            structure_level=StructureLevel.FREE_TEXT,
+            language_locale=language_locale,
+            unprocessed_input_content=unprocessed_content,
             received_at=payload.received_at,
         )

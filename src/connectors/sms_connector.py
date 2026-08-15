@@ -3,22 +3,24 @@
 See: decisions/step2.0_canonical_domain_schemas.md
 See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
 
-Processes outbound transactional SMS message transmissions over TRAI DLT-registered
-telecom SMS gateway interfaces.
+Processes incoming TRAI DLT-registered transactional SMS webhooks and passes canonical
+ingress payloads into Layer 2 security pipelines, and transmits outbound SMS confirmations.
 """
 
 import logging
+from typing import Any
 from uuid import uuid4
 
 from src.config import get_sms_interface_id
 from src.data_models.common import ChannelType
 from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
+from src.data_models.raw_ingress import SmsIngressPayload
 
 logger = logging.getLogger(__name__)
 
 
 class SmsConnector:
-    """Processes SMS transmissions and passes delivery receipts."""
+    """Processes incoming and outgoing SMS transmissions across carrier gateways."""
 
     def __init__(self, interface_id: str | None = None) -> None:
         """Initializes SmsConnector with carrier SMS gateway interface identifier.
@@ -32,6 +34,24 @@ class SmsConnector:
     def interface_id(self) -> str:
         """Returns the configured carrier interface identifier."""
         return self._interface_id
+
+    async def process_inbound_sms(self, payload: dict[str, Any]) -> SmsIngressPayload:
+        """Validates and processes raw incoming SMS webhook into SmsIngressPayload.
+
+        Args:
+            payload: Raw dict payload received from carrier SMS gateway webhook.
+
+        Returns:
+            Validated SmsIngressPayload.
+        """
+        validated_payload = SmsIngressPayload.model_validate(payload)
+
+        logger.info(
+            "Validated SMS webhook for session=%s, message_id=%s",
+            validated_payload.session_id,
+            validated_payload.channel_message_id,
+        )
+        return validated_payload
 
     async def send_outbound_confirmation(
         self, payload: OutboundConfirmationPayload

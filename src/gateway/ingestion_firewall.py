@@ -13,6 +13,7 @@ import logging
 from src.data_models.common import LanguageLocale
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
+    SmsIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
@@ -86,7 +87,7 @@ class IngestionFirewall:
         # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
         is_adversarial = False
         raw_text = None
-        if isinstance(payload, WhatsAppIngressPayload) and payload.text_body:
+        if isinstance(payload, WhatsAppIngressPayload | SmsIngressPayload) and payload.text_body:
             raw_text = payload.text_body
         elif isinstance(payload, UssdIngressPayload) and payload.ussd_user_digit_selection:
             raw_text = payload.ussd_user_digit_selection
