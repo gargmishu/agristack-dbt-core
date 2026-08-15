@@ -21,5 +21,5 @@ class StrictBaseModel(BaseModel):
         frozen=True,
         validate_assignment=True,
         str_strip_whitespace=True,
-        use_enum_values=True,
+        use_enum_values=False,
     )

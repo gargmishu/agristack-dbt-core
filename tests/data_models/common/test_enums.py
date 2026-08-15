@@ -83,3 +83,34 @@ from src.data_models.common.enums import (
 )
 def test_enum_members_match_expected_values(enum_member: str, expected_value: str) -> None:
     assert enum_member == expected_value
+
+
+def test_governance_action_classification_properties() -> None:
+    for action in (
+        GovernanceAction.AUTO_APPROVE,
+        GovernanceAction.AUTOMATED_PAYOUT,
+        GovernanceAction.MANUAL_APPROVE,
+    ):
+        assert action.is_approval is True
+        assert action.is_review is False
+        assert action.is_rejection is False
+
+    for action in (
+        GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
+        GovernanceAction.HUMAN_REVIEW,
+    ):
+        assert action.is_approval is False
+        assert action.is_review is True
+        assert action.is_rejection is False
+
+    for action in (
+        GovernanceAction.AUTO_REJECT,
+        GovernanceAction.MANUAL_REJECT,
+    ):
+        assert action.is_approval is False
+        assert action.is_review is False
+        assert action.is_rejection is True
+
+    assert GovernanceAction.REQUEST_MORE_INFO.is_approval is False
+    assert GovernanceAction.REQUEST_MORE_INFO.is_review is False
+    assert GovernanceAction.REQUEST_MORE_INFO.is_rejection is False

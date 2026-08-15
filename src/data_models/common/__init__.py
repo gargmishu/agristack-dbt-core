@@ -2,6 +2,9 @@
 
 from src.data_models.common.base import StrictBaseModel
 from src.data_models.common.enums import (
+    APPROVE_GOVERNANCE_ACTIONS,
+    REJECT_GOVERNANCE_ACTIONS,
+    REVIEW_GOVERNANCE_ACTIONS,
     ApplicationIntent,
     ApplicationStatus,
     ChannelType,
@@ -35,6 +38,7 @@ from src.data_models.common.field_types import (
 )
 
 __all__ = [
+    "APPROVE_GOVERNANCE_ACTIONS",
     "AiConfidenceScore",
     "ApplicationIntent",
     "ApplicationStatus",
@@ -56,6 +60,8 @@ __all__ = [
     "LanguageLocale",
     "PayloadType",
     "PhoneNumberE164",
+    "REJECT_GOVERNANCE_ACTIONS",
+    "REVIEW_GOVERNANCE_ACTIONS",
     "RejectionReasonCode",
     "SessionId",
     "SessionStatus",

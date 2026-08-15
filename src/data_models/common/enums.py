@@ -62,6 +62,44 @@ class GovernanceAction(StrEnum):
     MANUAL_APPROVE = "MANUAL_APPROVE"
     MANUAL_REJECT = "MANUAL_REJECT"
 
+    @property
+    def is_approval(self) -> bool:
+        """Returns True if action represents an automated or manual approval."""
+        return self in APPROVE_GOVERNANCE_ACTIONS
+
+    @property
+    def is_review(self) -> bool:
+        """Returns True if action represents an officer or human escalation review."""
+        return self in REVIEW_GOVERNANCE_ACTIONS
+
+    @property
+    def is_rejection(self) -> bool:
+        """Returns True if action represents an automated or manual rejection."""
+        return self in REJECT_GOVERNANCE_ACTIONS
+
+
+APPROVE_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+    {
+        GovernanceAction.AUTO_APPROVE,
+        GovernanceAction.AUTOMATED_PAYOUT,
+        GovernanceAction.MANUAL_APPROVE,
+    }
+)
+
+REVIEW_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+    {
+        GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
+        GovernanceAction.HUMAN_REVIEW,
+    }
+)
+
+REJECT_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+    {
+        GovernanceAction.AUTO_REJECT,
+        GovernanceAction.MANUAL_REJECT,
+    }
+)
+
 
 class SessionStatus(StrEnum):
     """Lifecycle state of parent citizen communication session."""

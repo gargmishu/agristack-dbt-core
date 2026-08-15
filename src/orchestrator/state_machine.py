@@ -272,19 +272,11 @@ class StateMachine:
         staged_case_id: str | None = None
 
         # Post-Decision Processing: Automated Payout Dispatch vs. Caseworker Staging
-        if governance_outcome.governance_action in (
-            GovernanceAction.AUTO_APPROVE,
-            GovernanceAction.AUTOMATED_PAYOUT,
-        ):
+        if governance_outcome.governance_action.is_approval:
             # Wire dispatch over sovereign payment rails
             disbursement_cb = await self._payment_rail.initiate_disbursement(governance_outcome)
         elif (
-            governance_outcome.governance_action
-            in (
-                GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
-                GovernanceAction.HUMAN_REVIEW,
-            )
-            and governance_outcome.escalation_case_id
+            governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id
         ):
             # Stage review ticket into Caseworker Dashboard
             staged_case_id = governance_outcome.escalation_case_id

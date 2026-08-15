@@ -22,7 +22,6 @@ from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
-    GovernanceAction,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
@@ -32,20 +31,6 @@ from src.data_models.delivery import (
 from src.services.ai.bhashini_service import BhashiniService
 
 logger = logging.getLogger(__name__)
-
-APPROVE_ACTIONS = {
-    GovernanceAction.AUTO_APPROVE,
-    GovernanceAction.AUTOMATED_PAYOUT,
-    GovernanceAction.MANUAL_APPROVE,
-}
-REVIEW_ACTIONS = {
-    GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
-    GovernanceAction.HUMAN_REVIEW,
-}
-REJECT_ACTIONS = {
-    GovernanceAction.AUTO_REJECT,
-    GovernanceAction.MANUAL_REJECT,
-}
 
 
 class MultichannelConfirmationService:
@@ -125,7 +110,7 @@ class MultichannelConfirmationService:
 
     def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
-        if request.governance_action in APPROVE_ACTIONS:
+        if request.governance_action.is_approval:
             txn = request.disbursement_txn_id or "TXN-PENDING"
             return (
                 "🌾 *AgriStack Sovereign Relief Confirmation*\n\n"
@@ -134,7 +119,7 @@ class MultichannelConfirmationService:
                 "• *Status:* Direct Benefit Transfer (DBT) clearing initiated.\n\n"
                 "The funds will be credited directly to your Aadhaar-linked bank account."
             )
-        if request.governance_action in REVIEW_ACTIONS:
+        if request.governance_action.is_review:
             case = request.escalation_case_id or "SPP-CASE-PENDING"
             return (
                 "📋 *AgriStack Claim Staged for Review*\n\n"
@@ -143,7 +128,7 @@ class MultichannelConfirmationService:
                 "• *Status:* Assigned to verification queue.\n\n"
                 "You will receive an update once the officer review is completed."
             )
-        if request.governance_action in REJECT_ACTIONS:
+        if request.governance_action.is_rejection:
             reason = request.rejection_reason or "Policy exclusion or eligibility mismatch"
             helpline = get_helpline_number()
             return (
@@ -163,7 +148,7 @@ class MultichannelConfirmationService:
     def _format_spoken_voice_text(self, request: ConfirmationRequestPayload) -> str:
         """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
         is_hindi = str(request.language_locale).startswith("hi")
-        if request.governance_action in APPROVE_ACTIONS:
+        if request.governance_action.is_approval:
             txn = request.disbursement_txn_id or (
                 "sankhya uplabdh nahi" if is_hindi else "unavailable"
             )
@@ -172,7 +157,7 @@ class MultichannelConfirmationService:
                 if is_hindi
                 else f"Your crop loss subsidy claim is approved. Transaction reference is {txn}."
             )
-        if request.governance_action in REVIEW_ACTIONS:
+        if request.governance_action.is_review:
             case = request.escalation_case_id or (
                 "ticket uplabdh nahi" if is_hindi else "unavailable"
             )
@@ -185,7 +170,7 @@ class MultichannelConfirmationService:
                     f"Ticket number is {case}."
                 )
             )
-        if request.governance_action in REJECT_ACTIONS:
+        if request.governance_action.is_rejection:
             reason = request.rejection_reason or (
                 "yogyata niyam" if is_hindi else "policy guidelines"
             )
@@ -204,13 +189,13 @@ class MultichannelConfirmationService:
 
     def _format_ussd_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats compact USSD plain text string strictly under 160 characters."""
-        if request.governance_action in APPROVE_ACTIONS:
+        if request.governance_action.is_approval:
             txn = request.disbursement_txn_id or "PENDING"
             msg = f"AgriStack: Claim Approved. Txn: {txn}. DBT initiated."
-        elif request.governance_action in REVIEW_ACTIONS:
+        elif request.governance_action.is_review:
             case = request.escalation_case_id or "PENDING"
             msg = f"AgriStack: Claim Under Review. Ticket: {case}. Officer review pending."
-        elif request.governance_action in REJECT_ACTIONS:
+        elif request.governance_action.is_rejection:
             reason = (request.rejection_reason or "Ineligible")[:30]
             helpline = get_helpline_number()
             msg = f"AgriStack: Claim Rejected ({reason}). Help: {helpline}."
@@ -223,19 +208,19 @@ class MultichannelConfirmationService:
 
     def _format_sms_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats concise transactional SMS message."""
-        if request.governance_action in APPROVE_ACTIONS:
+        if request.governance_action.is_approval:
             txn = request.disbursement_txn_id or "PENDING"
             return (
                 f"AgriStack: Your subsidy claim is approved. Txn ID: {txn}. "
                 "Benefit sent via DBT to linked account."
             )
-        if request.governance_action in REVIEW_ACTIONS:
+        if request.governance_action.is_review:
             case = request.escalation_case_id or "PENDING"
             return (
                 f"AgriStack: Your claim is under review. Incident Ticket: {case}. "
                 "Updates will follow."
             )
-        if request.governance_action in REJECT_ACTIONS:
+        if request.governance_action.is_rejection:
             reason = request.rejection_reason or "Ineligible"
             helpline = get_helpline_number()
             return (
