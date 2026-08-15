@@ -1,13 +1,15 @@
 """Outbound multichannel confirmation request payload schema."""
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from src.data_models.common import (
     ChannelType,
     DisbursementTxnId,
+    DomainEntityKey,
     EscalationCaseId,
     GovernanceAction,
     LanguageLocale,
+    RejectionReasonCode,
     SessionId,
     StrictBaseModel,
 )
@@ -31,11 +33,30 @@ class ConfirmationRequestPayload(StrictBaseModel):
         default=None,
         description="Populated for caseworker escalation reviews",
     )
-    rejection_reason: str | None = Field(
+    rejection_reason: RejectionReasonCode | None = Field(
         default=None,
         description="Populated when governance action is AUTO_REJECT or MANUAL_REJECT",
     )
-    missing_entity: str | None = Field(
+    missing_entity: DomainEntityKey | None = Field(
         default=None,
         description="Populated when governance action is REQUEST_MORE_INFO / clarification",
     )
+
+    @model_validator(mode="after")
+    def validate_action_specific_requirements(self) -> "ConfirmationRequestPayload":
+        """Enforces mandatory field matrix depending on governance action."""
+        if self.governance_action.is_approval and not self.disbursement_txn_id:
+            raise ValueError(
+                f"disbursement_txn_id is required for approval action '{self.governance_action}'"
+            )
+        if self.governance_action.is_review and not self.escalation_case_id:
+            raise ValueError(
+                f"escalation_case_id is required for review action '{self.governance_action}'"
+            )
+        if self.governance_action.is_rejection and not self.rejection_reason:
+            raise ValueError(
+                f"rejection_reason is required for rejection action '{self.governance_action}'"
+            )
+        if self.governance_action == GovernanceAction.REQUEST_MORE_INFO and not self.missing_entity:
+            raise ValueError("missing_entity is required for action 'REQUEST_MORE_INFO'")
+        return self

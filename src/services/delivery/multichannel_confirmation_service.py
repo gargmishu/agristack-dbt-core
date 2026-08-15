@@ -21,6 +21,7 @@ from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
+    DomainEntityKey,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
@@ -65,40 +66,57 @@ class MultichannelConfirmationService:
         self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_gateway_id = sms_gateway_id or get_sms_gateway_id()
 
+    @staticmethod
+    def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:
+        """Returns human-readable, channel-adapted label for a DomainEntityKey."""
+        if entity is None:
+            return "kripya vivaran" if is_hindi else "required details"
+        if is_hindi:
+            hindi_labels: dict[DomainEntityKey, str] = {
+                DomainEntityKey.DISTRICT: "zila",
+                DomainEntityKey.TALUKA: "taluka ya tehsil",
+                DomainEntityKey.VILLAGE: "gaon",
+                DomainEntityKey.CROP_NAME: "fasal ka naam",
+                DomainEntityKey.CROP_VARIETY: "fasal ki kism",
+                DomainEntityKey.LAND_SIZE_ACRES: "zameen ka aakar (acres)",
+                DomainEntityKey.SUBSIDY_SCHEME_ID: "yojana ID",
+                DomainEntityKey.SURVEY_NUMBER: "khasra sankhya",
+                DomainEntityKey.BANK_ACCOUNT_LAST4: "bank khate ke aakhiri 4 ank",
+            }
+            return hindi_labels.get(entity, entity.value.replace("_", " "))
+        return entity.value.replace("_", " ")
+
     def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
         if request.governance_action.is_approval:
-            txn = request.disbursement_txn_id or "TXN-PENDING"
             return (
                 "🌾 *AgriStack Sovereign Relief Confirmation*\n\n"
                 "Your crop loss subsidy claim has been *APPROVED*.\n\n"
-                f"• *Transaction ID:* `{txn}`\n"
+                f"• *Transaction ID:* `{request.disbursement_txn_id}`\n"
                 "• *Status:* Direct Benefit Transfer (DBT) clearing initiated.\n\n"
                 "The funds will be credited directly to your Aadhaar-linked bank account."
             )
         if request.governance_action.is_review:
-            case = request.escalation_case_id or "SPP-CASE-PENDING"
             return (
                 "📋 *AgriStack Claim Staged for Review*\n\n"
                 "Your application requires verification by a District Agricultural Officer.\n\n"
-                f"• *Incident Case ID:* `{case}`\n"
+                f"• *Incident Case ID:* `{request.escalation_case_id}`\n"
                 "• *Status:* Assigned to verification queue.\n\n"
                 "You will receive an update once the officer review is completed."
             )
         if request.governance_action.is_rejection:
-            reason = request.rejection_reason or "Policy exclusion or eligibility mismatch"
             helpline = get_helpline_number()
             return (
                 "❌ *AgriStack Claim Determination*\n\n"
                 "Your subsidy application could not be approved at this time.\n\n"
-                f"• *Reason:* {reason}\n"
+                f"• *Reason:* {request.rejection_reason}\n"
                 f"• *Helpline:* Dial toll-free {helpline} to file an appeal or inquiry."
             )
         # REQUEST_MORE_INFO / Clarification
-        entity = request.missing_entity or "required domain details"
+        entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)
         return (
             "ℹ️ *AgriStack Clarification Needed*\n\n"
-            f"Please provide your *{entity}* to proceed with your claim.\n\n"
+            f"Please provide your *{entity_label}* to proceed with your claim.\n\n"
             "Reply directly to this message with the requested details."
         )
 
@@ -106,59 +124,51 @@ class MultichannelConfirmationService:
         """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
         is_hindi = str(request.language_locale).startswith("hi")
         if request.governance_action.is_approval:
-            txn = request.disbursement_txn_id or (
-                "sankhya uplabdh nahi" if is_hindi else "unavailable"
-            )
             return (
-                f"Aapka fasal rahat aavedan swikrit ho gaya hai. Transaction sankhya hai {txn}."
+                f"Aapka fasal rahat aavedan swikrit ho gaya hai. "
+                f"Transaction sankhya hai {request.disbursement_txn_id}."
                 if is_hindi
-                else f"Your crop loss subsidy claim is approved. Transaction reference is {txn}."
+                else f"Your crop loss subsidy claim is approved. "
+                f"Transaction reference is {request.disbursement_txn_id}."
             )
         if request.governance_action.is_review:
-            case = request.escalation_case_id or (
-                "ticket uplabdh nahi" if is_hindi else "unavailable"
-            )
             return (
                 "Aapka aavedan krishi adhikari ke paas jaanch ke liye bhej diya gaya hai. "
-                f"Ticket sankhya hai {case}."
+                f"Ticket sankhya hai {request.escalation_case_id}."
                 if is_hindi
-                else (
-                    "Your application is forwarded to the district officer for review. "
-                    f"Ticket number is {case}."
-                )
+                else "Your application is forwarded to the district officer for review. "
+                f"Ticket number is {request.escalation_case_id}."
             )
         if request.governance_action.is_rejection:
-            reason = request.rejection_reason or (
-                "yogyata niyam" if is_hindi else "policy guidelines"
-            )
             return (
-                f"Aapka aavedan aswikrit kiya gaya hai. Karan hai: {reason}."
+                f"Aapka aavedan aswikrit kiya gaya hai. Karan hai: {request.rejection_reason}."
                 if is_hindi
-                else f"Your application could not be approved due to: {reason}."
+                else f"Your application could not be approved due to: {request.rejection_reason}."
             )
         # REQUEST_MORE_INFO
-        entity = request.missing_entity or ("vivaran" if is_hindi else "details")
+        entity_label = self._format_entity_label(request.missing_entity, is_hindi=is_hindi)
         return (
-            f"Kripya apna {entity} batayein taaki aavedan aage badhaya ja sake."
+            f"Kripya apna {entity_label} batayein taaki aavedan aage badhaya ja sake."
             if is_hindi
-            else f"Please provide your {entity} to complete your claim."
+            else f"Please provide your {entity_label} to complete your claim."
         )
 
     def _format_ussd_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats compact USSD plain text string strictly under 160 characters."""
         if request.governance_action.is_approval:
-            txn = request.disbursement_txn_id or "PENDING"
-            msg = f"AgriStack: Claim Approved. Txn: {txn}. DBT initiated."
+            msg = f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."
         elif request.governance_action.is_review:
-            case = request.escalation_case_id or "PENDING"
-            msg = f"AgriStack: Claim Under Review. Ticket: {case}. Officer review pending."
+            msg = (
+                f"AgriStack: Claim Under Review. Ticket: {request.escalation_case_id}. "
+                "Officer review pending."
+            )
         elif request.governance_action.is_rejection:
-            reason = (request.rejection_reason or "Ineligible")[:30]
+            reason = str(request.rejection_reason)[:30]
             helpline = get_helpline_number()
             msg = f"AgriStack: Claim Rejected ({reason}). Help: {helpline}."
         else:
-            entity = (request.missing_entity or "details")[:30]
-            msg = f"AgriStack: Missing {entity}. Reply to update."
+            entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)[:30]
+            msg = f"AgriStack: Missing {entity_label}. Reply to update."
 
         # Enforce hard 160 character boundary
         return msg[:MAX_USSD_CHARACTERS]
@@ -166,26 +176,27 @@ class MultichannelConfirmationService:
     def _format_sms_message(self, request: ConfirmationRequestPayload) -> str:
         """Formats concise transactional SMS message."""
         if request.governance_action.is_approval:
-            txn = request.disbursement_txn_id or "PENDING"
             return (
-                f"AgriStack: Your subsidy claim is approved. Txn ID: {txn}. "
+                "AgriStack: Your subsidy claim is approved. "
+                f"Txn ID: {request.disbursement_txn_id}. "
                 "Benefit sent via DBT to linked account."
             )
         if request.governance_action.is_review:
-            case = request.escalation_case_id or "PENDING"
             return (
-                f"AgriStack: Your claim is under review. Incident Ticket: {case}. "
-                "Updates will follow."
+                "AgriStack: Your claim is under review. "
+                f"Incident Ticket: {request.escalation_case_id}. Updates will follow."
             )
         if request.governance_action.is_rejection:
-            reason = request.rejection_reason or "Ineligible"
             helpline = get_helpline_number()
             return (
-                f"AgriStack: Your subsidy claim was rejected ({reason}). "
+                f"AgriStack: Your subsidy claim was rejected ({request.rejection_reason}). "
                 f"Call toll-free {helpline} for queries."
             )
-        entity = request.missing_entity or "required details"
-        return f"AgriStack: Clarification required for {entity}. Please submit details to proceed."
+        entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)
+        return (
+            f"AgriStack: Clarification required for {entity_label}. "
+            "Please submit details to proceed."
+        )
 
     async def prepare_confirmation(
         self, request: ConfirmationRequestPayload

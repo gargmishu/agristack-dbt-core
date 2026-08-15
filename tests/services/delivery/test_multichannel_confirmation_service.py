@@ -11,8 +11,10 @@ from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
+    DomainEntityKey,
     GovernanceAction,
     LanguageLocale,
+    RejectionReasonCode,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
@@ -72,10 +74,10 @@ async def test_prepare_whatsapp_auto_reject(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_REJECT,
-        rejection_reason="Ineligible land parcel size",
+        rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
     )
     payload = await delivery_service.prepare_confirmation(req)
-    assert "Ineligible land parcel size" in payload.formatted_message
+    assert "INELIGIBLE_LAND_SIZE" in payload.formatted_message
     assert "1800-180-1551" in payload.formatted_message
 
 
@@ -87,7 +89,7 @@ async def test_prepare_whatsapp_reprompt_clarification(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.REQUEST_MORE_INFO,
-        missing_entity="survey number",
+        missing_entity=DomainEntityKey.SURVEY_NUMBER,
     )
     payload = await delivery_service.prepare_confirmation(req)
     assert "survey number" in payload.formatted_message
@@ -144,8 +146,8 @@ async def test_prepare_ussd_length_boundary(
             governance_action=action,
             disbursement_txn_id="TXN-2026-100200",
             escalation_case_id="SPP-CASE-2026-100200",
-            rejection_reason="Duplicate claim detected for active crop season",
-            missing_entity="village",
+            rejection_reason=RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON,
+            missing_entity=DomainEntityKey.VILLAGE,
         )
         payload = await delivery_service.prepare_confirmation(req)
         assert len(payload.formatted_message) <= MAX_USSD_CHARACTERS
