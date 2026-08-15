@@ -37,8 +37,10 @@ class MultichannelConfirmationService:
     """Outbound confirmation dispatch engine generating channel-adapted notifications.
 
     Translates governance outcomes, payment clearing IDs, and caseworker escalation
-    tickets into channel-native formats (Rich WhatsApp Markdown cards, Bhashini TTS voice
-    recordings, compact 160-character USSD strings, and transactional SMS).
+    tickets into channel-native formats:
+    1. Rich WhatsApp Markdown cards with icons and structured details.
+    2. Phonetic vernacular voice text synthesized by Bhashini TTS.
+    3. Concise plain-text strings (<=160 chars) shared across SMS and USSD.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
@@ -86,7 +88,7 @@ class MultichannelConfirmationService:
             return hindi_labels.get(entity, entity.value.replace("_", " "))
         return entity.value.replace("_", " ")
 
-    def _format_whatsapp_message(self, request: ConfirmationRequestPayload) -> str:
+    def _format_rich_card(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
         if request.governance_action.is_approval:
             return (
@@ -153,8 +155,8 @@ class MultichannelConfirmationService:
             else f"Please provide your {entity_label} to complete your claim."
         )
 
-    def _format_ussd_message(self, request: ConfirmationRequestPayload) -> str:
-        """Formats compact USSD plain text string strictly under 160 characters."""
+    def _format_plain_text(self, request: ConfirmationRequestPayload) -> str:
+        """Formats compact plain text string strictly under 160 characters for SMS and USSD."""
         if request.governance_action.is_approval:
             msg = f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."
         elif request.governance_action.is_review:
@@ -163,40 +165,14 @@ class MultichannelConfirmationService:
                 "Officer review pending."
             )
         elif request.governance_action.is_rejection:
-            reason = str(request.rejection_reason)[:30]
             helpline = get_helpline_number()
-            msg = f"AgriStack: Claim Rejected ({reason}). Help: {helpline}."
+            msg = f"AgriStack: Claim Rejected ({request.rejection_reason}). Help: {helpline}."
         else:
-            entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)[:30]
+            entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)
             msg = f"AgriStack: Missing {entity_label}. Reply to update."
 
         # Enforce hard 160 character boundary
         return msg[:MAX_USSD_CHARACTERS]
-
-    def _format_sms_message(self, request: ConfirmationRequestPayload) -> str:
-        """Formats concise transactional SMS message."""
-        if request.governance_action.is_approval:
-            return (
-                "AgriStack: Your subsidy claim is approved. "
-                f"Txn ID: {request.disbursement_txn_id}. "
-                "Benefit sent via DBT to linked account."
-            )
-        if request.governance_action.is_review:
-            return (
-                "AgriStack: Your claim is under review. "
-                f"Incident Ticket: {request.escalation_case_id}. Updates will follow."
-            )
-        if request.governance_action.is_rejection:
-            helpline = get_helpline_number()
-            return (
-                f"AgriStack: Your subsidy claim was rejected ({request.rejection_reason}). "
-                f"Call toll-free {helpline} for queries."
-            )
-        entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)
-        return (
-            f"AgriStack: Clarification required for {entity_label}. "
-            "Please submit details to proceed."
-        )
 
     async def prepare_confirmation(
         self, request: ConfirmationRequestPayload
@@ -220,7 +196,7 @@ class MultichannelConfirmationService:
         audio_playback_url: HttpUrl | None = None
 
         if request.channel_type == ChannelType.WHATSAPP:
-            message = self._format_whatsapp_message(request)
+            message = self._format_rich_card(request)
         elif request.channel_type == ChannelType.IVR_VOICE:
             spoken_text = self._format_spoken_voice_text(request)
             raw_url = await self._bhashini_service.synthesize_speech(
@@ -228,10 +204,8 @@ class MultichannelConfirmationService:
             )
             audio_playback_url = HttpUrl(raw_url)
             message = spoken_text
-        elif request.channel_type == ChannelType.USSD:
-            message = self._format_ussd_message(request)
-        else:  # SMS
-            message = self._format_sms_message(request)
+        else:  # SMS and USSD (both use compact plain text <=160 chars)
+            message = self._format_plain_text(request)
 
         return OutboundConfirmationPayload(
             session_id=request.session_id,
