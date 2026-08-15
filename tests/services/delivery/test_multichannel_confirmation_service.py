@@ -7,7 +7,12 @@ from src.config import (
     DEFAULT_SMS_INTERFACE,
     DEFAULT_USSD_INTERFACE,
 )
-from src.connectors import IvrConnector, UssdConnector, WhatsAppConnector
+from src.connectors import (
+    IvrConnector,
+    SmsConnector,
+    UssdConnector,
+    WhatsAppConnector,
+)
 from src.data_models.common import (
     ChannelType,
     DeliveryStatus,
@@ -279,12 +284,13 @@ async def test_env_and_custom_injection_dispatch(
     custom_whatsapp = WhatsAppConnector(interface_id="MANUAL_WHATSAPP")
     custom_ivr = IvrConnector(interface_id="MANUAL_IVR")
     custom_ussd = UssdConnector(interface_id="MANUAL_USSD")
+    custom_sms = SmsConnector(interface_id="MANUAL_SMS")
     custom_service = MultichannelConfirmationService(
         bhashini_service=BhashiniService(),
         whatsapp_connector=custom_whatsapp,
         ivr_connector=custom_ivr,
         ussd_connector=custom_ussd,
-        sms_interface_id="MANUAL_SMS",
+        sms_connector=custom_sms,
     )
     res_custom_wa = await custom_service.dispatch_confirmation(wa_req)
     assert res_custom_wa["transmission_ack"]["interface_id"] == "MANUAL_WHATSAPP"
