@@ -226,7 +226,6 @@ async def test_dispatch_confirmation_sms(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_confirmation(req)
-    assert result["transmission_ack"]["sms_gateway"] == DEFAULT_SMS_INTERFACE
     assert result["transmission_ack"]["interface_id"] == DEFAULT_SMS_INTERFACE
 
 

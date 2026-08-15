@@ -267,7 +267,6 @@ class MultichannelConfirmationService:
         else:  # SMS
             transmission_ack = {
                 "interface_id": self._sms_interface_id,
-                "sms_gateway": self._sms_interface_id,
                 "session_id": payload.session_id,
                 "status": payload.delivery_status,
                 "message": payload.formatted_message,

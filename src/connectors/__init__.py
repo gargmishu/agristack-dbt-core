@@ -2,8 +2,6 @@
 
 from src.config import (
     DEFAULT_IVR_INTERFACE,
-    DEFAULT_SIGTRAN_INTERFACE,
-    DEFAULT_SIP_TRUNK_INTERFACE,
     DEFAULT_USSD_INTERFACE,
     DEFAULT_WHATSAPP_INTERFACE,
 )
@@ -13,8 +11,6 @@ from src.connectors.whatsapp_connector import WhatsAppConnector
 
 __all__ = [
     "DEFAULT_IVR_INTERFACE",
-    "DEFAULT_SIGTRAN_INTERFACE",
-    "DEFAULT_SIP_TRUNK_INTERFACE",
     "DEFAULT_USSD_INTERFACE",
     "DEFAULT_WHATSAPP_INTERFACE",
     "IvrConnector",
