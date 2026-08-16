@@ -12,12 +12,12 @@
 ## 🏛️ Architectural Overview (4-Layer System)
 
 ```
-[ Citizen Channels: IVR Voice | WhatsApp | USSD ]
+[ Citizen Channels: WhatsApp | IVR Voice | USSD | SMS ]
                         │ (Raw carrier payloads: audio URLs, text, DTMF)
                         ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Layer 1: Channel Edge Connectors (`src/connectors/`)                   │
-│ • WhatsAppConnector  • IvrConnector  • UssdConnector                   │
+│ • WhatsAppConnector  • IvrConnector  • UssdConnector  • SmsConnector   │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
                                         ▼
@@ -25,7 +25,7 @@
 │ Layer 2: Gateway & Perimeter Security (`src/gateway/`)                 │
 │ • CarrierAuthValidator (Webhook HMAC / Bearer verification)            │
 │ • ZeroTrustIdentityTokenizer (RAM-only SHA-256 HMAC pseudonymization)  │
-│ • PiiPurgeGuard (In-memory Zero-PII assertion sentinel)                │
+│ • PiiPurgeGuard (In-memory Zero-PII sanitizer & assertion sentinel)    │
 │ • AdversarialPromptFirewall (Injection & override defense)             │
 │ • RateLimiter (Token bucket quota guard)                               │
 │ • PayloadCanonicalizer (Transforms raw ingress into canonical intake)  │
@@ -47,15 +47,16 @@
 │ • CaseManagementService (Internal review queues & OpenSPP ticket sync) │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
-             ┌──────────────────────────┴──────────────────────────┐
-             ▼                                                     ▼
-┌──────────────────────────────────────┐ ┌──────────────────────────────────────┐
-│ Foundational AI Blocks (`src/services/ai/`)│ │ Authoritative DPI Registries (`src/services/dpi/`)│
-│ • BhashiniService (ASR / NMT / TTS)  │ │ • IdentityVerificationService (MOSIP)│
-│ • SlmExtractor (Sovereign SLM NLU)   │ │ • AgriRegistryService (Cadastral plots)│
-│ • ai_mock_fixtures (Deterministic)   │ │ • SocialRegistryService (OpenSPP)    │
-│                                      │ │ • PaymentRailService (NPCI APBS/PFMS)│
-└──────────────────────────────────────┘ └──────────────────────────────────────┘
+             ┌──────────────────────────┼──────────────────────────┐
+             ▼                          ▼                          ▼
+┌──────────────────────────┐ ┌──────────────────────────┐ ┌──────────────────────────┐
+│ Foundational AI Blocks   │ │ Multichannel Delivery    │ │ Authoritative Registries │
+│ (`src/services/ai/`)     │ │ (`src/services/delivery/`)│ │ (`src/services/dpi/`)    │
+│ • BhashiniService        │ │ • Multichannel-          │ │ • IdentityVerification   │
+│   (ASR / NMT / TTS)      │ │   ConfirmationService    │ │ • AgriRegistryService    │
+│ • SlmExtractor           │ │   (Adaptive 4-Channel    │ │ • SocialRegistryService  │
+│ • ai_mock_fixtures       │ │    Dispatch Engine)      │ │ • PaymentRailService     │
+└──────────────────────────┘ └──────────────────────────┘ └──────────────────────────┘
 ```
 
 ---

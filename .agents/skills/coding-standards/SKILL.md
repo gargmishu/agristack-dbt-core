@@ -72,12 +72,12 @@ src/
 ├── connectors/                      # Layer 1 Channel Edge Connectors
 │   ├── whatsapp_connector.py
 │   ├── ivr_connector.py
-│   └── ussd_connector.py
+│   ├── ussd_connector.py
+│   └── sms_connector.py
 ├── gateway/                         # Layer 2 Gateway & Perimeter Security
 │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
 │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
-│   ├── pii_purge_guard.py           # In-memory Zero-PII assertion sentinel
-│   ├── pii_text_redactor.py         # In-memory regex PII scanner and text redactor
+│   ├── pii_purge_guard.py           # In-memory Zero-PII sanitizer & assertion sentinel
 │   ├── adversarial_prompt_firewall.py # Adversarial prompt injection & override defense
 │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
 │   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
@@ -94,6 +94,8 @@ src/
 │   │   ├── ai_mock_fixtures.py
 │   │   ├── bhashini_service.py
 │   │   └── slm_extractor.py
+│   ├── delivery/
+│   │   └── multichannel_confirmation_service.py
 │   └── dpi/
 │       ├── dpi_mock_fixtures.py
 │       ├── agri_registry_service.py
@@ -109,6 +111,7 @@ src/
 │   │   └── field_types.py           # Constrained Annotated type aliases & validators
 │   ├── raw_ingress/                 # Layer 1 -> Layer 2 carrier raw ingress payloads
 │   │   ├── ivr_payload.py
+│   │   ├── sms_payload.py
 │   │   ├── ussd_payload.py
 │   │   └── whatsapp_payload.py
 │   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
@@ -119,6 +122,11 @@ src/
 │   ├── caseworker/                  # Caseworker portal review staging & outcome models
 │   │   ├── case_review_payload.py
 │   │   └── review_outcome_payload.py
+│   ├── delivery/                    # Layer 4 outbound multichannel delivery contracts
+│   │   ├── confirmation_dispatch_result.py
+│   │   ├── confirmation_request_payload.py
+│   │   ├── outbound_confirmation_payload.py
+│   │   └── transmission_ack.py
 │   └── disbursement/                # Financial clearing callback models
 │       └── disbursement_callback_payload.py
 ```
@@ -131,12 +139,12 @@ tests/
 ├── connectors/
 │   ├── test_whatsapp_connector.py
 │   ├── test_ivr_connector.py
-│   └── test_ussd_connector.py
+│   ├── test_ussd_connector.py
+│   └── test_sms_connector.py
 ├── gateway/
 │   ├── test_carrier_auth_validator.py
 │   ├── test_zero_trust_identity_tokenizer.py
 │   ├── test_pii_purge_guard.py
-│   ├── test_pii_text_redactor.py
 │   ├── test_adversarial_prompt_firewall.py
 │   ├── test_payload_canonicalizer.py
 │   ├── test_rate_limiter.py
@@ -153,6 +161,8 @@ tests/
 │   │   ├── test_ai_mock_fixtures.py
 │   │   ├── test_bhashini_service.py
 │   │   └── test_slm_extractor.py
+│   ├── delivery/
+│   │   └── test_multichannel_confirmation_service.py
 │   └── dpi/
 │       ├── test_dpi_mock_fixtures.py
 │       ├── test_agri_registry_service.py
@@ -168,6 +178,7 @@ tests/
 │   │   └── test_field_types.py
 │   ├── raw_ingress/
 │   │   ├── test_ivr_payload.py
+│   │   ├── test_sms_payload.py
 │   │   ├── test_ussd_payload.py
 │   │   └── test_whatsapp_payload.py
 │   ├── public_agent/
@@ -178,6 +189,11 @@ tests/
 │   ├── caseworker/
 │   │   ├── test_case_review_payload.py
 │   │   └── test_review_outcome_payload.py
+│   ├── delivery/
+│   │   ├── test_confirmation_dispatch_result.py
+│   │   ├── test_confirmation_request_payload.py
+│   │   ├── test_outbound_confirmation_payload.py
+│   │   └── test_transmission_ack.py
 │   └── disbursement/
 │       └── test_disbursement_callback_payload.py
 ```

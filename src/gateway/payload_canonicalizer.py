@@ -75,7 +75,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        if payload.payload_type == PayloadType.AUDIO:
+        if payload.payload_type.is_audio:
             unprocessed_content = str(payload.audio_recording_url)
             structure_level = StructureLevel.FREE_TEXT
         else:

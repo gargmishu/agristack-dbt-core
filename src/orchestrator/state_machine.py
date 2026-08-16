@@ -13,8 +13,6 @@ from src.data_models.common import (
     EligibilityStatus,
     EscalationReasonCode,
     GovernanceAction,
-    PayloadType,
-    StructureLevel,
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
@@ -106,10 +104,7 @@ class StateMachine:
             ExtractedEntityPayload containing parsed domain parameters.
         """
         # Fast-Path: Structured USSD or Menu Selection Bypass
-        if intake.structure_level in (
-            StructureLevel.DTMF_SELECTION,
-            StructureLevel.MENU_SELECTION,
-        ):
+        if intake.structure_level.is_structured:
             logger.info(
                 "Gate 1: Structured menu bypass applied for session=%s, channel=%s",
                 intake.session_id,
@@ -131,7 +126,7 @@ class StateMachine:
 
         # Audio Modality: Transcribe via Bhashini ASR
         text_to_extract = intake.unprocessed_input_content
-        if intake.payload_type == PayloadType.AUDIO:
+        if intake.payload_type.is_audio:
             try:
                 text_to_extract = await self._bhashini.transcribe_audio(
                     audio_url=intake.unprocessed_input_content,

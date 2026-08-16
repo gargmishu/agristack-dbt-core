@@ -208,7 +208,7 @@ class MultichannelConfirmationService:
 
     def _format_spoken_voice_text(self, request: ConfirmationRequestPayload) -> str:
         """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
-        is_hindi = str(request.language_locale).startswith("hi")
+        is_hindi = request.language_locale.is_hindi
         if request.governance_action.is_approval:
             return (
                 f"Aapka fasal rahat aavedan swikrit ho gaya hai. "

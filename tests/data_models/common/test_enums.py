@@ -8,6 +8,7 @@ from src.data_models.common.enums import (
     DomainEntityKey,
     EligibilityStatus,
     GovernanceAction,
+    LanguageLocale,
     PayloadType,
     SessionStatus,
     StructureLevel,
@@ -114,3 +115,39 @@ def test_governance_action_classification_properties() -> None:
     assert GovernanceAction.REQUEST_MORE_INFO.is_approval is False
     assert GovernanceAction.REQUEST_MORE_INFO.is_review is False
     assert GovernanceAction.REQUEST_MORE_INFO.is_rejection is False
+
+
+def test_channel_type_properties() -> None:
+    assert ChannelType.IVR_VOICE.is_voice is True
+    assert ChannelType.WHATSAPP.is_voice is False
+    assert ChannelType.SMS.is_voice is False
+    assert ChannelType.USSD.is_voice is False
+
+    assert ChannelType.SMS.is_text_only is True
+    assert ChannelType.USSD.is_text_only is True
+    assert ChannelType.WHATSAPP.is_text_only is False
+    assert ChannelType.IVR_VOICE.is_text_only is False
+
+    assert ChannelType.WHATSAPP.is_rich_card is True
+    assert ChannelType.SMS.is_rich_card is False
+
+
+def test_payload_type_properties() -> None:
+    assert PayloadType.AUDIO.is_audio is True
+    assert PayloadType.TEXT.is_audio is False
+    assert PayloadType.TEXT.is_text is True
+    assert PayloadType.AUDIO.is_text is False
+
+
+def test_structure_level_properties() -> None:
+    assert StructureLevel.DTMF_SELECTION.is_structured is True
+    assert StructureLevel.MENU_SELECTION.is_structured is True
+    assert StructureLevel.FREE_TEXT.is_structured is False
+    assert StructureLevel.FREE_TEXT.is_free_text is True
+    assert StructureLevel.DTMF_SELECTION.is_free_text is False
+
+
+def test_language_locale_properties() -> None:
+    assert LanguageLocale.HINDI.is_hindi is True
+    assert LanguageLocale.ENGLISH.is_hindi is False
+    assert LanguageLocale.TAMIL.is_hindi is False

@@ -17,7 +17,6 @@ See: roadmap.md (Phase 2 Step 2.2 Layer 3)
 import logging
 from typing import NamedTuple
 
-from src.data_models.common import StructureLevel
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
@@ -68,10 +67,7 @@ class IntakePayloadEvaluator:
                 evaluation_message="unprocessed_input_content cannot be empty or whitespace-only",
             )
 
-        if payload.structure_level in (
-            StructureLevel.DTMF_SELECTION,
-            StructureLevel.MENU_SELECTION,
-        ):
+        if payload.structure_level.is_structured:
             # Fast-path structured bypass: Saves ~800ms GPU NLU latency and avoids hallucinations.
             logger.info(
                 "Structured bypass evaluated for session=%s, channel=%s, level=%s",

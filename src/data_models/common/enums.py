@@ -11,6 +11,21 @@ class ChannelType(StrEnum):
     USSD = "ussd"
     SMS = "sms"
 
+    @property
+    def is_voice(self) -> bool:
+        """Returns True if channel carries telephony voice audio."""
+        return self == ChannelType.IVR_VOICE
+
+    @property
+    def is_text_only(self) -> bool:
+        """Returns True if channel is restricted to plain text messaging (SMS or USSD)."""
+        return self in (ChannelType.SMS, ChannelType.USSD)
+
+    @property
+    def is_rich_card(self) -> bool:
+        """Returns True if channel supports rich markdown cards with formatting (WhatsApp)."""
+        return self == ChannelType.WHATSAPP
+
 
 class PayloadType(StrEnum):
     """Normalized payload content modality."""
@@ -20,6 +35,16 @@ class PayloadType(StrEnum):
     IMAGE = "image"
     DOCUMENT = "document"
 
+    @property
+    def is_audio(self) -> bool:
+        """Returns True if content is audio modality."""
+        return self == PayloadType.AUDIO
+
+    @property
+    def is_text(self) -> bool:
+        """Returns True if content is text modality."""
+        return self == PayloadType.TEXT
+
 
 class StructureLevel(StrEnum):
     """Input structure complexity level of incoming citizen interaction or message."""
@@ -27,6 +52,16 @@ class StructureLevel(StrEnum):
     FREE_TEXT = "free_text"
     MENU_SELECTION = "menu_selection"
     DTMF_SELECTION = "dtmf_selection"
+
+    @property
+    def is_structured(self) -> bool:
+        """Returns True if input is a structured menu or DTMF selection."""
+        return self in (StructureLevel.MENU_SELECTION, StructureLevel.DTMF_SELECTION)
+
+    @property
+    def is_free_text(self) -> bool:
+        """Returns True if input is unstructured free-text."""
+        return self == StructureLevel.FREE_TEXT
 
 
 class ApplicationIntent(StrEnum):
@@ -177,6 +212,11 @@ class LanguageLocale(StrEnum):
     PUNJABI = "pa-IN"
     ODIA = "or-IN"
     MALAYALAM = "ml-IN"
+
+    @property
+    def is_hindi(self) -> bool:
+        """Returns True if this locale is Hindi."""
+        return self == LanguageLocale.HINDI
 
 
 class RejectionReasonCode(StrEnum):
