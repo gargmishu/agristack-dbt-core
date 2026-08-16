@@ -7,8 +7,8 @@ Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortc
 concatenated user digit selections.
 """
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_ussd_interface_id

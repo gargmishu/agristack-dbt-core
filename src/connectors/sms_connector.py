@@ -7,8 +7,8 @@ Processes incoming TRAI DLT-registered transactional SMS webhooks and passes can
 ingress payloads into Layer 2 security pipelines, and transmits outbound SMS confirmations.
 """
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_sms_interface_id

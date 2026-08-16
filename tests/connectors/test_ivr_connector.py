@@ -28,8 +28,6 @@ async def test_ivr_connector_valid_session() -> None:
     assert str(result.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
 
 
-
-
 @pytest.mark.asyncio
 async def test_ivr_connector_invalid_audio_url() -> None:
     connector = IvrConnector()

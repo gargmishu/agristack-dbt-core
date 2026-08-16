@@ -7,8 +7,8 @@ validating 16kHz Pulse-Code Modulation (PCM) uncompressed audio recording URLs a
 Automatic Number Identification (ANI) phone numbers.
 """
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_ivr_interface_id

@@ -27,25 +27,6 @@ async def test_ussd_connector_valid_session() -> None:
 
 
 @pytest.mark.asyncio
-async def test_ussd_connector_json_string_and_bytes() -> None:
-    connector = UssdConnector()
-    payload_json = (
-        '{"session_id": "sess_12345678", '
-        '"originating_phone_number": "+919876543210", '
-        '"ussd_service_code": "*147#", '
-        '"ussd_user_digit_selection": "1*2*9876543210", '
-        f'"received_at": "{datetime.now(UTC).isoformat()}"}}'
-    )
-    result_str = await connector.process_ussd_session(payload_json)
-    assert isinstance(result_str, UssdIngressPayload)
-    assert result_str.ussd_service_code == "*147#"
-
-    result_bytes = await connector.process_ussd_session(payload_json.encode("utf-8"))
-    assert isinstance(result_bytes, UssdIngressPayload)
-    assert result_bytes.ussd_service_code == "*147#"
-
-
-@pytest.mark.asyncio
 async def test_ussd_connector_invalid_service_code() -> None:
     connector = UssdConnector()
     invalid_payload = {

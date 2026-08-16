@@ -47,8 +47,6 @@ async def test_whatsapp_connector_valid_audio_payload() -> None:
     assert result.duration_seconds == EXPECTED_DURATION
 
 
-
-
 @pytest.mark.asyncio
 async def test_whatsapp_connector_invalid_phone() -> None:
     connector = WhatsAppConnector()

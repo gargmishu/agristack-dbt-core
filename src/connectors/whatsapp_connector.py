@@ -7,8 +7,8 @@ validating cleartext text messages and voice note audio URLs against zero Person
 Information (zero-PII) security rules.
 """
 
-from collections.abc import Mapping
 import logging
+from collections.abc import Mapping
 from uuid import uuid4
 
 from src.config import get_whatsapp_interface_id
