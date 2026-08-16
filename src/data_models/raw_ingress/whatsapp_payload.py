@@ -65,7 +65,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
         rejecting text bodies avoids multi-modal parsing complexity and prevents silent attribute
         truncation during ASR audio transcription staging.
         """
-        if self.payload_type == PayloadType.AUDIO:
+        if self.payload_type.is_audio:
             if self.audio_recording_url is None:
                 raise ValueError("audio_recording_url is required when payload_type is AUDIO")
             if self.duration_seconds is None:
@@ -83,7 +83,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
         from accidentally invoking expensive ASR translation workers on text interactions, ensuring
         optimal CPU/GPU resource utilization and deterministic routing.
         """
-        if self.payload_type == PayloadType.TEXT:
+        if self.payload_type.is_text:
             if self.text_body is None:
                 raise ValueError("text_body is required when payload_type is TEXT")
             if self.audio_recording_url is not None:
