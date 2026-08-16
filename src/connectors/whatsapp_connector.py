@@ -7,8 +7,8 @@ validating cleartext text messages and voice note audio URLs against zero Person
 Information (zero-PII) security rules.
 """
 
-import logging
 from collections.abc import Mapping
+import logging
 from uuid import uuid4
 
 from src.config import get_whatsapp_interface_id
@@ -35,21 +35,16 @@ class WhatsAppConnector:
         """Returns the configured carrier interface identifier."""
         return self._interface_id
 
-    async def process_webhook(
-        self, payload: bytes | str | Mapping[str, object]
-    ) -> WhatsAppIngressPayload:
+    async def process_webhook(self, payload: Mapping[str, object]) -> WhatsAppIngressPayload:
         """Validates and processes raw WhatsApp webhook into WhatsAppIngressPayload.
 
         Args:
-            payload: Raw bytes, JSON string, or mapping received from Meta WhatsApp API webhook.
+            payload: Raw dict/mapping payload received from Meta WhatsApp API webhook.
 
         Returns:
             Validated WhatsAppIngressPayload.
         """
-        if isinstance(payload, bytes | str):
-            validated_payload = WhatsAppIngressPayload.model_validate_json(payload)
-        else:
-            validated_payload = WhatsAppIngressPayload.model_validate(payload)
+        validated_payload = WhatsAppIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated WhatsApp webhook for session=%s, message_id=%s, type=%s",

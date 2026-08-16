@@ -7,8 +7,8 @@ Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortc
 concatenated user digit selections.
 """
 
-import logging
 from collections.abc import Mapping
+import logging
 from uuid import uuid4
 
 from src.config import get_ussd_interface_id
@@ -35,21 +35,16 @@ class UssdConnector:
         """Returns the configured SIGTRAN signaling interface identifier."""
         return self._interface_id
 
-    async def process_ussd_session(
-        self, payload: bytes | str | Mapping[str, object]
-    ) -> UssdIngressPayload:
+    async def process_ussd_session(self, payload: Mapping[str, object]) -> UssdIngressPayload:
         """Validates and processes raw USSD menu payload into canonical UssdIngressPayload.
 
         Args:
-            payload: Raw bytes, JSON string, or mapping received from USSD SS7/SIGTRAN gateway.
+            payload: Raw dict/mapping payload received from USSD SS7/SIGTRAN gateway.
 
         Returns:
             Validated UssdIngressPayload.
         """
-        if isinstance(payload, bytes | str):
-            validated_payload = UssdIngressPayload.model_validate_json(payload)
-        else:
-            validated_payload = UssdIngressPayload.model_validate(payload)
+        validated_payload = UssdIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated USSD session for session=%s, service_code=%s",

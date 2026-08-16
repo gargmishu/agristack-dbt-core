@@ -47,24 +47,6 @@ async def test_whatsapp_connector_valid_audio_payload() -> None:
     assert result.duration_seconds == EXPECTED_DURATION
 
 
-@pytest.mark.asyncio
-async def test_whatsapp_connector_json_string_and_bytes() -> None:
-    connector = WhatsAppConnector()
-    payload_json = (
-        '{"session_id": "sess_12345678", '
-        '"originating_phone_number": "+919876543210", '
-        '"channel_message_id": "wamid.HBgLOTE5ODc2NTQzMjEwFQIAERgSQTU1MzI0MTk0Nzc3MzRCOUEwAA==", '
-        '"payload_type": "text", '
-        '"text_body": "PM KISAN status", '
-        f'"received_at": "{datetime.now(UTC).isoformat()}"}}'
-    )
-    result_str = await connector.process_webhook(payload_json)
-    assert isinstance(result_str, WhatsAppIngressPayload)
-    assert result_str.text_body == "PM KISAN status"
-
-    result_bytes = await connector.process_webhook(payload_json.encode("utf-8"))
-    assert isinstance(result_bytes, WhatsAppIngressPayload)
-    assert result_bytes.text_body == "PM KISAN status"
 
 
 @pytest.mark.asyncio

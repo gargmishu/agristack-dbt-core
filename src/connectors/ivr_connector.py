@@ -7,8 +7,8 @@ validating 16kHz Pulse-Code Modulation (PCM) uncompressed audio recording URLs a
 Automatic Number Identification (ANI) phone numbers.
 """
 
-import logging
 from collections.abc import Mapping
+import logging
 from uuid import uuid4
 
 from src.config import get_ivr_interface_id
@@ -35,21 +35,16 @@ class IvrConnector:
         """Returns the configured telephony gateway interface identifier."""
         return self._interface_id
 
-    async def process_call_session(
-        self, payload: bytes | str | Mapping[str, object]
-    ) -> IvrIngressPayload:
+    async def process_call_session(self, payload: Mapping[str, object]) -> IvrIngressPayload:
         """Validates and processes raw IVR telephony payload into canonical IvrIngressPayload.
 
         Args:
-            payload: Raw bytes, JSON string, or mapping received from SIP telephony gateway.
+            payload: Raw dict/mapping payload received from SIP telephony gateway.
 
         Returns:
             Validated IvrIngressPayload.
         """
-        if isinstance(payload, bytes | str):
-            validated_payload = IvrIngressPayload.model_validate_json(payload)
-        else:
-            validated_payload = IvrIngressPayload.model_validate(payload)
+        validated_payload = IvrIngressPayload.model_validate(payload)
 
         logger.info(
             "Validated IVR call session for session=%s, duration=%ss",
