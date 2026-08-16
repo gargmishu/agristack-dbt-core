@@ -33,60 +33,9 @@ _AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}\s?\d{4}\s?\d{4}")
 class PiiPurgeGuard:
     """Unified in-memory PII redactor and zero-PII contract compliance sentinel."""
 
-    @classmethod
-    def contains_cleartext_phone(cls, text: str) -> bool:
-        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers.
-
-        Args:
-            text: String to inspect.
-
-        Returns:
-            True if any cleartext phone pattern is found.
-        """
-        if not text or not text.strip():
-            return False
-        clean = text.strip()
-        return bool(_E164_PHONE_PATTERN.search(clean) or _INDIAN_PHONE_PATTERN.search(clean))
-
-    @classmethod
-    def contains_cleartext_aadhaar(cls, text: str) -> bool:
-        """Checks if a string contains a 12-digit Aadhaar number pattern.
-
-        Args:
-            text: String to inspect.
-
-        Returns:
-            True if 12-digit Aadhaar pattern is found.
-        """
-        if not text or not text.strip():
-            return False
-        return bool(_AADHAAR_PATTERN.search(text.strip()))
-
-    @classmethod
-    def redact_phone_numbers(cls, text: str) -> str:
-        """Replaces cleartext E.164 and 10-digit Indian phone numbers with [REDACTED].
-
-        Args:
-            text: Raw free-text input string.
-
-        Returns:
-            Text with phone number patterns replaced by [REDACTED].
-        """
-        result = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
-        result = _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, result)
-        return result
-
-    @classmethod
-    def redact_aadhaar_numbers(cls, text: str) -> str:
-        """Replaces cleartext 12-digit Aadhaar UID patterns with [REDACTED].
-
-        Args:
-            text: Raw free-text input string.
-
-        Returns:
-            Text with Aadhaar number patterns replaced by [REDACTED].
-        """
-        return _AADHAAR_PATTERN.sub(_REDACTION_MARKER, text)
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
 
     @classmethod
     def redact_all(cls, text: str, session_id: str | None = None) -> str:
@@ -102,8 +51,8 @@ class PiiPurgeGuard:
         if not text or not text.strip():
             return text
 
-        redacted = cls.redact_phone_numbers(text)
-        redacted = cls.redact_aadhaar_numbers(redacted)
+        redacted = cls._redact_phone_numbers(text)
+        redacted = cls._redact_aadhaar_numbers(redacted)
 
         if redacted != text:
             logger.warning(
@@ -131,17 +80,17 @@ class PiiPurgeGuard:
             )
 
         # Ensure citizen token is not a cleartext phone number or Aadhaar UID
-        if cls.contains_cleartext_phone(payload.tokenized_citizen_id):
+        if cls._contains_cleartext_phone(payload.tokenized_citizen_id):
             raise ValueError("Cleartext phone number detected in tokenized_citizen_id field")
 
-        if cls.contains_cleartext_aadhaar(payload.tokenized_citizen_id):
+        if cls._contains_cleartext_aadhaar(payload.tokenized_citizen_id):
             raise ValueError("Cleartext Aadhaar number detected in tokenized_citizen_id field")
 
         # Scan unprocessed_input_content for cleartext phone or Aadhaar leak (for text payloads)
         if payload.payload_type == PayloadType.TEXT:
-            if cls.contains_cleartext_phone(payload.unprocessed_input_content):
+            if cls._contains_cleartext_phone(payload.unprocessed_input_content):
                 raise ValueError("Cleartext phone number detected in unprocessed_input_content")
-            if cls.contains_cleartext_aadhaar(payload.unprocessed_input_content):
+            if cls._contains_cleartext_aadhaar(payload.unprocessed_input_content):
                 raise ValueError("Cleartext Aadhaar number detected in unprocessed_input_content")
 
         logger.debug(
@@ -149,3 +98,34 @@ class PiiPurgeGuard:
             payload.session_id,
             payload.tokenized_citizen_id[:16],
         )
+
+    # -------------------------------------------------------------------------
+    # Private Sanitization & Detection Helpers
+    # -------------------------------------------------------------------------
+
+    @classmethod
+    def _contains_cleartext_phone(cls, text: str) -> bool:
+        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers."""
+        if not text or not text.strip():
+            return False
+        clean = text.strip()
+        return bool(_E164_PHONE_PATTERN.search(clean) or _INDIAN_PHONE_PATTERN.search(clean))
+
+    @classmethod
+    def _contains_cleartext_aadhaar(cls, text: str) -> bool:
+        """Checks if a string contains a 12-digit Aadhaar number pattern."""
+        if not text or not text.strip():
+            return False
+        return bool(_AADHAAR_PATTERN.search(text.strip()))
+
+    @classmethod
+    def _redact_phone_numbers(cls, text: str) -> str:
+        """Replaces cleartext E.164 and 10-digit Indian phone numbers with [REDACTED]."""
+        result = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
+        result = _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, result)
+        return result
+
+    @classmethod
+    def _redact_aadhaar_numbers(cls, text: str) -> str:
+        """Replaces cleartext 12-digit Aadhaar UID patterns with [REDACTED]."""
+        return _AADHAAR_PATTERN.sub(_REDACTION_MARKER, text)

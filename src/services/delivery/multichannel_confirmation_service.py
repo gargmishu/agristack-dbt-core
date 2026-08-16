@@ -84,14 +84,93 @@ class MultichannelConfirmationService:
         self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_connector = sms_connector or SmsConnector()
 
-    @staticmethod
-    def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:
-        """Returns human-readable, channel-adapted label for a DomainEntityKey."""
-        if entity is None:
-            return "kripya vivaran" if is_hindi else "required details"
-        if is_hindi:
-            return HINDI_ENTITY_LABELS.get(entity, entity.value.replace("_", " "))
-        return entity.value.replace("_", " ")
+    # -------------------------------------------------------------------------
+    # Public API
+    # -------------------------------------------------------------------------
+
+    async def prepare_confirmation(
+        self, request: ConfirmationRequestPayload
+    ) -> OutboundConfirmationPayload:
+        """Prepares channel-adapted OutboundConfirmationPayload with synthesized audio if voice.
+
+        Args:
+            request: Validated ConfirmationRequestPayload specifying channel, action, and fields.
+
+        Returns:
+            Validated OutboundConfirmationPayload ready for channel transmission.
+        """
+        logger.info(
+            "Preparing outbound confirmation for session=%s, channel=%s, action=%s, locale=%s",
+            request.session_id,
+            request.channel_type,
+            request.governance_action,
+            request.language_locale,
+        )
+
+        audio_playback_url: HttpUrl | None = None
+
+        if request.channel_type == ChannelType.WHATSAPP:
+            message = self._format_rich_card(request)
+        elif request.channel_type == ChannelType.IVR_VOICE:
+            spoken_text = self._format_spoken_voice_text(request)
+            raw_url = await self._bhashini_service.synthesize_speech(
+                spoken_text, str(request.language_locale)
+            )
+            audio_playback_url = HttpUrl(raw_url)
+            message = spoken_text
+        else:  # SMS and USSD (both use compact plain text <=160 chars)
+            message = self._format_plain_text(request)
+
+        return OutboundConfirmationPayload(
+            session_id=request.session_id,
+            channel_type=request.channel_type,
+            language_locale=request.language_locale,
+            governance_action=request.governance_action,
+            delivery_status=DeliveryStatus.DELIVERED,
+            formatted_message=message,
+            audio_playback_url=audio_playback_url,
+            disbursement_txn_id=request.disbursement_txn_id,
+            escalation_case_id=request.escalation_case_id,
+            delivered_at=datetime.now(UTC),
+        )
+
+    async def dispatch_confirmation(
+        self, request: ConfirmationRequestPayload
+    ) -> ConfirmationDispatchResult:
+        """Prepares and dispatches confirmation through the appropriate edge connector.
+
+        Args:
+            request: Validated ConfirmationRequestPayload specifying channel and determination.
+
+        Returns:
+            ConfirmationDispatchResult with payload and carrier TransmissionAck receipt.
+        """
+        payload = await self.prepare_confirmation(request)
+
+        transmission_ack: TransmissionAck
+        if request.channel_type == ChannelType.WHATSAPP:
+            transmission_ack = await self._whatsapp_connector.send_outbound_confirmation(payload)
+        elif request.channel_type == ChannelType.IVR_VOICE:
+            transmission_ack = await self._ivr_connector.send_outbound_confirmation(payload)
+        elif request.channel_type == ChannelType.USSD:
+            transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
+        else:  # SMS
+            transmission_ack = await self._sms_connector.send_outbound_confirmation(payload)
+
+        logger.info(
+            "Dispatched confirmation for session=%s across channel=%s with status=%s",
+            payload.session_id,
+            payload.channel_type,
+            payload.delivery_status,
+        )
+        return ConfirmationDispatchResult(
+            payload=payload,
+            transmission_ack=transmission_ack,
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Channel Formatters & Label Helpers
+    # -------------------------------------------------------------------------
 
     def _format_rich_card(self, request: ConfirmationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
@@ -179,82 +258,11 @@ class MultichannelConfirmationService:
         # Enforce hard 160 character boundary
         return msg[:MAX_USSD_CHARACTERS]
 
-    async def prepare_confirmation(
-        self, request: ConfirmationRequestPayload
-    ) -> OutboundConfirmationPayload:
-        """Prepares channel-adapted OutboundConfirmationPayload with synthesized audio if voice.
-
-        Args:
-            request: Validated ConfirmationRequestPayload specifying channel, action, and fields.
-
-        Returns:
-            Validated OutboundConfirmationPayload ready for channel transmission.
-        """
-        logger.info(
-            "Preparing outbound confirmation for session=%s, channel=%s, action=%s, locale=%s",
-            request.session_id,
-            request.channel_type,
-            request.governance_action,
-            request.language_locale,
-        )
-
-        audio_playback_url: HttpUrl | None = None
-
-        if request.channel_type == ChannelType.WHATSAPP:
-            message = self._format_rich_card(request)
-        elif request.channel_type == ChannelType.IVR_VOICE:
-            spoken_text = self._format_spoken_voice_text(request)
-            raw_url = await self._bhashini_service.synthesize_speech(
-                spoken_text, str(request.language_locale)
-            )
-            audio_playback_url = HttpUrl(raw_url)
-            message = spoken_text
-        else:  # SMS and USSD (both use compact plain text <=160 chars)
-            message = self._format_plain_text(request)
-
-        return OutboundConfirmationPayload(
-            session_id=request.session_id,
-            channel_type=request.channel_type,
-            language_locale=request.language_locale,
-            governance_action=request.governance_action,
-            delivery_status=DeliveryStatus.DELIVERED,
-            formatted_message=message,
-            audio_playback_url=audio_playback_url,
-            disbursement_txn_id=request.disbursement_txn_id,
-            escalation_case_id=request.escalation_case_id,
-            delivered_at=datetime.now(UTC),
-        )
-
-    async def dispatch_confirmation(
-        self, request: ConfirmationRequestPayload
-    ) -> ConfirmationDispatchResult:
-        """Prepares and dispatches confirmation through the appropriate edge connector.
-
-        Args:
-            request: Validated ConfirmationRequestPayload specifying channel and determination.
-
-        Returns:
-            ConfirmationDispatchResult with payload and carrier TransmissionAck receipt.
-        """
-        payload = await self.prepare_confirmation(request)
-
-        transmission_ack: TransmissionAck
-        if request.channel_type == ChannelType.WHATSAPP:
-            transmission_ack = await self._whatsapp_connector.send_outbound_confirmation(payload)
-        elif request.channel_type == ChannelType.IVR_VOICE:
-            transmission_ack = await self._ivr_connector.send_outbound_confirmation(payload)
-        elif request.channel_type == ChannelType.USSD:
-            transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
-        else:  # SMS
-            transmission_ack = await self._sms_connector.send_outbound_confirmation(payload)
-
-        logger.info(
-            "Dispatched confirmation for session=%s across channel=%s with status=%s",
-            payload.session_id,
-            payload.channel_type,
-            payload.delivery_status,
-        )
-        return ConfirmationDispatchResult(
-            payload=payload,
-            transmission_ack=transmission_ack,
-        )
+    @staticmethod
+    def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:
+        """Returns human-readable, channel-adapted label for a DomainEntityKey."""
+        if entity is None:
+            return "kripya vivaran" if is_hindi else "required details"
+        if is_hindi:
+            return HINDI_ENTITY_LABELS.get(entity, entity.value.replace("_", " "))
+        return entity.value.replace("_", " ")

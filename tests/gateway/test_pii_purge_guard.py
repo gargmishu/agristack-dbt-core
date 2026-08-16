@@ -15,29 +15,29 @@ from src.gateway.pii_purge_guard import PiiPurgeGuard
 
 
 def test_pii_purge_guard_detects_cleartext_phone() -> None:
-    assert PiiPurgeGuard.contains_cleartext_phone("+919876543210") is True
-    assert PiiPurgeGuard.contains_cleartext_phone("9876543210") is True
+    assert PiiPurgeGuard._contains_cleartext_phone("+919876543210") is True
+    assert PiiPurgeGuard._contains_cleartext_phone("9876543210") is True
     assert (
-        PiiPurgeGuard.contains_cleartext_phone(
+        PiiPurgeGuard._contains_cleartext_phone(
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         )
         is False
     )
-    assert PiiPurgeGuard.contains_cleartext_phone("") is False
-    assert PiiPurgeGuard.contains_cleartext_phone("   ") is False
+    assert PiiPurgeGuard._contains_cleartext_phone("") is False
+    assert PiiPurgeGuard._contains_cleartext_phone("   ") is False
 
 
 def test_pii_purge_guard_detects_cleartext_aadhaar() -> None:
-    assert PiiPurgeGuard.contains_cleartext_aadhaar("1234 5678 9012") is True
-    assert PiiPurgeGuard.contains_cleartext_aadhaar("123456789012") is True
-    assert PiiPurgeGuard.contains_cleartext_aadhaar("Survey number 1002") is False
-    assert PiiPurgeGuard.contains_cleartext_aadhaar("") is False
-    assert PiiPurgeGuard.contains_cleartext_aadhaar("   ") is False
+    assert PiiPurgeGuard._contains_cleartext_aadhaar("1234 5678 9012") is True
+    assert PiiPurgeGuard._contains_cleartext_aadhaar("123456789012") is True
+    assert PiiPurgeGuard._contains_cleartext_aadhaar("Survey number 1002") is False
+    assert PiiPurgeGuard._contains_cleartext_aadhaar("") is False
+    assert PiiPurgeGuard._contains_cleartext_aadhaar("   ") is False
 
 
 def test_pii_purge_guard_redacts_indian_mobile_numbers() -> None:
     text = "Mera phone 9876543210 hai aur dusra 919876543211 hai."
-    sanitized = PiiPurgeGuard.redact_phone_numbers(text)
+    sanitized = PiiPurgeGuard._redact_phone_numbers(text)
     assert "[REDACTED]" in sanitized
     assert "9876543210" not in sanitized
     assert "919876543211" not in sanitized
@@ -45,7 +45,7 @@ def test_pii_purge_guard_redacts_indian_mobile_numbers() -> None:
 
 def test_pii_purge_guard_redacts_e164_numbers() -> None:
     text = "Contact me at +919876543210 or +14155552671."
-    sanitized = PiiPurgeGuard.redact_phone_numbers(text)
+    sanitized = PiiPurgeGuard._redact_phone_numbers(text)
     assert "[REDACTED]" in sanitized
     assert "+919876543210" not in sanitized
     assert "+14155552671" not in sanitized
@@ -53,7 +53,7 @@ def test_pii_purge_guard_redacts_e164_numbers() -> None:
 
 def test_pii_purge_guard_redacts_aadhaar_numbers() -> None:
     text = "Aadhaar 1234 5678 9012 or 123456789012."
-    sanitized = PiiPurgeGuard.redact_aadhaar_numbers(text)
+    sanitized = PiiPurgeGuard._redact_aadhaar_numbers(text)
     assert "[REDACTED]" in sanitized
     assert "1234 5678 9012" not in sanitized
     assert "123456789012" not in sanitized
