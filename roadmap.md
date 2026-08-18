@@ -110,8 +110,16 @@ If we built "Outside-In" (Connectors $\rightarrow$ Gateway API $\rightarrow$ Bra
 
 ## **Phase 4: Verification & End-to-End Simulation Matrix**
 
-*Purpose: Validate the completed build against all branching paths, fallback loops, and security perimeters defined in the flowchart.*
+*Purpose: Validate the completed build against all branching paths, fallback loops, outbound channels, and security perimeters defined in the flowchart.*
 
-* **Step 4.1: Channel Ingress & Convergence Simulation:** Test happy-path convergence across voice, chat, and USSD channels into the Layer 3 intake gateway.  
-* **Step 4.2: Zero-Trust Tokenization & Purge Auditing:** Assert via automated memory and DB tests that cleartext PII is purged from RAM post-tokenization and never appears in database transaction logs or disk storage.  
-* **Step 4.3: Governance Matrix & Conversational Loop Verification:** Execute end-to-end simulation suites verifying automated payout clearing, caseworker escalation routing, auto-rejection boundaries, and multi-attempt user correction loops.
+* **Step 4.1: Multichannel Ingress & Modality Convergence:** Test happy-path convergence across all four ingress channels (Voice/IVR, WhatsApp, USSD, and SMS) into the Layer 3 Public Agent intake gateway across audio and text modalities.
+* **Step 4.2: Security Firewall & Zero-Trust PII Auditing:** Execute automated security test suites to verify:
+  * Carrier authentication (HMAC/Bearer) and rate-limiting quota enforcement.
+  * Adversarial prompt injection defense (asserting AI extraction confidence is neutralized to `0.0`).
+  * In-memory RAM zero-PII purge and automated assertions verifying no cleartext PII touches disk or database transaction logs.
+* **Step 4.3: Three-Gate Governance & Conversational Loop Verification:** Execute end-to-end simulation suites verifying:
+  * Ingress & Structure Gate (audio routing vs. USSD bypass).
+  * Intake Validation Gate (missing entity detection and multi-attempt correction loops capped at 3 attempts).
+  * Deterministic Governance Routing Matrix (Automated Payout vs. Caseworker Review vs. Auto-Rejection).
+* **Step 4.4: Outbound Confirmation & Financial Callback Verification:** Validate native outbound receipt delivery back through the originating channel (WhatsApp, SMS, IVR TTS, USSD) and verify asynchronous payment clearing callbacks (NPCI APBS / PFMS Treasury).
+* **Step 4.5: Database Persistence & Analytical Deduplication:** Verify relational database persistence against `schema.sql` and test analytical deduplication queries (`QUALIFY ROW_NUMBER() OVER`) on multi-attempt conversational logs.
