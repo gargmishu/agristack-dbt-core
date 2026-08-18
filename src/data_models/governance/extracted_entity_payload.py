@@ -16,9 +16,7 @@ class ExtractedEntityPayload(StrictBaseModel):
     See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
     """
 
-    application_intent: ApplicationIntent = Field(
-        ..., description="Classified citizen intent (e.g. apply_subsidy, check_status)"
-    )
+    application_intent: ApplicationIntent
     ai_confidence_score: AiConfidenceScore
     domain_entities: DomainEntities = Field(
         default_factory=dict,
