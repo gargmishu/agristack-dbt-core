@@ -1,4 +1,4 @@
-"""Outbound multichannel confirmation delivery payload schema (Step 12)."""
+"""Outbound multichannel notification delivery payload schema (Step 12)."""
 
 from pydantic import Field, HttpUrl, model_validator
 
@@ -18,8 +18,8 @@ from src.data_models.common import (
 MAX_USSD_CHARACTERS = 160
 
 
-class OutboundConfirmationPayload(StrictBaseModel):
-    """Channel-adapted outbound confirmation receipt payload dispatched to citizen (Step 12).
+class OutboundNotificationPayload(StrictBaseModel):
+    """Channel-adapted outbound notification receipt payload dispatched to citizen (Step 12).
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
@@ -49,18 +49,18 @@ class OutboundConfirmationPayload(StrictBaseModel):
     )
     delivered_at: UtcTimestamp = Field(
         ...,
-        description="UTC timestamp when confirmation receipt was generated and dispatched",
+        description="UTC timestamp when notification receipt was generated and dispatched",
     )
 
     @model_validator(mode="after")
-    def validate_non_empty_message(self) -> "OutboundConfirmationPayload":
-        """Ensures that formatted confirmation message is not empty or whitespace."""
+    def validate_non_empty_message(self) -> "OutboundNotificationPayload":
+        """Ensures that formatted notification message is not empty or whitespace."""
         if not self.formatted_message or not self.formatted_message.strip():
             raise ValueError("formatted_message cannot be empty or whitespace-only")
         return self
 
     @model_validator(mode="after")
-    def validate_ussd_character_ceiling(self) -> "OutboundConfirmationPayload":
+    def validate_ussd_character_ceiling(self) -> "OutboundNotificationPayload":
         """Enforces 160-character ceiling for USSD channel to prevent carrier signaling errors."""
         if (
             self.channel_type == ChannelType.USSD

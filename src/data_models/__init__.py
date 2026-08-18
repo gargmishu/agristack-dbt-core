@@ -38,9 +38,10 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 from src.data_models.delivery import (
-    ConfirmationDispatchResult,
-    ConfirmationRequestPayload,
-    OutboundConfirmationPayload,
+    MAX_USSD_CHARACTERS,
+    NotificationDispatchResult,
+    NotificationRequestPayload,
+    OutboundNotificationPayload,
     TransmissionAck,
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
@@ -65,8 +66,6 @@ __all__ = [
     "CaseworkerCaseReviewPayload",
     "CaseworkerReviewOutcomePayload",
     "ChannelType",
-    "ConfirmationDispatchResult",
-    "ConfirmationRequestPayload",
     "DisbursementCallbackPayload",
     "DisbursementFailureCode",
     "DisbursementStatus",
@@ -83,8 +82,11 @@ __all__ = [
     "HmacCitizenToken",
     "IvrIngressPayload",
     "LanguageLocale",
+    "MAX_USSD_CHARACTERS",
     "NotificationDeliveryStatus",
-    "OutboundConfirmationPayload",
+    "NotificationDispatchResult",
+    "NotificationRequestPayload",
+    "OutboundNotificationPayload",
     "PayloadType",
     "PhoneNumberE164",
     "PublicAgentStandardizedIntakePayload",

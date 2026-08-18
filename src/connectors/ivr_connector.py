@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from src.config import get_ivr_interface_id
 from src.data_models.common import ChannelType
-from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
+from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -53,13 +53,13 @@ class IvrConnector:
         )
         return validated_payload
 
-    async def send_outbound_confirmation(
-        self, payload: OutboundConfirmationPayload
+    async def send_outbound_notification(
+        self, payload: OutboundNotificationPayload
     ) -> TransmissionAck:
         """Dispatches outbound audio playback instruction to SIP telephony gateway.
 
         Args:
-            payload: Validated OutboundConfirmationPayload with synthesized audio URL.
+            payload: Validated OutboundNotificationPayload with synthesized audio URL.
 
         Returns:
             Strict TransmissionAck receipt with carrier reference ID.

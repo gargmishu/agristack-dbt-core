@@ -11,7 +11,7 @@ from src.data_models.common import (
     NotificationDeliveryStatus,
     PayloadType,
 )
-from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
+from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 EXPECTED_DURATION = 15
@@ -83,11 +83,11 @@ async def test_whatsapp_connector_invalid_message_id_short() -> None:
 
 
 @pytest.mark.asyncio
-async def test_whatsapp_connector_send_outbound_confirmation() -> None:
+async def test_whatsapp_connector_send_outbound_notification() -> None:
     connector = WhatsAppConnector(interface_id="CUSTOM_META_WHATSAPP_API")
     assert connector.interface_id == "CUSTOM_META_WHATSAPP_API"
 
-    payload = OutboundConfirmationPayload(
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -96,7 +96,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
     )
-    result = await connector.send_outbound_confirmation(payload)
+    result = await connector.send_outbound_notification(payload)
     assert isinstance(result, TransmissionAck)
     assert result.interface_id == "CUSTOM_META_WHATSAPP_API"
     assert result.channel_type == ChannelType.WHATSAPP

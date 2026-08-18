@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from src.config import get_sms_interface_id
 from src.data_models.common import ChannelType
-from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
+from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import SmsIngressPayload
 
 logger = logging.getLogger(__name__)
@@ -53,13 +53,13 @@ class SmsConnector:
         )
         return validated_payload
 
-    async def send_outbound_confirmation(
-        self, payload: OutboundConfirmationPayload
+    async def send_outbound_notification(
+        self, payload: OutboundNotificationPayload
     ) -> TransmissionAck:
         """Dispatches outbound SMS message to carrier SMS gateway.
 
         Args:
-            payload: Validated OutboundConfirmationPayload.
+            payload: Validated OutboundNotificationPayload.
 
         Returns:
             Strict TransmissionAck receipt with carrier reference ID.

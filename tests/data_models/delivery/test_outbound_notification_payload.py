@@ -1,4 +1,4 @@
-"""Unit tests for OutboundConfirmationPayload schema."""
+"""Unit tests for OutboundNotificationPayload schema."""
 
 from datetime import UTC, datetime
 
@@ -13,12 +13,12 @@ from src.data_models.common import (
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
-    OutboundConfirmationPayload,
+    OutboundNotificationPayload,
 )
 
 
 def test_outbound_payload_valid_whatsapp() -> None:
-    payload = OutboundConfirmationPayload(
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         language_locale=LanguageLocale.ENGLISH,
@@ -35,7 +35,7 @@ def test_outbound_payload_valid_whatsapp() -> None:
 
 
 def test_outbound_payload_valid_ivr_voice() -> None:
-    payload = OutboundConfirmationPayload(
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.IVR_VOICE,
         language_locale=LanguageLocale.HINDI,
@@ -55,7 +55,7 @@ def test_outbound_payload_valid_ivr_voice() -> None:
 
 
 def test_outbound_payload_valid_ussd() -> None:
-    payload = OutboundConfirmationPayload(
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.USSD,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -69,7 +69,7 @@ def test_outbound_payload_valid_ussd() -> None:
 
 def test_outbound_payload_empty_message_rejected() -> None:
     with pytest.raises(ValidationError) as exc:
-        OutboundConfirmationPayload(
+        OutboundNotificationPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.AUTO_APPROVE,
@@ -81,7 +81,7 @@ def test_outbound_payload_empty_message_rejected() -> None:
 
 def test_outbound_payload_ussd_length_exceeded_rejected() -> None:
     with pytest.raises(ValidationError) as exc:
-        OutboundConfirmationPayload(
+        OutboundNotificationPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.USSD,
             governance_action=GovernanceAction.AUTO_APPROVE,

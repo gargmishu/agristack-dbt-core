@@ -1,4 +1,4 @@
-"""Adaptive Multichannel Confirmation Delivery Service (Step 3.5 / Step 12).
+"""Adaptive Multichannel Notification Delivery Service (Step 3.5 / Step 12).
 
 Formats and dispatches final transaction receipts, caseworker escalation tickets,
 or conversational re-prompts back to citizens across WhatsApp, IVR Voice, USSD, and SMS.
@@ -27,9 +27,9 @@ from src.data_models.common import (
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
-    ConfirmationDispatchResult,
-    ConfirmationRequestPayload,
-    OutboundConfirmationPayload,
+    NotificationDispatchResult,
+    NotificationRequestPayload,
+    OutboundNotificationPayload,
     TransmissionAck,
 )
 from src.services.ai.bhashini_service import BhashiniService
@@ -49,8 +49,8 @@ HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
 }
 
 
-class MultichannelConfirmationService:
-    """Outbound confirmation dispatch engine generating channel-adapted notifications.
+class MultichannelNotificationService:
+    """Outbound notification dispatch engine generating channel-adapted receipts.
 
     Translates governance outcomes, payment clearing IDs, and caseworker escalation
     tickets into channel-native formats:
@@ -69,7 +69,7 @@ class MultichannelConfirmationService:
         ussd_connector: UssdConnector | None = None,
         sms_connector: SmsConnector | None = None,
     ) -> None:
-        """Initializes MultichannelConfirmationService with injected dependencies.
+        """Initializes MultichannelNotificationService with injected dependencies.
 
         Args:
             bhashini_service: Optional BhashiniService instance for TTS voice synthesis.
@@ -88,19 +88,19 @@ class MultichannelConfirmationService:
     # Public API
     # -------------------------------------------------------------------------
 
-    async def prepare_confirmation(
-        self, request: ConfirmationRequestPayload
-    ) -> OutboundConfirmationPayload:
-        """Prepares channel-adapted OutboundConfirmationPayload with synthesized audio if voice.
+    async def prepare_notification(
+        self, request: NotificationRequestPayload
+    ) -> OutboundNotificationPayload:
+        """Prepares channel-adapted OutboundNotificationPayload with synthesized audio if voice.
 
         Args:
-            request: Validated ConfirmationRequestPayload specifying channel, action, and fields.
+            request: Validated NotificationRequestPayload specifying channel, action, and fields.
 
         Returns:
-            Validated OutboundConfirmationPayload ready for channel transmission.
+            Validated OutboundNotificationPayload ready for channel transmission.
         """
         logger.info(
-            "Preparing outbound confirmation for session=%s, channel=%s, action=%s, locale=%s",
+            "Preparing outbound notification for session=%s, channel=%s, action=%s, locale=%s",
             request.session_id,
             request.channel_type,
             request.governance_action,
@@ -121,7 +121,7 @@ class MultichannelConfirmationService:
         else:  # SMS and USSD (both use compact plain text <=160 chars)
             message = self._format_plain_text(request)
 
-        return OutboundConfirmationPayload(
+        return OutboundNotificationPayload(
             session_id=request.session_id,
             channel_type=request.channel_type,
             language_locale=request.language_locale,
@@ -134,36 +134,36 @@ class MultichannelConfirmationService:
             delivered_at=datetime.now(UTC),
         )
 
-    async def dispatch_confirmation(
-        self, request: ConfirmationRequestPayload
-    ) -> ConfirmationDispatchResult:
-        """Prepares and dispatches confirmation through the appropriate edge connector.
+    async def dispatch_notification(
+        self, request: NotificationRequestPayload
+    ) -> NotificationDispatchResult:
+        """Prepares and dispatches notification through the appropriate edge connector.
 
         Args:
-            request: Validated ConfirmationRequestPayload specifying channel and determination.
+            request: Validated NotificationRequestPayload specifying channel and determination.
 
         Returns:
-            ConfirmationDispatchResult with payload and carrier TransmissionAck receipt.
+            NotificationDispatchResult with payload and carrier TransmissionAck receipt.
         """
-        payload = await self.prepare_confirmation(request)
+        payload = await self.prepare_notification(request)
 
         transmission_ack: TransmissionAck
         if request.channel_type == ChannelType.WHATSAPP:
-            transmission_ack = await self._whatsapp_connector.send_outbound_confirmation(payload)
+            transmission_ack = await self._whatsapp_connector.send_outbound_notification(payload)
         elif request.channel_type == ChannelType.IVR_VOICE:
-            transmission_ack = await self._ivr_connector.send_outbound_confirmation(payload)
+            transmission_ack = await self._ivr_connector.send_outbound_notification(payload)
         elif request.channel_type == ChannelType.USSD:
-            transmission_ack = await self._ussd_connector.send_outbound_confirmation(payload)
+            transmission_ack = await self._ussd_connector.send_outbound_notification(payload)
         else:  # SMS
-            transmission_ack = await self._sms_connector.send_outbound_confirmation(payload)
+            transmission_ack = await self._sms_connector.send_outbound_notification(payload)
 
         logger.info(
-            "Dispatched confirmation for session=%s across channel=%s with status=%s",
+            "Dispatched notification for session=%s across channel=%s with status=%s",
             payload.session_id,
             payload.channel_type,
             payload.delivery_status,
         )
-        return ConfirmationDispatchResult(
+        return NotificationDispatchResult(
             payload=payload,
             transmission_ack=transmission_ack,
         )
@@ -172,7 +172,7 @@ class MultichannelConfirmationService:
     # Private Channel Formatters & Label Helpers
     # -------------------------------------------------------------------------
 
-    def _format_rich_card(self, request: ConfirmationRequestPayload) -> str:
+    def _format_rich_card(self, request: NotificationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message."""
         if request.governance_action.is_approval:
             return (
@@ -206,7 +206,7 @@ class MultichannelConfirmationService:
             "Reply directly to this message with the requested details."
         )
 
-    def _format_spoken_voice_text(self, request: ConfirmationRequestPayload) -> str:
+    def _format_spoken_voice_text(self, request: NotificationRequestPayload) -> str:
         """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
         is_hindi = request.language_locale.is_hindi
         if request.governance_action.is_approval:
@@ -239,7 +239,7 @@ class MultichannelConfirmationService:
             else f"Please provide your {entity_label} to complete your claim."
         )
 
-    def _format_plain_text(self, request: ConfirmationRequestPayload) -> str:
+    def _format_plain_text(self, request: NotificationRequestPayload) -> str:
         """Formats compact plain text string strictly under 160 characters for SMS and USSD."""
         if request.governance_action.is_approval:
             msg = f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."

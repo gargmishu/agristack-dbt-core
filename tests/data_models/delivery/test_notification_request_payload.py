@@ -1,4 +1,4 @@
-"""Unit tests for ConfirmationRequestPayload domain schema."""
+"""Unit tests for NotificationRequestPayload domain schema."""
 
 import pytest
 from pydantic import ValidationError
@@ -10,11 +10,11 @@ from src.data_models.common import (
     LanguageLocale,
     RejectionReasonCode,
 )
-from src.data_models.delivery import ConfirmationRequestPayload
+from src.data_models.delivery import NotificationRequestPayload
 
 
-def test_confirmation_request_valid() -> None:
-    req = ConfirmationRequestPayload(
+def test_notification_request_valid() -> None:
+    req = NotificationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -29,8 +29,8 @@ def test_confirmation_request_valid() -> None:
     assert req.escalation_case_id is None
 
 
-def test_confirmation_request_manual_review() -> None:
-    req = ConfirmationRequestPayload(
+def test_notification_request_manual_review() -> None:
+    req = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.IVR_VOICE,
         governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
@@ -41,8 +41,8 @@ def test_confirmation_request_manual_review() -> None:
     assert req.language_locale == LanguageLocale.HINDI
 
 
-def test_confirmation_request_auto_reject_valid() -> None:
-    req = ConfirmationRequestPayload(
+def test_notification_request_auto_reject_valid() -> None:
+    req = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.SMS,
         governance_action=GovernanceAction.AUTO_REJECT,
@@ -51,8 +51,8 @@ def test_confirmation_request_auto_reject_valid() -> None:
     assert req.rejection_reason == RejectionReasonCode.IDENTITY_NOT_VERIFIED
 
 
-def test_confirmation_request_reprompt_valid() -> None:
-    req = ConfirmationRequestPayload(
+def test_notification_request_reprompt_valid() -> None:
+    req = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.REQUEST_MORE_INFO,
@@ -61,9 +61,9 @@ def test_confirmation_request_reprompt_valid() -> None:
     assert req.missing_entity == DomainEntityKey.CROP_NAME
 
 
-def test_confirmation_request_invalid_session_id() -> None:
+def test_notification_request_invalid_session_id() -> None:
     with pytest.raises(ValidationError):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="short",  # Min length 8
             channel_type=ChannelType.USSD,
             governance_action=GovernanceAction.AUTO_APPROVE,
@@ -71,9 +71,9 @@ def test_confirmation_request_invalid_session_id() -> None:
         )
 
 
-def test_confirmation_request_missing_txn_id_on_approval() -> None:
+def test_notification_request_missing_txn_id_on_approval() -> None:
     with pytest.raises(ValidationError, match="disbursement_txn_id is required"):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.AUTO_APPROVE,
@@ -81,9 +81,9 @@ def test_confirmation_request_missing_txn_id_on_approval() -> None:
         )
 
 
-def test_confirmation_request_missing_case_id_on_review() -> None:
+def test_notification_request_missing_case_id_on_review() -> None:
     with pytest.raises(ValidationError, match="escalation_case_id is required"):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
@@ -91,9 +91,9 @@ def test_confirmation_request_missing_case_id_on_review() -> None:
         )
 
 
-def test_confirmation_request_missing_reason_on_rejection() -> None:
+def test_notification_request_missing_reason_on_rejection() -> None:
     with pytest.raises(ValidationError, match="rejection_reason is required"):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.AUTO_REJECT,
@@ -101,9 +101,9 @@ def test_confirmation_request_missing_reason_on_rejection() -> None:
         )
 
 
-def test_confirmation_request_invalid_rejection_reason_enum() -> None:
+def test_notification_request_invalid_rejection_reason_enum() -> None:
     with pytest.raises(ValidationError):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.AUTO_REJECT,
@@ -111,9 +111,9 @@ def test_confirmation_request_invalid_rejection_reason_enum() -> None:
         )
 
 
-def test_confirmation_request_missing_entity_on_reprompt() -> None:
+def test_notification_request_missing_entity_on_reprompt() -> None:
     with pytest.raises(ValidationError, match="missing_entity is required"):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.REQUEST_MORE_INFO,
@@ -121,9 +121,9 @@ def test_confirmation_request_missing_entity_on_reprompt() -> None:
         )
 
 
-def test_confirmation_request_invalid_missing_entity_enum() -> None:
+def test_notification_request_invalid_missing_entity_enum() -> None:
     with pytest.raises(ValidationError):
-        ConfirmationRequestPayload(
+        NotificationRequestPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
             governance_action=GovernanceAction.REQUEST_MORE_INFO,

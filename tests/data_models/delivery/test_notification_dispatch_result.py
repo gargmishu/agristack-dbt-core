@@ -1,4 +1,4 @@
-"""Unit tests for ConfirmationDispatchResult data model."""
+"""Unit tests for NotificationDispatchResult data model."""
 
 from datetime import UTC, datetime
 
@@ -9,14 +9,14 @@ from src.data_models.common import (
     NotificationDeliveryStatus,
 )
 from src.data_models.delivery import (
-    ConfirmationDispatchResult,
-    OutboundConfirmationPayload,
+    NotificationDispatchResult,
+    OutboundNotificationPayload,
     TransmissionAck,
 )
 
 
-def test_confirmation_dispatch_result_valid() -> None:
-    payload = OutboundConfirmationPayload(
+def test_notification_dispatch_result_valid() -> None:
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         language_locale=LanguageLocale.ENGLISH,
@@ -33,7 +33,7 @@ def test_confirmation_dispatch_result_valid() -> None:
         status=NotificationDeliveryStatus.DELIVERED,
         carrier_reference_id="wamid.12345",
     )
-    result = ConfirmationDispatchResult(
+    result = NotificationDispatchResult(
         payload=payload,
         transmission_ack=ack,
     )

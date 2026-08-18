@@ -1,4 +1,4 @@
-"""Outbound multichannel confirmation request payload schema."""
+"""Outbound multichannel notification request payload schema."""
 
 from pydantic import Field, model_validator
 
@@ -15,8 +15,8 @@ from src.data_models.common import (
 )
 
 
-class ConfirmationRequestPayload(StrictBaseModel):
-    """Input request contract for generating outbound multichannel confirmation (Step 12).
+class NotificationRequestPayload(StrictBaseModel):
+    """Input request contract for generating outbound multichannel notification (Step 12).
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
@@ -43,7 +43,7 @@ class ConfirmationRequestPayload(StrictBaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_action_specific_requirements(self) -> "ConfirmationRequestPayload":
+    def validate_action_specific_requirements(self) -> "NotificationRequestPayload":
         """Enforces mandatory field matrix depending on governance action."""
         if self.governance_action.is_approval and not self.disbursement_txn_id:
             raise ValueError(

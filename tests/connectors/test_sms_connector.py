@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.config import DEFAULT_SMS_INTERFACE
 from src.connectors import SmsConnector
 from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
-from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
+from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import SmsIngressPayload
 
 
@@ -43,11 +43,11 @@ async def test_sms_connector_process_inbound_sms_invalid() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sms_connector_send_outbound_confirmation() -> None:
+async def test_sms_connector_send_outbound_notification() -> None:
     connector = SmsConnector(interface_id="CUSTOM_SMS_GATEWAY_01")
     assert connector.interface_id == "CUSTOM_SMS_GATEWAY_01"
 
-    payload = OutboundConfirmationPayload(
+    payload = OutboundNotificationPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.SMS,
         governance_action=GovernanceAction.AUTO_APPROVE,
@@ -56,7 +56,7 @@ async def test_sms_connector_send_outbound_confirmation() -> None:
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
     )
-    result = await connector.send_outbound_confirmation(payload)
+    result = await connector.send_outbound_notification(payload)
     assert isinstance(result, TransmissionAck)
     assert result.interface_id == "CUSTOM_SMS_GATEWAY_01"
     assert result.channel_type == ChannelType.SMS

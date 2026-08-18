@@ -65,11 +65,14 @@ src/
 ├── data_models/
 │   ├── delivery/
 │   │   ├── __init__.py
-│   │   └── outbound_confirmation_payload.py  <-- OutboundConfirmationPayload & NotificationDeliveryStatus
+│   │   ├── notification_request_payload.py    <-- NotificationRequestPayload
+│   │   ├── outbound_notification_payload.py   <-- OutboundNotificationPayload & NotificationDeliveryStatus
+│   │   ├── notification_dispatch_result.py    <-- NotificationDispatchResult
+│   │   └── transmission_ack.py                <-- TransmissionAck
 ├── services/
 │   └── delivery/
 │       ├── __init__.py
-│       └── multichannel_confirmation_service.py <-- Adaptive Template & Dispatch Service
+│       └── multichannel_notification_service.py <-- Adaptive Template & Dispatch Service
 ```
 
 ---
