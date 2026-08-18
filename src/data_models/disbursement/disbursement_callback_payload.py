@@ -27,9 +27,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
             "Required for all statuses for audit reconciliation."
         ),
     )
-    disbursement_status: DisbursementStatus = Field(
-        ..., description="Updated financial clearing state: SUCCESS, FAILED, RETURNED"
-    )
+    disbursement_status: DisbursementStatus
     cleared_at: UtcTimestamp = Field(
         ...,
         description="UTC timestamp when sovereign payment rail cleared or errored transaction",
