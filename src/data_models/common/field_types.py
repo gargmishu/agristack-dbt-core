@@ -136,13 +136,11 @@ UtcTimestamp = Annotated[
     AfterValidator(validate_utc_freshness),
 ]
 
-DomainEntityScalar = str | float | int
-
 # Canonical domain parameters mapped to primitive scalars (str, float, int):
 # Enforces key membership in DomainEntityKey and scalar strictness (str, float, int),
 # preventing nested dictionary injection attacks and type drift across layers.
 DomainEntities = Annotated[
-    dict[DomainEntityKey, DomainEntityScalar],
+    dict[DomainEntityKey, str | float | int],
     Field(
         default_factory=dict,
         description="Canonical domain parameters mapped to primitive scalars (str, float, int)",
