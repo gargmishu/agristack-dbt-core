@@ -15,10 +15,10 @@ from src.connectors import (
 )
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
     DomainEntityKey,
     GovernanceAction,
     LanguageLocale,
+    NotificationDeliveryStatus,
     RejectionReasonCode,
 )
 from src.data_models.delivery import (
@@ -50,7 +50,7 @@ async def test_prepare_whatsapp_auto_approve(
     payload = await delivery_service.prepare_confirmation(req)
     assert payload.session_id == "sess_12345678"
     assert payload.channel_type == ChannelType.WHATSAPP
-    assert payload.delivery_status == DeliveryStatus.DELIVERED
+    assert payload.delivery_status == NotificationDeliveryStatus.DELIVERED
     assert "TXN-2026-981245" in payload.formatted_message
     assert "APPROVED" in payload.formatted_message
     assert payload.audio_playback_url is None
@@ -192,7 +192,7 @@ async def test_dispatch_confirmation_whatsapp(
     assert result.payload.session_id == "sess_12345678"
     assert isinstance(result.transmission_ack, TransmissionAck)
     assert result.transmission_ack.channel_type == ChannelType.WHATSAPP
-    assert result.transmission_ack.status == DeliveryStatus.DELIVERED
+    assert result.transmission_ack.status == NotificationDeliveryStatus.DELIVERED
     assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
 
 

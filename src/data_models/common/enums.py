@@ -258,7 +258,7 @@ class DisbursementFailureCode(StrEnum):
     NETWORK_TIMEOUT = "NETWORK_TIMEOUT"
 
 
-class DeliveryStatus(StrEnum):
+class NotificationDeliveryStatus(StrEnum):
     """Lifecycle status of outbound multichannel notification dispatch."""
 
     PENDING = "PENDING"

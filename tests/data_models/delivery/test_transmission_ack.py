@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.data_models.common import ChannelType, DeliveryStatus
+from src.data_models.common import ChannelType, NotificationDeliveryStatus
 from src.data_models.delivery import TransmissionAck
 
 
@@ -12,13 +12,13 @@ def test_transmission_ack_valid() -> None:
         interface_id="WHATSAPP_GATEWAY_DEFAULT",
         channel_type=ChannelType.WHATSAPP,
         session_id="sess_12345678",
-        status=DeliveryStatus.DELIVERED,
+        status=NotificationDeliveryStatus.DELIVERED,
         carrier_reference_id="wamid.HBgLOTE5",
     )
     assert ack.interface_id == "WHATSAPP_GATEWAY_DEFAULT"
     assert ack.channel_type == ChannelType.WHATSAPP
     assert ack.session_id == "sess_12345678"
-    assert ack.status == DeliveryStatus.DELIVERED
+    assert ack.status == NotificationDeliveryStatus.DELIVERED
     assert ack.carrier_reference_id == "wamid.HBgLOTE5"
     assert ack.acknowledged_at is not None
 
@@ -34,7 +34,7 @@ def test_transmission_ack_all_channels() -> None:
             interface_id="CARRIER_GW_01",
             channel_type=channel,
             session_id="sess_12345678",
-            status=DeliveryStatus.DELIVERED,
+            status=NotificationDeliveryStatus.DELIVERED,
             carrier_reference_id=f"ref-{channel.value}",
         )
         assert ack.channel_type == channel

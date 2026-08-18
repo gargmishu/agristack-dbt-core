@@ -22,8 +22,8 @@ from src.connectors import (
 )
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
     DomainEntityKey,
+    NotificationDeliveryStatus,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
@@ -126,7 +126,7 @@ class MultichannelConfirmationService:
             channel_type=request.channel_type,
             language_locale=request.language_locale,
             governance_action=request.governance_action,
-            delivery_status=DeliveryStatus.DELIVERED,
+            delivery_status=NotificationDeliveryStatus.DELIVERED,
             formatted_message=message,
             audio_playback_url=audio_playback_url,
             disbursement_txn_id=request.disbursement_txn_id,

@@ -7,9 +7,9 @@ from pydantic import HttpUrl, ValidationError
 
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
     GovernanceAction,
     LanguageLocale,
+    NotificationDeliveryStatus,
 )
 from src.data_models.delivery import (
     MAX_USSD_CHARACTERS,
@@ -23,7 +23,7 @@ def test_outbound_payload_valid_whatsapp() -> None:
         channel_type=ChannelType.WHATSAPP,
         language_locale=LanguageLocale.ENGLISH,
         governance_action=GovernanceAction.AUTO_APPROVE,
-        delivery_status=DeliveryStatus.DELIVERED,
+        delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="*AgriStack Relief Approved!* Txn: TXN-2026-981245.",
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
@@ -31,7 +31,7 @@ def test_outbound_payload_valid_whatsapp() -> None:
     assert payload.session_id == "sess_12345678"
     assert payload.channel_type == ChannelType.WHATSAPP
     assert payload.disbursement_txn_id == "TXN-2026-981245"
-    assert payload.delivery_status == DeliveryStatus.DELIVERED
+    assert payload.delivery_status == NotificationDeliveryStatus.DELIVERED
 
 
 def test_outbound_payload_valid_ivr_voice() -> None:

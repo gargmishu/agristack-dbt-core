@@ -4,9 +4,9 @@ from datetime import UTC, datetime
 
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
     GovernanceAction,
     LanguageLocale,
+    NotificationDeliveryStatus,
 )
 from src.data_models.delivery import (
     ConfirmationDispatchResult,
@@ -21,7 +21,7 @@ def test_confirmation_dispatch_result_valid() -> None:
         channel_type=ChannelType.WHATSAPP,
         language_locale=LanguageLocale.ENGLISH,
         governance_action=GovernanceAction.AUTO_APPROVE,
-        delivery_status=DeliveryStatus.DELIVERED,
+        delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="Claim Approved",
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
@@ -30,7 +30,7 @@ def test_confirmation_dispatch_result_valid() -> None:
         interface_id="WHATSAPP_GATEWAY_DEFAULT",
         channel_type=ChannelType.WHATSAPP,
         session_id="sess_12345678",
-        status=DeliveryStatus.DELIVERED,
+        status=NotificationDeliveryStatus.DELIVERED,
         carrier_reference_id="wamid.12345",
     )
     result = ConfirmationDispatchResult(

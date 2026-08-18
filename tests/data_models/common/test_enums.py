@@ -9,6 +9,7 @@ from src.data_models.common.enums import (
     EligibilityStatus,
     GovernanceAction,
     LanguageLocale,
+    NotificationDeliveryStatus,
     PayloadType,
     SessionStatus,
     StructureLevel,
@@ -80,6 +81,10 @@ from src.data_models.common.enums import (
         (ThreatCategory.DELIMITER_HIJACKING, "DELIMITER_HIJACKING"),
         (ThreatCategory.DATABASE_INJECTION, "DATABASE_INJECTION"),
         (ThreatCategory.PAYOUT_MANIPULATION, "PAYOUT_MANIPULATION"),
+        (NotificationDeliveryStatus.PENDING, "PENDING"),
+        (NotificationDeliveryStatus.SENT, "SENT"),
+        (NotificationDeliveryStatus.DELIVERED, "DELIVERED"),
+        (NotificationDeliveryStatus.FAILED, "FAILED"),
     ],
 )
 def test_enum_members_match_expected_values(enum_member: str, expected_value: str) -> None:

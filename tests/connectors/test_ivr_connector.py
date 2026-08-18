@@ -5,7 +5,7 @@ from pydantic import HttpUrl, ValidationError
 
 from src.config import DEFAULT_IVR_INTERFACE
 from src.connectors import IvrConnector
-from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction
+from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
 from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
@@ -65,7 +65,7 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
         session_id="sess_12345678",
         channel_type=ChannelType.IVR_VOICE,
         governance_action=GovernanceAction.AUTO_APPROVE,
-        delivery_status=DeliveryStatus.DELIVERED,
+        delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="Aapka aavedan swikrit ho gaya hai.",
         audio_playback_url=HttpUrl("https://bhashini.ai/audio_1.wav"),
         disbursement_txn_id="TXN-2026-981245",
@@ -76,7 +76,7 @@ async def test_ivr_connector_send_outbound_confirmation() -> None:
     assert result.interface_id == "CUSTOM_SIP_TRUNK_01"
     assert result.channel_type == ChannelType.IVR_VOICE
     assert result.session_id == "sess_12345678"
-    assert result.status == DeliveryStatus.DELIVERED
+    assert result.status == NotificationDeliveryStatus.DELIVERED
     assert result.carrier_reference_id.startswith("sip-call-")
 
 

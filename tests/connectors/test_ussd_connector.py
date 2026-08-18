@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from src.config import DEFAULT_USSD_INTERFACE
 from src.connectors import UssdConnector
-from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction
+from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
 from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import UssdIngressPayload
 
@@ -63,7 +63,7 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
         session_id="sess_12345678",
         channel_type=ChannelType.USSD,
         governance_action=GovernanceAction.AUTO_APPROVE,
-        delivery_status=DeliveryStatus.DELIVERED,
+        delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="AgriStack: Claim Approved.",
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
@@ -73,7 +73,7 @@ async def test_ussd_connector_send_outbound_confirmation() -> None:
     assert result.interface_id == "CUSTOM_SS7_GATEWAY_01"
     assert result.channel_type == ChannelType.USSD
     assert result.session_id == "sess_12345678"
-    assert result.status == DeliveryStatus.DELIVERED
+    assert result.status == NotificationDeliveryStatus.DELIVERED
     assert result.carrier_reference_id.startswith("ussd-sig-")
 
 

@@ -4,11 +4,11 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
     DisbursementTxnId,
     EscalationCaseId,
     GovernanceAction,
     LanguageLocale,
+    NotificationDeliveryStatus,
     SessionId,
     StrictBaseModel,
     UtcTimestamp,
@@ -28,7 +28,7 @@ class OutboundConfirmationPayload(StrictBaseModel):
     channel_type: ChannelType
     language_locale: LanguageLocale = LanguageLocale.ENGLISH
     governance_action: GovernanceAction
-    delivery_status: DeliveryStatus = DeliveryStatus.DELIVERED
+    delivery_status: NotificationDeliveryStatus = NotificationDeliveryStatus.DELIVERED
     formatted_message: str = Field(
         ...,
         min_length=1,

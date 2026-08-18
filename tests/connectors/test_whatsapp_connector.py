@@ -5,7 +5,12 @@ from pydantic import ValidationError
 
 from src.config import DEFAULT_WHATSAPP_INTERFACE
 from src.connectors import WhatsAppConnector
-from src.data_models.common import ChannelType, DeliveryStatus, GovernanceAction, PayloadType
+from src.data_models.common import (
+    ChannelType,
+    GovernanceAction,
+    NotificationDeliveryStatus,
+    PayloadType,
+)
 from src.data_models.delivery import OutboundConfirmationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
@@ -86,7 +91,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_APPROVE,
-        delivery_status=DeliveryStatus.DELIVERED,
+        delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="Claim Approved",
         disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
@@ -96,7 +101,7 @@ async def test_whatsapp_connector_send_outbound_confirmation() -> None:
     assert result.interface_id == "CUSTOM_META_WHATSAPP_API"
     assert result.channel_type == ChannelType.WHATSAPP
     assert result.session_id == "sess_12345678"
-    assert result.status == DeliveryStatus.DELIVERED
+    assert result.status == NotificationDeliveryStatus.DELIVERED
     assert result.carrier_reference_id.startswith("wamid.")
 
 

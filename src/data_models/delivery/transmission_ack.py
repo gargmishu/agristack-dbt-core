@@ -6,7 +6,7 @@ from pydantic import Field
 
 from src.data_models.common import (
     ChannelType,
-    DeliveryStatus,
+    NotificationDeliveryStatus,
     SessionId,
     StrictBaseModel,
     UtcTimestamp,
@@ -32,8 +32,8 @@ class TransmissionAck(StrictBaseModel):
         ...,
         description="Canonical session tracking identifier",
     )
-    status: DeliveryStatus = Field(
-        default=DeliveryStatus.DELIVERED,
+    status: NotificationDeliveryStatus = Field(
+        default=NotificationDeliveryStatus.DELIVERED,
         description="Transmission delivery status outcome",
     )
     carrier_reference_id: str = Field(

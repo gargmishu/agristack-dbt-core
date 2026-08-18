@@ -65,7 +65,7 @@ src/
 ├── data_models/
 │   ├── delivery/
 │   │   ├── __init__.py
-│   │   └── outbound_confirmation_payload.py  <-- OutboundConfirmationPayload & DeliveryStatus
+│   │   └── outbound_confirmation_payload.py  <-- OutboundConfirmationPayload & NotificationDeliveryStatus
 ├── services/
 │   └── delivery/
 │       ├── __init__.py
