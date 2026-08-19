@@ -4,6 +4,7 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.data_models.common import (
     AudioDurationSeconds,
+    ChannelMessageId,
     PayloadType,
     PhoneNumberE164,
     SessionId,
@@ -25,15 +26,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
 
     session_id: SessionId
     originating_phone_number: PhoneNumberE164
-    channel_message_id: str = Field(
-        ...,
-        min_length=8,
-        max_length=128,
-        description=(
-            "Carrier unique message ID (e.g. WhatsApp wamid). Needed for async discrete "
-            "message deduplication; unlike IVR/USSD where interaction is bound to session."
-        ),
-    )
+    channel_message_id: ChannelMessageId
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
     )

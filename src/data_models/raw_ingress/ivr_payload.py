@@ -15,6 +15,10 @@ class IvrIngressPayload(StrictBaseModel):
     """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2).
 
     See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
+
+    IVR uses session_id as the call identity because one SIP call is a continuous
+    session rather than a sequence of independently retried messages. A separate
+    channel_message_id is therefore not required for IVR deduplication.
     """
 
     session_id: SessionId

@@ -15,6 +15,11 @@ class UssdIngressPayload(StrictBaseModel):
 
     See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
 
+    USSD uses session_id as the interaction identity because each request belongs to
+    one short-lived signaling session. Unlike SMS or WhatsApp webhooks, it does not
+    represent an independently retried discrete message, so channel_message_id is
+    not required.
+
     Architectural Design Choice:
     Decoupling network routing shortcodes (e.g. *147#) from application menu selections
     (e.g. 1*2*9876543210) eliminates parsing ambiguity for downstream services and allows

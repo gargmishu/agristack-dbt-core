@@ -28,6 +28,15 @@ SessionId = Annotated[
     ),
 ]
 
+ChannelMessageId = Annotated[
+    str,
+    Field(
+        min_length=8,
+        max_length=128,
+        description="Carrier/provider unique message ID for discrete message deduplication",
+    ),
+]
+
 PhoneNumberE164 = Annotated[
     str,
     Field(

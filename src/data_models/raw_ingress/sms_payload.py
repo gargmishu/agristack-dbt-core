@@ -3,6 +3,7 @@
 from pydantic import Field, model_validator
 
 from src.data_models.common import (
+    ChannelMessageId,
     PhoneNumberE164,
     SessionId,
     StrictBaseModel,
@@ -18,12 +19,7 @@ class SmsIngressPayload(StrictBaseModel):
 
     session_id: SessionId
     originating_phone_number: PhoneNumberE164
-    channel_message_id: str = Field(
-        ...,
-        min_length=4,
-        max_length=128,
-        description="Carrier unique SMS message ID / DLT transaction reference for deduplication",
-    )
+    channel_message_id: ChannelMessageId
     text_body: str = Field(
         ...,
         min_length=1,

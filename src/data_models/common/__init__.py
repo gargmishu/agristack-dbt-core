@@ -25,6 +25,7 @@ from src.data_models.common.enums import (
 from src.data_models.common.field_types import (
     AiConfidenceScore,
     AudioDurationSeconds,
+    ChannelMessageId,
     DisbursementTxnId,
     DomainEntities,
     EscalationCaseId,
@@ -42,6 +43,7 @@ __all__ = [
     "ApplicationIntent",
     "ApplicationStatus",
     "AudioDurationSeconds",
+    "ChannelMessageId",
     "ChannelType",
     "DisbursementFailureCode",
     "DisbursementStatus",

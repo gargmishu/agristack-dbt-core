@@ -238,6 +238,15 @@ To maintain consistency and avoid duplicate validation logic across services, th
 
 Connectors for each channel (WhatsApp, IVR, USSD) receive raw carrier payloads. Raw PII (e.g., phone number) is isolated at Layer 1 and Layer 2 and MUST be tokenized before passing into Layer 3. Here we define the **Layer 1 -> Layer 2** Schema:
 
+**Channel identity and deduplication rule:** `channel_message_id` is required only for
+discrete, asynchronous carrier messages (SMS and WhatsApp), where a provider can retry
+the same message independently and the message ID is the stable deduplication key. IVR
+and USSD are session-scoped transports: IVR is one continuous SIP call and USSD is one
+short-lived signaling interaction. Their `session_id` is therefore the interaction key,
+so neither payload requires a separate `channel_message_id`. If a future gateway exposes
+multiple independently retried events within one IVR or USSD session, that event ID must
+be modeled separately rather than treating every session as a message.
+
 #### WhatsApp Ingress Payload
 ```python
 class WhatsAppIngressPayload(StrictBaseModel):
@@ -269,7 +278,7 @@ class IvrIngressPayload(StrictBaseModel):
     session_id: str = Field(..., min_length=8, max_length=128, description="Telephony Provider Call Session ID")
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
-    duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
+    audio_duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
     received_at: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
 ```
 
