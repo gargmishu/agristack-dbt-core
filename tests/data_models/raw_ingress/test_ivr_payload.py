@@ -14,10 +14,10 @@ def test_ivr_ingress_valid() -> None:
         session_id="sip_call_987654321",
         originating_phone_number="+919876543210",
         audio_recording_url=url,
-        duration_seconds=300,
+        audio_duration_seconds=300,
         received_at=datetime.now(UTC),
     )
-    assert payload.duration_seconds == 300  # noqa: PLR2004
+    assert payload.audio_duration_seconds == 300  # noqa: PLR2004
 
 
 def test_ivr_ingress_duration_exceeds_ceiling() -> None:
@@ -27,6 +27,6 @@ def test_ivr_ingress_duration_exceeds_ceiling() -> None:
             session_id="sip_call_987654321",
             originating_phone_number="+919876543210",
             audio_recording_url=url,
-            duration_seconds=601,  # Exceeds max 600s ceiling
+            audio_duration_seconds=601,  # Exceeds max 600s ceiling
             received_at=datetime.now(UTC),
         )

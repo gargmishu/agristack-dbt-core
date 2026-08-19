@@ -20,7 +20,7 @@ class IvrIngressPayload(StrictBaseModel):
     session_id: SessionId
     originating_phone_number: PhoneNumberE164
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
-    duration_seconds: AudioDurationSeconds
+    audio_duration_seconds: AudioDurationSeconds
     received_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when SIP gateway received voice stream"
     )

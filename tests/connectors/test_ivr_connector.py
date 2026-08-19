@@ -19,12 +19,12 @@ async def test_ivr_connector_valid_session() -> None:
         "session_id": "sess_12345678",
         "originating_phone_number": "+919876543210",
         "audio_recording_url": "https://sip-gateway.telecom.in/audio/call_987.wav",
-        "duration_seconds": EXPECTED_DURATION,
+        "audio_duration_seconds": EXPECTED_DURATION,
         "received_at": datetime.now(UTC).isoformat(),
     }
     result = await connector.process_call_session(payload_data)
     assert isinstance(result, IvrIngressPayload)
-    assert result.duration_seconds == EXPECTED_DURATION
+    assert result.audio_duration_seconds == EXPECTED_DURATION
     assert str(result.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
 
 
@@ -35,7 +35,7 @@ async def test_ivr_connector_invalid_audio_url() -> None:
         "session_id": "sess_12345678",
         "originating_phone_number": "+919876543210",
         "audio_recording_url": "not_a_valid_url",
-        "duration_seconds": EXPECTED_DURATION,
+        "audio_duration_seconds": EXPECTED_DURATION,
         "received_at": datetime.now(UTC).isoformat(),
     }
     with pytest.raises(ValidationError):
@@ -49,7 +49,7 @@ async def test_ivr_connector_invalid_duration_zero() -> None:
         "session_id": "sess_12345678",
         "originating_phone_number": "+919876543210",
         "audio_recording_url": "https://sip-gateway.telecom.in/audio/call_987.wav",
-        "duration_seconds": 0,  # Min duration is 1 second
+        "audio_duration_seconds": 0,  # Min duration is 1 second
         "received_at": datetime.now(UTC).isoformat(),
     }
     with pytest.raises(ValidationError):

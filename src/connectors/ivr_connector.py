@@ -49,7 +49,7 @@ class IvrConnector:
         logger.info(
             "Validated IVR call session for session=%s, duration=%ss",
             validated_payload.session_id,
-            validated_payload.duration_seconds,
+            validated_payload.audio_duration_seconds,
         )
         return validated_payload
 
