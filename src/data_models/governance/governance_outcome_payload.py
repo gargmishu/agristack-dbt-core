@@ -51,9 +51,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
     disbursement_status: DisbursementStatus | None = Field(
         None,
         description=(
-            "Initialized to PENDING at decision time; transitioned to INITIATED by step_10 "
-            "(or Treasury Dispatcher) upon wire dispatch; updated to "
-            "SUCCESS/FAILED/RETURNED upon bank callback"
+            "Initialized to PENDING at decision time; transitioned to INITIATED upon wire dispatch; updated to SUCCESS/FAILED/RETURNED upon bank callback"
         ),
     )
     escalation_case_id: EscalationCaseId | None = Field(
