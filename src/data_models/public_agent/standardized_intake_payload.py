@@ -17,8 +17,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
-MAX_DTMF_LENGTH: Final[int] = 64
-MAX_MENU_SELECTION_LENGTH: Final[int] = 256
+_MAX_DTMF_LENGTH: Final[int] = 64
+_MAX_MENU_SELECTION_LENGTH: Final[int] = 256
 _DTMF_REGEX: Final[re.Pattern[str]] = re.compile(r"^\d+(\*\d+)*$")
 
 # Pydantic v2 TypeAdapter used for standalone validation of HttpUrl strings without a model.
@@ -115,7 +115,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
                     f"URL: {err}"
                 ) from err
         elif self.payload_type.is_text and self.structure_level == StructureLevel.DTMF_SELECTION:
-            if len(content) > MAX_DTMF_LENGTH or not _DTMF_REGEX.match(content):
+            if len(content) > _MAX_DTMF_LENGTH or not _DTMF_REGEX.match(content):
                 raise ValueError(
                     "DTMF_SELECTION unprocessed_input_content must match DTMF keypad pattern "
                     "^\\d+(\\*\\d+)*$ (max 64 chars)"
@@ -123,7 +123,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
         elif (
             self.payload_type.is_text
             and self.structure_level == StructureLevel.MENU_SELECTION
-            and len(content) > MAX_MENU_SELECTION_LENGTH
+            and len(content) > _MAX_MENU_SELECTION_LENGTH
         ):
             raise ValueError(
                 "MENU_SELECTION unprocessed_input_content cannot exceed 256 characters"
