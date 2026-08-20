@@ -53,12 +53,12 @@ class PiiPurgeGuard:
     # -------------------------------------------------------------------------
 
     @classmethod
-    def redact_all(cls, text: str, session_id: str | None = None) -> str:
+    def redact_all(cls, text: str, session_id: str) -> str:
         """Applies all PII redaction rules in sequence and returns sanitized text.
 
         Args:
             text: Raw free-text input string to sanitize.
-            session_id: Optional session identifier for audit logging.
+            session_id: Session identifier for audit logging.
 
         Returns:
             Sanitized text with all detected PII replaced by [REDACTED].
@@ -72,7 +72,7 @@ class PiiPurgeGuard:
         if redacted != text:
             logger.warning(
                 "PII redacted from free-text input for session=%s",
-                session_id or "unknown",
+                session_id,
             )
 
         return redacted

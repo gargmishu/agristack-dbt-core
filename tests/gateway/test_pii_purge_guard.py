@@ -68,10 +68,10 @@ def test_pii_purge_guard_redact_all() -> None:
 
 
 def test_pii_purge_guard_redact_all_handles_empty_and_whitespace() -> None:
-    assert PiiPurgeGuard.redact_all("") == ""
-    assert PiiPurgeGuard.redact_all("   ") == "   "
+    assert PiiPurgeGuard.redact_all("", session_id="sess_empty_1") == ""
+    assert PiiPurgeGuard.redact_all("   ", session_id="sess_empty_2") == "   "
     clean_text = "Sirf gehu ki kheti hai."
-    assert PiiPurgeGuard.redact_all(clean_text) == clean_text
+    assert PiiPurgeGuard.redact_all(clean_text, session_id="sess_clean_1") == clean_text
 
 
 def test_pii_purge_guard_asserts_valid_payload() -> None:
