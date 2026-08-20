@@ -44,7 +44,7 @@ if command -v uv &> /dev/null; then
 else
     echo "  Using standard 'pip' installer..."
     pip install --upgrade pip setuptools wheel 2>/dev/null || true
-    
+
     # Try standard editable install first, fallback to reading pyproject.toml directly
     if ! pip install -e ".[dev]"; then
         echo "  Standard build failed, retrying with --no-build-isolation..."

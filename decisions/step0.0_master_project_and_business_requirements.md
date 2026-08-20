@@ -3,7 +3,7 @@
 ## 1. Executive Summary & Core Project Mandate
 
 ### 1.1 Project Vision & Purpose
-**AgriStack Direct Benefit Transfer Core (`agristack-dbt-core`)** is an enterprise-grade, sovereign social benefit disbursement, governance routing, multi-channel conversational ingestion, zero-trust PII tokenization, and automated payment clearance engine. 
+**AgriStack Direct Benefit Transfer Core (`agristack-dbt-core`)** is an enterprise-grade, sovereign social benefit disbursement, governance routing, multi-channel conversational ingestion, zero-trust PII tokenization, and automated payment clearance engine.
 
 The system automates direct benefit transfers (DBT) for agricultural schemes (e.g., PM-KISAN, Disaster Relief, Seasonal Crop Loss Compensation) across India by integrating sovereign Digital Public Infrastructure (DPI) rails—including MOSIP Identity, AgriStack Land Registries, OpenSPP Social Protection, and NPCI Aadhaar Payment Bridge System (APBS).
 
@@ -301,7 +301,7 @@ CREATE TABLE application_governance_ledger (
     evaluated_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
-    
+
     CONSTRAINT chk_approval_requires_amount CHECK (
         governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
     ),
@@ -322,8 +322,8 @@ CREATE TABLE application_governance_ledger_history (
 );
 
 -- Fast Resume Partial Index
-CREATE INDEX idx_active_session_resume 
-ON session_telemetry_log (tokenized_phone_hash, created_at DESC) 
+CREATE INDEX idx_active_session_resume
+ON session_telemetry_log (tokenized_phone_hash, created_at DESC)
 WHERE session_status = 'ACTIVE';
 ```
 

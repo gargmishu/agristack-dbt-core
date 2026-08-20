@@ -12,9 +12,16 @@ from src.data_models.common import (
 
 
 class SmsIngressPayload(StrictBaseModel):
-    """SMS carrier webhook ingress payload (Layer 1 -> Layer 2).
+    """Data model representing an SMS message ingress payload.
 
-    See: decisions/step2.0_canonical_domain_schemas.md
+    Captures text message content and carrier delivery metadata from SMS gateway webhooks.
+
+    Invariants:
+    - `text_body` must contain at least one non-whitespace character.
+    - `channel_message_id` is required for tracking and deduplicating discrete messages.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#41-raw-carrier-ingress-payloads
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
     session_id: SessionId

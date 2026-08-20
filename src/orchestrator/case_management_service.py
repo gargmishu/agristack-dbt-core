@@ -6,7 +6,8 @@ and officer adjudication workflows for escalated claims.
 Why locate CaseManagementService in Layer 4 Orchestrator?
 CaseManagementService governs internal domain escalation staging (Flow 2), caseworker
 review queues, officer audit logging, and citizen clarification resolution loops within
-AgriStack's Layer 4 Governance Engine. It injects SocialRegistryService (from src/services/dpi/)
+AgriStack's Layer 4 Governance Engine. It injects SocialRegistryService (from
+src/services/dpi/)
 strictly as an external DPI boundary client for OpenSPP synchronization.
 
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
@@ -27,13 +28,20 @@ logger = logging.getLogger(__name__)
 
 
 class CaseManagementService:
-    """Layer 4 orchestrator service governing caseworker incident review queues and adjudication.
+    """Service governing caseworker review ticket queues and manual adjudication workflows.
 
-    Maintains lifecycle state transitions for manual review tickets and adjudication
-    workflows for escalated claims.
+    Maintains incident review ticket staging, queue queries, and officer adjudication
+    determinations.
+
+    Operations:
+    - `stage_incident_ticket`: Enqueues an escalated `CaseworkerCaseReviewPayload` into the
+      staged cases ledger.
+    - `get_staged_case`: Retrieves a staged case review ticket by ticket ID.
+    - `process_officer_review`: Evaluates a `CaseworkerReviewOutcomePayload`, transitions
+      the case,
+      and returns a corresponding `GovernanceOutcomePayload`.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
-    See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 
     def __init__(self, social_service: SocialRegistryService | None = None) -> None:
@@ -111,7 +119,8 @@ class CaseManagementService:
 
         Args:
             escalation_case_id: Incident ticket ID (SPP-CASE-YYYY-XXXXXX).
-            citizen_clarification_text: Citizen text reply provided over conversational channel.
+            citizen_clarification_text: Citizen text reply provided over conversational
+            channel.
 
         Returns:
             True if the response was accepted and queued for re-review, False otherwise.

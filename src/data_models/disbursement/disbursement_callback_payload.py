@@ -12,9 +12,18 @@ from src.data_models.common import (
 
 
 class DisbursementCallbackPayload(StrictBaseModel):
-    """Asynchronous payment status callback from PFMS / NPCI / OpenSPP payment rails.
+    """Data model representing an asynchronous payment rail clearing callback.
+
+    Captures financial clearing status and banking references returned by national payment
+    gateways.
+
+    Invariants:
+    - `bank_reference_id` is mandatory across all statuses for audit reconciliation.
+    - `FAILED` and `RETURNED` statuses strictly require `failure_reason_code`.
+    - `SUCCESS` status strictly forbids `failure_reason_code`.
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.5)
+    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
     """
 
     disbursement_txn_id: DisbursementTxnId
@@ -42,7 +51,8 @@ class DisbursementCallbackPayload(StrictBaseModel):
         """Enforces mandatory failure justification when financial clearing fails or returns.
 
         Why require failure_reason_code?
-        When APBS or PFMS bank clearing fails (e.g., INVALID_IFSC or ACCOUNT_BLOCKED), the system
+        When APBS or PFMS bank clearing fails (e.g., INVALID_IFSC or ACCOUNT_BLOCKED), the
+        system
         must capture explicit error codes to trigger citizen re-notification and automated
         conversational correction loops without human caseworker intervention.
         """
@@ -65,7 +75,8 @@ class DisbursementCallbackPayload(StrictBaseModel):
 
         Why forbid failure_reason_code on SUCCESS?
         Successful transactions must not carry failure telemetry. The bank_reference_id is
-        required for all statuses (maintained at schema level) to ensure audit trail continuity
+        required for all statuses (maintained at schema level) to ensure audit trail
+        continuity
         across SUCCESS, FAILED, and RETURNED outcomes.
         """
         if (

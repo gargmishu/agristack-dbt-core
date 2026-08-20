@@ -4,7 +4,8 @@ Interfaces with national clearing rails (NPCI APBS / PFMS Treasury Gateway)
 for benefit disbursement.
 
 Why monotonic forward-only clearing state machine?
-Financial states move strictly forward (`PENDING` -> `INITIATED` -> `SUCCESS`/`FAILED`/`RETURNED`).
+Financial states move strictly forward (`PENDING` -> `INITIATED` ->
+`SUCCESS`/`FAILED`/`RETURNED`).
 Reversion is strictly forbidden to prevent double-payouts.
 
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.2 & 3.3)
@@ -26,11 +27,18 @@ logger = logging.getLogger(__name__)
 
 
 class PaymentRailService:
-    """Service abstraction for NPCI APBS / PFMS financial clearing and payout dispatch.
+    """Service client for Direct Benefit Transfer (DBT) payment rail clearing.
 
-    Manages asynchronous clearing wire transmissions (`disbursement_txn_id`) and status callbacks.
+    Dispatches automated payment clearing instructions and receives clearing status
+    callbacks.
+
+    Operations:
+    - `initiate_disbursement`: Sends payout instructions for approved governance outcomes
+      and
+      returns initial clearing status (`DisbursementCallbackPayload`).
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.4)
     """
 
     async def initiate_disbursement(

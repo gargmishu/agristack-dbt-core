@@ -40,7 +40,26 @@ MAX_REPROMPT_ATTEMPTS: Final[int] = 3
 
 @dataclass(frozen=True)
 class OrchestrationExecutionResult:
-    """Consolidated outcome returned by the Layer 4 Orchestrator State Machine."""
+    """Execution outcome returned by the Orchestrator State Machine.
+
+    Encapsulates session progress, governance outcome, extracted parameters, and optional
+    next steps.
+
+    Attributes:
+        session_id: Primary session tracking identifier.
+        application_intent: Classified citizen intent driving workflow routing.
+        governance_outcome: Governance adjudication verdict.
+        extracted_entities: Extracted domain parameter dictionary.
+        requires_reprompt: True if mandatory entity completeness failed and requires citizen
+        clarification.
+        reprompt_message: Clarification prompt message if reprompt is required.
+        disbursement_callback: Payment clearing callback receipt if automated payout was
+        initiated.
+        caseworker_ticket_id: Escalation ticket ID (`SPP-CASE-YYYY-XXXXXX`) if staged for
+        review.
+
+    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    """
 
     session_id: str
     application_intent: ApplicationIntent
@@ -53,14 +72,17 @@ class OrchestrationExecutionResult:
 
 
 class StateMachine:
-    """Deterministic state machine governing monotonic workflow transitions across 3 gates.
+    """State machine governing claim processing workflows across three execution gates.
 
-    Gate 1: Ingress & Structure Evaluation (ASR, NMT, & Structured Bypass)
-    Gate 2: Intake & Intent Validation (Entity Completeness & Re-prompt Loops)
-    Gate 3: Deterministic Governance Routing Matrix (Auto Payout vs Review vs Auto Reject)
+    Coordinates end-to-end processing across transcription, entity validation, and
+    governance routing:
+    - Gate 1 (Ingress & Structure): Manages audio transcription or structured input bypass.
+    - Gate 2 (Intake & Intent): Validates mandatory entity completeness and manages
+      re-prompt loops.
+    - Gate 3 (Governance Routing): Evaluates eligibility rules and routes to auto-payout,
+      review, or rejection.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
-    See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 
     def __init__(

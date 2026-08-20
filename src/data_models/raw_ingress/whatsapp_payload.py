@@ -14,14 +14,18 @@ from src.data_models.common import (
 
 
 class WhatsAppIngressPayload(StrictBaseModel):
-    """WhatsApp messaging carrier ingress payload (Layer 1 -> Layer 2).
+    """Data model representing a WhatsApp messaging ingress payload.
+
+    Captures incoming message content (text or voice note audio) and metadata from WhatsApp
+    webhooks.
+
+    Invariants:
+    - Enforces mutual exclusivity between audio fields (`audio_recording_url`,
+      `audio_duration_seconds`)
+      and text fields (`text_body`) based on `payload_type`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#whatsapp-ingress-payload
-
-    Note: channel_message_id is unique to WhatsApp (e.g. wamid). It is required for
-    async discrete message deduplication. IVR and USSD do not carry this field because
-    their interactions are bound 1:1 to session_id (continuous voice stream and transient
-    GSM signaling session, respectively).
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
     session_id: SessionId
@@ -53,9 +57,11 @@ class WhatsAppIngressPayload(StrictBaseModel):
         """Enforces mandatory voice parameters and excludes text when modality is AUDIO.
 
         Why strictly separate audio URLs from text messages?
-        Carrier webhooks must present a single unambiguous modality to Layer 2 canonicalization
+        Carrier webhooks must present a single unambiguous modality to Layer 2
+        canonicalization
         services. Requiring both signed audio recording URLs and voice note durations while
-        rejecting text bodies avoids multi-modal parsing complexity and prevents silent attribute
+        rejecting text bodies avoids multi-modal parsing complexity and prevents silent
+        attribute
         truncation during ASR audio transcription staging.
         """
         if self.payload_type.is_audio:
@@ -72,8 +78,10 @@ class WhatsAppIngressPayload(StrictBaseModel):
         """Enforces non-empty text body and excludes audio pointers when modality is TEXT.
 
         Why strictly exclude audio attributes on text webhooks?
-        Guaranteeing that text payloads carry zero acoustic references prevents edge connectors
-        from accidentally invoking expensive ASR translation workers on text interactions, ensuring
+        Guaranteeing that text payloads carry zero acoustic references prevents edge
+        connectors
+        from accidentally invoking expensive ASR translation workers on text interactions,
+        ensuring
         optimal CPU/GPU resource utilization and deterministic routing.
         """
         if self.payload_type.is_text:

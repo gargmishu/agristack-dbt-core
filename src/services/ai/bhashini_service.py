@@ -1,11 +1,13 @@
 """Foundational AI Block: Speech & Translation Service (Bhashini Abstraction).
 
 Abstracts ASR (Automatic Speech Recognition), NMT (Neural Machine Translation), and TTS
-(Text-to-Speech) capabilities for sovereign multi-lingual citizen engagement across Indic languages.
+(Text-to-Speech) capabilities for sovereign multi-lingual citizen engagement across Indic
+languages.
 
 Why abstract AI services behind interfaces?
 Model architectures and translation providers evolve rapidly. Decoupling the ingestion edge
-from specific translation services allows swapping backends without breaking Layer 3/4 contracts.
+from specific translation services allows swapping backends without breaking Layer 3/4
+contracts.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.5)
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
@@ -27,12 +29,19 @@ logger = logging.getLogger(__name__)
 
 
 class BhashiniService:
-    """Service abstraction for ASR transcription, NMT translation, and TTS synthesis.
+    """Service client for multi-lingual speech transcription, translation, and audio synthesis.
 
-    Provides multi-lingual voice and text processing for Indian regional languages
-    (Hindi, Tamil, Telugu, Kannada, Marathi, Punjabi, Gujarati, etc.).
+    Provides multi-lingual voice and text processing across Indian regional language
+    locales:
+    - Audio Transcription (`transcribe_audio`): Transcribes audio recordings into vernacular
+      Indic text.
+    - Text Translation (`translate_text`): Translates regional language text into canonical
+      English representations.
+    - Speech Synthesis (`synthesize_speech`): Generates audio stream URLs for synthesized
+      vernacular text.
 
-    See: decisions/step2.0_canonical_domain_schemas.md
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 3.2)
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
     """
 
     async def transcribe_audio(self, audio_url: str, language_locale: str) -> str:

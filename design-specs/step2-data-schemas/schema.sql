@@ -90,7 +90,7 @@ CREATE TABLE application_governance_ledger (
     evaluated_at TIMESTAMPTZ,
     disbursement_status disbursement_status_enum,
     governance_metadata JSONB DEFAULT '{}'::jsonb,
-    
+
     -- Safety Nets: JSONB Type Constraints
     CONSTRAINT chk_approval_amount_type CHECK (
         governance_metadata->'approval_amount' IS NULL OR jsonb_typeof(governance_metadata->'approval_amount') = 'number'
@@ -98,7 +98,7 @@ CREATE TABLE application_governance_ledger (
     CONSTRAINT chk_rejection_reason_type CHECK (
         governance_metadata->'rejection_reason' IS NULL OR jsonb_typeof(governance_metadata->'rejection_reason') = 'string'
     ),
-    
+
     -- Business Logic: Terminal Decision Constraints
     CONSTRAINT chk_approval_requires_amount CHECK (
         governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE') OR (governance_metadata ? 'approval_amount')
@@ -139,12 +139,12 @@ CREATE TABLE consent_registry (
     revocation_reason revocation_reason_enum,
     -- Ensure exactly one token type is provided
     CONSTRAINT chk_one_token_provided CHECK (
-        (tokenized_phone_hash IS NOT NULL AND tokenized_identity_hash IS NULL) 
+        (tokenized_phone_hash IS NOT NULL AND tokenized_identity_hash IS NULL)
         OR (tokenized_phone_hash IS NULL AND tokenized_identity_hash IS NOT NULL)
     ),
     -- Revocation reason only valid if revoked_at is set
     CONSTRAINT chk_revocation_consistency CHECK (
-        (revoked_at IS NOT NULL AND revocation_reason IS NOT NULL) 
+        (revoked_at IS NOT NULL AND revocation_reason IS NOT NULL)
         OR (revoked_at IS NULL AND revocation_reason IS NULL)
     )
 );
@@ -174,33 +174,33 @@ CREATE TABLE consent_registry (
 -- ==============================================================================
 
 -- Drop-off Prevention / Chatbot Session Resume (Partial Index)
-CREATE INDEX idx_active_session_resume 
-ON session_telemetry_log (tokenized_phone_hash, created_at DESC) 
+CREATE INDEX idx_active_session_resume
+ON session_telemetry_log (tokenized_phone_hash, created_at DESC)
 WHERE session_status = 'ACTIVE';
 
 -- Analytics Deduplication
-CREATE INDEX idx_session_extraction_session_attempt 
+CREATE INDEX idx_session_extraction_session_attempt
 ON session_extraction_details (session_id, attempt_id DESC);
 
 -- Operational Visibility / Funnel Joins
-CREATE INDEX idx_application_governance_session 
+CREATE INDEX idx_application_governance_session
 ON application_governance_ledger (session_id, evaluated_at DESC);
 
 -- Double-Dipping Fraud Prevention / Status API
-CREATE INDEX idx_governance_identity_lookup 
+CREATE INDEX idx_governance_identity_lookup
 ON application_governance_ledger (tokenized_identity_hash, evaluated_at DESC);
 
 -- SLA Time-in-State Tracking
-CREATE INDEX idx_governance_history_claim_time 
+CREATE INDEX idx_governance_history_claim_time
 ON application_governance_ledger_history (claim_id, changed_at DESC);
 
 
 -- Index for checking active consent (not expired, not explicitly revoked)
-CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at) 
+CREATE INDEX idx_consent_active ON consent_registry (tokenized_phone_hash, tokenized_identity_hash, expires_at, revoked_at)
 WHERE revoked_at IS NULL AND expires_at > NOW();
 
 -- Index for token-based consent lookups
-CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash) 
+CREATE INDEX idx_consent_identity ON consent_registry (tokenized_identity_hash)
 WHERE tokenized_identity_hash IS NOT NULL;
 
 -- ==============================================================================
@@ -219,7 +219,7 @@ BEGIN
         changed_at
     ) VALUES (
         NEW.claim_id,
-        OLD.application_status, 
+        OLD.application_status,
         NEW.application_status,
         NEW.governance_action,
         COALESCE(NEW.governance_metadata->>'reviewer_id', 'SYSTEM:DEFAULT'),
@@ -248,13 +248,13 @@ EXECUTE FUNCTION log_governance_ledger_history();
 
 -- 5.1 Deduplication Filter
 CREATE OR REPLACE VIEW staging_committed_extractions AS
-SELECT * 
-FROM session_extraction_details 
+SELECT *
+FROM session_extraction_details
 WHERE processing_state = 'COMMITTED';
 
 -- 5.2 JSON Unpacking (Schema Contract)
 CREATE OR REPLACE VIEW staging_flattened_governance_ledger AS
-SELECT 
+SELECT
     claim_id,
     session_id,
     payload_id,
@@ -275,7 +275,7 @@ FROM application_governance_ledger;
 
 -- 5.3 The Unified Dashboard View (OBT)
 CREATE OR REPLACE VIEW citizen_journey_funnel AS
-SELECT 
+SELECT
     t.session_id,
     t.tokenized_phone_hash,
     t.ingress_channel,
@@ -299,20 +299,20 @@ SELECT
     g.fraud_flag_code,
     g.disbursement_txn_id
 FROM session_telemetry_log t
-LEFT JOIN staging_committed_extractions e 
+LEFT JOIN staging_committed_extractions e
     ON t.session_id = e.session_id
-LEFT JOIN staging_flattened_governance_ledger g 
+LEFT JOIN staging_flattened_governance_ledger g
     ON e.payload_id = g.payload_id;
 
 -- 5.4 Active Consent Status (Consent is valid if: granted, not revoked, and expires_at is in future or NULL while session active)
 CREATE OR REPLACE VIEW active_consent_registry AS
-SELECT 
+SELECT
     cr.*,
     st.session_status,
-    CASE 
-        WHEN cr.consent_status = 'GRANTED' 
-        AND cr.revoked_at IS NULL 
-        AND (cr.expires_at > NOW() OR (cr.expires_at IS NULL AND st.session_status = 'ACTIVE')) 
+    CASE
+        WHEN cr.consent_status = 'GRANTED'
+        AND cr.revoked_at IS NULL
+        AND (cr.expires_at > NOW() OR (cr.expires_at IS NULL AND st.session_status = 'ACTIVE'))
         THEN TRUE
         ELSE FALSE
     END AS is_consent_active

@@ -1,7 +1,9 @@
 """Foundational AI Block: Small Language Model (SLM) Structured Entity Extractor.
 
-Abstracts sovereign, in-memory structured entity extraction pipeline for Layer 3/4 processing.
-Extracts domain parameters (district, taluka, village, crop_name, survey_number) and computes
+Abstracts sovereign, in-memory structured entity extraction pipeline for Layer 3/4
+processing.
+Extracts domain parameters (district, taluka, village, crop_name, survey_number) and
+computes
 AI extraction confidence scores.
 
 Why local sovereign SLM models?
@@ -27,12 +29,20 @@ logger = logging.getLogger(__name__)
 
 
 class SlmExtractor:
-    """Service abstraction for structured entity extraction from citizen text input.
+    """Service client for structured domain entity extraction from natural language text.
 
-    Uses zero-shot/few-shot NLU prompts to convert unstructured regional language text
-    into typed domain parameters keyed by DomainEntityKey.
+    Converts natural language input strings into typed domain parameter dictionaries keyed
+    by `DomainEntityKey`.
 
-    See: decisions/step2.0_canonical_domain_schemas.md
+    Capabilities:
+    - Entity Extraction (`extract_entities`): Extracts parameters (e.g. crop name, land
+      size, survey number)
+      and computes an extraction confidence score.
+    - Adversarial Defense: Flags inputs containing prompt injection patterns
+      (`is_adversarial_attempt=True`).
+
+    See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
     """
 
     async def extract_entities(

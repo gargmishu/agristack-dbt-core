@@ -11,9 +11,16 @@ import time
 
 
 class RateLimiter:
-    """Token bucket rate limiter tracking requests per identifier/channel.
+    """Token bucket rate limiter tracking requests per identifier or communication channel.
 
-    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    Enforces request quotas and burst allowances to prevent high-frequency request floods.
+
+    Configuration & Behavior:
+    - Refill Rate (`rate_per_minute`): Number of tokens added to the bucket per minute.
+    - Burst Capacity (`capacity`): Maximum token bucket capacity for transient bursts.
+    - Enforcement (`check_rate_limit`): Evaluates and consumes tokens using monotonic time.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 4.1)
     """
 
     def __init__(self, rate_per_minute: int = 60, capacity: int = 10) -> None:

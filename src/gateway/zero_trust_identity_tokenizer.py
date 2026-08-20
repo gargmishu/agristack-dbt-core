@@ -1,7 +1,8 @@
 """Layer 2 Zero-Trust Identity Tokenizer (Layer 2 Privacy Boundary).
 
 Performs one-way SHA-256 HMAC tokenization of citizen identifiers (MSISDN, Aadhaar UID)
-in volatile RAM, guaranteeing that cleartext PII never touches disk storage or database ledgers.
+in volatile RAM, guaranteeing that cleartext PII never touches disk storage or database
+ledgers.
 
 See: decisions/step0.3_zero_trust_tokenization.md
 """
@@ -13,7 +14,20 @@ from typing import Final
 
 
 class ZeroTrustIdentityTokenizer:
-    """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance."""
+    """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance.
+
+    Computes deterministic, non-reversible pseudonymous tokens from raw citizen identifiers
+    (MSISDN phone numbers, UIDAI Aadhaar tokens, Farmer IDs) using a secret pepper.
+
+    Guarantees:
+    - Stateless in-memory hashing without disk persistence of raw citizen identifiers.
+    - Produces consistent 64-character lowercase hexadecimal SHA-256 digests
+      (`HmacCitizenToken`).
+    - Mandates a non-empty `pepper_key` during initialization.
+
+    See: decisions/step0.3_zero_trust_tokenization.md
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    """
 
     _DEFAULT_PEPPER_ENV_VAR: Final[str] = "AGRISTACK_PEPPER_SECRET"
 
@@ -37,7 +51,8 @@ class ZeroTrustIdentityTokenizer:
         """Tokenizes raw citizen ID (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.
 
         Args:
-            raw_identifier: Cleartext identity string (e.g. "+919876543210" or Aadhaar number).
+            raw_identifier: Cleartext identity string (e.g. "+919876543210" or Aadhaar
+            number).
 
         Returns:
             64-character lowercase hex HMAC-SHA256 digest string.

@@ -66,9 +66,9 @@
         "properties": {
           "log_entry_id": { "type": "string", "description": "Unique UUID primary tracking key generated for every system mutation event." },
           "session_id": { "type": "string" },
-          "actor_id": { 
-            "type": "string", 
-            "enum": ["SYSTEM_CORE", "AI_INFERENCE_ENGINE", "AGRISTACK_API_GATEWAY", "BENEFITS_REGISTRY_SYSTEM", "TREASURY_PAYMENT_RAIL", "DISTRICT_OFFICER_HITL"] 
+          "actor_id": {
+            "type": "string",
+            "enum": ["SYSTEM_CORE", "AI_INFERENCE_ENGINE", "AGRISTACK_API_GATEWAY", "BENEFITS_REGISTRY_SYSTEM", "TREASURY_PAYMENT_RAIL", "DISTRICT_OFFICER_HITL"]
           },
           "timestamp_utc": { "type": "string" },
           "action_executed": { "type": "string" },

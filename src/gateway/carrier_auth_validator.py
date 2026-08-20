@@ -16,7 +16,19 @@ from typing import Final
 class CarrierAuthValidator:
     """Security validator enforcing cryptographic signature & token verification for webhooks.
 
-    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    Validates transport authenticity across incoming carrier webhooks using timing-safe
+    comparisons:
+    1. Meta WhatsApp Webhooks: Verifies `X-Hub-Signature-256` SHA-256 HMAC digest against
+       app secret.
+    2. Bearer Tokens: Verifies Bearer tokens presented in the `Authorization` header.
+
+    Security Guarantees:
+    - Constant-Time Comparison: Employs `secrets.compare_digest` across all signature and
+      token checks
+      to prevent timing side-channel attack vectors.
+    - Fail-Closed: Missing headers, invalid formatting, or mismatched digests fail closed.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 2)
     """
 
     _SIGNATURE_PREFIX: Final[str] = "sha256="
@@ -33,8 +45,10 @@ class CarrierAuthValidator:
 
         Args:
             payload_bytes: Raw HTTP request body bytes.
-            signature_header: Raw 'X-Hub-Signature-256' header string (e.g., 'sha256=abcdef...').
-            app_secret: Meta Application Secret key (provided via the Meta Developers Dashboard).
+            signature_header: Raw 'X-Hub-Signature-256' header string (e.g.,
+            'sha256=abcdef...').
+            app_secret: Meta Application Secret key (provided via the Meta Developers
+            Dashboard).
 
         Returns:
             True if signature matches, False otherwise.

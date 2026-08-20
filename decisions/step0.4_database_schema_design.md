@@ -96,7 +96,7 @@ To ensure strict data integrity and predictable routing, the following native Po
 #### Telemetry & Extraction Enums
 *   **`ingress_channel_type`**: `WHATSAPP`, `IVR_VOICE`, `USSD`
 *   **`session_status_enum`**: `ACTIVE`, `PENDING`, `COMPLETED`, `ABANDONED`, `TIMEOUT`
-*   **`processing_state_enum`**: 
+*   **`processing_state_enum`**:
     *   `STAGED` (Initial NLP extraction pending confirmation)
     *   `SUPERSEDED` (User corrected the AI; old payload is archived)
     *   `COMMITTED` (Final accepted extraction used for the claim)
@@ -128,7 +128,7 @@ While `governance_metadata` is a flexible `JSONB` column, we enforce strict payl
 
 ### 2.4. State Machine Mapping: Application Status vs. Governance Decision
 
-**Note on State Relationship:** `application_status` and `governance_action` work in tandem but serve different purposes. `application_status` tracks *where* the claim is in its lifecycle, while `governance_action` tracks *what action* was taken to move it there. 
+**Note on State Relationship:** `application_status` and `governance_action` work in tandem but serve different purposes. `application_status` tracks *where* the claim is in its lifecycle, while `governance_action` tracks *what action* was taken to move it there.
 
 #### Bidirectional Flow Mapping
 
@@ -163,7 +163,7 @@ Indexes were designed based on expected query access patterns from real-time API
      - **`TIMEOUT` (Stale Context):** A timeout occurs when a user exceeds the allowable response window. If the bot asks a question and the citizen replies days later, the context is entirely stale. Ignoring this state forces a hard reset (a fresh session), preventing the bot from misinterpreting a new message as an out-of-context answer to an old question.
      - **`ABANDONED` (Explicit User Intent):** This state triggers when a user explicitly opts out of the current flow (e.g., texting "Cancel" or "Stop"). Resuming an abandoned session violates the user's explicit command to kill the process. Ignoring it ensures their next message starts with a clean slate.
      - **`PENDING` (System Lock):** Unlike the terminal states, `PENDING` is a transitional state indicating the session is waiting on an asynchronous system action (e.g., waiting for an OTP to generate or a rate-limit to clear). The bot is not ready to process unstructured text yet. The resume index ignores it until the backend bottleneck clears and safely transitions it to `ACTIVE`.
-     - **Performance Impact:** 
+     - **Performance Impact:**
          - **Massive Space Savings (Storage):** The index footprint shrinks by 99% because historical sessions are excluded.
          - **Zero Write Overhead for Terminal States (Write Impact):** When a session transitions to `COMPLETED`, Postgres removes it from the index tree. This prevents database bloat and ensures `INSERT` and `UPDATE` operations remain fast over time.
          - **Lightning Fast Retrieval (Read Impact):** By completely ignoring 99% of a user's historical conversational rows, the database returns the single live thread in milliseconds, which is critical for real-time chatbot responsiveness.
@@ -180,8 +180,8 @@ Indexes were designed based on expected query access patterns from real-time API
 4. **`idx_governance_identity_lookup` (`tokenized_identity_hash`, `evaluated_at DESC`)**
    - *Table:* **application_governance_ledger**
    - *Business Reason:* **Fraud Prevention & Customer Service.** Strictly prevents "double-dipping" by ensuring a single citizen cannot receive duplicate payouts in the same season, while also allowing the chatbot to instantly answer the most common support question: "What is the status of my claim?"
-   - *Technical Rationale:* The primary lookup vector for fraud validation and real-time API status checks. 
-   - *Performance Impact:* 
+   - *Technical Rationale:* The primary lookup vector for fraud validation and real-time API status checks.
+   - *Performance Impact:*
      - **Fraud Prevention:** Before the rules engine processes a new extraction, it must query `tokenized_identity_hash` to ensure the citizen hasn't already received an `AUTO_APPROVE` payout this season (Double-dipping prevention).
      - **Status API:** Allows the real-time chatbot to execute sub-second lookups when a citizen asks "What is the status of my claim?" without scanning the entire governance ledger.
 5. **`idx_governance_history_claim_time` (`claim_id`, `changed_at DESC`)**
@@ -209,7 +209,7 @@ In accordance with DBT best practices, we utilize views to handle JSON unpacking
 
 ### 4.2. `staging_flattened_governance_ledger` (JSON Unpacking)
 - *Business Reason:* **Self-Serve Analytics.** Empowers non-technical business analysts and product managers to easily build their own reports (e.g., summing up total approval amounts or graphing top rejection reasons) in tools like Tableau or PowerBI, without needing a data engineer to write complex JSON SQL queries for them.
-- *Technical Rationale:* While `JSONB` provides engineering flexibility for sparse metadata, BI tools and data analysts struggle to query nested JSON natively. 
+- *Technical Rationale:* While `JSONB` provides engineering flexibility for sparse metadata, BI tools and data analysts struggle to query nested JSON natively.
 - *Implementation:* This view unpacks the `governance_metadata` column into strongly typed, top-level relational columns (e.g., `(governance_metadata->>'approval_amount')::numeric AS approval_amount`). This abstracts the JSON complexity within the data warehouse, presenting a traditional flat table to downstream consumers.
   - **Schema Contract:** This view intentionally acts as a gatekeeper. If backend engineers dynamically add new keys to the `JSONB` payload, they will not automatically appear in downstream BI tools until a data engineer explicitly maps them in this view. This protects dashboards from breaking due to unexpected schema changes while preserving backend agility.
 
@@ -237,7 +237,7 @@ In accordance with DBT best practices, we utilize views to handle JSON unpacking
     *   *Cons:* Lack of native type enforcement and a larger storage footprint.
 
 **Decision: The Hybrid Approach**
-We elected to store core routing state fields (`governance_action`, `application_status`) as standard relational columns, while storing all variable edge-case data in a unified `governance_metadata JSONB` column. 
+We elected to store core routing state fields (`governance_action`, `application_status`) as standard relational columns, while storing all variable edge-case data in a unified `governance_metadata JSONB` column.
 
 **Rationale:**
 *   **Operational Agility:** The policy team can dynamically introduce new metadata keys without database migrations or downtime.
@@ -245,7 +245,7 @@ We elected to store core routing state fields (`governance_action`, `application
 
 ### Decision 5.2: Single v/s Split JSONB for approval/rejection metadata
 **Context:** Now that we established using JSONB for sparse data, we evaluated whether to split this into distinct JSONB columns based on state (e.g., `approval_metadata JSONB` and `rejection_metadata JSONB`).
-**Decision:** We elected to store all sparse variables in a single, unified `governance_metadata JSONB` column. 
+**Decision:** We elected to store all sparse variables in a single, unified `governance_metadata JSONB` column.
 **Rationale:**
 *   **Avoiding the "NULL Matrix":** Splitting columns by state guarantees empty, dead columns for every row. Furthermore, other states like `UNDER_REVIEW` (which tracks `reviewer_id`) or `DRAFT` (which tracks `missing_info`) would require even more column splits, leading to severe schema bloat.
 *   **Downstream Analytics (DBT) Ergonomics:** A single column allows data engineers to query `governance_metadata` directly. Splitting columns would force analysts to write complex `COALESCE(approval_metadata, rejection_metadata, ...)` logic in every staging model to find the relevant payload.
@@ -266,7 +266,7 @@ We elected to store core routing state fields (`governance_action`, `application
 
 ### Decision 5.5: Storing Core Routing Logic as Native Enums vs. VARCHARs
 **Context:** The system needs strict guarantees around valid states for routing (`governance_action`), application lifecycle (`application_status`), telemetry phases (`session_status`), and financial clearing (`disbursement_status`).
-**Decision:** We chose to implement all state-machine fields as native Postgres `ENUM` types rather than `VARCHAR` columns with `CHECK` constraints. 
+**Decision:** We chose to implement all state-machine fields as native Postgres `ENUM` types rather than `VARCHAR` columns with `CHECK` constraints.
 **Rationale:** While `VARCHAR` is more portable across different SQL dialects, native Postgres `ENUM`s provide superior type safety, occupy far less disk space (4 bytes vs text length), and ensure clean application-layer integration by mapping perfectly to strict Pydantic or SQLAlchemy enum classes.
 
 ### Decision 5.6: Leaving `rejection_reason` as a Flexible String

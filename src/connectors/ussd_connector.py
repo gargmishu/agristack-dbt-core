@@ -2,8 +2,11 @@
 
 See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
 
-Processes incoming Unstructured Supplementary Service Data (USSD) Signaling System No. 7 (SS7) /
-Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortcode patterns and
+Processes incoming Unstructured Supplementary Service Data (USSD) Signaling System No. 7
+(SS7)
+/
+Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortcode patterns
+and
 concatenated user digit selections.
 """
 
@@ -20,7 +23,28 @@ logger = logging.getLogger(__name__)
 
 
 class UssdConnector:
-    """Processes USSD menu signaling codes and passes canonical ingress payload."""
+    """Cellular signaling edge connector interfacing with SS7/SIGTRAN USSD gateways.
+
+    Provides validation for incoming USSD menu signaling frames and dispatch for outbound
+    response strings.
+
+    Core Capabilities:
+    - Ingress Validation (`process_ussd_session`): Validates incoming USSD signaling
+      mappings into
+      `UssdIngressPayload` instances, verifying shortcode patterns, session identifiers, and
+      user digit selections.
+    - Egress Dispatch (`send_outbound_notification`): Dispatches plain-text response strings
+      (`OutboundNotificationPayload` capped at 160 characters) to the carrier gateway and
+      returns
+      an authoritative `TransmissionAck` receipt.
+
+    Attributes:
+        interface_id: Configured identifier of the target USSD gateway interface.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
+    """
 
     def __init__(self, interface_id: str | None = None) -> None:
         """Initializes UssdConnector with SS7/SIGTRAN carrier interface identifier.

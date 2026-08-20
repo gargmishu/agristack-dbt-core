@@ -41,7 +41,22 @@ DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
 
 @dataclass(frozen=True)
 class ClaimEvaluationContext:
-    """Context container for Gate 3 governance claim evaluation."""
+    """Context container for governance claim eligibility evaluation.
+
+    Encapsulates citizen parameters, extracted entities, active season, and approved payout
+    ledger records.
+
+    Attributes:
+        session_id: Primary session tracking identifier.
+        payload_id: Extraction payload tracking identifier.
+        tokenized_citizen_id: 64-character SHA-256 HMAC citizen identity token.
+        extracted_payload: Extracted entity payload containing intent and domain entities.
+        active_season: Agricultural crop season identifier (e.g. 'KHARIF-2026').
+        approved_payouts_ledger: Set of (tokenized_citizen_id, season) tuples tracking prior
+        disbursements.
+
+    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+    """
 
     session_id: str
     payload_id: str
@@ -54,12 +69,19 @@ class ClaimEvaluationContext:
 class GovernanceRouter:
     """Evaluates governance decision matrix based on confidence and registry eligibility.
 
-    Decouples governance adjudication from financial execution by assigning an idempotent
-    disbursement transaction key (`disbursement_txn_id`) and status `PENDING` upon approval,
-    enabling asynchronous clearing over sovereign payment rails.
+    Coordinates eligibility verification across sovereign identity and land registry
+    clients,
+    generating authoritative `GovernanceOutcomePayload` determinations.
+
+    Decision Rules:
+    - Auto-Approval (`AUTO_APPROVE`): High confidence (>= 0.85), verified identity, eligible
+      land parcel,
+      and no prior claim in the active season.
+    - Escalation (`ROUTE_FOR_MANUAL_REVIEW`): Moderate confidence (0.60 to 0.84) or
+      unverified registry records.
+    - Rejection (`AUTO_REJECT`): Duplicate active-season claim or land record ineligibility.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
-    See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 
     def __init__(

@@ -2,7 +2,7 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
 
 ```text
                [ LAYER 1: USER ACTION & CHANNELS ]
-  
+
      📱 Smartphone         📞 Feature Phone        📵 Basic Phone
    ([ACTION] Voice Note)  ([ACTION] Voice Call) ([ACTION] USSD Menu)
             |                     |                      |
@@ -33,7 +33,7 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
                 \                 |                  /
                  \                v                 /
                   +--------------------------------+
-                  | [ACTION] Public Agent Intake   | 
+                  | [ACTION] Public Agent Intake   |
                   | API Receives Standardized JSON |
                   +--------------------------------+
                                   |

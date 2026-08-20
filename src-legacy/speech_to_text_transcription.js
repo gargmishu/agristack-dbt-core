@@ -27,10 +27,10 @@ return {
     },
     groq_config: {
       model: "whisper-large-v3",
-      language: "hi", 
+      language: "hi",
       response_format: "json"
     }
   },
   // Forward the binary file array ('data') downstream to Groq
-  binary: $input.item.binary 
+  binary: $input.item.binary
 };

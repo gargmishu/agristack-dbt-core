@@ -13,6 +13,8 @@ from src.data_models.common.field_types import (
 
 
 class DummyValidatorModel(StrictBaseModel):
+    """Test model used to verify common field types and custom validators."""
+
     session_id: SessionId
     phone: PhoneNumberE164
     hmac_token: HmacCitizenToken

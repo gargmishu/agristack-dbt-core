@@ -12,16 +12,16 @@ from src.data_models.common import (
 
 
 class CaseworkerReviewOutcomePayload(StrictBaseModel):
-    """Review outcome submitted by a human caseworker/officer reviewing an escalated case.
+    """Data model representing an adjudication decision submitted by a human caseworker.
 
-    This contract represents the authoritative adjudication outcome rendered by an officer on the
-    Caseworker Review Dashboard. It governs human-in-the-loop resolutions for complex claims that
+    Encapsulates the officer's determination, financial allowances, rejection reasons, and
+    audit notes. It governs human-in-the-loop resolutions for complex claims that
     exceeded automated confidence thresholds or triggered policy escalation gates.
 
-    To preserve strict system auditability and financial clearing invariants, this schema enforces
-    a rigorous state matrix: positive financial allowances are mandatory for approvals and forbidden
-    otherwise, rejection justifications are mandatory for rejections and forbidden otherwise, and
-    intermediate clarification requests strictly exclude both terminal attributes.
+    Invariants:
+    - `MANUAL_APPROVE`: Requires `approved_amount > 0.0` and forbids `rejection_reason`.
+    - `MANUAL_REJECT`: Requires `rejection_reason` and forbids `approved_amount`.
+    - `REQUEST_MORE_INFO`: Forbids both `approved_amount` and `rejection_reason`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#442-caseworker-review-decision-payload
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
@@ -56,10 +56,14 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         """Enforces allowed manual review actions and non-empty caseworker audit justification.
 
         Why restrict action types and enforce non-empty review_notes?
-        Automated actions (e.g. AUTO_APPROVE or AUTOMATED_PAYOUT) are strictly forbidden within
-        caseworker payloads to prevent automated system spoofing through administrative portals.
-        Furthermore, national welfare audit regulations require every human adjudication to carry
-        an immutable, meaningful textual justification (`review_notes`) in the governance ledger.
+        Automated actions (e.g. AUTO_APPROVE or AUTOMATED_PAYOUT) are strictly forbidden
+        within
+        caseworker payloads to prevent automated system spoofing through administrative
+        portals.
+        Furthermore, national welfare audit regulations require every human adjudication to
+        carry
+        an immutable, meaningful textual justification (`review_notes`) in the governance
+        ledger.
         """
         allowed_actions = {
             GovernanceAction.MANUAL_APPROVE,
@@ -80,8 +84,10 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
 
         Why enforce approved_amount > 0.0 and reject rejection_reason?
         Under financial clearing invariants, a manual approval without a positive financial
-        allowance cannot be cleared over NPCI/PFMS banking rails. Simultaneously, retaining any
-        legacy or accidental rejection text on an approved claim violates state integrity and
+        allowance cannot be cleared over NPCI/PFMS banking rails. Simultaneously, retaining
+        any
+        legacy or accidental rejection text on an approved claim violates state integrity
+        and
         pollutes downstream audit records.
         """
         if self.governance_action == GovernanceAction.MANUAL_APPROVE:
@@ -96,8 +102,10 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         """Enforces mandatory rejection justification and forbids approved amount on rejection.
 
         Why mandate rejection_reason and forbid approved_amount?
-        Under citizen transparency mandates, every negative determination requires an explicit,
-        legally defensible rejection reason to support citizen appeal workflows. Permitting a
+        Under citizen transparency mandates, every negative determination requires an
+        explicit,
+        legally defensible rejection reason to support citizen appeal workflows. Permitting
+        a
         financial allowance on a rejected case violates financial clearing rules.
         """
         if self.governance_action == GovernanceAction.MANUAL_REJECT:
@@ -112,9 +120,11 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         """Forbids both financial amount and rejection reason when requesting more info.
 
         Why exclude terminal attributes during information clarification requests?
-        Requesting more information (`REQUEST_MORE_INFO`) transitions the claim into an intermediate
+        Requesting more information (`REQUEST_MORE_INFO`) transitions the claim into an
+        intermediate
         conversational loop. Assigning a payout or rejection verdict would prematurely bias
-        and corrupt subsequent automated re-evaluation passes once the citizen submits new data.
+        and corrupt subsequent automated re-evaluation passes once the citizen submits new
+        data.
         """
         if self.governance_action == GovernanceAction.REQUEST_MORE_INFO:
             if self.approved_amount is not None:

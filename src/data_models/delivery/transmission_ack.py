@@ -14,7 +14,13 @@ from src.data_models.common import (
 
 
 class TransmissionAck(StrictBaseModel):
-    """Authoritative carrier transmission wire receipt."""
+    """Data model representing an authoritative carrier transmission wire receipt.
+
+    Captures transport acknowledgment telemetry returned upon dispatching an outbound
+    notification.
+    
+    See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
+    """
 
     interface_id: str = Field(
         ...,

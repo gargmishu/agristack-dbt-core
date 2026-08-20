@@ -5,6 +5,8 @@ from src.data_models.common.base import StrictBaseModel
 
 
 class SampleModel(StrictBaseModel):
+    """Test model used to verify StrictBaseModel whitespace stripping and immutability."""
+
     name: str
     age: int
 

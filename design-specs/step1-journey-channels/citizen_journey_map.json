@@ -62,9 +62,9 @@
             "type": "string",
             "description": "Populated strictly if ingress_channel == IVR_VOICE. Contains the persistent real-time streaming protocol endpoint (e.g., rtp:// URI) capturing live acoustic telephony bytes for downstream ASR consumption."
           },
-          "whatsapp_cleartext_string": { 
-            "type": "string", 
-            "description": "Populated strictly if ingress_channel == WHATSAPP. Contains the cleartext incoming message payload." 
+          "whatsapp_cleartext_string": {
+            "type": "string",
+            "description": "Populated strictly if ingress_channel == WHATSAPP. Contains the cleartext incoming message payload."
           },
           "ussd_collected_payload": {
             "type": "object",
@@ -326,8 +326,8 @@
         "type": "object",
         "properties": {
           "identity_verified": { "type": "boolean", "description": "True if the national identity provider authenticates the citizen record successfully." },
-          "tokenized_identity_hash": { 
-            "type": "string", 
+          "tokenized_identity_hash": {
+            "type": "string",
             "description": "Irreversible 64-character SHA-256 system token hash substituting the cleartext identification numbers at the edge perimeter.",
             "##_rationale": "Guarantees complete legal alignment with global data protection laws and the India DPDP Act 2023 by preventing cleartext identity leakages down backend tables."
           }
@@ -402,7 +402,7 @@
       "input_contract": {
         "type": "object",
         "properties": {
-          "verification_result": { 
+          "verification_result": {
             "type": "boolean",
             "description": "Consumes the successful registry alignment flag passed down from the prior verification step."
           }
@@ -435,16 +435,16 @@
       "input_contract": {
         "type": "object",
         "properties": {
-          "llm_confidence_score": { 
-            "type": "number", 
-            "minimum": 0.0, 
-            "maximum": 1.0, 
+          "llm_confidence_score": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
             "description": "Evaluated model extraction value passed down directly from the step_04 output payload.",
             "##_rationale": "Defaults to 1.0 for deterministic USSD sessions because menu inputs run on a strict fixed numeric system tree with zero translation or voice acoustic risks."
           },
-          "registry_match_flag": { 
-            "type": "boolean", 
-            "description": "Sovereign data matching verification flag passed down directly from the step_06 output database contract." 
+          "registry_match_flag": {
+            "type": "boolean",
+            "description": "Sovereign data matching verification flag passed down directly from the step_06 output database contract."
           }
         },
         "required": ["llm_confidence_score", "registry_match_flag"],
@@ -565,9 +565,9 @@
       "output_contract": {
         "type": "object",
         "properties": {
-          "escalation_case_id": { 
-            "type": "string", 
-            "description": "Cryptographically signed state tracking index token mapping to the open manual case record." 
+          "escalation_case_id": {
+            "type": "string",
+            "description": "Cryptographically signed state tracking index token mapping to the open manual case record."
           },
           "caseworker_assignment_status": { "type": "string", "enum": ["TICKET_QUEUED", "STAGING_FAILED"] }
         },

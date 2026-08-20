@@ -11,9 +11,18 @@ from src.data_models.common import (
 
 
 class ExtractedEntityPayload(StrictBaseModel):
-    """SLM structured entity extraction payload (Layer 3 -> Layer 4).
+    """Data model representing structured entities extracted from citizen interactions.
+
+    Encapsulates parsed application intent, domain entity parameters, and AI confidence
+    score.
+
+    Invariants:
+    - If `is_adversarial_attempt` is True, `domain_entities` is automatically reset to `{}`
+      and `ai_confidence_score` is forced to `0.0`.
+    - If `is_structured_menu_bypass` is True, `ai_confidence_score` defaults to 1.0.
 
     See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
     application_intent: ApplicationIntent
@@ -32,9 +41,12 @@ class ExtractedEntityPayload(StrictBaseModel):
         """Enforces confidence zeroing and entity wipe when adversarial attempt is flagged.
 
         Why object.__setattr__?
-        StrictBaseModel is immutable (frozen=True) to prevent accidental mutation during pipeline
-        execution. When a prompt-injection attack is flagged, we must forcefully override the
-        LLM/SLM output by zeroing confidence score (0.0) and wiping extracted entities to prevent
+        StrictBaseModel is immutable (frozen=True) to prevent accidental mutation during
+        pipeline
+        execution. When a prompt-injection attack is flagged, we must forcefully override
+        the
+        LLM/SLM output by zeroing confidence score (0.0) and wiping extracted entities to
+        prevent
         hallucinated or injected parameters from contaminating downstream governance rules.
         """
         if self.is_adversarial_attempt:

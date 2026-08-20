@@ -22,10 +22,10 @@ for wf_file in "$WORKFLOW_DIR"/*.json; do
         for js_file in "$SRC_DIR"/*; do
             if [ -f "$js_file" ]; then
                 node_name=$(basename "$js_file")
-                
+
                 echo "   📦 Compiling logic for: [$node_name]"
                 js_content=$(jq -Rs . "$js_file")
-                
+
                 jq --arg name "$node_name" --arg code "$js_content" \
                   'walk(if type == "object" and .name == $name and has("parameters") then .parameters.jsCode = ($code | fromjson) else . end)' \
                   "$wf_file" > "$wf_file.tmp" && mv "$wf_file.tmp" "$wf_file"
@@ -38,11 +38,11 @@ done
 if [ -n "$(ls -A "$WORKFLOW_DIR"/*.json 2>/dev/null)" ]; then
     for json_file in "$WORKFLOW_DIR"/*.json; do
         echo "📥 Pushing manifest to database: $(basename "$json_file")"
-        
+
         # 🟢 CHANGED: Re-inject a clean structural ID if it was stripped, using the filename prefix hash
         filename_hash=$(basename "$json_file" .json)
         jq --arg id "$filename_hash" '.id = $id' "$json_file" > "$json_file.import.tmp"
-        
+
         # Run the import against the temporary file that contains the valid ID schema
         npx n8n import:workflow --input="$json_file.import.tmp" --user-folder="$USER_FOLDER"
         rm -f "$json_file.import.tmp"
@@ -61,4 +61,3 @@ else
 fi
 
 echo "🚀 Local UI canvas hot-reloaded and synchronized with your source changes."
-

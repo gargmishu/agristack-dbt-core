@@ -20,7 +20,28 @@ logger = logging.getLogger(__name__)
 
 
 class IvrConnector:
-    """Processes IVR voice SIP gateway streams and passes canonical ingress payload."""
+    """Telephony edge connector interfacing with SIP and Private Branch Exchange (PBX) gateways.
+
+    Provides validation for incoming SIP voice call payloads and dispatch for outbound audio
+    playback.
+
+    Core Capabilities:
+    - Ingress Validation (`process_call_session`): Validates incoming telephony session
+      mappings
+      into `IvrIngressPayload` instances, enforcing phone number format, signed audio URL,
+      and
+      duration bounds.
+    - Egress Dispatch (`send_outbound_notification`): Dispatches audio playback instructions
+      (`OutboundNotificationPayload`) to the configured telephony interface and returns an
+      authoritative `TransmissionAck` receipt with a generated SIP call reference ID.
+
+    Attributes:
+        interface_id: Configured identifier of the target SIP telephony interface.
+
+    See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
+    """
 
     def __init__(self, interface_id: str | None = None) -> None:
         """Initializes IvrConnector with SIP telephony gateway interface identifier.

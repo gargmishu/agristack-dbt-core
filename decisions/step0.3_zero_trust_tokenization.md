@@ -1,7 +1,7 @@
 # Zero-Trust Purge & Tokenization Protocols
 
-**Framework Step:** Phase 0 · Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols  
-**Related Documents:** 
+**Framework Step:** Phase 0 · Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols
+**Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 - [step0.2_data_model_design.md](./step0.2_data_model_design.md)
@@ -21,9 +21,9 @@ Based on our multi-channel architecture, cleartext Personally Identifiable Infor
 > **Note:** Layer 1 and Layer 2 must never write cleartext PII to persistent storage or disk logs; they may only forward cleartext in-memory to L3/L4. Edge layers may only use orchestrator-issued tokens or ephemeral, tightly TTL'd encrypted caches when absolutely necessary.
 
 1. **Source Phone Number (ANI):** Reaches the system through channel connectors (WhatsApp webhook, IVR SIP gateway, USSD signaling). This is required initially for session tracking but poses a privacy risk if stored long-term in cleartext.
-2. **Citizen Identity Numbers (Aadhaar / Farmer ID):** Captured explicitly as part of the conversational AI extraction or USSD input to perform `identity_verify()` against DPI registries (e.g., MOSIP / Aadhaar). 
+2. **Citizen Identity Numbers (Aadhaar / Farmer ID):** Captured explicitly as part of the conversational AI extraction or USSD input to perform `identity_verify()` against DPI registries (e.g., MOSIP / Aadhaar).
 3. **Location / Cadastral Data:** Geographic coordinates, property parcel identifiers, or farm boundary data may appear less sensitive in isolation, but once linked to a specific identity token they can be used to infer a person’s exact residence, land ownership, and movements. In that combined form, the data is treated as protected because it materially increases re-identification risk and privacy impact.
-> [!WARNING] **Cleartext Ban**  
+> [!WARNING] **Cleartext Ban**
 > Under no circumstances will cleartext Aadhaar numbers or other highly sensitive citizen ID numbers be written to the database or written to disk-based application logs.
 
 ---
@@ -39,7 +39,7 @@ All highly sensitive identifiers (e.g., Aadhaar) must be hashed immediately upon
 - **Implementation (Concept):**
   ```javascript
   const crypto = require('crypto');
-  
+
   function tokenizePII(rawId, pepperSalt) {
       return crypto.createHmac('sha256', pepperSalt)
                    .update(rawId)
@@ -143,7 +143,7 @@ The Orchestrator resolves this by relying on the stateless nature of network pro
   - The HTTP request ends, Layer 4 purges cleartext from RAM, and the cleartext phone number is dropped.
 
 **Future Follow-ups (Delegation to Secure Vault):**
-If a human caseworker needs to contact the citizen, or an asynchronous payout receipt must be sent days later, the Orchestrator does *not* have the phone number. 
+If a human caseworker needs to contact the citizen, or an asynchronous payout receipt must be sent days later, the Orchestrator does *not* have the phone number.
 - Caseworkers will log directly into the OpenSPP secure dashboard to access the citizen's contact details.
 - Automated system alerts will query OpenSPP using the `openspp_case_id` to retrieve a short-lived token or have OpenSPP dispatch the notification directly.
 

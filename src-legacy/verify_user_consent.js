@@ -16,7 +16,7 @@ switch (channel_type) {
     source_phone_number = payload.From || payload.source_phone_number || "";
     const dtmf_input = payload.Digits || payload.ivr_dtmf || "";
     if (dtmf_input === "1") consent_granted = true;
-    
+
     custom_channel_payload = {
       ivr_dtmf_captured: dtmf_input,
       ivr_audio_stream_uri: payload.ivr_audio_stream_uri || `s3://production-carrier-audio-streams/${session_id}.wav`
@@ -29,7 +29,7 @@ switch (channel_type) {
     if (incoming_text === "I Accept and Authorize Check" || payload.whatsapp_optin === "I Accept and Authorize Check") {
       consent_granted = true;
     }
-    
+
     custom_channel_payload = {
       whatsapp_cleartext_string: incoming_text
     };
@@ -38,10 +38,10 @@ switch (channel_type) {
   case "USSD":
     source_phone_number = payload.source_phone_number || "";
     if (payload.ussd_optin === "1" || payload.ussd_input === "1") consent_granted = true;
-    
+
     custom_channel_payload = {
       ussd_collected_payload: {
-        farmer_id_cleartext: "[Aadhaar Redacted]", 
+        farmer_id_cleartext: "[Aadhaar Redacted]",
         district_name: payload.district_name || "",
         crop_type: payload.crop_type || ""
       }

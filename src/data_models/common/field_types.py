@@ -129,7 +129,8 @@ def validate_utc_freshness(dt: datetime) -> datetime:
     """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation).
 
     Why 5s? A tight 5-second window accommodates legitimate NTP server drift between edge
-    connectors and core microservices while strictly blocking future-timestamp replay attacks.
+    connectors and core microservices while strictly blocking future-timestamp replay
+    attacks.
     """
     now = datetime.now(UTC)
     parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)

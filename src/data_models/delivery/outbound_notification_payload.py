@@ -19,7 +19,15 @@ MAX_USSD_CHARACTERS = 160
 
 
 class OutboundNotificationPayload(StrictBaseModel):
-    """Channel-adapted outbound notification receipt payload dispatched to citizen (Step 12).
+    """Data model representing a channel-adapted outbound notification message.
+
+    Encapsulates the rendered message text and optional audio playback stream for outbound
+    dispatch.
+
+    Invariants:
+    - `formatted_message` must contain non-empty, non-whitespace content.
+    - For `ChannelType.USSD`, `formatted_message` length is strictly capped at 160
+      characters.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """

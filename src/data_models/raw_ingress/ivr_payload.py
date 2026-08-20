@@ -12,13 +12,17 @@ from src.data_models.common import (
 
 
 class IvrIngressPayload(StrictBaseModel):
-    """IVR Telephony SIP gateway ingress payload (Layer 1 -> Layer 2).
+    """Data model representing an IVR voice call ingress payload.
+
+    Captures telephony call metadata and audio recording pointers delivered by SIP gateways.
+
+    Invariants:
+    - `session_id` acts as the primary call key; discrete message IDs are not used because
+      one SIP call represents a continuous interaction session.
+    - `audio_duration_seconds` must be between 1 and 600 seconds inclusive.
 
     See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
-
-    IVR uses session_id as the call identity because one SIP call is a continuous
-    session rather than a sequence of independently retried messages. A separate
-    channel_message_id is therefore not required for IVR deduplication.
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
     session_id: SessionId

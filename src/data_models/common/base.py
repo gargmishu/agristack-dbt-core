@@ -4,16 +4,27 @@ from pydantic import BaseModel, ConfigDict
 
 
 class StrictBaseModel(BaseModel):
-    """Base model for all inter-layer payloads.
+    """Foundational immutable base model for all AgriStack domain contracts and payloads.
+
+    Enforces strict typing, immutability, extra-field rejection, and whitespace sanitization
+    across all inter-layer communication boundaries (Layer 1 -> Layer 2 -> Layer 3 -> Layer
+    4).
+
+    Core Configuration & Security Guarantees:
+    - `extra="forbid"`: Rejects payload pollution, prototype tampering, and unexpected
+      injected
+      keys.
+    - `frozen=True`: Guarantees thread-safe immutability across async processing pipelines.
+    - `validate_assignment=True`: Ensures runtime validation rules are executed if models
+      are
+      unfrozen.
+    - `str_strip_whitespace=True`: Automatically strips leading and trailing whitespace from
+      string fields.
+    - `use_enum_values=False`: Preserves native enum instances during processing for direct
+      member comparisons.
 
     See: decisions/step2.0_canonical_domain_schemas.md#31-base-configuration-strictbasemodel
     See: decisions/step1.2_runtime_strictness_linting.md
-
-    - extra="forbid": Rejects payload pollution / unexpected injected keys.
-    - frozen=True: Guarantees immutability as data moves between layers.
-    - validate_assignment=True: Validates mutations if model is unfrozen.
-    - str_strip_whitespace=True: Auto-strips leading/trailing whitespace.
-    - use_enum_values=True: Coerces enum values for clean serialization.
     """
 
     model_config = ConfigDict(

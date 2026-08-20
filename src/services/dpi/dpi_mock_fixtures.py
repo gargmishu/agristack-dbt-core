@@ -1,12 +1,17 @@
 """Offline Mock Fixtures for Authoritative DPI Registries (Step 3.1).
 
-Defines deterministic validation thresholds, simulated failure prefixes, and mock status responses
-for identity, cadastral, social welfare, and payment rail services during offline simulation.
+Defines deterministic validation thresholds, simulated failure prefixes, and mock status
+responses
+for identity, cadastral, social welfare, and payment rail services during offline
+simulation.
 
 Why deterministic offline mocks?
-Under our Inside-Out development methodology, foundational external dependency boundaries must be
+Under our Inside-Out development methodology, foundational external dependency boundaries
+must
+be
 completely simulated in memory with zero network calls and predictable data structures. This
-prevents dangling wire dependencies during Layer 4 state machine construction and eliminates network
+prevents dangling wire dependencies during Layer 4 state machine construction and eliminates
+network
 latency during automated verification.
 
 See: decisions/step3.1_foundational_mock_boundaries.md
@@ -32,6 +37,18 @@ MOCK_PAYMENT_FAILURE_REASON = DisbursementFailureCode.ERR_INSUFFICIENT_BANK_ACCO
 
 class MockCadastralParcel(NamedTuple):
     """Immutable cadastral plot entity for offline AgriStack land registry simulations.
+
+    Represents a verified agricultural parcel with geographic boundaries and crop
+    entitlement.
+
+    Attributes:
+        survey_number: Cadastral survey/khasra plot number (e.g., '124/2A').
+        district: District administrative jurisdiction.
+        taluka: Sub-district / tehsil administrative jurisdiction.
+        village: Village revenue boundary.
+        owner_hmac_prefix: Hexadecimal prefix matching citizen identity HMAC token.
+        is_entitled: Boolean indicating whether plot is entitled for direct subsidy
+        benefits.
 
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.2)
     """

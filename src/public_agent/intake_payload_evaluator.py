@@ -23,12 +23,17 @@ logger = logging.getLogger(__name__)
 
 
 class IntakeEvaluationResult(NamedTuple):
-    """Result of Layer 3 intake payload evaluation.
+    """Result of intake payload structure evaluation.
+
+    Encapsulates structural validity and NLU extraction requirement flags.
 
     Attributes:
-        is_valid: Boolean indicating whether the payload passes structural sanity guards.
-        requires_nlu_extraction: True if payload requires SLM NLU entity extraction.
-        evaluation_message: Descriptive message explaining evaluation decision outcome.
+        is_valid: True if the payload satisfies non-empty content and structure guards.
+        requires_nlu_extraction: True if payload requires natural language extraction; False
+        if structured bypass applies.
+        evaluation_message: Descriptive message explaining the evaluation outcome.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
 
     is_valid: bool
@@ -37,10 +42,18 @@ class IntakeEvaluationResult(NamedTuple):
 
 
 class IntakePayloadEvaluator:
-    """Evaluates and determines pipeline routing for Layer 3 intake payloads.
+    """Evaluator classifying intake payload structure and extraction requirements.
 
-    Validates non-empty input content guards and classifies payloads into fast-path
-    deterministic routing vs. NLU extraction pipeline execution.
+    Inspects `PublicAgentStandardizedIntakePayload` instances to determine whether natural
+    language
+    extraction is required or if structured bypass applies.
+
+    Evaluation Rules:
+    - Structured Inputs (`MENU_SELECTION`, `DTMF_SELECTION`): Bypasses NLU extraction
+      (`requires_nlu_extraction=False`).
+    - Unstructured Inputs (`FREE_TEXT`): Routes to NLU extraction
+      (`requires_nlu_extraction=True`).
+    - Content Validation: Rejects empty or whitespace-only inputs (`is_valid=False`).
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
@@ -54,7 +67,8 @@ class IntakePayloadEvaluator:
             payload: Validated PublicAgentStandardizedIntakePayload instance.
 
         Returns:
-            IntakeEvaluationResult indicating validity and whether NLU extraction is required.
+            IntakeEvaluationResult indicating validity and whether NLU extraction is
+            required.
         """
         if not payload.unprocessed_input_content or not payload.unprocessed_input_content.strip():
             logger.warning(

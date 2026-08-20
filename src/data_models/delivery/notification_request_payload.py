@@ -16,7 +16,16 @@ from src.data_models.common import (
 
 
 class NotificationRequestPayload(StrictBaseModel):
-    """Input request contract for generating outbound multichannel notification (Step 12).
+    """Data model representing a request to generate and dispatch an outbound notification.
+
+    Encapsulates recipient channel targeting, governance determination outcome, and
+    contextual parameters.
+
+    Invariants:
+    - Approvals require `disbursement_txn_id`.
+    - Escalations require `escalation_case_id`.
+    - Rejections require `rejection_reason`.
+    - Clarifications (`REQUEST_MORE_INFO`) require `missing_entity`.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """

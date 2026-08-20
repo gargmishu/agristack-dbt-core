@@ -30,7 +30,24 @@ _AADHAAR_PATTERN: Final[re.Pattern[str]] = re.compile(r"\d{4}\s?\d{4}\s?\d{4}")
 
 
 class PiiPurgeGuard:
-    """Unified in-memory PII redactor and zero-PII contract compliance sentinel."""
+    """In-memory PII redactor and zero-PII contract compliance sentinel.
+
+    Provides privacy protection across text inputs and standardized intake contracts:
+    1. Active Text Redaction (`redact_text`): Replaces E.164 phone numbers, 10-digit Indian
+       mobile
+       numbers, and 12-digit Aadhaar UID numbers with `[REDACTED]`.
+    2. Compliance Sentinel (`assert_zero_pii`): Inspects
+       `PublicAgentStandardizedIntakePayload`
+       contracts to verify citizen tokens are valid SHA-256 HMAC digests and text contains
+       zero cleartext PII.
+
+    Invariants:
+    - In-memory execution without disk persistence of sensitive numbers.
+    - Raises `ValueError` immediately if cleartext PII is detected on inter-layer payloads.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step0.3_zero_trust_tokenization.md
+    """
 
     # -------------------------------------------------------------------------
     # Public API

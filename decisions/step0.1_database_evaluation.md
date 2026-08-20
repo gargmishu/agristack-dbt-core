@@ -1,8 +1,8 @@
 # Cloud Database Evaluation & Selection Rationale
 
-**Framework Step:** Phase 0 · Step 0.1: Choose the Database Infrastructure  
-**Target Environment:** Managed Cloud Database (100% Free Tier)  
-**Related Documents:** 
+**Framework Step:** Phase 0 · Step 0.1: Choose the Database Infrastructure
+**Target Environment:** Managed Cloud Database (100% Free Tier)
+**Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 

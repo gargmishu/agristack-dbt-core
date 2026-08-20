@@ -27,10 +27,11 @@ _HTTP_URL_ADAPTER: Final[TypeAdapter[HttpUrl]] = TypeAdapter(HttpUrl)
 
 
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
-    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3).
+    """Normalized, zero-PII public agent intake payload data model.
 
-    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
-    See: decisions/step0.3_zero_trust_tokenization.md
+    Represents the canonical cross-channel contract encapsulating citizen input after
+    perimeter
+    security normalization and identity tokenization.
 
     Architectural Design Decisions:
     1. tokenized_citizen_id: Pseudonymous citizen identity token (not "tokenized_phone").
@@ -39,6 +40,18 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     2. structure_level: Enables Layer 3 pipeline routing to bypass SLM NLU for DTMF_SELECTION
        and MENU_SELECTION (saving ~800ms GPU inference latency and eliminating AI hallucinations)
        while directing FREE_TEXT into the SLM/NLU extraction pipeline.
+    3. Payload-Aware URL Validation: Unlike generic Pydantic models where type validation alone
+       may allow "https://[IP_ADDRESS]" or localhost schemes, this schema implements a runtime
+       check enforcing that all signed audio URLs resolve to valid domain endpoints.
+
+    Invariants:
+    - Enforces compatibility matrix between `channel_type` and `structure_level` (e.g. IVR
+      allows
+      FREE_TEXT or DTMF_SELECTION; USSD allows MENU_SELECTION).
+    - `unprocessed_input_content` must not be empty or whitespace-only.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    See: decisions/step0.3_zero_trust_tokenization.md
     """
 
     session_id: SessionId

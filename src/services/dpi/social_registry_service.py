@@ -23,11 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 class SocialRegistryService:
-    """External DPI client for citizen social protection eligibility checks.
+    """Service client for social protection platform entitlement verification.
 
-    Queries the OpenSPP social registry for beneficiary entitlement under a specific
-    scheme. This service is focused on eligibility verification and does not manage
-    case review lifecycle state.
+    Queries external social registries for citizen welfare scheme eligibility.
+
+    Operations:
+    - `verify_incident_ticket_eligibility`: Evaluates case review tickets for scheme
+      entitlement.
+    - `query_beneficiary_eligibility`: Checks beneficiary entitlement for a specific scheme.
 
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
     """
@@ -41,7 +44,8 @@ class SocialRegistryService:
             case_review: Validated CaseworkerCaseReviewPayload instance.
 
         Returns:
-            True if the citizen is eligible according to the external registry, False otherwise.
+            True if the citizen is eligible according to the external registry, False
+            otherwise.
         """
         logger.info(
             "Evaluating eligibility for incident ticket=%s via OpenSPP registry for session=%s",

@@ -11,20 +11,19 @@ from src.data_models.common import (
 
 
 class UssdIngressPayload(StrictBaseModel):
-    """USSD Menu signaling ingress payload (Layer 1 -> Layer 2).
+    """Data model representing a USSD menu signaling ingress payload.
+
+    Captures network routing shortcodes and citizen menu digit selections from cellular
+    signaling frames.
+
+    Invariants:
+    - Decouples network routing shortcodes from user digit selections to maintain clean
+      parsing boundaries.
+    - `ussd_user_digit_selection` length is bounded to 64 characters based on menu depth
+      formula.
 
     See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
-
-    USSD uses session_id as the interaction identity because each request belongs to
-    one short-lived signaling session. Unlike SMS or WhatsApp webhooks, it does not
-    represent an independently retried discrete message, so channel_message_id is
-    not required.
-
-    Architectural Design Choice:
-    Decoupling network routing shortcodes (e.g. *147#) from application menu selections
-    (e.g. 1*2*9876543210) eliminates parsing ambiguity for downstream services and allows
-    Layer 2 connectors to forward digit selections directly into
-    StandardizedIntakePayload.unprocessed_input_content.
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
     session_id: SessionId

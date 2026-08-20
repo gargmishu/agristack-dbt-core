@@ -1,8 +1,8 @@
 # Domain Entity & Relational Data Model Design
 
-**Framework Step:** Phase 0 · Step 0.2: Identify Entities, Tables & Table Names  
-**Target Environment:** Authoritative Relational Database ([step0.1_database_evaluation.md](./step0.1_database_evaluation.md))  
-**Related Documents:** 
+**Framework Step:** Phase 0 · Step 0.2: Identify Entities, Tables & Table Names
+**Target Environment:** Authoritative Relational Database ([step0.1_database_evaluation.md](./step0.1_database_evaluation.md))
+**Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 - [step0.1_database_evaluation.md](./step0.1_database_evaluation.md)
@@ -34,16 +34,16 @@ In [flowchart.md](../design-specs/step3-guardrails/flowchart.md), the citizen in
 
 To eliminate redundancy, preserve complete transactional auditability, and strictly separate AI extraction retry logs from authoritative business claims, we deduce the following relational entities:
 
-1. **`session_telemetry_log` (Root Parent Entity)**  
+1. **`session_telemetry_log` (Root Parent Entity)**
    An authoritative record representing the citizen's overall communication session from initial carrier signaling ingress to connection termination. All other entities are traceable back to this root record.
 
-2. **`session_extraction_details` (Child of `session_telemetry_log`)**  
+2. **`session_extraction_details` (Child of `session_telemetry_log`)**
    A granular record representing each sequential payload submission, AI extraction pass, and validation attempt occurring within that parent session loop. A single session can produce many extraction attempts (1:N).
 
-3. **`application_governance_ledger` (Child of both `session_telemetry_log` and `session_extraction_details`)**  
+3. **`application_governance_ledger` (Child of both `session_telemetry_log` and `session_extraction_details`)**
    An authoritative business record capturing the claims that successfully pass the Intake Validation Gate. It holds two foreign keys: `session_id` (anchoring it to the root session for full-funnel analytics) and `payload_id` (anchoring it to the specific winning extraction attempt that drove the claim).
 
-4. **`application_governance_ledger_history` (Audit Entity, Child of `application_governance_ledger`)**  
+4. **`application_governance_ledger_history` (Audit Entity, Child of `application_governance_ledger`)**
    An append-only historical log tracking every state change a claim undergoes. Populated automatically via PostgreSQL triggers — the application layer never writes to this table directly. Preserves the chronological lifecycle for SLA tracking and regulatory auditability.
 
 5. **`consent_registry` (Policy / Consent Entity)**

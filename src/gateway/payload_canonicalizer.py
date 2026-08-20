@@ -28,7 +28,25 @@ IngressPayloadUnion = (
 
 
 class PayloadCanonicalizer:
-    """Canonicalizes raw carrier ingress payloads into Layer 3 intake payloads."""
+    """Canonicalizes raw carrier ingress payloads into standardized intake payloads.
+
+    Translates channel-specific payloads (WhatsApp, IVR, USSD, SMS) into normalized
+    `PublicAgentStandardizedIntakePayload` contracts.
+
+    Operations:
+    - WhatsApp: Maps text messages or audio recording URLs, populating the appropriate
+      `PayloadType`.
+    - IVR: Maps SIP audio recording URLs with `StructureLevel.FREE_TEXT` and
+      `PayloadType.AUDIO`.
+    - USSD: Extracts digit selections into `unprocessed_input_content` with
+      `StructureLevel.MENU_SELECTION`.
+    - SMS: Maps text bodies with `StructureLevel.FREE_TEXT` and `PayloadType.TEXT`.
+    - Pseudonymization: Computes 64-character SHA-256 HMAC identity tokens from phone
+      numbers.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+    See: decisions/step0.3_zero_trust_tokenization.md
+    """
 
     def __init__(self, tokenizer: ZeroTrustIdentityTokenizer) -> None:
         """Initializes canonicalizer with an explicit identity tokenizer."""

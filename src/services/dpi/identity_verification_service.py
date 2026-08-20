@@ -1,12 +1,16 @@
 """Authoritative DPI Registry: Identity Verification Service.
 
-Provides Zero-PII identity token verification against authoritative MOSIP/Aadhaar registries.
+Provides Zero-PII identity token verification against authoritative MOSIP/Aadhaar
+registries.
 
 Why operate exclusively on Zero-PII HMAC tokens?
 Cleartext PII (phone numbers, Aadhaar numbers, cleartext names) is strictly forbidden from
-touching persistent database ledgers or disk storage under Aadhaar Act §29 and national privacy
-mandates. While active tokenization occurs at the Layer 2 perimeter via ZeroTrustIdentityTokenizer,
-all downstream registry verification operates exclusively on pre-computed 64-character hex tokens
+touching persistent database ledgers or disk storage under Aadhaar Act §29 and national
+privacy
+mandates. While active tokenization occurs at the Layer 2 perimeter via
+ZeroTrustIdentityTokenizer,
+all downstream registry verification operates exclusively on pre-computed 64-character hex
+tokens
 (`HmacCitizenToken`).
 
 See: decisions/step0.3_zero_trust_tokenization.md
@@ -25,12 +29,16 @@ logger = logging.getLogger(__name__)
 
 
 class IdentityVerificationService:
-    """Service abstraction for sovereign identity registry verification.
+    """Service client for sovereign identity registry verification.
 
-    Interacts with national identity providers (MOSIP / UIDAI Aadhaar) via zero-trust
-    pseudonymized token queries without exposing raw PII.
+    Verifies active citizen registration using pseudonymous 64-character SHA-256 HMAC
+    tokens.
+
+    Operations:
+    - `verify_identity_token`: Queries identity registry to confirm token validity.
 
     See: decisions/step0.3_zero_trust_tokenization.md
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
     """
 
     async def verify_identity_token(self, tokenized_citizen_id: str) -> bool:

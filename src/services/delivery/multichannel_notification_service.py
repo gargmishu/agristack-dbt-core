@@ -50,13 +50,18 @@ HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
 
 
 class MultichannelNotificationService:
-    """Outbound notification dispatch engine generating channel-adapted receipts.
+    """Outbound notification engine adapting messages and coordinating multi-channel delivery.
 
-    Translates governance outcomes, payment clearing IDs, and caseworker escalation
-    tickets into channel-native formats:
-    1. Rich WhatsApp Markdown cards with icons and structured details.
-    2. Phonetic vernacular voice text synthesized by Bhashini TTS.
-    3. Concise plain-text strings (<=160 chars) shared across SMS and USSD.
+    Renders channel-specific message formats and dispatches them to configured carrier
+    connectors:
+    - WhatsApp: Renders structured Markdown cards with status badges and reference keys.
+    - IVR Voice: Formats phonetic vernacular text and coordinates TTS audio synthesis.
+    - USSD & SMS: Generates plain-text strings constrained to 160 characters.
+
+    Operations:
+    - `prepare_and_dispatch`: Constructs an `OutboundNotificationPayload` and dispatches it
+      via
+      the target connector, returning a `NotificationDispatchResult`.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
@@ -94,7 +99,8 @@ class MultichannelNotificationService:
         """Prepares channel-adapted OutboundNotificationPayload with synthesized audio if voice.
 
         Args:
-            request: Validated NotificationRequestPayload specifying channel, action, and fields.
+            request: Validated NotificationRequestPayload specifying channel, action, and
+            fields.
 
         Returns:
             Validated OutboundNotificationPayload ready for channel transmission.
@@ -140,7 +146,8 @@ class MultichannelNotificationService:
         """Prepares and dispatches notification through the appropriate edge connector.
 
         Args:
-            request: Validated NotificationRequestPayload specifying channel and determination.
+            request: Validated NotificationRequestPayload specifying channel and
+            determination.
 
         Returns:
             NotificationDispatchResult with payload and carrier TransmissionAck receipt.

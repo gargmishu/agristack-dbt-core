@@ -1,7 +1,7 @@
 # Hashing Algorithm Evaluation & Selection
 
-**Framework Step:** Phase 0 · Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols  
-**Related Documents:** 
+**Framework Step:** Phase 0 · Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols
+**Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 - [step0.2_data_model_design.md](../step0.2_data_model_design.md)
@@ -10,7 +10,7 @@
 
 ## 1. Goal
 
-Evaluate and select the cryptographic hashing algorithm used for the in-memory tokenization of highly sensitive citizen Personally Identifiable Information (PII) such as Aadhaar numbers and phone numbers. 
+Evaluate and select the cryptographic hashing algorithm used for the in-memory tokenization of highly sensitive citizen Personally Identifiable Information (PII) such as Aadhaar numbers and phone numbers.
 
 ---
 
@@ -39,9 +39,9 @@ Evaluate and select the cryptographic hashing algorithm used for the in-memory t
 - **Key Storage:** The secret pepper lives in an environment variable (`process.env.PEPPER_KEY`).
 - **Availability:** Available natively as a built-in library in Node.js (`crypto`).
 - **Cost:** 100% Free. Because it executes in microseconds, its CPU footprint is virtually zero.
-- **Pros:** 
+- **Pros:**
   - Extremely fast and gives the same result every time.
-- **Cons:** 
+- **Cons:**
   - **Cryptographic Weakness:** A length‑extension attack lets an attacker take a known hash of `message + secret` and append extra data to produce a valid hash for `message + secret + extra` without knowing the secret. For example, if the hash was computed over `+919876543210` with a secret pepper, an attacker could add `+1234` and generate a new hash that still verifies, breaking security. HMAC (Option B) prevents this.
 
 ### Option B – HMAC‑SHA256 (recommended)
@@ -55,11 +55,11 @@ Evaluate and select the cryptographic hashing algorithm used for the in-memory t
 - **Key Storage:** The secret pepper is stored in an environment variable (`process.env.PEPPER_KEY`).
 - **Availability:** Available natively as a built-in library in Node.js (`crypto`).
 - **Cost:** 100% Free. Because it executes in microseconds, its CPU footprint is virtually zero.
-- **Pros:** 
+- **Pros:**
   - **Deterministic:** The same identifier always produces the same token, enabling database index lookups.
   - **Immune to Length Extension Attacks:** Formally proven to be secure against length extension attacks, unlike simple concatenation.
   - **High Performance:** Sub-millisecond execution times appropriate for high-throughput ingress webhooks.
-- **Cons:** 
+- **Cons:**
   - If the secret pepper key stored in your environment is compromised, the entire database can be brute-forced rapidly due to the speed of SHA-256.
 
 ### Option C – HMAC‑SHA3 (newer hash function)
@@ -73,9 +73,9 @@ Evaluate and select the cryptographic hashing algorithm used for the in-memory t
 - **Key Storage:** The secret pepper is stored in an environment variable (`process.env.PEPPER_KEY`).
 - **Availability:** Often requires third-party libraries depending on the exact runtime, though some modern environments support it natively.
 - **Cost:** 100% Free.
-- **Pros:** 
+- **Pros:**
   - **Mathematically Stronger:** SHA‑3 uses a "sponge" idea: it soaks up the input data, mixes it thoroughly, and then squeezes out a fixed‑size hash. This design makes SHA‑3 naturally immune to length‑extension attacks and gives it strong security guarantees.
-- **Cons:** 
+- **Cons:**
   - **Performance**: Slightly slower than SHA‑256
   - **Ecosystem:** May need an extra library in older runtimes.
 
@@ -85,7 +85,7 @@ If you only need to verify an identifier at point‑of‑intake to see if it mat
   ```javascript
   const argon2 = require('argon2');
   // Generates a unique salt automatically, preventing DB searches
-  const hash = await argon2.hash('+919876543210'); 
+  const hash = await argon2.hash('+919876543210');
   ```
 - **Availability:** Available as open‑source third‑party libraries (e.g., npm package `argon2`).
 - **Cost:** 100% Free for the software, but the heavy compute overhead will mandate upgrading cloud hardware under load.
@@ -123,11 +123,11 @@ A widely used symmetric encryption standard for securing data at rest or in tran
   const token = cipher.update('+919876543210', 'utf8', 'hex') + cipher.final('hex');
   ```
 - **Availability:** Available natively in Node.js (`crypto`).
-- **Cost:** 100% Free for compute. However, if using a secure Key Management Service API (like AWS KMS or Google Cloud KMS) to inject the keys, it falls under their **Free Tier / Low Cost Tier** ($0.03 per 10,000 requests). 
+- **Cost:** 100% Free for compute. However, if using a secure Key Management Service API (like AWS KMS or Google Cloud KMS) to inject the keys, it falls under their **Free Tier / Low Cost Tier** ($0.03 per 10,000 requests).
 - **Key Storage:** The encryption key is stored in an environment variable (`process.env.ENCRYPTION_KEY`).
-- **Pros:** 
+- **Pros:**
   - Extremely fast and secure.
-- **Cons:** 
+- **Cons:**
   - **Reversible:** This violates the core zero‑trust mandate. If an attacker compromises the environment key and the database, all PII can be decrypted back to cleartext. We need a one‑way tokenization, not reversible encryption.
 
 ### Option G: BLAKE3 (Newer Cryptographic Hash)
@@ -144,7 +144,7 @@ A modern, extremely fast cryptographic hash function.
 - **Pros:**
   - BLAKE3 is significantly faster than SHA-256.
 - **Cons:**
-  - **Ecosystem Support:** While fast, BLAKE3 often requires external dependencies or native WebAssembly bindings in Node.js. 
+  - **Ecosystem Support:** While fast, BLAKE3 often requires external dependencies or native WebAssembly bindings in Node.js.
 
 ### Option H: Cloud Key Management Service (AWS KMS / Google Cloud KMS HMAC)
 Externalized hashing where the HMAC key never enters the application environment.
@@ -160,9 +160,9 @@ Externalized hashing where the HMAC key never enters the application environment
   ```
 - **Availability:** Proprietary Cloud APIs.
 - **Cost:** Violates the 100% Free Tier constraint. Generates API costs (e.g., ~$0.03 per 10,000 requests) that scale linearly with traffic.
-- **Pros:** 
+- **Pros:**
   - **Ultimate Security:** Perfectly overcomes the cons of Option A. Even if the application memory is dumped, the key cannot be stolen, making an offline dictionary attack impossible.
-- **Cons:** 
+- **Cons:**
   - **Latency:** Adds network round‑trip latency to every single interaction, risking telecom gateway timeouts.
   - **Cost:** Fails the zero‑cost architecture mandate.
 
@@ -170,7 +170,7 @@ Externalized hashing where the HMAC key never enters the application environment
 
 ## 4. Selection Rationale
 
-We selected **Option A: HMAC-SHA256** using a strict cryptographic environment key as the tokenization algorithm. 
+We selected **Option A: HMAC-SHA256** using a strict cryptographic environment key as the tokenization algorithm.
 
 **Why it wins:**
 1. **Deterministic Lookup:** It allows the Orchestrator to instantly recognize returning citizens across different channels with a direct database query (Blind Indexing), without ever persisting the cleartext ID.

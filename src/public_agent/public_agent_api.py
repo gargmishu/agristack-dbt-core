@@ -25,10 +25,16 @@ logger = logging.getLogger(__name__)
 
 
 class PublicAgentApi:
-    """Public Agent Gateway API normalizing events before submitting to Layer 4.
+    """Public Agent Gateway API providing intake submission and structure evaluation.
 
-    Evaluates structural routing directives and submits accepted payloads for downstream
-    orchestration.
+    Submits standardized intake payloads for evaluation and prepares accepted payloads for
+    processing.
+
+    Operations:
+    - `submit_payload`: Evaluates a `PublicAgentStandardizedIntakePayload` via the injected
+      evaluator,
+      raising `ValueError` if invalid, or returning the verified payload and evaluation
+      result.
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """

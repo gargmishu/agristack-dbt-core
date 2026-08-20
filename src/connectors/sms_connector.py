@@ -20,13 +20,34 @@ logger = logging.getLogger(__name__)
 
 
 class SmsConnector:
-    """Processes incoming and outgoing SMS transmissions across carrier gateways."""
+    """Telecommunication edge connector interfacing with SMS gateways and webhook endpoints.
+
+    Provides validation for incoming SMS webhook payloads and dispatch for outbound SMS
+    messages.
+
+    Core Capabilities:
+    - Ingress Validation (`process_inbound_sms`): Validates incoming webhook payload
+      mappings into
+      `SmsIngressPayload` instances, enforcing phone number format, message ID, and text
+      body length constraints.
+    - Egress Dispatch (`send_outbound_notification`): Dispatches text messages
+      (`OutboundNotificationPayload`)
+      to the configured SMS gateway and returns an authoritative `TransmissionAck` receipt.
+
+    Attributes:
+        interface_id: Configured identifier of the target SMS gateway interface.
+
+    See: decisions/step2.0_canonical_domain_schemas.md
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
+    """
 
     def __init__(self, interface_id: str | None = None) -> None:
         """Initializes SmsConnector with carrier SMS gateway interface identifier.
 
         Args:
-            interface_id: Optional SMS carrier interface identifier (defaults to env or config).
+            interface_id: Optional SMS carrier interface identifier (defaults to env or
+            config).
         """
         self._interface_id = interface_id or get_sms_interface_id()
 

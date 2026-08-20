@@ -1,7 +1,7 @@
 # Runtime Strictness & Code Quality Tooling Design
 
-**Framework Step:** Phase 1 · Step 1.2: Configure Environment Strictness & Code Quality Tools  
-**Target Architecture:** Ruff + MyPy + Pytest + pre-commit  
+**Framework Step:** Phase 1 · Step 1.2: Configure Environment Strictness & Code Quality Tools
+**Target Architecture:** Ruff + MyPy + Pytest + pre-commit
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [step2.0_canonical_domain_schemas.md](./step2.0_canonical_domain_schemas.md)
@@ -37,7 +37,7 @@ To establish code quality and environment sanity, four key tooling decisions wer
   1. *Pyright / Pylance (Microsoft):* Extremely fast and excellent LSP for VS Code, but relies on Node.js / npm infrastructure or pyright npm binaries, introducing a non-Python runtime dependency into CI pipelines.
   2. *Pytype (Google):* Developed by Google primarily for **type inference** across large legacy Python codebases without requiring upfront type annotations. Pytype runs an abstract bytecode interpreter to infer types from variable usage.
   3. *Pyre (Meta):* High-performance type checker written in OCaml, tailored for Facebook's large monolithic repositories.
-- **Decision Rationale:** 
+- **Decision Rationale:**
   - **Explicit Annotations vs. Type Inference:** While **Pytype** excels at inferring types in legacy codebases (and is widely used across Google), this greenfield project enforces **100% explicit type annotations** (`mypy --strict` with `disallow_untyped_defs = true`). We explicitly want missing type hints to trigger CI failures rather than relying on type inference.
   - **Python 3.11+ Support:** MyPy maintains first-class alignment with CPython typing standards and Python 3.11+ features (`Self`, `TypeVarTuple`, async task types).
 

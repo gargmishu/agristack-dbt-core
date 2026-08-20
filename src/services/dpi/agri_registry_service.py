@@ -1,9 +1,11 @@
 """Authoritative DPI Registry: AgriStack Cadastral & Land Registry Service.
 
-Performs cadastral plot verification, landholding ownership cross-matching, and crop validation.
+Performs cadastral plot verification, landholding ownership cross-matching, and crop
+validation.
 
 Why cross-match against AgriStack cadastral registries?
-Benefit eligibility requires verifying landholding entitlement, survey/khata numbers, and seasonal
+Benefit eligibility requires verifying landholding entitlement, survey/khata numbers, and
+seasonal
 crop records before executing automated payouts or staging caseworker reviews.
 
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.2)
@@ -26,9 +28,13 @@ logger = logging.getLogger(__name__)
 
 
 class AgriRegistryService:
-    """Service abstraction for AgriStack cadastral and crop land registry cross-matching.
+    """Service client for agricultural landholding and crop registry verification.
 
-    Validates land ownership parameters and seasonal crop entitlement without exposing PII.
+    Cross-matches citizen identity tokens and land record identifiers against cadastral
+    databases.
+
+    Operations:
+    - `verify_land_record`: Verifies land parcel ownership and seasonal crop entitlement.
 
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.2)
     """

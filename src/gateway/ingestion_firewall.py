@@ -28,7 +28,25 @@ logger = logging.getLogger(__name__)
 
 
 class IngestionFirewall:
-    """Unified Layer 2 Ingestion Firewall protecting Public Agent Intake."""
+    """Perimeter security facade coordinating rate limiting, tokenization, and canonicalization.
+
+    Combines rate limiting, identity tokenization, PII redaction, prompt injection
+    inspection,
+    and payload normalization into a single ingress validation pipeline.
+
+    Pipeline Operations:
+    1. Rate Limiting (`RateLimiter`): Enforces request quota per caller identity.
+    2. Canonicalization & Tokenization (`PayloadCanonicalizer`): Converts raw ingress
+       payloads into
+       `PublicAgentStandardizedIntakePayload` with pseudonymous 64-char HMAC citizen tokens.
+    3. PII Purge Sentinel (`PiiPurgeGuard.assert_zero_pii`): Verifies that cleartext
+       identifiers do not exist.
+    4. Adversarial Prompt Scanning (`AdversarialPromptFirewall`): Checks content for
+       injection patterns.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step0.3_zero_trust_tokenization.md
+    """
 
     def __init__(
         self,

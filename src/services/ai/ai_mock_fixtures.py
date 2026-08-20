@@ -1,12 +1,16 @@
 """Offline Mock Fixtures for Foundational AI Block Abstractions (Step 3.1).
 
-Provides deterministic, locally testable data structures and response mappings for ASR, NMT, TTS,
+Provides deterministic, locally testable data structures and response mappings for ASR, NMT,
+TTS,
 and SLM structured entity extraction during offline development and testing.
 
 Why abstract AI blocks behind offline simulation fixtures?
-Sovereign orchestration development under an Inside-Out methodology requires decoupling core state
-machine execution from real LLM inference latency, network timeouts, and non-deterministic model
-hallucinations. These fixtures provide reproducible inputs for stress-testing multi-attempt loops
+Sovereign orchestration development under an Inside-Out methodology requires decoupling core
+state
+machine execution from real LLM inference latency, network timeouts, and non-deterministic
+model
+hallucinations. These fixtures provide reproducible inputs for stress-testing multi-attempt
+loops
 and adversarial prompt injection boundaries.
 
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 2)
@@ -47,7 +51,18 @@ MISSING_ENTITY_KEYWORDS: tuple[str, ...] = ("missing", "incomplete")
 
 
 class MockExtractionRule(NamedTuple):
-    """Configuration rule for deterministic SLM entity extraction simulation."""
+    """Configuration rule for deterministic SLM entity extraction simulations.
+
+    Defines the expected parsed intent, entity dictionary, and confidence score for mock
+    testing.
+
+    Attributes:
+        intent: Classified citizen application intent (`ApplicationIntent`).
+        entities: Dictionary of extracted domain parameters keyed by `DomainEntityKey`.
+        confidence_score: Simulated AI confidence score bounded to [0.0, 1.0].
+
+    See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
+    """
 
     intent: ApplicationIntent
     entities: DomainEntities

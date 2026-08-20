@@ -10,7 +10,17 @@ from src.data_models.delivery.transmission_ack import TransmissionAck
 
 
 class NotificationDispatchResult(StrictBaseModel):
-    """End-to-end notification preparation and carrier dispatch outcome."""
+    """Data model representing the outcome of an outbound notification dispatch.
+
+    Pairs the generated channel-adapted notification payload with the carrier transmission
+    acknowledgment.
+
+    Attributes:
+        payload: Channel-adapted notification payload generated for transmission.
+        transmission_ack: Authoritative carrier transmission acknowledgment receipt.
+
+    See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
+    """
 
     payload: OutboundNotificationPayload = Field(
         ...,

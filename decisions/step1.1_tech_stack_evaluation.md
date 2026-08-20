@@ -1,6 +1,6 @@
 # Stack Selection: Language, Runtime & AI Frameworks
 
-**Framework Step:** Phase 1 · Step 1.1: Choose Language, Runtime & AI Frameworks  
+**Framework Step:** Phase 1 · Step 1.1: Choose Language, Runtime & AI Frameworks
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
 - [flowchart.md](../design-specs/step3-guardrails/flowchart.md)

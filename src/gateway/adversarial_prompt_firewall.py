@@ -62,7 +62,28 @@ _PROMPT_INJECTION_PATTERNS: Final[list[tuple[ThreatCategory, re.Pattern[str]]]] 
 
 
 class AdversarialPromptFirewall:
-    """Security firewall inspecting citizen inputs against adversarial prompt injections."""
+    """Security firewall inspecting text inputs against adversarial prompt injections.
+
+    Detects instruction overrides, role usurpation, delimiter escapes, query injections, and
+    payout
+    manipulation patterns.
+
+    Threat Categories Evaluated:
+    - `SYSTEM_OVERRIDE`: Detects attempts to disregard system instructions or safety rules.
+    - `ROLE_USURPATION`: Detects prompts attempting to alter agent persona or bypass
+      authorization.
+    - `DELIMITER_HIJACKING`: Catches attempts to break structured formatting boundaries.
+    - `DATABASE_INJECTION`: Intercepts database and query injection patterns.
+    - `PAYOUT_MANIPULATION`: Flags prompt instructions attempting to alter entitlement
+      amounts.
+
+    Operations:
+    - `inspect`: Evaluates input text against known threat regex patterns and returns a
+      tuple
+      of `(is_adversarial, threat_category)`.
+
+    See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 3)
+    """
 
     @classmethod
     def inspect(cls, input_text: str) -> tuple[bool, ThreatCategory | None]:

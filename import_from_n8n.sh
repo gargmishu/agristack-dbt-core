@@ -26,22 +26,22 @@ echo "$workflow_names" | while read -r name; do
         # Normalize the name string for the standard unix file structure
         safe_name=$(echo "$name" | sed 's/[[:space:]]/_/g' | sed 's/[^a-zA-Z0-9__-]//g')
         target_json="${WORKFLOW_DIR}/${safe_name}.json"
-        
+
         echo "🔀 Unpacking and normalising: [$name] ──> ${target_json}"
-        
+
         # Isolate the specific canvas schema block from the master file and drop transient metadata tags
         jq --arg wf_name "$name" '.[] | select(.name == $wf_name) | del(.id, .createdAt, .updatedAt)' "$MASTER_DUMP" > "$target_json"
-        
+
         # ✂️ Extract clean, standalone JavaScript code blocks from the node tree
         jq -c '.nodes[] | select(.type | startswith("n8n-nodes-base.code")) | {name: .name, code: (.parameters.jsCode // .parameters.code)} | select(.code != null)' "$target_json" | while read -r row; do
             node_name=$(echo "$row" | jq -r '.name')
-            
+
             # Trim accidental whitespace and remove an existing .js suffix if present to prevent double extensions
             base_filename=$(echo "$node_name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | sed 's/\.js$//i')
-            
+
             # 🌟 FIX: Deterministically enforce the .js extension
             final_filename="${base_filename}.js"
-            
+
             echo "$row" | jq -r '.code' > "${SRC_DIR}/${final_filename}"
             echo "   💾 Saved decoupled module: ${SRC_DIR}/${final_filename}"
         done
