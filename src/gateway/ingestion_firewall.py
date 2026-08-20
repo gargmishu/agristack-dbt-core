@@ -160,7 +160,7 @@ class IngestionFirewall:
             raise PermissionError(f"Rate limit exceeded for session {payload.session_id}")
 
         # 2. Adversarial Prompt Injection Pre-Inspection
-        # Note: Pre-inspects text bodies and USSD selections at the ingress boundary.
+        # Note: Pre-inspects free-text message bodies (WhatsApp text, SMS) at the ingress boundary.
         # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
         raw_text = self._extract_inspectable_text(payload)
         if raw_text is not None:
@@ -208,9 +208,7 @@ class IngestionFirewall:
         | UssdIngressPayload
         | SmsIngressPayload,
     ) -> str | None:
-        """Extracts text content or digit strings for ingress prompt injection screening."""
+        """Extracts free-form text content for ingress prompt injection screening."""
         if isinstance(payload, WhatsAppIngressPayload | SmsIngressPayload) and payload.text_body:
             return payload.text_body
-        if isinstance(payload, UssdIngressPayload) and payload.ussd_user_digit_selection:
-            return payload.ussd_user_digit_selection
         return None
