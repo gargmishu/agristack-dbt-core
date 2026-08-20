@@ -16,7 +16,7 @@ from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
 
-SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
+_SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
 _REDACTION_MARKER: Final[str] = "[REDACTED]"
 
 # E.164 international phone numbers embedded in free text or discrete fields
@@ -34,8 +34,7 @@ class PiiPurgeGuard:
 
     Provides privacy protection across text inputs and standardized intake contracts:
     1. Active Text Redaction (`redact_text`): Replaces E.164 phone numbers, 10-digit Indian
-       mobile
-       numbers, and 12-digit Aadhaar UID numbers with `[REDACTED]`.
+       mobile numbers, and 12-digit Aadhaar UID numbers with `[REDACTED]`.
     2. Compliance Sentinel (`assert_zero_pii`): Inspects
        `PublicAgentStandardizedIntakePayload`
        contracts to verify citizen tokens are valid SHA-256 HMAC digests and text contains
@@ -89,9 +88,9 @@ class PiiPurgeGuard:
             ValueError: If cleartext MSISDN or Aadhaar is detected in non-token fields.
         """
         # Token must be strictly a 64-char SHA-256 HMAC hash
-        if len(payload.tokenized_citizen_id) != SHA256_HEX_TOKEN_LENGTH:
+        if len(payload.tokenized_citizen_id) != _SHA256_HEX_TOKEN_LENGTH:
             raise ValueError(
-                f"tokenized_citizen_id must be a {SHA256_HEX_TOKEN_LENGTH}-character "
+                f"tokenized_citizen_id must be a {_SHA256_HEX_TOKEN_LENGTH}-character "
                 f"SHA-256 HMAC token, got length {len(payload.tokenized_citizen_id)}"
             )
 
