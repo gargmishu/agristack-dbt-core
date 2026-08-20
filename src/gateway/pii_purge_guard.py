@@ -70,7 +70,7 @@ class PiiPurgeGuard:
         redacted = cls._redact_aadhaar_numbers(redacted)
 
         if redacted != text:
-            logger.warning(
+            logger.info(
                 "PII redacted from free-text input for session=%s",
                 session_id,
             )
