@@ -22,10 +22,6 @@ from src.data_models.raw_ingress import (
 from src.gateway.pii_purge_guard import PiiPurgeGuard
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
-IngressPayloadUnion = (
-    WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload | SmsIngressPayload
-)
-
 
 class PayloadCanonicalizer:
     """Canonicalizes raw carrier ingress payloads into standardized intake payloads.
@@ -59,7 +55,10 @@ class PayloadCanonicalizer:
 
     def canonicalize(
         self,
-        payload: IngressPayloadUnion,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
         language_locale: LanguageLocale = LanguageLocale.HINDI,
     ) -> PublicAgentStandardizedIntakePayload:
         """Canonicalizes any raw ingress payload into PublicAgentStandardizedIntakePayload.

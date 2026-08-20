@@ -13,13 +13,14 @@ import logging
 from src.data_models.common import LanguageLocale
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
+    IvrIngressPayload,
     SmsIngressPayload,
     UssdIngressPayload,
     WhatsAppIngressPayload,
 )
 from src.gateway.adversarial_prompt_firewall import AdversarialPromptFirewall
 from src.gateway.carrier_auth_validator import CarrierAuthValidator
-from src.gateway.payload_canonicalizer import IngressPayloadUnion, PayloadCanonicalizer
+from src.gateway.payload_canonicalizer import PayloadCanonicalizer
 from src.gateway.pii_purge_guard import PiiPurgeGuard
 from src.gateway.rate_limiter import RateLimiter
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
@@ -70,7 +71,10 @@ class IngestionFirewall:
 
     def validate_and_canonicalize(
         self,
-        payload: IngressPayloadUnion,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
         language_locale: LanguageLocale = LanguageLocale.HINDI,
     ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
         """Ingests, rate-limits, tokenizes PII in RAM, and scans for adversarial patterns.
@@ -87,8 +91,7 @@ class IngestionFirewall:
             ValueError: If payload fails PII purge assertion.
         """
         # 1. Rate Limit Enforcement
-        rate_key = payload.originating_phone_number
-        if not self._rate_limiter.is_allowed(rate_key):
+        if not self._rate_limiter.is_allowed(payload.originating_phone_number):
             logger.warning("Rate limit exceeded for ingress session=%s", payload.session_id)
             raise PermissionError(f"Rate limit exceeded for session {payload.session_id}")
 
