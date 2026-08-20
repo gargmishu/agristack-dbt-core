@@ -255,6 +255,11 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
   * **Correct**: `SLM/NLU extraction pipeline`, `ASR/STT audio transcription worker`, `AI governance engine`
   * **Incorrect**: `Ollama pipeline`, `Whisper transcription worker`, `LLaMA model`
 
+### 3.6 Method Ordering & Placement of Private Helpers
+* **Public Interface First**: Constructors (`__init__`), factory class methods (`from_env`, `from_default`), and public domain/orchestration interface methods must be declared first in class definitions.
+* **Private Helpers at the Bottom**: All internal private helper methods (prefixed with a leading underscore `_`, e.g., `_extract_inspectable_text`, `_canonicalize_whatsapp`) must strictly be placed at the **bottom** of the class definition below all public, static, and class methods.
+* **Module-Level Helpers**: Module-level private functions should similarly reside below primary class definitions or at the bottom of the module to maintain clean, top-down readability for engineers.
+
 ---
 
 ## 4. Strict Type Safety & Immutability

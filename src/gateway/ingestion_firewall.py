@@ -80,6 +80,96 @@ class IngestionFirewall:
             ),
         )
 
+    def inspect_security(
+        self,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
+    ) -> bool:
+        """Enforces caller rate limits and scans for adversarial prompt injections.
+
+        Args:
+            payload: Ingress carrier payload.
+
+        Returns:
+            bool: True if an adversarial threat/prompt injection is detected, False otherwise.
+
+        Raises:
+            PermissionError: If rate limit is exceeded for the originating phone number.
+        """
+        # 1. Rate Limit Enforcement
+        if not self._rate_limiter.is_allowed(payload.originating_phone_number):
+            logger.warning("Rate limit exceeded for ingress session=%s", payload.session_id)
+            raise PermissionError(f"Rate limit exceeded for session {payload.session_id}")
+
+        # 2. Adversarial Prompt Injection Pre-Inspection
+        # Note: Pre-inspects text bodies and USSD selections at the ingress boundary.
+        # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
+        raw_text = self._extract_inspectable_text(payload)
+        if raw_text is not None:
+            is_adversarial, threat_category = AdversarialPromptFirewall.inspect(raw_text)
+            if is_adversarial:
+                logger.warning(
+                    "Adversarial pattern detected during ingress session=%s category=%s",
+                    payload.session_id,
+                    threat_category,
+                )
+                return True
+
+        return False
+
+    def canonicalize(
+        self,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
+    ) -> PublicAgentStandardizedIntakePayload:
+        """Transforms a raw carrier ingress payload into a zero-PII standardized contract.
+
+        Args:
+            payload: Raw carrier ingress payload with phone number.
+            language_locale: Target BCP-47 language locale (default: 'hi-IN').
+
+        Returns:
+            PublicAgentStandardizedIntakePayload with RAM-tokenized citizen identifier.
+
+        Raises:
+            ValueError: If the normalized payload fails the PII purge assertion.
+        """
+        standardized_payload = self._canonicalizer.canonicalize(
+            payload=payload, language_locale=language_locale
+        )
+        PiiPurgeGuard.assert_zero_pii(standardized_payload)
+        return standardized_payload
+
+    def process_ingress(
+        self,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
+    ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
+        """Unified ingress pipeline orchestrator: validates security, tokenizes, and canonicalizes.
+
+        Args:
+            payload: Raw carrier ingress payload (WhatsApp, IVR, USSD, or SMS).
+            language_locale: Target BCP-47 language locale (default: 'hi-IN').
+
+        Returns:
+            Tuple of (standardized_payload, is_adversarial_detected).
+
+        Raises:
+            PermissionError: If rate limit is exceeded.
+            ValueError: If payload fails PII purge assertion.
+        """
+        is_adversarial = self.inspect_security(payload)
+        standardized_payload = self.canonicalize(payload, language_locale=language_locale)
+        return standardized_payload, is_adversarial
+
     def validate_and_canonicalize(
         self,
         payload: WhatsAppIngressPayload
@@ -90,50 +180,9 @@ class IngestionFirewall:
     ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
         """Ingests, rate-limits, tokenizes PII in RAM, and scans for adversarial patterns.
 
-        Args:
-            payload: WhatsAppIngressPayload, IvrIngressPayload, or UssdIngressPayload.
-            language_locale: Target BCP-47 language locale (default: 'hi-IN').
-
-        Returns:
-            Tuple of (standardized_payload, is_adversarial_detected).
-
-        Raises:
-            PermissionError: If rate limit is exceeded.
-            ValueError: If payload fails PII purge assertion.
+        Note: This method delegates directly to `process_ingress`.
         """
-        # 1. Rate Limit Enforcement
-        if not self._rate_limiter.is_allowed(payload.originating_phone_number):
-            logger.warning("Rate limit exceeded for ingress session=%s", payload.session_id)
-            raise PermissionError(f"Rate limit exceeded for session {payload.session_id}")
-
-        # 2. Canonicalization with RAM-only PII tokenization
-        standardized_payload = self._canonicalizer.canonicalize(
-            payload=payload, language_locale=language_locale
-        )
-
-        # 3. PII Purge Sentinel Assertion
-        PiiPurgeGuard.assert_zero_pii(standardized_payload)
-
-        # 4. Adversarial Prompt Injection Pre-Inspection
-        # Note: Pre-inspects text bodies and USSD selections at the ingress boundary.
-        # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
-        is_adversarial = False
-        raw_text = None
-        if isinstance(payload, WhatsAppIngressPayload | SmsIngressPayload) and payload.text_body:
-            raw_text = payload.text_body
-        elif isinstance(payload, UssdIngressPayload) and payload.ussd_user_digit_selection:
-            raw_text = payload.ussd_user_digit_selection
-
-        if raw_text is not None:
-            is_adversarial, threat_category = AdversarialPromptFirewall.inspect(raw_text)
-            if is_adversarial:
-                logger.warning(
-                    "Adversarial pattern detected during ingress session=%s category=%s",
-                    payload.session_id,
-                    threat_category,
-                )
-
-        return standardized_payload, is_adversarial
+        return self.process_ingress(payload=payload, language_locale=language_locale)
 
     @staticmethod
     def verify_carrier_webhook(
@@ -158,3 +207,17 @@ class IngestionFirewall:
             auth_header=auth_header,
             expected_token=expected_token,
         )
+
+    def _extract_inspectable_text(
+        self,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
+    ) -> str | None:
+        """Extracts text content or digit strings for ingress prompt injection screening."""
+        if isinstance(payload, WhatsAppIngressPayload | SmsIngressPayload) and payload.text_body:
+            return payload.text_body
+        if isinstance(payload, UssdIngressPayload) and payload.ussd_user_digit_selection:
+            return payload.ussd_user_digit_selection
+        return None
