@@ -49,6 +49,16 @@ def get_rate_limit_capacity() -> int:
     return _get_positive_int("RATE_LIMIT_CAPACITY")
 
 
+def get_pepper_secret() -> str:
+    """Returns configured cryptographic pepper secret for Zero-PII HMAC tokenization."""
+    pepper_secret = os.getenv("AGRISTACK_PEPPER_SECRET")
+    if not pepper_secret or not pepper_secret.strip():
+        raise ValueError(
+            "Required environment variable 'AGRISTACK_PEPPER_SECRET' is missing or empty."
+        )
+    return pepper_secret.strip()
+
+
 def _get_positive_int(variable_name: str) -> int:
     value = os.getenv(variable_name)
     if value is None:

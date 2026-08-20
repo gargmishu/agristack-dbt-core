@@ -8,9 +8,9 @@ See: decisions/step0.3_zero_trust_tokenization.md
 """
 
 import hmac
-import os
 from hashlib import sha256
-from typing import Final
+
+from src.config import get_pepper_secret
 
 
 class ZeroTrustIdentityTokenizer:
@@ -29,8 +29,6 @@ class ZeroTrustIdentityTokenizer:
     See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
-    _DEFAULT_PEPPER_ENV_VAR: Final[str] = "AGRISTACK_PEPPER_SECRET"
-
     def __init__(self, pepper_key: str) -> None:
         """Initializes tokenizer with an explicit cryptographic pepper key."""
         if not pepper_key or not pepper_key.strip():
@@ -40,12 +38,7 @@ class ZeroTrustIdentityTokenizer:
     @classmethod
     def from_env(cls) -> "ZeroTrustIdentityTokenizer":
         """Factory method to instantiate tokenizer using environment variable configuration."""
-        pepper_key = os.getenv(cls._DEFAULT_PEPPER_ENV_VAR)
-        if not pepper_key or not pepper_key.strip():
-            raise ValueError(
-                f"Required env var '{cls._DEFAULT_PEPPER_ENV_VAR}' is missing or empty."
-            )
-        return cls(pepper_key=pepper_key)
+        return cls(pepper_key=get_pepper_secret())
 
     def tokenize_citizen_id(self, raw_identifier: str) -> str:
         """Tokenizes raw citizen ID (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.

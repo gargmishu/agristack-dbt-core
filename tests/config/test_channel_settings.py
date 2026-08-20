@@ -10,6 +10,7 @@ from src.config import (
     DEFAULT_WHATSAPP_INTERFACE,
     get_helpline_number,
     get_ivr_interface_id,
+    get_pepper_secret,
     get_rate_limit_capacity,
     get_rate_per_minute,
     get_sms_interface_id,
@@ -50,3 +51,16 @@ def test_rate_limit_settings_environment_values(monkeypatch: pytest.MonkeyPatch)
 
     assert get_rate_per_minute() == expected_rate_per_minute
     assert get_rate_limit_capacity() == expected_rate_limit_capacity
+
+
+def test_get_pepper_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "custom_pepper_secret_12345")
+    assert get_pepper_secret() == "custom_pepper_secret_12345"
+
+    monkeypatch.delenv("AGRISTACK_PEPPER_SECRET", raising=False)
+    with pytest.raises(ValueError, match="Required environment variable 'AGRISTACK_PEPPER_SECRET'"):
+        get_pepper_secret()
+
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "   ")
+    with pytest.raises(ValueError, match="Required environment variable 'AGRISTACK_PEPPER_SECRET'"):
+        get_pepper_secret()

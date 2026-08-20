@@ -35,7 +35,7 @@ def test_tokenizer_missing_pepper_key_raises(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.delenv("AGRISTACK_PEPPER_SECRET", raising=False)
     with pytest.raises(ValueError) as exc:
         ZeroTrustIdentityTokenizer.from_env()
-    assert "Required env var" in str(exc.value)
+    assert "Required environment variable" in str(exc.value)
 
 
 def test_tokenizer_empty_pepper_arg_raises() -> None:
