@@ -89,7 +89,7 @@ def test_canonicalize_ussd() -> None:
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
         ussd_service_code="*147#",
-        ussd_user_digit_selection="1*2*9876543210",
+        ussd_user_digit_selection="1*2*101",
         received_at=datetime.now(UTC),
     )
 
@@ -97,7 +97,7 @@ def test_canonicalize_ussd() -> None:
     assert intake.channel_type == ChannelType.USSD
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.DTMF_SELECTION
-    assert intake.unprocessed_input_content == "1*2*9876543210"
+    assert intake.unprocessed_input_content == "1*2*101"
 
 
 def test_canonicalize_sms() -> None:
@@ -117,6 +117,24 @@ def test_canonicalize_sms() -> None:
     assert intake.structure_level == StructureLevel.FREE_TEXT
     assert intake.unprocessed_input_content == "Mujhe PM KISAN kist ki jankari chahiye"
     assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LEN
+
+
+def test_canonicalize_redacts_embedded_pii_in_text() -> None:
+    canonicalizer = PayloadCanonicalizer.from_env()
+    payload = WhatsAppIngressPayload(
+        session_id="sess_pii_redaction",
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.HBgLOTE5ODc2NTQzMjEwFQIAERgSQTU1MzI0MTk0Nzc3MzRCOUEwAA==",
+        payload_type=PayloadType.TEXT,
+        text_body="Mera phone 9876543210 aur Aadhaar 1234 5678 9012 hai",
+        received_at=datetime.now(UTC),
+    )
+
+    intake = canonicalizer.canonicalize(payload)
+    assert "[REDACTED]" in intake.unprocessed_input_content
+    assert "9876543210" not in intake.unprocessed_input_content
+    assert "1234 5678 9012" not in intake.unprocessed_input_content
+    assert intake.unprocessed_input_content == "Mera phone [REDACTED] aur Aadhaar [REDACTED] hai"
 
 
 def test_canonicalize_unsupported_payload_type() -> None:
