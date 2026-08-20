@@ -99,6 +99,9 @@ class IngestionFirewall:
             PermissionError: If rate limit is exceeded for the originating phone number.
         """
         # 1. Rate Limit Enforcement
+        # Note: Rate limits are tracked in-memory by originating_phone_number to throttle
+        # callers across multiple sessions. The session_id is logged instead of the cleartext
+        # phone number to adhere strictly to the Zero-PII logging invariant.
         if not self._rate_limiter.is_allowed(payload.originating_phone_number):
             logger.warning("Rate limit exceeded for ingress session=%s", payload.session_id)
             raise PermissionError(f"Rate limit exceeded for session {payload.session_id}")
