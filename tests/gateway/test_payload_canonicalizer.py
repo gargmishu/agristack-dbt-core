@@ -53,7 +53,7 @@ def test_canonicalize_whatsapp_audio() -> None:
         channel_message_id="wamid.HBgLOTE5ODc2NTQzMjEwFQIAERgSQTU1MzI0MTk0Nzc3MzRCOUEwAA==",
         payload_type=PayloadType.AUDIO,
         audio_recording_url=HttpUrl("https://s3.ap-south-1.amazonaws.com/bhashini/audio.ogg"),
-        duration_seconds=15,
+        audio_duration_seconds=15,
         received_at=datetime.now(UTC),
     )
 
@@ -72,7 +72,7 @@ def test_canonicalize_ivr() -> None:
         session_id="sess_12345678",
         originating_phone_number="+919876543210",
         audio_recording_url=HttpUrl("https://sip-gateway.telecom.in/call.wav"),
-        duration_seconds=30,
+        audio_duration_seconds=30,
         received_at=datetime.now(UTC),
     )
 

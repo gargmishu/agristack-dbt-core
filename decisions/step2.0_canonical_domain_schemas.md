@@ -221,13 +221,13 @@ To maintain consistency and avoid duplicate validation logic across services, th
 
 #### 4.0.1 Shared Audio Boundary & Stream Decoding Validations (WhatsApp Voice Notes & IVR Telephony)
 
-1. **Co-presence of `audio_recording_url` and `duration_seconds`:**
+1. **Co-presence of `audio_recording_url` and `audio_duration_seconds`:**
    - **`audio_recording_url` (Binary Data Pointer):** Cryptographically signed, time-limited HTTPS URL pointing to private object storage audio recordings (`.wav` for IVR, `.ogg` for WhatsApp). Keeps JSON metadata payloads lightweight (~150 bytes) instead of shipping multi-megabyte binary blobs.
-   - **`duration_seconds` (Fail-Fast Gatekeeping & Resource Budgeting):** Metadata integer field enabling immediate schema-level rejection of invalid, dropped, or oversized audio recordings *prior to* any network I/O or file download. Enables downstream ASR/STT orchestrators to allocate GPU/compute timeout budgets without decoding audio headers.
-2. **Actual Audio Stream Validation (e.g., `duration_seconds=480` (8 min) but actual audio > 10 min):**
-   - **Ingress Layer (Layer 1 -> Layer 2):** The JSON schema evaluates `duration_seconds` against `min=1, max=600`. The metadata check passes, and `audio_recording_url` is verified for URL syntax only (no network download occurs during Pydantic schema instantiation).
+    - **`audio_duration_seconds` (Fail-Fast Gatekeeping & Resource Budgeting):** Metadata integer field enabling immediate schema-level rejection of invalid, dropped, or oversized audio recordings *prior to* any network I/O or file download. Enables downstream ASR/STT orchestrators to allocate GPU/compute timeout budgets without decoding audio headers.
+2. **Actual Audio Stream Validation (e.g., `audio_duration_seconds=480` (8 min) but actual audio > 10 min):**
+    - **Ingress Layer (Layer 1 -> Layer 2):** The JSON schema evaluates `audio_duration_seconds` against `min=1, max=600`. The metadata check passes, and `audio_recording_url` is verified for URL syntax only (no network download occurs during Pydantic schema instantiation).
    - **Audio Decoding Layer (Layer 2 -> Layer 3 Ingestion Worker):** When the ingestion worker fetches the audio file, it computes actual physical duration from decoded samples: `actual_duration = total_samples / sample_rate`.
-   - **Discrepancy Action:** If `actual_duration > 600s` or drifts beyond tolerance from `duration_seconds`:
+    - **Discrepancy Action:** If `actual_duration > 600s` or drifts beyond tolerance from `audio_duration_seconds`:
      - The worker triggers an `AudioDurationMismatchError` / `PayloadBufferOverflowError`.
      - The audio is **strictly rejected** from entering the single-pass SLM/ASR pipeline (protecting GPU workers from Out-Of-Memory crashes and context truncation hallucinations).
      - The session is quarantined to the Dead-Letter Queue (DLQ) and logged to `SessionTelemetryLog` as an anomalous/tampered payload event.
@@ -256,7 +256,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     payload_type: PayloadType = Field(..., description="Ingress payload modality: audio, text, image, document")
     received_at: datetime = Field(..., description="UTC timestamp when carrier received event")
     audio_recording_url: Optional[HttpUrl] = Field(None, description="Signed URL for .ogg audio file (populated for AUDIO)")
-    duration_seconds: Optional[int] = Field(None, min=1, max=600, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)")
+    audio_duration_seconds: Optional[int] = Field(None, min=1, max=600, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)")
     text_body: Optional[str] = Field(None, max_length=1000, description="Raw text message (populated for TEXT)")
 ```
 
@@ -266,9 +266,9 @@ class WhatsAppIngressPayload(StrictBaseModel):
    - **max=128:** covers the longest known format (WhatsApp wmid: 50–100 chars, RCS UUID compound: 36–72 chars, SMS provider ID: 8–32 chars) while providing a hard ceiling against oversized injection.
    - **WhatsApp wmid format note:** WhatsApp message ids always begins with the `wamid.` prefix ("wa" = WhatsApp) followed by a base64-encoded payload issued by the WhatsApp Business Platform. A value that does not start with `wamid.` on a WhatsApp channel is anomalous and should be flagged.
 2. **Mutual Exclusivity & Content Completeness (Audio vs. Text):**
-   - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `duration_seconds` **must** be an integer (`1 <= duration <= 600`); `text_body` **must** be `None`.
-   - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` and `duration_seconds` **must** be `None`.
-3. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
+    - If `payload_type == AUDIO`: `audio_recording_url` **must** be a valid HTTP/HTTPS URL pointing to an `.ogg` file; `audio_duration_seconds` **must** be an integer (`1 <= duration <= 600`); `text_body` **must** be `None`.
+    - If `payload_type == TEXT`: `text_body` **must** be a non-empty string (1–1000 chars); `audio_recording_url` and `audio_duration_seconds` **must** be `None`.
+3. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `audio_duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
 
 ---
 
@@ -283,13 +283,13 @@ class IvrIngressPayload(StrictBaseModel):
 ```
 
 ##### IVR Telephony Specific Validations:
-1. **Call Duration Bounds:** `duration_seconds` must be an integer, `min=1, max=600`.
-   - **min=1:** A call with `duration_seconds=0` means the call connected but immediately dropped before any audio was captured — no usable recording exists. Negative values are physically impossible. Any call that produced a valid `audio_recording_url` must have at least 1 second of audio.
+1. **Call Duration Bounds:** `audio_duration_seconds` must be an integer, `min=1, max=600`.
+    - **min=1:** A call with `audio_duration_seconds=0` means the call connected but immediately dropped before any audio was captured — no usable recording exists. Negative values are physically impossible. Any call that produced a valid `audio_recording_url` must have at least 1 second of audio.
    - **max=600:** Chosen from three converging constraints:
      1. **Flow design ceiling:** The longest AgriStack IVR flow (subsidy application) was derived bottom-up from its component steps: opening greeting + language selection (~15 s) + 5 navigation menu levels at ~15 s each (~75 s) + 5 data-entry inputs at ~30 s each (system prompt → DTMF digits → readback → confirm = ~150 s) + summary readback (~20 s) + closing + reference number announcement (~15 s) = **~275 s ≈ 4.6 min**. 600s gives 2× headroom above that ceiling without being unbounded.
      2. **Audio file size:**  The file size formula is `sample_rate × bytes_per_sample × channels × duration`. At standard IVR encoding (8 kHz, 8-bit, mono) & 10min audio, it becomes `8,000 × 1 × 1 × 600 = 4.8 MB`. We are currently assuming that SLMs should be able to handle audio files up to this size without chunking.
      3. **Anti-resource-exhaustion:** A hard ceiling prevents stuck or adversarial calls from filling the audio storage bucket with arbitrarily large files.
-2. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
+2. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `audio_duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
 
 ---
 

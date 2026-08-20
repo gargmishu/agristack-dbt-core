@@ -33,7 +33,7 @@ class WhatsAppIngressPayload(StrictBaseModel):
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )
-    duration_seconds: AudioDurationSeconds | None = Field(
+    audio_duration_seconds: AudioDurationSeconds | None = Field(
         None, description="Voice note audio duration in seconds (1 to 600s; populated for AUDIO)"
     )
     # min_length=1 allows single-digit menu selections or quick affirmative replies
@@ -61,8 +61,8 @@ class WhatsAppIngressPayload(StrictBaseModel):
         if self.payload_type.is_audio:
             if self.audio_recording_url is None:
                 raise ValueError("audio_recording_url is required when payload_type is AUDIO")
-            if self.duration_seconds is None:
-                raise ValueError("duration_seconds is required when payload_type is AUDIO")
+            if self.audio_duration_seconds is None:
+                raise ValueError("audio_duration_seconds is required when payload_type is AUDIO")
             if self.text_body is not None:
                 raise ValueError("text_body must be None when payload_type is AUDIO")
         return self
@@ -81,6 +81,6 @@ class WhatsAppIngressPayload(StrictBaseModel):
                 raise ValueError("text_body is required when payload_type is TEXT")
             if self.audio_recording_url is not None:
                 raise ValueError("audio_recording_url must be None when payload_type is TEXT")
-            if self.duration_seconds is not None:
-                raise ValueError("duration_seconds must be None when payload_type is TEXT")
+            if self.audio_duration_seconds is not None:
+                raise ValueError("audio_duration_seconds must be None when payload_type is TEXT")
         return self

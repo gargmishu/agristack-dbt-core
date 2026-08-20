@@ -32,11 +32,11 @@ def test_whatsapp_ingress_valid_audio() -> None:
         payload_type=PayloadType.AUDIO,
         received_at=datetime.now(UTC),
         audio_recording_url=url,
-        duration_seconds=120,
+        audio_duration_seconds=120,
     )
     assert payload.payload_type == PayloadType.AUDIO
     assert str(payload.audio_recording_url) == "https://storage.agristack.gov.in/audio/voice.ogg"
-    assert payload.duration_seconds == 120  # noqa: PLR2004
+    assert payload.audio_duration_seconds == 120  # noqa: PLR2004
 
 
 def test_whatsapp_ingress_invalid_audio_missing_url() -> None:
@@ -47,13 +47,13 @@ def test_whatsapp_ingress_invalid_audio_missing_url() -> None:
             channel_message_id="wamid.HBgLMTIzNDU2Nzg5MA==",
             payload_type=PayloadType.AUDIO,
             received_at=datetime.now(UTC),
-            duration_seconds=120,
+            audio_duration_seconds=120,
         )
 
 
 def test_whatsapp_ingress_invalid_audio_missing_duration() -> None:
     url = http_url_adapter.validate_python("https://storage.agristack.gov.in/audio/voice.ogg")
-    with pytest.raises(ValidationError, match="duration_seconds is required"):
+    with pytest.raises(ValidationError, match="audio_duration_seconds is required"):
         WhatsAppIngressPayload(
             session_id="sess_12345678",
             originating_phone_number="+919876543210",
@@ -61,7 +61,7 @@ def test_whatsapp_ingress_invalid_audio_missing_duration() -> None:
             payload_type=PayloadType.AUDIO,
             received_at=datetime.now(UTC),
             audio_recording_url=url,
-            duration_seconds=None,
+            audio_duration_seconds=None,
         )
 
 
@@ -75,7 +75,7 @@ def test_whatsapp_ingress_invalid_audio_with_text_body() -> None:
             payload_type=PayloadType.AUDIO,
             received_at=datetime.now(UTC),
             audio_recording_url=url,
-            duration_seconds=120,
+            audio_duration_seconds=120,
             text_body="Some text with audio",
         )
 
@@ -115,7 +115,7 @@ def test_whatsapp_ingress_invalid_text_with_audio_url_or_duration() -> None:
             audio_recording_url=url,
         )
 
-    with pytest.raises(ValidationError, match="duration_seconds must be None"):
+    with pytest.raises(ValidationError, match="audio_duration_seconds must be None"):
         WhatsAppIngressPayload(
             session_id="sess_12345678",
             originating_phone_number="+919876543210",
@@ -123,7 +123,7 @@ def test_whatsapp_ingress_invalid_text_with_audio_url_or_duration() -> None:
             payload_type=PayloadType.TEXT,
             received_at=datetime.now(UTC),
             text_body="Text with duration",
-            duration_seconds=60,
+            audio_duration_seconds=60,
         )
 
 

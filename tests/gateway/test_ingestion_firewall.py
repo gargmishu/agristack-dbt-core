@@ -77,7 +77,7 @@ def test_ingestion_firewall_processes_ivr_payload(firewall: IngestionFirewall) -
         session_id="session-ivr-123456",
         originating_phone_number="+919876543210",
         audio_recording_url=HttpUrl("https://s3.ap-south-1.amazonaws.com/agristack-ivr/rec.wav"),
-        duration_seconds=45,
+        audio_duration_seconds=45,
         received_at=datetime.now(UTC),
     )
     standardized, is_adversarial = firewall.validate_and_canonicalize(raw_payload)
