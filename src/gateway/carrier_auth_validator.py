@@ -19,8 +19,8 @@ class CarrierAuthValidator:
     See: decisions/step3.2_security_and_ingestion_firewalls.md
     """
 
-    SIGNATURE_PREFIX: Final[str] = "sha256="
-    BEARER_PREFIX: Final[str] = "Bearer "
+    _SIGNATURE_PREFIX: Final[str] = "sha256="
+    _BEARER_PREFIX: Final[str] = "Bearer "
 
     @classmethod
     def validate_whatsapp_signature(
@@ -39,10 +39,10 @@ class CarrierAuthValidator:
         Returns:
             True if signature matches, False otherwise.
         """
-        if not signature_header or not signature_header.startswith(cls.SIGNATURE_PREFIX):
+        if not signature_header or not signature_header.startswith(cls._SIGNATURE_PREFIX):
             return False
 
-        expected_signature = signature_header.removeprefix(cls.SIGNATURE_PREFIX).strip()
+        expected_signature = signature_header.removeprefix(cls._SIGNATURE_PREFIX).strip()
         computed_signature = hmac.new(
             app_secret.encode("utf-8"),
             payload_bytes,
@@ -66,8 +66,8 @@ class CarrierAuthValidator:
         Returns:
             True if token matches using constant-time comparison, False otherwise.
         """
-        if not auth_header or not auth_header.startswith(cls.BEARER_PREFIX):
+        if not auth_header or not auth_header.startswith(cls._BEARER_PREFIX):
             return False
 
-        provided_token = auth_header.removeprefix(cls.BEARER_PREFIX).strip()
+        provided_token = auth_header.removeprefix(cls._BEARER_PREFIX).strip()
         return secrets.compare_digest(provided_token, expected_token)

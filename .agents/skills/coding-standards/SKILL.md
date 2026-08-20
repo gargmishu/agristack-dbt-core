@@ -38,6 +38,7 @@ Before writing validator methods, map out **100% of Enum states** in a matrix ta
 
 ### 1.2 Attribute & Field Naming (`snake_case`)
 * All model attributes, function parameters, and variables must strictly use `snake_case`.
+* Constants that are implementation details must use uppercase `SNAKE_CASE` with a leading underscore (for example, `_SIGNATURE_PREFIX`, `_BEARER_PREFIX`, and `_DEFAULT_PEPPER_ENV_VAR`). Public configuration defaults, domain policy tables, and test fixtures may remain unprefixed when they are intentionally part of the module's usable surface.
 
 ### 1.3 Timestamp Attribute Standard (`<action>_at`)
 * All timestamp fields across all 4 architecture layers must follow the clean **`<action>_at`** convention. Avoid redundant `_timestamp` suffixes.
@@ -103,7 +104,7 @@ src/
 │       ├── payment_rail_service.py
 │       └── social_registry_service.py # External OpenSPP registry boundary client
 ├── errors/                          # RFC 7807 problem details exception handlers
-│   └── handlers.py
+│   └── validation_exception_handler.py
 ├── data_models/                     # Domain data contracts & Pydantic validation schemas
 │   ├── common/                      # Shared foundational primitives & type annotations
 │   │   ├── base.py                  # StrictBaseModel definition
@@ -170,7 +171,7 @@ tests/
 │       ├── test_payment_rail_service.py
 │       └── test_social_registry_service.py
 ├── errors/
-│   └── test_handlers.py
+│   └── test_validation_exception_handler.py
 ├── data_models/
 │   ├── common/
 │   │   ├── test_base.py

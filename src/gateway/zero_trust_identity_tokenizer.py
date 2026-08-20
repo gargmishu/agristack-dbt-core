@@ -15,7 +15,7 @@ from typing import Final
 class ZeroTrustIdentityTokenizer:
     """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance."""
 
-    DEFAULT_PEPPER_ENV_VAR: Final[str] = "AGRISTACK_PEPPER_SECRET"
+    _DEFAULT_PEPPER_ENV_VAR: Final[str] = "AGRISTACK_PEPPER_SECRET"
 
     def __init__(self, pepper_key: str) -> None:
         """Initializes tokenizer with an explicit cryptographic pepper key."""
@@ -26,10 +26,10 @@ class ZeroTrustIdentityTokenizer:
     @classmethod
     def from_env(cls) -> "ZeroTrustIdentityTokenizer":
         """Factory method to instantiate tokenizer using environment variable configuration."""
-        pepper_key = os.getenv(cls.DEFAULT_PEPPER_ENV_VAR)
+        pepper_key = os.getenv(cls._DEFAULT_PEPPER_ENV_VAR)
         if not pepper_key or not pepper_key.strip():
             raise ValueError(
-                f"Required env var '{cls.DEFAULT_PEPPER_ENV_VAR}' is missing or empty."
+                f"Required env var '{cls._DEFAULT_PEPPER_ENV_VAR}' is missing or empty."
             )
         return cls(pepper_key=pepper_key)
 
