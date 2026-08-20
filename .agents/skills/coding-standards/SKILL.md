@@ -260,6 +260,10 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
 * **Private Helpers at the Bottom**: All internal private helper methods (prefixed with a leading underscore `_`, e.g., `_extract_inspectable_text`, `_canonicalize_whatsapp`) must strictly be placed at the **bottom** of the class definition below all public, static, and class methods.
 * **Module-Level Helpers**: Module-level private functions should similarly reside below primary class definitions or at the bottom of the module to maintain clean, top-down readability for engineers.
 
+### 3.7 Clean Method Renaming & Legacy Caller Elimination
+* **Atomic Refactoring Across Callers**: When renaming or refactoring a method, function, or class, atomically migrate 100% of internal callers, test cases, and fixture references across the repository in the same change.
+* **Eliminate Legacy Shims & Forwarding Aliases**: Do not retain temporary backward-compatibility wrappers, aliases, or forwarding stubs (e.g., `validate_and_canonicalize`, `validate_whatsapp_signature`) once callers are migrated. Delete deprecated names immediately to eliminate dead code paths, avoid technical debt, and keep the public API unambiguous.
+
 ---
 
 ## 4. Strict Type Safety & Immutability

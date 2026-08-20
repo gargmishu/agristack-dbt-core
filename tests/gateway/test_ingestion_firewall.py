@@ -154,22 +154,6 @@ def test_ingestion_firewall_enforces_rate_limit(firewall: IngestionFirewall) -> 
         firewall.process_ingress(raw_payload)
 
 
-def test_ingestion_firewall_backward_compatible_validate_and_canonicalize(
-    firewall: IngestionFirewall,
-) -> None:
-    raw_payload = WhatsAppIngressPayload(
-        session_id="session-wa-compat",
-        originating_phone_number="+919876543210",
-        channel_message_id="wamid-HBgMOTE5ODc2NTQzMjEz",
-        payload_type=PayloadType.TEXT,
-        text_body="Fasal claim enquiry",
-        received_at=datetime.now(UTC),
-    )
-    standardized, is_adversarial = firewall.validate_and_canonicalize(raw_payload)
-    assert standardized.session_id == "session-wa-compat"
-    assert is_adversarial is False
-
-
 def test_ingestion_firewall_verifies_webhook_signature() -> None:
     payload_body = b'{"object": "whatsapp_business_account"}'
     sample_hmac_signing_key = "meta_test_webhook_signing_key"
@@ -202,7 +186,9 @@ def test_ingestion_firewall_verifies_bearer_token() -> None:
     assert IngestionFirewall.verify_carrier_bearer(None, "valid_carrier_key") is False
 
 
-def test_ingestion_firewall_split_methods_direct_invocation(firewall: IngestionFirewall) -> None:
+def test_ingestion_firewall_private_helpers_direct_invocation(
+    firewall: IngestionFirewall,
+) -> None:
     raw_payload = WhatsAppIngressPayload(
         session_id="session-wa-split-test",
         originating_phone_number="+919876543210",
@@ -212,17 +198,17 @@ def test_ingestion_firewall_split_methods_direct_invocation(firewall: IngestionF
         received_at=datetime.now(UTC),
     )
 
-    # 1. Test inspect_security directly
-    is_adversarial = firewall.inspect_security(raw_payload)
+    # 1. Test _inspect_security helper directly
+    is_adversarial = firewall._inspect_security(raw_payload)
     assert is_adversarial is False
 
-    # 2. Test canonicalize directly
-    standardized = firewall.canonicalize(raw_payload)
+    # 2. Test _canonicalize helper directly
+    standardized = firewall._canonicalize(raw_payload)
     assert standardized.session_id == "session-wa-split-test"
     assert standardized.channel_type == ChannelType.WHATSAPP
     assert len(standardized.tokenized_citizen_id) == EXPECTED_SHA256_HEX_LENGTH
 
-    # 3. Test process_ingress directly
+    # 3. Test process_ingress pipeline directly
     std_payload, adv_flag = firewall.process_ingress(raw_payload)
     assert std_payload.session_id == "session-wa-split-test"
     assert adv_flag is False

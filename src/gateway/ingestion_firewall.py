@@ -80,7 +80,60 @@ class IngestionFirewall:
             ),
         )
 
-    def inspect_security(
+    def process_ingress(
+        self,
+        payload: WhatsAppIngressPayload
+        | IvrIngressPayload
+        | UssdIngressPayload
+        | SmsIngressPayload,
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
+    ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
+        """Unified ingress pipeline orchestrator: validates security, tokenizes, and canonicalizes.
+
+        Args:
+            payload: Raw carrier ingress payload (WhatsApp, IVR, USSD, or SMS).
+            language_locale: Target BCP-47 language locale (default: 'hi-IN').
+
+        Returns:
+            Tuple of (standardized_payload, is_adversarial_detected).
+
+        Raises:
+            PermissionError: If rate limit is exceeded.
+            ValueError: If payload fails PII purge assertion.
+        """
+        is_adversarial = self._inspect_security(payload)
+        standardized_payload = self._canonicalize(payload, language_locale=language_locale)
+        return standardized_payload, is_adversarial
+
+    @staticmethod
+    def verify_carrier_webhook(
+        payload_bytes: bytes,
+        signature_header: str | None,
+        app_secret: str,
+    ) -> bool:
+        """Verifies carrier SHA-256 HMAC payload signatures (e.g. Meta WhatsApp, BSPs)."""
+        return CarrierAuthValidator.validate_hmac_signature(
+            payload_bytes=payload_bytes,
+            signature_header=signature_header,
+            app_secret=app_secret,
+        )
+
+    @staticmethod
+    def verify_carrier_bearer(
+        auth_header: str | None,
+        expected_token: str,
+    ) -> bool:
+        """Verifies carrier bearer token for IVR (SIP), USSD (SS7), and SMS gateway requests."""
+        return CarrierAuthValidator.validate_carrier_bearer_token(
+            auth_header=auth_header,
+            expected_token=expected_token,
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Security & Canonicalization Helpers
+    # -------------------------------------------------------------------------
+
+    def _inspect_security(
         self,
         payload: WhatsAppIngressPayload
         | IvrIngressPayload
@@ -122,7 +175,7 @@ class IngestionFirewall:
 
         return False
 
-    def canonicalize(
+    def _canonicalize(
         self,
         payload: WhatsAppIngressPayload
         | IvrIngressPayload
@@ -147,69 +200,6 @@ class IngestionFirewall:
         )
         PiiPurgeGuard.assert_zero_pii(standardized_payload)
         return standardized_payload
-
-    def process_ingress(
-        self,
-        payload: WhatsAppIngressPayload
-        | IvrIngressPayload
-        | UssdIngressPayload
-        | SmsIngressPayload,
-        language_locale: LanguageLocale = LanguageLocale.HINDI,
-    ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
-        """Unified ingress pipeline orchestrator: validates security, tokenizes, and canonicalizes.
-
-        Args:
-            payload: Raw carrier ingress payload (WhatsApp, IVR, USSD, or SMS).
-            language_locale: Target BCP-47 language locale (default: 'hi-IN').
-
-        Returns:
-            Tuple of (standardized_payload, is_adversarial_detected).
-
-        Raises:
-            PermissionError: If rate limit is exceeded.
-            ValueError: If payload fails PII purge assertion.
-        """
-        is_adversarial = self.inspect_security(payload)
-        standardized_payload = self.canonicalize(payload, language_locale=language_locale)
-        return standardized_payload, is_adversarial
-
-    def validate_and_canonicalize(
-        self,
-        payload: WhatsAppIngressPayload
-        | IvrIngressPayload
-        | UssdIngressPayload
-        | SmsIngressPayload,
-        language_locale: LanguageLocale = LanguageLocale.HINDI,
-    ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
-        """Ingests, rate-limits, tokenizes PII in RAM, and scans for adversarial patterns.
-
-        Note: This method delegates directly to `process_ingress`.
-        """
-        return self.process_ingress(payload=payload, language_locale=language_locale)
-
-    @staticmethod
-    def verify_carrier_webhook(
-        payload_bytes: bytes,
-        signature_header: str | None,
-        app_secret: str,
-    ) -> bool:
-        """Verifies carrier SHA-256 HMAC payload signatures (e.g. Meta WhatsApp, BSPs)."""
-        return CarrierAuthValidator.validate_hmac_signature(
-            payload_bytes=payload_bytes,
-            signature_header=signature_header,
-            app_secret=app_secret,
-        )
-
-    @staticmethod
-    def verify_carrier_bearer(
-        auth_header: str | None,
-        expected_token: str,
-    ) -> bool:
-        """Verifies carrier bearer token for IVR (SIP), USSD (SS7), and SMS gateway requests."""
-        return CarrierAuthValidator.validate_carrier_bearer_token(
-            auth_header=auth_header,
-            expected_token=expected_token,
-        )
 
     def _extract_inspectable_text(
         self,
