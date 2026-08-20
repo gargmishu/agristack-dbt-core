@@ -18,7 +18,7 @@ class TransmissionAck(StrictBaseModel):
 
     Captures transport acknowledgment telemetry returned upon dispatching an outbound
     notification.
-    
+
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
 
