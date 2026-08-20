@@ -620,7 +620,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
 To prevent schema details or stack traces from leaking to external callers, FastAPI exception handlers format validation errors into RFC 7807 problem details:
 
 ```python
-# src/errors/handlers.py
+# src/errors/validation_exception_handler.py
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -703,7 +703,7 @@ agristack-dbt-core/
     │   └── disbursement/
     │       └── test_disbursement_callback_payload.py <-- Bank clearing callback & terminal failure reason tests
     └── errors/
-        └── test_handlers.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
+        └── test_validation_exception_handler.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
 ```
 
 ### Module Responsibilities & Model Exports
@@ -732,7 +732,7 @@ agristack-dbt-core/
 8. **`src/data_models/disbursement/disbursement_callback_payload.py`:**
    Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
 
-9. **`src/errors/handlers.py`:**
+9. **`src/errors/validation_exception_handler.py`:**
    Implements `validation_exception_handler` to convert Pydantic validation failures into RFC 7807 problem details payloads, sanitizing internal implementation details while returning machine-readable `invalid_params` error arrays.
 
 ---

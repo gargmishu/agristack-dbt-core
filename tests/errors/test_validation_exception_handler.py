@@ -5,7 +5,7 @@ from fastapi import Request
 from pydantic import ValidationError
 
 from src.data_models.raw_ingress import WhatsAppIngressPayload
-from src.errors.handlers import validation_exception_handler
+from src.errors.validation_exception_handler import validation_exception_handler
 
 
 @pytest.mark.asyncio
