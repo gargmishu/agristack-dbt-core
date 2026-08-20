@@ -32,6 +32,8 @@ def firewall() -> IngestionFirewall:
 
 def test_ingestion_firewall_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", TEST_PEPPER)
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "60")
+    monkeypatch.setenv("RATE_LIMIT_CAPACITY", "10")
     fw = IngestionFirewall.from_env()
     assert isinstance(fw, IngestionFirewall)
 

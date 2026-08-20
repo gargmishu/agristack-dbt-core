@@ -37,3 +37,28 @@ def get_sms_interface_id() -> str:
 def get_helpline_number() -> str:
     """Returns configured grievance helpline number from environment or default."""
     return os.getenv("HELPLINE_NUMBER", DEFAULT_HELPLINE_NUMBER)
+
+
+def get_rate_per_minute() -> int:
+    """Returns the configured sustained ingress rate limit per minute."""
+    return _get_positive_int("RATE_LIMIT_PER_MINUTE")
+
+
+def get_rate_limit_capacity() -> int:
+    """Returns the configured ingress burst capacity."""
+    return _get_positive_int("RATE_LIMIT_CAPACITY")
+
+
+def _get_positive_int(variable_name: str) -> int:
+    value = os.getenv(variable_name)
+    if value is None:
+        raise ValueError(f"Required environment variable '{variable_name}' is missing.")
+
+    try:
+        parsed_value = int(value)
+    except ValueError as error:
+        raise ValueError(f"Environment variable '{variable_name}' must be an integer.") from error
+
+    if parsed_value <= 0:
+        raise ValueError(f"Environment variable '{variable_name}' must be positive.")
+    return parsed_value

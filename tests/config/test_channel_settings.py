@@ -10,6 +10,8 @@ from src.config import (
     DEFAULT_WHATSAPP_INTERFACE,
     get_helpline_number,
     get_ivr_interface_id,
+    get_rate_limit_capacity,
+    get_rate_per_minute,
     get_sms_interface_id,
     get_ussd_interface_id,
     get_whatsapp_interface_id,
@@ -38,3 +40,13 @@ def test_channel_settings_environment_overrides(
     assert get_ussd_interface_id() == "CUSTOM_USSD_GW"
     assert get_sms_interface_id() == "CUSTOM_SMS_GW"
     assert get_helpline_number() == "1800-000-0000"
+
+
+def test_rate_limit_settings_environment_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    expected_rate_per_minute = 120
+    expected_rate_limit_capacity = 25
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", str(expected_rate_per_minute))
+    monkeypatch.setenv("RATE_LIMIT_CAPACITY", str(expected_rate_limit_capacity))
+
+    assert get_rate_per_minute() == expected_rate_per_minute
+    assert get_rate_limit_capacity() == expected_rate_limit_capacity

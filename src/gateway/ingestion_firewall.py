@@ -10,6 +10,7 @@ See: decisions/step0.3_zero_trust_tokenization.md
 
 import logging
 
+from src.config import get_rate_limit_capacity, get_rate_per_minute
 from src.data_models.common import LanguageLocale
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import (
@@ -52,22 +53,32 @@ class IngestionFirewall:
     def __init__(
         self,
         tokenizer: ZeroTrustIdentityTokenizer,
-        rate_limiter: RateLimiter | None = None,
+        rate_limiter: RateLimiter,
     ) -> None:
-        """Initializes IngestionFirewall with required security components.
+        """Initializes all firewall members from injected security components.
 
         Args:
             tokenizer: Non-nullable ZeroTrustIdentityTokenizer instance.
-            rate_limiter: Optional RateLimiter instance (defaults to standard quota).
+            rate_limiter: RateLimiter instance controlling ingress request quotas.
         """
         self._tokenizer = tokenizer
-        self._rate_limiter = rate_limiter or RateLimiter(rate_per_minute=60, capacity=10)
+        self._rate_limiter = rate_limiter
         self._canonicalizer = PayloadCanonicalizer(tokenizer=tokenizer)
 
     @classmethod
     def from_env(cls) -> "IngestionFirewall":
-        """Factory method to construct firewall with environment-injected secrets."""
-        return cls(tokenizer=ZeroTrustIdentityTokenizer.from_env())
+        """Builds a firewall with an environment-configured tokenizer.
+
+        Environment resolution happens here; all instance members are initialized by
+        ``__init__`` using the same dependency-injection path as direct construction.
+        """
+        return cls(
+            tokenizer=ZeroTrustIdentityTokenizer.from_env(),
+            rate_limiter=RateLimiter(
+                rate_per_minute=get_rate_per_minute(),
+                capacity=get_rate_limit_capacity(),
+            ),
+        )
 
     def validate_and_canonicalize(
         self,
