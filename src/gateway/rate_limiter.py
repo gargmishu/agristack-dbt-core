@@ -11,14 +11,14 @@ import time
 
 
 class RateLimiter:
-    """Token bucket rate limiter tracking requests per identifier or communication channel.
+    """In-memory token bucket rate limiter tracking requests per caller identifier.
 
     Enforces request quotas and burst allowances to prevent high-frequency request floods.
 
     Configuration & Behavior:
     - Refill Rate (`rate_per_minute`): Number of tokens added to the bucket per minute.
     - Burst Capacity (`capacity`): Maximum token bucket capacity for transient bursts.
-    - Enforcement (`check_rate_limit`): Evaluates and consumes tokens using monotonic time.
+    - Enforcement (`is_allowed`): Evaluates and consumes tokens using monotonic time.
 
     See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 4.1)
     """
@@ -47,7 +47,7 @@ class RateLimiter:
         """Checks if request for key is within rate limits and consumes 1 token.
 
         Args:
-            key: Rate limit key (e.g. tokenized_citizen_id or IP address).
+            key: Rate limit tracking key (e.g. caller phone number or token).
 
         Returns:
             True if request is allowed, False if rate limit is exceeded.
