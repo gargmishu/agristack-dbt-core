@@ -40,8 +40,8 @@ class ZeroTrustIdentityTokenizer:
         """Factory method to instantiate tokenizer using environment variable configuration."""
         return cls(pepper_key=get_pepper_secret())
 
-    def tokenize_citizen_id(self, raw_identifier: str) -> str:
-        """Tokenizes raw citizen ID (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.
+    def tokenize_id(self, raw_identifier: str) -> str:
+        """Tokenizes raw identifier (Aadhaar / MSISDN / Farmer ID) into 64-char SHA-256 HMAC token.
 
         Args:
             raw_identifier: Cleartext identity string (e.g. "+919876543210" or Aadhaar
@@ -60,7 +60,3 @@ class ZeroTrustIdentityTokenizer:
             sha256,
         ).hexdigest()
         return token
-
-    def tokenize_phone_number(self, phone_number: str) -> str:
-        """Tokenizes E.164 phone number into 64-character SHA-256 HMAC token."""
-        return self.tokenize_citizen_id(phone_number)

@@ -8,8 +8,8 @@ EXPECTED_TOKEN_LEN = 64
 def test_tokenizer_deterministic_output() -> None:
     tokenizer = ZeroTrustIdentityTokenizer(pepper_key="test_pepper_key")
     phone = "+919876543210"
-    token1 = tokenizer.tokenize_phone_number(phone)
-    token2 = tokenizer.tokenize_phone_number(phone)
+    token1 = tokenizer.tokenize_id(phone)
+    token2 = tokenizer.tokenize_id(phone)
 
     assert len(token1) == EXPECTED_TOKEN_LEN
     assert token1 == token2
@@ -21,13 +21,13 @@ def test_tokenizer_different_peppers_produce_different_tokens() -> None:
     tok2 = ZeroTrustIdentityTokenizer(pepper_key="pepper_2")
     phone = "+919876543210"
 
-    assert tok1.tokenize_phone_number(phone) != tok2.tokenize_phone_number(phone)
+    assert tok1.tokenize_id(phone) != tok2.tokenize_id(phone)
 
 
 def test_tokenizer_empty_identifier_raises() -> None:
     tokenizer = ZeroTrustIdentityTokenizer(pepper_key="test_pepper_key")
     with pytest.raises(ValueError) as exc:
-        tokenizer.tokenize_citizen_id("   ")
+        tokenizer.tokenize_id("   ")
     assert "cannot be empty or whitespace-only" in str(exc.value)
 
 
@@ -48,5 +48,5 @@ def test_tokenizer_reads_pepper_from_env_var(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "env_test_pepper_key")
     tokenizer = ZeroTrustIdentityTokenizer.from_env()
     phone = "+919876543210"
-    token = tokenizer.tokenize_phone_number(phone)
+    token = tokenizer.tokenize_id(phone)
     assert len(token) == EXPECTED_TOKEN_LEN
