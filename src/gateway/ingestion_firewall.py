@@ -193,8 +193,8 @@ class IngestionFirewall:
         signature_header: str | None,
         app_secret: str,
     ) -> bool:
-        """Verifies Meta WhatsApp X-Hub-Signature-256 header."""
-        return CarrierAuthValidator.validate_whatsapp_signature(
+        """Verifies carrier SHA-256 HMAC payload signatures (e.g. Meta WhatsApp, BSPs)."""
+        return CarrierAuthValidator.validate_hmac_signature(
             payload_bytes=payload_bytes,
             signature_header=signature_header,
             app_secret=app_secret,
@@ -205,7 +205,7 @@ class IngestionFirewall:
         auth_header: str | None,
         expected_token: str,
     ) -> bool:
-        """Verifies carrier bearer token for IVR/USSD gateway requests."""
+        """Verifies carrier bearer token for IVR (SIP), USSD (SS7), and SMS gateway requests."""
         return CarrierAuthValidator.validate_carrier_bearer_token(
             auth_header=auth_header,
             expected_token=expected_token,

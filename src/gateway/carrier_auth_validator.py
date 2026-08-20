@@ -35,23 +35,22 @@ class CarrierAuthValidator:
     _BEARER_PREFIX: Final[str] = "Bearer "
 
     @classmethod
-    def validate_whatsapp_signature(
+    def validate_hmac_signature(
         cls,
         payload_bytes: bytes,
         signature_header: str | None,
         app_secret: str,
     ) -> bool:
-        """Validates Meta WhatsApp Business API X-Hub-Signature-256 header.
+        """Validates SHA-256 HMAC payload signature headers (e.g. Meta WhatsApp, BSPs).
 
         Args:
             payload_bytes: Raw HTTP request body bytes.
-            signature_header: Raw 'X-Hub-Signature-256' header string (e.g.,
-            'sha256=abcdef...').
-            app_secret: Meta Application Secret key (provided via the Meta Developers
-            Dashboard).
+            signature_header: Raw 'X-Hub-Signature-256' or equivalent HMAC header string
+                (e.g., 'sha256=abcdef...').
+            app_secret: Shared HMAC webhook signing key / application secret.
 
         Returns:
-            True if signature matches, False otherwise.
+            True if signature matches using constant-time comparison, False otherwise.
         """
         if not signature_header or not signature_header.startswith(cls._SIGNATURE_PREFIX):
             return False
@@ -71,7 +70,7 @@ class CarrierAuthValidator:
         auth_header: str | None,
         expected_token: str,
     ) -> bool:
-        """Validates Bearer token header for both IVR (SIP) and USSD (SS7) carrier gateway requests.
+        """Validates Bearer token headers for IVR (SIP), USSD (SS7), and SMS requests.
 
         Args:
             auth_header: Raw 'Authorization' header string (e.g., 'Bearer secret_token').

@@ -4,35 +4,30 @@ from hashlib import sha256
 from src.gateway import CarrierAuthValidator
 
 
-def test_whatsapp_signature_valid() -> None:
+def test_hmac_signature_valid() -> None:
     app_secret = "meta_app_secret_12345"  # noqa: S105
     payload_bytes = b'{"object": "whatsapp_business_account", "entry": []}'
     computed_sig = hmac.new(app_secret.encode("utf-8"), payload_bytes, sha256).hexdigest()
     header_val = f"sha256={computed_sig}"
 
     assert (
-        CarrierAuthValidator.validate_whatsapp_signature(payload_bytes, header_val, app_secret)
-        is True
+        CarrierAuthValidator.validate_hmac_signature(payload_bytes, header_val, app_secret) is True
     )
 
 
-def test_whatsapp_signature_invalid_and_missing() -> None:
+def test_hmac_signature_invalid_and_missing() -> None:
     app_secret = "meta_app_secret_12345"  # noqa: S105
     payload_bytes = b'{"object": "whatsapp_business_account", "entry": []}'
 
     assert (
-        CarrierAuthValidator.validate_whatsapp_signature(
+        CarrierAuthValidator.validate_hmac_signature(
             payload_bytes, "sha256=invalid_sig", app_secret
         )
         is False
     )
+    assert CarrierAuthValidator.validate_hmac_signature(payload_bytes, None, app_secret) is False
     assert (
-        CarrierAuthValidator.validate_whatsapp_signature(payload_bytes, None, app_secret) is False
-    )
-    assert (
-        CarrierAuthValidator.validate_whatsapp_signature(
-            payload_bytes, "invalid_prefix", app_secret
-        )
+        CarrierAuthValidator.validate_hmac_signature(payload_bytes, "invalid_prefix", app_secret)
         is False
     )
 
