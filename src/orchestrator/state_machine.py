@@ -96,20 +96,9 @@ class StateMachine:
         """Initializes StateMachine with required AI and DPI service dependencies."""
         self._bhashini = bhashini_service or BhashiniService()
         self._slm_extractor = slm_extractor or SlmExtractor()
-        self._governance_router = governance_router or GovernanceRouter.from_default()
-        self._case_service = case_management_service or CaseManagementService.from_default()
+        self._governance_router = governance_router or GovernanceRouter()
+        self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or PaymentRailService()
-
-    @classmethod
-    def from_default(cls) -> "StateMachine":
-        """Factory method to construct StateMachine with all default dependencies."""
-        return cls(
-            bhashini_service=BhashiniService(),
-            slm_extractor=SlmExtractor(),
-            governance_router=GovernanceRouter.from_default(),
-            case_management_service=CaseManagementService.from_default(),
-            payment_rail_service=PaymentRailService(),
-        )
 
     async def evaluate_gate1_ingress_structure(
         self, intake: PublicAgentStandardizedIntakePayload

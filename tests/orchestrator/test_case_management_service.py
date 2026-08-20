@@ -20,7 +20,7 @@ MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
 
 @pytest.mark.asyncio
 async def test_case_management_stage_incident_ticket() -> None:
-    service = CaseManagementService.from_default()
+    service = CaseManagementService()
     case = CaseworkerCaseReviewPayload(
         escalation_case_id="SPP-CASE-2026-100200",
         session_id="sess_stage_1",
@@ -43,7 +43,7 @@ async def test_case_management_stage_incident_ticket() -> None:
 
 @pytest.mark.asyncio
 async def test_case_management_process_officer_review() -> None:
-    service = CaseManagementService.from_default()
+    service = CaseManagementService()
     review = CaseworkerReviewOutcomePayload(
         escalation_case_id="SPP-CASE-2026-100200",
         reviewer_id="OFFICER-UUID-12345",
@@ -59,7 +59,7 @@ async def test_case_management_process_officer_review() -> None:
 
 @pytest.mark.asyncio
 async def test_case_management_resolve_citizen_clarification() -> None:
-    service = CaseManagementService.from_default()
+    service = CaseManagementService()
     resolved = await service.resolve_citizen_clarification(
         escalation_case_id="SPP-CASE-2026-100200",
         citizen_clarification_text="Updated crop survey number is 402/A",
@@ -73,7 +73,7 @@ async def test_case_management_resolve_citizen_clarification() -> None:
 
 @pytest.mark.asyncio
 async def test_case_management_process_citizen_response_workflow() -> None:
-    service = CaseManagementService.from_default()
+    service = CaseManagementService()
     resolved = await service.process_citizen_response_workflow(
         escalation_case_id="SPP-CASE-2026-100200",
         citizen_clarification_text="Updated crop survey number is 402/A",

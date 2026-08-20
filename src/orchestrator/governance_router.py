@@ -98,14 +98,6 @@ class GovernanceRouter:
         self._identity_service = identity_service or IdentityVerificationService()
         self._agri_service = agri_service or AgriRegistryService()
 
-    @classmethod
-    def from_default(cls) -> "GovernanceRouter":
-        """Factory method to construct GovernanceRouter with default registry services."""
-        return cls(
-            identity_service=IdentityVerificationService(),
-            agri_service=AgriRegistryService(),
-        )
-
     async def evaluate_claim(
         self,
         context: ClaimEvaluationContext,

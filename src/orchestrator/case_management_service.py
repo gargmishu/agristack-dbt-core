@@ -53,11 +53,6 @@ class CaseManagementService:
         self._social_service = social_service or SocialRegistryService()
         self._staged_cases: dict[str, CaseworkerCaseReviewPayload] = {}
 
-    @classmethod
-    def from_default(cls) -> "CaseManagementService":
-        """Factory method to construct CaseManagementService with default dependencies."""
-        return cls(social_service=SocialRegistryService())
-
     async def stage_incident_ticket(self, case_review: CaseworkerCaseReviewPayload) -> bool:
         """Stages an escalated case review into the District Caseworker Dashboard.
 

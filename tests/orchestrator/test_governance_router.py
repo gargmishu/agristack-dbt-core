@@ -25,7 +25,7 @@ MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
 
 @pytest.mark.asyncio
 async def test_governance_router_auto_approve() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -43,7 +43,7 @@ async def test_governance_router_auto_approve() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_auto_reject() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -59,7 +59,7 @@ async def test_governance_router_auto_reject() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_review_routing() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -75,7 +75,7 @@ async def test_governance_router_manual_review_routing() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_approve() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -94,7 +94,7 @@ async def test_governance_router_manual_approve() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_manual_reject() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -112,7 +112,7 @@ async def test_governance_router_manual_reject() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_request_more_info() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     payload = GovernanceOutcomePayload(
         session_id="sess_12345678",
         payload_id="ext_12345678",
@@ -128,7 +128,7 @@ async def test_governance_router_request_more_info() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,
@@ -153,7 +153,7 @@ async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -
 
 @pytest.mark.asyncio
 async def test_governance_router_evaluate_claim_low_confidence_escalation() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.70,
@@ -176,7 +176,7 @@ async def test_governance_router_evaluate_claim_low_confidence_escalation() -> N
 
 @pytest.mark.asyncio
 async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.95,
@@ -197,7 +197,7 @@ async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_evaluate_claim_unverified_identity() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     unverified_token = UNVERIFIED_IDENTITY_PREFIX + "a" * (64 - len(UNVERIFIED_IDENTITY_PREFIX))
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
@@ -218,7 +218,7 @@ async def test_governance_router_evaluate_claim_unverified_identity() -> None:
 
 @pytest.mark.asyncio
 async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
-    router = GovernanceRouter.from_default()
+    router = GovernanceRouter()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,

@@ -24,7 +24,7 @@ MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
 
 @pytest.mark.asyncio
 async def test_state_machine_execution_loop() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     payload = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,
@@ -48,7 +48,7 @@ async def test_state_machine_execution_loop() -> None:
 async def test_state_machine_intents(
     intent: ApplicationIntent, confidence: float, is_bypass: bool
 ) -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     payload = ExtractedEntityPayload(
         application_intent=intent,
         ai_confidence_score=confidence,
@@ -62,7 +62,7 @@ async def test_state_machine_intents(
 
 @pytest.mark.asyncio
 async def test_state_machine_gate1_structured_bypass() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_ussd_bypass_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -83,7 +83,7 @@ async def test_state_machine_gate1_structured_bypass() -> None:
 
 @pytest.mark.asyncio
 async def test_state_machine_gate1_audio_transcription() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_ivr_audio_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -130,7 +130,7 @@ async def test_state_machine_gate1_audio_transcription_failure_and_slm_none() ->
 
 @pytest.mark.asyncio
 async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,
@@ -189,7 +189,7 @@ async def test_state_machine_full_cycle_reprompt() -> None:
 
 @pytest.mark.asyncio
 async def test_state_machine_full_cycle_happy_path_auto_approve() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_happy_path_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -211,7 +211,7 @@ async def test_state_machine_full_cycle_happy_path_auto_approve() -> None:
 
 @pytest.mark.asyncio
 async def test_state_machine_full_cycle_anti_double_dipping() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_double_dip_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -237,7 +237,7 @@ async def test_state_machine_full_cycle_anti_double_dipping() -> None:
 
 @pytest.mark.asyncio
 async def test_state_machine_full_cycle_adversarial_escalates_to_caseworker() -> None:
-    state_machine = StateMachine.from_default()
+    state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_adversarial_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
