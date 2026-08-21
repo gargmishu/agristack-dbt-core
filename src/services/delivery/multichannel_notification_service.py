@@ -36,7 +36,7 @@ from src.services.ai.bhashini_service import BhashiniService
 
 logger = logging.getLogger(__name__)
 
-HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
+_HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
     DomainEntityKey.DISTRICT: "zila",
     DomainEntityKey.TALUKA: "taluka ya tehsil",
     DomainEntityKey.VILLAGE: "gaon",
@@ -271,5 +271,5 @@ class MultichannelNotificationService:
         if entity is None:
             return "kripya vivaran" if is_hindi else "required details"
         if is_hindi:
-            return HINDI_ENTITY_LABELS.get(entity, entity.value.replace("_", " "))
+            return _HINDI_ENTITY_LABELS.get(entity, entity.value.replace("_", " "))
         return entity.value.replace("_", " ")

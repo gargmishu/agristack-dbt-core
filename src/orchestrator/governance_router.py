@@ -35,8 +35,8 @@ from src.services.dpi import (
 
 logger = logging.getLogger(__name__)
 
-AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
-DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
+_AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
+_DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
 
 
 @dataclass(frozen=True)
@@ -62,7 +62,7 @@ class ClaimEvaluationContext:
     payload_id: str
     tokenized_citizen_id: str
     extracted_payload: ExtractedEntityPayload
-    active_season: str = DEFAULT_ACTIVE_SEASON
+    active_season: str = _DEFAULT_ACTIVE_SEASON
     approved_payouts_ledger: set[tuple[str, str]] = field(default_factory=set)
 
 
@@ -191,8 +191,8 @@ class GovernanceRouter:
                 evaluated_at=now,
             )
 
-        # 5. Threshold Gate: Confidence Score Evaluation (>= AUTO_APPROVE_CONFIDENCE_THRESHOLD)
-        if extracted.ai_confidence_score >= AUTO_APPROVE_CONFIDENCE_THRESHOLD:
+        # 5. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
+        if extracted.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
             logger.info(
                 "Straight-through automated payout approved for session=%s score=%.2f",
                 context.session_id,

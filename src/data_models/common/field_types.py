@@ -5,7 +5,7 @@ See: decisions/step0.3_zero_trust_tokenization.md
 """
 
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Final
 
 from pydantic import AfterValidator, Field
 
@@ -13,7 +13,7 @@ from src.data_models.common.enums import DomainEntityKey
 
 # Allow 5 seconds of clock skew between edge connectors and core services to handle
 # minor network latency and NTP drift while preventing replay attacks and future-dated payloads.
-MAX_CLOCK_SKEW_SECONDS = 5.0
+_MAX_CLOCK_SKEW_SECONDS: Final[float] = 5.0
 
 # Session ID entropy bounds (8 to 128 chars):
 # - min=8: Entropy floor (8 alphanumeric chars ≈ 48 bits) preventing brute-force guessing.
@@ -135,7 +135,7 @@ def validate_utc_freshness(dt: datetime) -> datetime:
     now = datetime.now(UTC)
     parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
-    if (parsed_dt - now).total_seconds() > MAX_CLOCK_SKEW_SECONDS:
+    if (parsed_dt - now).total_seconds() > _MAX_CLOCK_SKEW_SECONDS:
         raise ValueError("Timestamp cannot be >5 seconds in the future (clock-skew violation)")
     return parsed_dt
 

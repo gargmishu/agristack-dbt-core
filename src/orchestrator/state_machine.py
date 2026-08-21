@@ -31,11 +31,11 @@ from src.services.dpi import PaymentRailService
 logger = logging.getLogger(__name__)
 
 # Mandatory domain entities required for seasonal crop subsidy claim processing
-MANDATORY_SUBSIDY_ENTITIES: Final[tuple[DomainEntityKey, ...]] = (
+_MANDATORY_SUBSIDY_ENTITIES: Final[tuple[DomainEntityKey, ...]] = (
     DomainEntityKey.DISTRICT,
     DomainEntityKey.CROP_NAME,
 )
-MAX_REPROMPT_ATTEMPTS: Final[int] = 3
+_MAX_REPROMPT_ATTEMPTS: Final[int] = 3
 
 
 @dataclass(frozen=True)
@@ -195,12 +195,12 @@ class StateMachine:
 
         missing_fields: list[str] = [
             key.value
-            for key in MANDATORY_SUBSIDY_ENTITIES
+            for key in _MANDATORY_SUBSIDY_ENTITIES
             if key not in extracted.domain_entities
             or not str(extracted.domain_entities[key]).strip()
         ]
 
-        if missing_fields and attempt_count < MAX_REPROMPT_ATTEMPTS:
+        if missing_fields and attempt_count < _MAX_REPROMPT_ATTEMPTS:
             logger.info(
                 "Gate 2: Missing mandatory fields=%s on attempt=%d; triggering re-prompt",
                 missing_fields,
