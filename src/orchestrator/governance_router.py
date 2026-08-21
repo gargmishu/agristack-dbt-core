@@ -1,12 +1,10 @@
 """Layer 4 Governance Engine: Decision Matrix Router.
 
-Evaluates AI extraction confidence scores, landholding cross-match eligibility,
-and anti-double-dipping ledgers to assign automated decisions:
-1. AUTOMATED_PAYOUT / AUTO_APPROVE (High confidence >=0.85 + Eligible + No active payout)
-2. HUMAN_REVIEW / ROUTE_FOR_MANUAL_REVIEW (Low confidence <0.85 or entity discrepancies)
-3. AUTO_REJECT (Ineligible land records or double-dipping detection)
+Evaluates citizen claims against AI confidence thresholds, sovereign identity records,
+cadastral landholdings, and anti-double-dipping ledgers to assign authoritative
+governance determinations (AUTO_APPROVE, AUTO_REJECT, or ROUTE_FOR_MANUAL_REVIEW).
 
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1)
+See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 See: roadmap.md (Phase 3 Step 3.3 Layer 4 Governance Router)
 """
@@ -75,11 +73,11 @@ class GovernanceRouter:
 
     Decision Rules:
     - Auto-Approval (`AUTO_APPROVE`): High confidence (>= 0.85), verified identity, eligible
-      land parcel,
-      and no prior claim in the active season.
-    - Escalation (`ROUTE_FOR_MANUAL_REVIEW`): Moderate confidence (0.60 to 0.84) or
-      unverified registry records.
-    - Rejection (`AUTO_REJECT`): Duplicate active-season claim or land record ineligibility.
+      land parcel, and no prior claim in the active season.
+    - Escalation (`ROUTE_FOR_MANUAL_REVIEW`): Low/moderate confidence (< 0.85) or
+      adversarial prompt injection attempts.
+    - Rejection (`AUTO_REJECT`): Duplicate active-season claim, unverified identity token,
+      or cadastral land record mismatch.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
