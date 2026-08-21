@@ -21,7 +21,7 @@ from src.data_models.caseworker import (
     CaseworkerCaseReviewPayload,
     CaseworkerReviewOutcomePayload,
 )
-from src.data_models.common import GovernanceAction
+from src.data_models.common import ApplicationStatus, GovernanceAction
 from src.services.dpi import SocialRegistryService
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,14 @@ class CaseManagementService:
       staged cases ledger.
     - `get_staged_case`: Retrieves a staged case review ticket by ticket ID.
     - `process_officer_review`: Evaluates a `CaseworkerReviewOutcomePayload`, transitions
-      the case,
-      and returns a corresponding `GovernanceOutcomePayload`.
+            the case, and records the officer decision in the audit ledger.
+
+        Audit-log storage:
+        - Current: keeps an in-memory, append-only history of officer outcomes grouped by
+            `escalation_case_id` for lifecycle queries and testable governance behavior.
+        - Future: the dictionary boundary can be replaced by a durable append-only audit
+            repository without changing the case-management API; each case key is the natural
+            partition for retention, retrieval, and compliance export.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
     """
@@ -52,6 +58,8 @@ class CaseManagementService:
         """
         self._social_service = social_service or SocialRegistryService()
         self._staged_cases: dict[str, CaseworkerCaseReviewPayload] = {}
+        self._case_statuses: dict[str, ApplicationStatus] = {}
+        self._review_audit_log: dict[str, list[CaseworkerReviewOutcomePayload]] = {}
 
     async def stage_incident_ticket(self, case_review: CaseworkerCaseReviewPayload) -> bool:
         """Stages an escalated case review into the District Caseworker Dashboard.
@@ -69,6 +77,7 @@ class CaseManagementService:
             case_review.escalation_reason,
         )
         self._staged_cases[case_review.escalation_case_id] = case_review
+        self._case_statuses[case_review.escalation_case_id] = ApplicationStatus.UNDER_REVIEW
         return True
 
     def get_staged_case(self, escalation_case_id: str) -> CaseworkerCaseReviewPayload | None:
@@ -78,6 +87,16 @@ class CaseManagementService:
     def list_staged_cases(self) -> list[CaseworkerCaseReviewPayload]:
         """Returns all currently staged caseworker incident review tickets."""
         return list(self._staged_cases.values())
+
+    def get_case_status(self, escalation_case_id: str) -> ApplicationStatus | None:
+        """Returns the current lifecycle status for a staged or reviewed case."""
+        return self._case_statuses.get(escalation_case_id)
+
+    def list_review_audit_entries(
+        self, escalation_case_id: str
+    ) -> list[CaseworkerReviewOutcomePayload]:
+        """Returns a chronological copy of the audit history for one escalation case."""
+        return list(self._review_audit_log.get(escalation_case_id, []))
 
     async def process_officer_review(self, review_outcome: CaseworkerReviewOutcomePayload) -> bool:
         """Processes officer review outcome submitted from the caseworker dashboard.
@@ -89,19 +108,33 @@ class CaseManagementService:
             review_outcome: Validated CaseworkerReviewOutcomePayload instance.
 
         Returns:
-            True if review decision was processed successfully, False otherwise.
+            True if the review decision was processed successfully, False if the case was
+            not staged or the action is unsupported.
         """
+        case_id = review_outcome.escalation_case_id
+        if case_id not in self._staged_cases:
+            logger.warning("Cannot process review for unstaged ticket=%s", case_id)
+            return False
+
+        next_status_by_action = {
+            GovernanceAction.MANUAL_APPROVE: ApplicationStatus.APPROVED,
+            GovernanceAction.MANUAL_REJECT: ApplicationStatus.REJECTED,
+            GovernanceAction.REQUEST_MORE_INFO: ApplicationStatus.INFO_REQUESTED,
+        }
+        next_status = next_status_by_action.get(review_outcome.governance_action)
+        if next_status is None:
+            return False
+
         logger.info(
             "Processing officer review ticket=%s action=%s by reviewer=%s",
-            review_outcome.escalation_case_id,
+            case_id,
             review_outcome.governance_action,
             review_outcome.reviewer_id,
         )
-        return review_outcome.governance_action in {
-            GovernanceAction.MANUAL_APPROVE,
-            GovernanceAction.MANUAL_REJECT,
-            GovernanceAction.REQUEST_MORE_INFO,
-        }
+        self._case_statuses[case_id] = next_status
+        self._review_audit_log.setdefault(case_id, []).append(review_outcome)
+        self._staged_cases.pop(case_id)
+        return True
 
     async def resolve_citizen_clarification(
         self, escalation_case_id: str, citizen_clarification_text: str
@@ -122,11 +155,14 @@ class CaseManagementService:
         """
         if not escalation_case_id.strip() or not citizen_clarification_text.strip():
             return False
+        if escalation_case_id not in self._case_statuses:
+            return False
 
         logger.info(
             "Citizen clarification received for ticket=%s; transitioning to UNDER_REVIEW",
             escalation_case_id,
         )
+        self._case_statuses[escalation_case_id] = ApplicationStatus.UNDER_REVIEW
         return True
 
     async def process_citizen_response_workflow(

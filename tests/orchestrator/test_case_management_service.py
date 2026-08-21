@@ -10,6 +10,7 @@ from src.data_models.caseworker import (
 )
 from src.data_models.common import (
     ApplicationIntent,
+    ApplicationStatus,
     EscalationReasonCode,
     GovernanceAction,
 )
@@ -18,10 +19,8 @@ from src.orchestrator import CaseManagementService
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
 
-@pytest.mark.asyncio
-async def test_case_management_stage_incident_ticket() -> None:
-    service = CaseManagementService()
-    case = CaseworkerCaseReviewPayload(
+def build_case() -> CaseworkerCaseReviewPayload:
+    return CaseworkerCaseReviewPayload(
         escalation_case_id="SPP-CASE-2026-100200",
         session_id="sess_stage_1",
         payload_id="ext_stage_1",
@@ -32,6 +31,12 @@ async def test_case_management_stage_incident_ticket() -> None:
         escalation_reason=EscalationReasonCode.LOW_AI_CONFIDENCE,
         staged_at=datetime.now(UTC),
     )
+
+
+@pytest.mark.asyncio
+async def test_case_management_stage_incident_ticket() -> None:
+    service = CaseManagementService()
+    case = build_case()
 
     staged = await service.stage_incident_ticket(case)
     assert staged is True
@@ -44,6 +49,7 @@ async def test_case_management_stage_incident_ticket() -> None:
 @pytest.mark.asyncio
 async def test_case_management_process_officer_review() -> None:
     service = CaseManagementService()
+    await service.stage_incident_ticket(build_case())
     review = CaseworkerReviewOutcomePayload(
         escalation_case_id="SPP-CASE-2026-100200",
         reviewer_id="OFFICER-UUID-12345",
@@ -55,16 +61,32 @@ async def test_case_management_process_officer_review() -> None:
     )
     processed = await service.process_officer_review(review)
     assert processed is True
+    assert service.get_case_status(review.escalation_case_id) == ApplicationStatus.APPROVED
+    assert service.list_review_audit_entries(review.escalation_case_id) == [review]
+    assert service.get_staged_case(review.escalation_case_id) is None
 
 
 @pytest.mark.asyncio
 async def test_case_management_resolve_citizen_clarification() -> None:
     service = CaseManagementService()
+    await service.stage_incident_ticket(build_case())
+    await service.process_officer_review(
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-100200",
+            reviewer_id="OFFICER-UUID-12345",
+            governance_action=GovernanceAction.REQUEST_MORE_INFO,
+            review_notes="Please provide the updated crop survey number",
+            approved_amount=None,
+            rejection_reason=None,
+            reviewed_at=datetime.now(UTC),
+        )
+    )
     resolved = await service.resolve_citizen_clarification(
         escalation_case_id="SPP-CASE-2026-100200",
         citizen_clarification_text="Updated crop survey number is 402/A",
     )
     assert resolved is True
+    assert service.get_case_status("SPP-CASE-2026-100200") == ApplicationStatus.UNDER_REVIEW
 
     # Empty inputs should fail
     assert await service.resolve_citizen_clarification("", "Note") is False
@@ -74,6 +96,18 @@ async def test_case_management_resolve_citizen_clarification() -> None:
 @pytest.mark.asyncio
 async def test_case_management_process_citizen_response_workflow() -> None:
     service = CaseManagementService()
+    await service.stage_incident_ticket(build_case())
+    await service.process_officer_review(
+        CaseworkerReviewOutcomePayload(
+            escalation_case_id="SPP-CASE-2026-100200",
+            reviewer_id="OFFICER-UUID-12345",
+            governance_action=GovernanceAction.REQUEST_MORE_INFO,
+            review_notes="Please provide the updated crop survey number",
+            approved_amount=None,
+            rejection_reason=None,
+            reviewed_at=datetime.now(UTC),
+        )
+    )
     resolved = await service.process_citizen_response_workflow(
         escalation_case_id="SPP-CASE-2026-100200",
         citizen_clarification_text="Updated crop survey number is 402/A",
