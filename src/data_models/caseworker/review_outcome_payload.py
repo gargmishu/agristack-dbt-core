@@ -43,12 +43,12 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
         max_length=2000,
         description="Mandatory audit justification note or information request details",
     )
+    reviewed_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when officer submitted review outcome on dashboard"
+    )
     approved_amount: float | None = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
     rejection_reason: RejectionReasonCode | None = Field(
         None, description="Populated for MANUAL_REJECT"
-    )
-    reviewed_at: UtcTimestamp = Field(
-        ..., description="UTC timestamp when officer submitted review outcome on dashboard"
     )
 
     @model_validator(mode="after")

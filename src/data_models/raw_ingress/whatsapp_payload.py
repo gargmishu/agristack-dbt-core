@@ -34,6 +34,9 @@ class WhatsAppIngressPayload(StrictBaseModel):
     payload_type: PayloadType = Field(
         ..., description="Ingress payload modality: audio, text, image, document"
     )
+    received_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when Meta webhook payload arrived"
+    )
     audio_recording_url: HttpUrl | None = Field(
         None, description="Signed URL for .ogg audio file (populated for AUDIO)"
     )
@@ -47,9 +50,6 @@ class WhatsAppIngressPayload(StrictBaseModel):
         min_length=1,
         max_length=1000,
         description="Raw text message (populated for TEXT)",
-    )
-    received_at: UtcTimestamp = Field(
-        ..., description="UTC timestamp when Meta webhook payload arrived"
     )
 
     @model_validator(mode="after")

@@ -34,15 +34,19 @@ class OutboundNotificationPayload(StrictBaseModel):
 
     session_id: SessionId
     channel_type: ChannelType
-    language_locale: LanguageLocale = LanguageLocale.ENGLISH
     governance_action: GovernanceAction
-    delivery_status: NotificationDeliveryStatus = NotificationDeliveryStatus.DELIVERED
     formatted_message: str = Field(
         ...,
         min_length=1,
         max_length=5000,
         description="Channel-adapted plain text, rich markdown card, or menu response",
     )
+    delivered_at: UtcTimestamp = Field(
+        ...,
+        description="UTC timestamp when notification receipt was generated and dispatched",
+    )
+    language_locale: LanguageLocale = LanguageLocale.ENGLISH
+    delivery_status: NotificationDeliveryStatus = NotificationDeliveryStatus.DELIVERED
     audio_playback_url: HttpUrl | None = Field(
         default=None,
         description="Pre-signed synthesized TTS audio stream URL for IVR voice playback",
@@ -54,10 +58,6 @@ class OutboundNotificationPayload(StrictBaseModel):
     escalation_case_id: EscalationCaseId | None = Field(
         default=None,
         description="Populated when governance action is ROUTE_FOR_MANUAL_REVIEW or HUMAN_REVIEW",
-    )
-    delivered_at: UtcTimestamp = Field(
-        ...,
-        description="UTC timestamp when notification receipt was generated and dispatched",
     )
 
     @model_validator(mode="after")

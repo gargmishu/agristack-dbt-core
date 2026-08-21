@@ -46,6 +46,10 @@ class GovernanceOutcomePayload(StrictBaseModel):
     governance_action: GovernanceAction = Field(
         ..., description="Automated or manual governance routing action"
     )
+    evaluated_at: UtcTimestamp = Field(
+        ...,
+        description="UTC timestamp when automated governance evaluation or review was rendered",
+    )
     disbursement_txn_id: DisbursementTxnId | None = Field(
         None,
         description=(
@@ -76,10 +80,6 @@ class GovernanceOutcomePayload(StrictBaseModel):
         min_length=5,
         max_length=2000,
         description="Internal caseworker audit notes carried from manual adjudication",
-    )
-    evaluated_at: UtcTimestamp = Field(
-        ...,
-        description="UTC timestamp when automated governance evaluation or review was rendered",
     )
 
     @model_validator(mode="after")

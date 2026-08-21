@@ -41,6 +41,11 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     payload_id: ExtractionPayloadId
     tokenized_citizen_id: HmacCitizenToken
     application_intent: ApplicationIntent
+    unprocessed_input_content: UnprocessedInputContent
+    escalation_reason: EscalationReasonCode
+    staged_at: UtcTimestamp = Field(
+        ..., description="UTC timestamp when incident ticket was staged into review dashboard"
+    )
     extracted_entities: DomainEntities = Field(
         default_factory=dict,
         description=(
@@ -48,15 +53,10 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
             "triggered by AI entity extraction failure or unparseable input."
         ),
     )
-    unprocessed_input_content: UnprocessedInputContent
     clarification_history: list[CitizenClarificationPayload] = Field(
         default_factory=list,
         description=(
             "Chronological log of citizen clarifications submitted in response to "
             "caseworker REQUEST_MORE_INFO inquiries."
         ),
-    )
-    escalation_reason: EscalationReasonCode
-    staged_at: UtcTimestamp = Field(
-        ..., description="UTC timestamp when incident ticket was staged into review dashboard"
     )

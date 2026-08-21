@@ -65,13 +65,13 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     structure_level: StructureLevel = Field(
         ..., description="Input structure: free_text, menu_selection, dtmf_selection"
     )
-    language_locale: LanguageLocale = Field(
-        LanguageLocale.HINDI,
-        description="Supported BCP 47 language code (defaults to hi-IN)",
-    )
     unprocessed_input_content: UnprocessedInputContent
     received_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when canonicalized payload reached Layer 3 intake gateway"
+    )
+    language_locale: LanguageLocale = Field(
+        LanguageLocale.HINDI,
+        description="Supported BCP 47 language code (defaults to hi-IN)",
     )
 
     @model_validator(mode="after")
