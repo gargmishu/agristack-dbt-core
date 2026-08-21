@@ -16,10 +16,12 @@ See: roadmap.md (Phase 3 Step 3.3 Layer 4 Brain)
 """
 
 import logging
+from datetime import UTC, datetime
 
 from src.data_models.caseworker import (
     CaseworkerCaseReviewPayload,
     CaseworkerReviewOutcomePayload,
+    CitizenClarificationPayload,
 )
 from src.data_models.common import ApplicationStatus, GovernanceAction
 from src.services.dpi import SocialRegistryService
@@ -58,6 +60,7 @@ class CaseManagementService:
         """
         self._social_service = social_service or SocialRegistryService()
         self._staged_cases: dict[str, CaseworkerCaseReviewPayload] = {}
+        self._case_records: dict[str, CaseworkerCaseReviewPayload] = {}
         self._case_statuses: dict[str, ApplicationStatus] = {}
         self._review_audit_log: dict[str, list[CaseworkerReviewOutcomePayload]] = {}
 
@@ -77,6 +80,7 @@ class CaseManagementService:
             case_review.escalation_reason,
         )
         self._staged_cases[case_review.escalation_case_id] = case_review
+        self._case_records[case_review.escalation_case_id] = case_review
         self._case_statuses[case_review.escalation_case_id] = ApplicationStatus.UNDER_REVIEW
         return True
 
@@ -97,6 +101,18 @@ class CaseManagementService:
     ) -> list[CaseworkerReviewOutcomePayload]:
         """Returns a chronological copy of the audit history for one escalation case."""
         return list(self._review_audit_log.get(escalation_case_id, []))
+
+    def get_citizen_clarification(self, escalation_case_id: str) -> str | None:
+        """Returns the latest citizen clarification recorded for an escalation case."""
+        clarifications = self.get_citizen_clarifications(escalation_case_id)
+        return clarifications[-1].text if clarifications else None
+
+    def get_citizen_clarifications(
+        self, escalation_case_id: str
+    ) -> list[CitizenClarificationPayload]:
+        """Returns a copy of all citizen clarifications recorded for an escalation case."""
+        case_record = self._case_records.get(escalation_case_id)
+        return list(case_record.clarification_history) if case_record else []
 
     async def process_officer_review(self, review_outcome: CaseworkerReviewOutcomePayload) -> bool:
         """Processes officer review outcome submitted from the caseworker dashboard.
@@ -155,24 +171,28 @@ class CaseManagementService:
         """
         if not escalation_case_id.strip() or not citizen_clarification_text.strip():
             return False
-        if escalation_case_id not in self._case_statuses:
+        if self._case_statuses.get(escalation_case_id) != ApplicationStatus.INFO_REQUESTED:
             return False
 
         logger.info(
             "Citizen clarification received for ticket=%s; transitioning to UNDER_REVIEW",
             escalation_case_id,
         )
+        clarification = citizen_clarification_text.strip()
+        clarification_received_at = datetime.now(UTC)
+        case_record = self._case_records[escalation_case_id]
+        updated_case = case_record.model_copy(
+            update={
+                "clarification_history": [
+                    *case_record.clarification_history,
+                    CitizenClarificationPayload(
+                        text=clarification,
+                        received_at=clarification_received_at,
+                    ),
+                ]
+            }
+        )
+        self._case_records[escalation_case_id] = updated_case
+        self._staged_cases[escalation_case_id] = updated_case
         self._case_statuses[escalation_case_id] = ApplicationStatus.UNDER_REVIEW
         return True
-
-    async def process_citizen_response_workflow(
-        self, escalation_case_id: str, citizen_clarification_text: str
-    ) -> bool:
-        """Workflow wrapper for citizen follow-up after a REQUEST_MORE_INFO decision.
-
-        This keeps the citizen-response flow explicit and reusable from the orchestrator
-        layer without introducing a separate service class for a single use case.
-        """
-        return await self.resolve_citizen_clarification(
-            escalation_case_id, citizen_clarification_text
-        )

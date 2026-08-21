@@ -83,33 +83,55 @@ async def test_case_management_resolve_citizen_clarification() -> None:
     )
     resolved = await service.resolve_citizen_clarification(
         escalation_case_id="SPP-CASE-2026-100200",
-        citizen_clarification_text="Updated crop survey number is 402/A",
+        citizen_clarification_text="  Updated crop survey number is 402/A  ",
     )
     assert resolved is True
     assert service.get_case_status("SPP-CASE-2026-100200") == ApplicationStatus.UNDER_REVIEW
+    assert (
+        service.get_citizen_clarification("SPP-CASE-2026-100200")
+        == "Updated crop survey number is 402/A"
+    )
+    assert [entry.text for entry in service.get_citizen_clarifications("SPP-CASE-2026-100200")] == [
+        "Updated crop survey number is 402/A"
+    ]
+    returned_clarifications = service.get_citizen_clarifications("SPP-CASE-2026-100200")
+    returned_clarifications.clear()
+    assert service.get_citizen_clarifications("SPP-CASE-2026-100200")
+    updated_case = service.get_staged_case("SPP-CASE-2026-100200")
+    assert updated_case is not None
+    assert updated_case.unprocessed_input_content == "Raw text for manual review"
+    assert len(updated_case.clarification_history) == 1
+    assert updated_case.clarification_history[0].text == "Updated crop survey number is 402/A"
+    assert updated_case.clarification_history[0].received_at.tzinfo == UTC
 
     # Empty inputs should fail
     assert await service.resolve_citizen_clarification("", "Note") is False
     assert await service.resolve_citizen_clarification("SPP-CASE-2026-100200", "  ") is False
-
-
-@pytest.mark.asyncio
-async def test_case_management_process_citizen_response_workflow() -> None:
-    service = CaseManagementService()
-    await service.stage_incident_ticket(build_case())
+    assert (
+        await service.resolve_citizen_clarification(
+            "SPP-CASE-2026-100200", "A second clarification"
+        )
+        is False
+    )
     await service.process_officer_review(
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-100200",
             reviewer_id="OFFICER-UUID-12345",
             governance_action=GovernanceAction.REQUEST_MORE_INFO,
-            review_notes="Please provide the updated crop survey number",
+            review_notes="Please provide the updated village code",
             approved_amount=None,
             rejection_reason=None,
             reviewed_at=datetime.now(UTC),
         )
     )
-    resolved = await service.process_citizen_response_workflow(
-        escalation_case_id="SPP-CASE-2026-100200",
-        citizen_clarification_text="Updated crop survey number is 402/A",
+    assert await service.resolve_citizen_clarification(
+        "SPP-CASE-2026-100200", "Updated village code is VLG-22"
+    ) is True
+    assert (
+        service.get_citizen_clarification("SPP-CASE-2026-100200")
+        == "Updated village code is VLG-22"
     )
-    assert resolved is True
+    assert [entry.text for entry in service.get_citizen_clarifications("SPP-CASE-2026-100200")] == [
+        "Updated crop survey number is 402/A",
+        "Updated village code is VLG-22",
+    ]

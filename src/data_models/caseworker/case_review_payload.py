@@ -14,6 +14,7 @@ from src.data_models.common import (
     UnprocessedInputContent,
     UtcTimestamp,
 )
+from src.data_models.caseworker.citizen_clarification_payload import CitizenClarificationPayload
 
 
 class CaseworkerCaseReviewPayload(StrictBaseModel):
@@ -48,6 +49,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
         ),
     )
     unprocessed_input_content: UnprocessedInputContent
+    clarification_history: list[CitizenClarificationPayload] = Field(default_factory=list)
     escalation_reason: EscalationReasonCode
     staged_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when incident ticket was staged into review dashboard"
