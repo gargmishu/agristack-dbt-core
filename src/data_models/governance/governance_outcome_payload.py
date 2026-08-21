@@ -51,32 +51,32 @@ class GovernanceOutcomePayload(StrictBaseModel):
         description="UTC timestamp when automated governance evaluation or review was rendered",
     )
     disbursement_txn_id: DisbursementTxnId | None = Field(
-        None,
+        default=None,
         description=(
             "Idempotency tracking key generated at approval time for "
             "AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT"
         ),
     )
     disbursement_status: DisbursementStatus | None = Field(
-        None,
+        default=None,
         description=(
             "Initialized to PENDING at decision time; transitioned to INITIATED upon "
             "wire dispatch; updated to SUCCESS/FAILED/RETURNED upon bank callback"
         ),
     )
     escalation_case_id: EscalationCaseId | None = Field(
-        None,
+        default=None,
         description=(
             "Incident ticket tracking key (SPP-CASE-YYYY-XXXXXX) required for "
             "manual review routing, info requests, and caseworker adjudications"
         ),
     )
     rejection_reason: RejectionReasonCode | None = Field(
-        None,
+        default=None,
         description="Populated for AUTO_REJECT / MANUAL_REJECT",
     )
     review_notes: str | None = Field(
-        None,
+        default=None,
         min_length=5,
         max_length=2000,
         description="Internal caseworker audit notes carried from manual adjudication",
