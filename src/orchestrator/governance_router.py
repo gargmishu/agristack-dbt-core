@@ -222,22 +222,3 @@ class GovernanceRouter:
             escalation_case_id=f"SPP-CASE-2026-{short_id}",
             evaluated_at=now,
         )
-
-    async def route_governance_outcome(
-        self, payload: GovernanceOutcomePayload
-    ) -> GovernanceOutcomePayload:
-        """Routes finalized governance outcome through policy logging.
-
-        Args:
-            payload: Validated GovernanceOutcomePayload instance.
-
-        Returns:
-            GovernanceOutcomePayload with finalized governance action and tracking keys.
-        """
-        logger.info(
-            "Routing governance outcome for session=%s, action=%s, confidence=%.2f",
-            payload.session_id,
-            payload.governance_action,
-            payload.ai_confidence_score,
-        )
-        return payload
