@@ -90,7 +90,7 @@ class PayloadCanonicalizer:
             return self._canonicalize_ivr(payload, tokenized_id, language_locale)
         elif isinstance(payload, UssdIngressPayload):
             return self._canonicalize_ussd(payload, tokenized_id, language_locale)
-        else: #SMS
+        else:  # SMS
             return self._canonicalize_sms(payload, tokenized_id, language_locale)
 
     def _canonicalize_whatsapp(

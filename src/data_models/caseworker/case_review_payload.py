@@ -2,6 +2,7 @@
 
 from pydantic import Field
 
+from src.data_models.caseworker.citizen_clarification_payload import CitizenClarificationPayload
 from src.data_models.common import (
     ApplicationIntent,
     DomainEntities,
@@ -14,7 +15,6 @@ from src.data_models.common import (
     UnprocessedInputContent,
     UtcTimestamp,
 )
-from src.data_models.caseworker.citizen_clarification_payload import CitizenClarificationPayload
 
 
 class CaseworkerCaseReviewPayload(StrictBaseModel):
@@ -49,7 +49,13 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
         ),
     )
     unprocessed_input_content: UnprocessedInputContent
-    clarification_history: list[CitizenClarificationPayload] = Field(default_factory=list)
+    clarification_history: list[CitizenClarificationPayload] = Field(
+        default_factory=list,
+        description=(
+            "Chronological log of citizen clarifications submitted in response to "
+            "caseworker REQUEST_MORE_INFO inquiries."
+        ),
+    )
     escalation_reason: EscalationReasonCode
     staged_at: UtcTimestamp = Field(
         ..., description="UTC timestamp when incident ticket was staged into review dashboard"

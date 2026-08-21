@@ -124,9 +124,12 @@ async def test_case_management_resolve_citizen_clarification() -> None:
             reviewed_at=datetime.now(UTC),
         )
     )
-    assert await service.resolve_citizen_clarification(
-        "SPP-CASE-2026-100200", "Updated village code is VLG-22"
-    ) is True
+    assert (
+        await service.resolve_citizen_clarification(
+            "SPP-CASE-2026-100200", "Updated village code is VLG-22"
+        )
+        is True
+    )
     assert (
         service.get_citizen_clarification("SPP-CASE-2026-100200")
         == "Updated village code is VLG-22"
