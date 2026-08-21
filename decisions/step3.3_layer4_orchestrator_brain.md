@@ -98,7 +98,7 @@ Gate 3 evaluates three independent verification criteria:
 
 | Governance Condition | Action (`GovernanceAction`) | Application Status | Financial State (`DisbursementStatus`) | Generated Artifacts |
 | :--- | :--- | :--- | :--- | :--- |
-| $\text{Score} \ge 0.85 \land \text{Eligible} \land \text{No Duplicate}$ | `AUTO_APPROVE` / `AUTOMATED_PAYOUT` | `APPROVED` | `PENDING` | `disbursement_txn_id = "TXN-YYYY-XXXXXX"` |
+| $\text{Score} \ge 0.85 \land \text{Eligible} \land \text{No Duplicate}$ | `AUTO_APPROVE` | `APPROVED` | `PENDING` | `disbursement_txn_id = "TXN-YYYY-XXXXXX"` |
 | $\text{Score} < 0.85 \lor \text{Adversarial} \lor \text{Attempts} \ge 3$ | `ROUTE_FOR_MANUAL_REVIEW` | `UNDER_REVIEW` | `None` (Bypassed) | `escalation_case_id = "SPP-CASE-YYYY-XXXXXX"` |
 | $\text{Ineligible Record} \lor \text{Duplicate Active Claim}$ | `AUTO_REJECT` | `REJECTED` | `None` (Bypassed) | `rejection_reason` (Non-empty justification) |
 

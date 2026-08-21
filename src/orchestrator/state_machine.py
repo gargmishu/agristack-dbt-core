@@ -1,3 +1,14 @@
+"""Layer 4 Governance Engine: State Machine & 3-Gate Execution Pipeline.
+
+Coordinates end-to-end processing across three sequential execution gates:
+- Gate 1: Ingress & Structure Evaluation (Audio transcription or structured input bypass)
+- Gate 2: Intake & Intent Validation (Mandatory entity completeness & multi-turn reprompt loops)
+- Gate 3: Governance Routing Matrix (DPI cross-matching, anti-double-dipping, and threshold routing)
+
+See: decisions/step3.3_layer4_orchestrator_brain.md
+See: decisions/step2.2_governance_flows_and_state_transitions.md
+"""
+
 import logging
 import secrets
 import uuid
