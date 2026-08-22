@@ -319,24 +319,6 @@ class StateMachine:
             caseworker_ticket_id=staged_case_id,
         )
 
-    async def execute_state_transition(
-        self, payload: ExtractedEntityPayload
-    ) -> ExtractedEntityPayload:
-        """Evaluates extracted entity payload and executes state machine transition.
-
-        Args:
-            payload: Validated ExtractedEntityPayload instance from NLU pipeline.
-
-        Returns:
-            Updated ExtractedEntityPayload reflecting the state transition.
-        """
-        logger.info(
-            "Evaluating state machine transition for intent=%s, confidence=%.2f",
-            payload.application_intent,
-            payload.ai_confidence_score,
-        )
-        return payload
-
     @staticmethod
     def _create_fallback_extracted_payload() -> ExtractedEntityPayload:
         """Constructs safe low-confidence fallback extraction payload for unparseable input.
