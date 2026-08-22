@@ -1,7 +1,8 @@
-"""Layer 4 Governance Engine: State Machine & 3-Gate Execution Pipeline.
+"""Layer 4 Governance Engine: Claim Orchestrator & 3-Gate Execution Pipeline.
 
 Coordinates end-to-end citizen claim processing across multimodal ingress transcription,
-entity validation, multi-turn conversational reprompts, and deterministic governance routing.
+claim completeness validation, multi-turn conversational reprompts, and deterministic
+governance routing.
 
 See: decisions/step3.3_layer4_orchestrator_brain.md
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
@@ -49,7 +50,7 @@ _MAX_REPROMPT_ATTEMPTS: Final[int] = 3
 
 @dataclass(frozen=True)
 class OrchestrationExecutionResult:
-    """Execution outcome returned by the Orchestrator State Machine.
+    """Execution outcome returned by the Claim Orchestrator.
 
     Encapsulates session progress, governance outcome, extracted parameters, and optional
     next steps.
@@ -80,8 +81,8 @@ class OrchestrationExecutionResult:
     caseworker_ticket_id: str | None = None
 
 
-class StateMachine:
-    """State machine governing claim processing workflows across three execution gates.
+class ClaimOrchestrator:
+    """Claim orchestrator governing claim processing workflows across three execution gates.
 
     Coordinates end-to-end processing across transcription, entity validation, and
     governance routing:
@@ -103,7 +104,7 @@ class StateMachine:
         case_management_service: CaseManagementService | None = None,
         payment_rail_service: PaymentRailService | None = None,
     ) -> None:
-        """Initializes StateMachine with required AI and DPI service dependencies."""
+        """Initializes ClaimOrchestrator with required AI and DPI service dependencies."""
         self._bhashini = bhashini_service or BhashiniService()
         self._slm_extractor = slm_extractor or SlmExtractor()
         self._governance_router = governance_router or GovernanceRouter()

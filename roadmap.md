@@ -51,7 +51,7 @@
       │   ├── public_agent_api.py          # Public Agent Gateway API Surface
       │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
       ├── orchestrator/                    # Layer 4 DPI Workflow Execution Brain
-      │   ├── state_machine.py             # Deterministic workflow execution loop
+      │   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate execution loop
       │   ├── governance_router.py         # Decision matrix (Payout vs Review vs Reject)
       │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
       ├── services/                        # External Dependency Abstractions

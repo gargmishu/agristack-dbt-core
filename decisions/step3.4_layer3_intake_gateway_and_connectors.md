@@ -36,7 +36,7 @@ The ingress architecture decouples carrier transport protocols, perimeter securi
                                       ▼ (Prepared Intake Context)
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 4: DPI ORCHESTRATOR BRAIN                        │
-  │  - StateMachine               (Gate 1 -> Gate 2 -> Gate 3 Pipeline)    │
+  │  - ClaimOrchestrator          (Gate 1 -> Gate 2 -> Gate 3 Pipeline)    │
   └────────────────────────────────────────────────────────────────────────┘
 ```
 

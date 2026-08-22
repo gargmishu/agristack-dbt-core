@@ -45,7 +45,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 2. Gate 1: Ingress & Structure Evaluation Gate (`StateMachine.process_ingress_payload`)
+## 2. Gate 1: Ingress & Structure Evaluation Gate (`ClaimOrchestrator.process_ingress_payload`)
 
 ### 2.1 Modality Dispatch & ASR/NMT Pipeline
 * **`PayloadType.AUDIO` (IVR voice calls & WhatsApp voice notes):**
@@ -62,7 +62,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 3. Gate 2: Intake & Intent Validation Gate (`StateMachine.check_claim_completeness`)
+## 3. Gate 2: Intake & Intent Validation Gate (`ClaimOrchestrator.check_claim_completeness`)
 
 ### 3.1 Intent Classification & Routing
 * Evaluates the classified `ApplicationIntent`:
@@ -120,7 +120,7 @@ Gate 3 evaluates three independent verification criteria:
 ```text
 src/orchestrator/
 ├── __init__.py                 <-- Package exports
-├── state_machine.py           <-- Core 3-Gate State Machine & Execution Loop
+├── claim_orchestrator.py      <-- Core 3-Gate Claim Orchestrator & Execution Loop
 ├── governance_router.py       <-- Decision Matrix Evaluator (Auto Approve/Reject/Review)
 └── case_management_service.py <-- Internal Escalation Staging & Clarification Loops
 ```

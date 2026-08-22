@@ -42,7 +42,7 @@
                                         ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Layer 4: Orchestrator Brain & Governance (`src/orchestrator/`)         │
-│ • StateMachine (Monotonic deterministic workflow state transitions)    │
+│ • ClaimOrchestrator (3-Gate workflow orchestration & pipeline coordinator) │
 │ • GovernanceRouter (Automated Payout vs. Caseworker Review vs. Reject) │
 │ • CaseManagementService (Internal review queues & OpenSPP ticket sync) │
 └───────────────────────────────────────┬────────────────────────────────┘

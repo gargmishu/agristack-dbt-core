@@ -88,7 +88,7 @@ src/
 │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
 ├── orchestrator/                    # Layer 4 Orchestrator Brain & Governance Engine
 │   ├── governance_router.py         # Decision matrix & threshold routing
-│   ├── state_machine.py             # Deterministic state transitions & gates
+│   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate pipeline
 │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
 ├── services/                        # External DPI Registries & AI Adapter Services ONLY
 │   ├── ai/
@@ -155,7 +155,7 @@ tests/
 │   └── test_intake_payload_evaluator.py
 ├── orchestrator/
 │   ├── test_governance_router.py
-│   ├── test_state_machine.py
+│   ├── test_claim_orchestrator.py
 │   └── test_case_management_service.py
 ├── services/
 │   ├── ai/
