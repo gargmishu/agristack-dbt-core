@@ -154,11 +154,11 @@ class StateMachine:
                 )
             except Exception as err:
                 logger.warning(
-                    "Gate 1: Audio transcription failed for session=%s: %s",
+                    "Gate 1: Audio transcription failed for session=%s: %s; using fallback",
                     intake.session_id,
                     err,
                 )
-                text_to_extract = ""
+                return self._create_fallback_extracted_payload()
 
         # Sovereign SLM Entity Extraction
         extracted = await self._slm_extractor.extract_entities(
@@ -169,13 +169,7 @@ class StateMachine:
 
         if extracted is None:
             logger.info("Gate 1: Extraction fallback for session=%s", intake.session_id)
-            return ExtractedEntityPayload(
-                application_intent=ApplicationIntent.UNKNOWN,
-                ai_confidence_score=0.40,
-                domain_entities={},
-                is_adversarial_attempt=False,
-                is_structured_menu_bypass=False,
-            )
+            return self._create_fallback_extracted_payload()
 
         return extracted
 
@@ -339,3 +333,22 @@ class StateMachine:
             payload.ai_confidence_score,
         )
         return payload
+
+    @staticmethod
+    def _create_fallback_extracted_payload() -> ExtractedEntityPayload:
+        """Constructs safe low-confidence fallback extraction payload for unparseable input.
+
+        Why 0.40 instead of 0.0?
+        - 0.0 is strictly reserved for Security Zeroing on adversarial prompt injection attacks
+          (is_adversarial_attempt=True), which routes to the security threat triage queue.
+        - 0.40 represents benign low model confidence / unparseable speech (e.g. ambient farm
+          noise, dialect mismatch, or transcription timeout), routing safely to the standard
+          caseworker review queue (ROUTE_FOR_MANUAL_REVIEW) without false security alarms.
+        """
+        return ExtractedEntityPayload(
+            application_intent=ApplicationIntent.UNKNOWN,
+            ai_confidence_score=0.40,
+            domain_entities={},
+            is_adversarial_attempt=False,
+            is_structured_menu_bypass=False,
+        )
