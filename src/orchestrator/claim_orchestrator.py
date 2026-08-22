@@ -241,11 +241,11 @@ class ClaimOrchestrator:
         payload_id = f"ext-{uuid.uuid4().hex[:8]}"
 
         # --- GATE 1: Ingress & Structure Evaluation ---
-        extracted = await self.process_ingress_payload(intake)
+        extracted_entities = await self.process_ingress_payload(intake)
 
         # --- GATE 2: Intake & Intent Validation ---
         requires_reprompt, missing_entities = self.check_claim_completeness(
-            extracted, attempt_count=attempt_count
+            extracted_entities, attempt_count=attempt_count
         )
 
         if requires_reprompt:
@@ -256,7 +256,7 @@ class ClaimOrchestrator:
             reprompt_outcome = GovernanceOutcomePayload(
                 session_id=session_id,
                 payload_id=payload_id,
-                ai_confidence_score=extracted.ai_confidence_score,
+                ai_confidence_score=extracted_entities.ai_confidence_score,
                 eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
                 governance_action=GovernanceAction.REQUEST_MORE_INFO,
                 escalation_case_id=f"SPP-CASE-2026-{secrets.randbelow(900000) + 100000:06d}",
@@ -264,9 +264,9 @@ class ClaimOrchestrator:
             )
             return OrchestrationExecutionResult(
                 session_id=session_id,
-                application_intent=extracted.application_intent,
+                application_intent=extracted_entities.application_intent,
                 governance_outcome=reprompt_outcome,
-                extracted_entities=extracted,
+                extracted_entities=extracted_entities,
                 requires_reprompt=True,
                 reprompt_message=reprompt_msg,
             )
@@ -276,7 +276,7 @@ class ClaimOrchestrator:
             session_id=session_id,
             payload_id=payload_id,
             tokenized_citizen_id=intake.tokenized_citizen_id,
-            extracted_payload=extracted,
+            extracted_payload=extracted_entities,
             active_season=active_season,
             approved_payouts_ledger=approved_payouts_ledger or set(),
         )
@@ -299,12 +299,12 @@ class ClaimOrchestrator:
                 session_id=session_id,
                 payload_id=payload_id,
                 tokenized_citizen_id=intake.tokenized_citizen_id,
-                application_intent=extracted.application_intent,
-                extracted_entities=extracted.domain_entities,
+                application_intent=extracted_entities.application_intent,
+                extracted_entities=extracted_entities.domain_entities,
                 unprocessed_input_content=intake.unprocessed_input_content,
                 escalation_reason=(
                     EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
-                    if extracted.is_adversarial_attempt
+                    if extracted_entities.is_adversarial_attempt
                     else EscalationReasonCode.MISSING_MANDATORY_ENTITIES
                 ),
                 staged_at=datetime.now(UTC),
@@ -313,9 +313,9 @@ class ClaimOrchestrator:
 
         return OrchestrationExecutionResult(
             session_id=session_id,
-            application_intent=extracted.application_intent,
+            application_intent=extracted_entities.application_intent,
             governance_outcome=governance_outcome,
-            extracted_entities=extracted,
+            extracted_entities=extracted_entities,
             requires_reprompt=False,
             disbursement_callback=disbursement_cb,
             caseworker_ticket_id=staged_case_id,
