@@ -163,20 +163,20 @@ class ClaimOrchestrator:
                 return self._create_fallback_extracted_payload()
 
         # Sovereign SLM Entity Extraction
-        extracted = await self._slm_extractor.extract_entities(
+        extracted_entities = await self._slm_extractor.extract_entities(
             session_id=intake.session_id,
             unprocessed_content=text_to_extract,
             language_locale=intake.language_locale,
         )
 
-        if extracted is None:
+        if extracted_entities is None:
             logger.warning(
                 "Gate 1: SLM extraction failed for session=%s; applying low-confidence fallback",
                 intake.session_id,
             )
             return self._create_fallback_extracted_payload()
 
-        return extracted
+        return extracted_entities
 
     def check_claim_completeness(
         self,
