@@ -68,7 +68,7 @@ class PublicAgentApi:
         """
         evaluation_result = self._evaluator.evaluate_payload(payload)
         if not evaluation_result.is_valid:
-            logger.error(
+            logger.warning(
                 "PublicAgentApi rejected payload for session=%s: %s",
                 payload.session_id,
                 evaluation_result.evaluation_message,

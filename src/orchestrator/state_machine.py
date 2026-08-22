@@ -168,7 +168,10 @@ class StateMachine:
         )
 
         if extracted is None:
-            logger.info("Gate 1: Extraction fallback for session=%s", intake.session_id)
+            logger.warning(
+                "Gate 1: SLM extraction failed for session=%s; applying low-confidence fallback",
+                intake.session_id,
+            )
             return self._create_fallback_extracted_payload()
 
         return extracted

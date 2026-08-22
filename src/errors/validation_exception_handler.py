@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
+
+logger = logging.getLogger(__name__)
 
 
 async def validation_exception_handler(
@@ -20,6 +24,13 @@ async def validation_exception_handler(
         }
         for error_detail in validation_error.errors()
     ]
+
+    req_path = incoming_request.scope.get("path", "<unknown>")
+    logger.warning(
+        "Request validation failed for path=%s: %d invalid parameters",
+        req_path,
+        len(invalid_params),
+    )
 
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

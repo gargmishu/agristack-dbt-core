@@ -59,12 +59,27 @@ class AgriRegistryService:
             or land_record_id.startswith(INVALID_LAND_RECORD_PREFIX)
             or INVALID_SURVEY_NUMBER in land_record_id
         ):
+            logger.warning(
+                "Cadastral verification failed: invalid land_record_id='%s' for token=%s...",
+                land_record_id,
+                tokenized_citizen_id[:16],
+            )
             return False
         if (
             tokenized_citizen_id == UNVERIFIED_IDENTITY_TOKEN_ZERO
             or tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
         ):
+            logger.warning(
+                "Cadastral verification failed: unverified citizen token=%s...",
+                tokenized_citizen_id[:16],
+            )
             return False
         if land_record_id in MOCK_CADASTRAL_REGISTRY:
-            return MOCK_CADASTRAL_REGISTRY[land_record_id].is_entitled
+            is_entitled = MOCK_CADASTRAL_REGISTRY[land_record_id].is_entitled
+            if not is_entitled:
+                logger.warning(
+                    "Cadastral verification failed: citizen not entitled for land_record=%s",
+                    land_record_id,
+                )
+            return is_entitled
         return True

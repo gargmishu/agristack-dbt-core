@@ -69,6 +69,12 @@ class PaymentRailService:
             status = DisbursementStatus.FAILED
             reason = MOCK_PAYMENT_FAILURE_REASON
             bank_ref = f"NPCI-REJ-{str(outcome.disbursement_txn_id)[-6:]}"
+            logger.warning(
+                "Payment clearing failed for session=%s, txn=%s, reason=%s",
+                outcome.session_id,
+                outcome.disbursement_txn_id,
+                reason,
+            )
         else:
             status = DisbursementStatus.SUCCESS
             reason = None

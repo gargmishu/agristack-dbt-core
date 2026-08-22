@@ -51,7 +51,13 @@ class IdentityVerificationService:
             True if identity token is verified and active in registry, False otherwise.
         """
         logger.info("Verifying identity token=%s...", tokenized_citizen_id[:16])
-        return (
+        is_verified = (
             tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO
             and not tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
         )
+        if not is_verified:
+            logger.warning(
+                "Identity verification rejected for token=%s...",
+                tokenized_citizen_id[:16],
+            )
+        return is_verified

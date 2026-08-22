@@ -170,8 +170,16 @@ class CaseManagementService:
             True if the response was accepted and queued for re-review, False otherwise.
         """
         if not escalation_case_id.strip() or not citizen_clarification_text.strip():
+            logger.warning(
+                "Cannot resolve clarification: empty case_id='%s' or empty text",
+                escalation_case_id,
+            )
             return False
         if self._case_statuses.get(escalation_case_id) != ApplicationStatus.INFO_REQUESTED:
+            logger.warning(
+                "Cannot resolve clarification for ticket=%s: ticket not in INFO_REQUESTED status",
+                escalation_case_id,
+            )
             return False
 
         logger.info(

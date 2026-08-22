@@ -66,6 +66,11 @@ class SlmExtractor:
             return None
 
         is_adversarial = any(kw in content_lower for kw in ADVERSARIAL_INJECTION_KEYWORDS)
+        if is_adversarial:
+            logger.warning(
+                "SLM detected adversarial injection keywords for session=%s",
+                session_id,
+            )
 
         if any(k in content_lower for k in SUBSIDY_CLAIM_KEYWORDS):
             rule = MOCK_SLM_RULES["subsidy_claim"]
