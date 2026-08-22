@@ -315,7 +315,7 @@ class ClaimOrchestrator:
             session_id=session_id,
             application_intent=extracted_entities.application_intent,
             governance_outcome=governance_outcome,
-            extracted_entities=extracted_entities,
+            extracted_entities=extracted_entities   ,
             requires_reprompt=False,
             disbursement_callback=disbursement_cb,
             caseworker_ticket_id=staged_case_id,
