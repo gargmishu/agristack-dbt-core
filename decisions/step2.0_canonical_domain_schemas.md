@@ -669,7 +669,8 @@ agristack-dbt-core/
 │   │   │   ├── __init__.py
 │   │   │   └── standardized_intake_payload.py <-- PublicAgentStandardizedIntakePayload
 │   │   ├── governance/             <-- Subpackage for Layer 3 -> Layer 4 governance schemas
-│   │   │   ├── __init__.py         <-- Exports ExtractedEntityPayload, GovernanceOutcomePayload
+│   │   │   ├── __init__.py         <-- Exports ClaimEvaluationPayload, ExtractedEntityPayload, GovernanceOutcomePayload
+│   │   │   ├── claim_evaluation_payload.py    <-- ClaimEvaluationPayload
 │   │   │   ├── extracted_entity_payload.py    <-- ExtractedEntityPayload
 │   │   │   └── governance_outcome_payload.py  <-- GovernanceOutcomePayload
 │   │   ├── caseworker/             <-- Subpackage for Step 11 manual escalation schemas
@@ -695,6 +696,7 @@ agristack-dbt-core/
     │   ├── public_agent/
     │   │   └── test_standardized_intake_payload.py <-- 2-type tuple validation & zero-PII HMAC token format tests
     │   ├── governance/
+    │   │   ├── test_claim_evaluation_payload.py    <-- Pydantic input contract & field validation tests
     │   │   ├── test_governance_outcome_payload.py  <-- Adversarial confidence zeroing, menu bypass, & governance action tests
     │   │   └── test_extracted_entity_payload.py
     │   ├── caseworker/

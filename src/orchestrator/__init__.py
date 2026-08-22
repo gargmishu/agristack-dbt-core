@@ -8,14 +8,10 @@ from src.orchestrator.claim_orchestrator import (
     ClaimOrchestrator,
     OrchestrationExecutionResult,
 )
-from src.orchestrator.governance_router import (
-    ClaimEvaluationContext,
-    GovernanceRouter,
-)
+from src.orchestrator.governance_router import GovernanceRouter
 
 __all__ = [
     "CaseManagementService",
-    "ClaimEvaluationContext",
     "ClaimOrchestrator",
     "GovernanceRouter",
     "OrchestrationExecutionResult",

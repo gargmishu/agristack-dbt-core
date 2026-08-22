@@ -8,12 +8,10 @@ from src.data_models.common import (
     RejectionReasonCode,
 )
 from src.data_models.governance import (
+    ClaimEvaluationPayload,
     ExtractedEntityPayload,
 )
-from src.orchestrator.governance_router import (
-    ClaimEvaluationContext,
-    GovernanceRouter,
-)
+from src.orchestrator.governance_router import GovernanceRouter
 from src.services.dpi.dpi_mock_fixtures import UNVERIFIED_IDENTITY_PREFIX
 
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
@@ -31,7 +29,7 @@ async def test_governance_router_evaluate_claim_duplicate_claim() -> None:
             DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
         },
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_dup",
         payload_id="ext_eval_dup",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -57,7 +55,7 @@ async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -
             DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
         },
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_1",
         payload_id="ext_eval_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -81,7 +79,7 @@ async def test_governance_router_evaluate_claim_low_confidence_escalation() -> N
             DomainEntityKey.CROP_NAME: "Wheat",
         },
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_2",
         payload_id="ext_eval_2",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -102,7 +100,7 @@ async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
         domain_entities={DomainEntityKey.DISTRICT: "Karnal"},
         is_adversarial_attempt=True,
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_3",
         payload_id="ext_eval_3",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -123,7 +121,7 @@ async def test_governance_router_evaluate_claim_unverified_identity() -> None:
         ai_confidence_score=0.92,
         domain_entities={DomainEntityKey.DISTRICT: "Karnal"},
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_4",
         payload_id="ext_eval_4",
         tokenized_citizen_id=unverified_token,
@@ -147,7 +145,7 @@ async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
             DomainEntityKey.SURVEY_NUMBER: "INVALID_LAND_REC_9999",
         },
     )
-    context = ClaimEvaluationContext(
+    context = ClaimEvaluationPayload(
         session_id="sess_eval_5",
         payload_id="ext_eval_5",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,

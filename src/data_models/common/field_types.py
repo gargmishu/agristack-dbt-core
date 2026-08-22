@@ -124,6 +124,16 @@ AiConfidenceScore = Annotated[
     ),
 ]
 
+CropSeason = Annotated[
+    str,
+    Field(
+        min_length=4,
+        max_length=64,
+        pattern=r"^[A-Z0-9_\-]+$",
+        description="Agricultural crop season identifier (e.g. KHARIF-2026, RABI-2026, ZAID-2026)",
+    ),
+]
+
 
 def validate_utc_freshness(dt: datetime) -> datetime:
     """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation).

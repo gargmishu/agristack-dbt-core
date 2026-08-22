@@ -12,7 +12,6 @@ See: roadmap.md (Phase 3 Step 3.3 Layer 4 Governance Router)
 
 import logging
 import secrets
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Final
 
@@ -24,7 +23,7 @@ from src.data_models.common import (
     RejectionReasonCode,
 )
 from src.data_models.governance import (
-    ExtractedEntityPayload,
+    ClaimEvaluationPayload,
     GovernanceOutcomePayload,
 )
 from src.services.dpi import (
@@ -35,34 +34,6 @@ from src.services.dpi import (
 logger = logging.getLogger(__name__)
 
 _AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
-_DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
-
-
-@dataclass(frozen=True)
-class ClaimEvaluationContext:
-    """Context container for governance claim eligibility evaluation.
-
-    Encapsulates citizen parameters, extracted entities, active season, and approved payout
-    ledger records.
-
-    Attributes:
-        session_id: Primary session tracking identifier.
-        payload_id: Extraction payload tracking identifier.
-        tokenized_citizen_id: 64-character SHA-256 HMAC citizen identity token.
-        extracted_payload: Extracted entity payload containing intent and domain entities.
-        active_season: Agricultural crop season identifier (e.g. 'KHARIF-2026').
-        approved_payouts_ledger: Set of (tokenized_citizen_id, season) tuples tracking prior
-        disbursements.
-
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
-    """
-
-    session_id: str
-    payload_id: str
-    tokenized_citizen_id: str
-    extracted_payload: ExtractedEntityPayload
-    active_season: str = _DEFAULT_ACTIVE_SEASON
-    approved_payouts_ledger: set[tuple[str, str]] = field(default_factory=set)
 
 
 class GovernanceRouter:
@@ -99,31 +70,31 @@ class GovernanceRouter:
 
     async def evaluate_claim(
         self,
-        context: ClaimEvaluationContext,
+        payload: ClaimEvaluationPayload,
     ) -> GovernanceOutcomePayload:
         """Evaluates extracted entities and citizen credentials against Gate 3 rules matrix.
 
         Args:
-            context: Validated ClaimEvaluationContext instance.
+            payload: Validated ClaimEvaluationPayload instance.
 
         Returns:
             Fully validated GovernanceOutcomePayload representing the adjudication outcome.
         """
-        ledger = context.approved_payouts_ledger or set()
+        ledger = payload.approved_payouts_ledger or set()
         short_id = f"{secrets.randbelow(900000) + 100000:06d}"
         now = datetime.now(UTC)
-        extracted = context.extracted_payload
+        extracted = payload.extracted_payload
 
         # 1. Security Check: Adversarial Prompt Injection Zeroing Invariant
         if extracted.is_adversarial_attempt or extracted.ai_confidence_score == 0.0:
             logger.warning(
                 "Adversarial attempt or zero-confidence claim flagged for session=%s; "
                 "routing to caseworker review",
-                context.session_id,
+                payload.session_id,
             )
             return GovernanceOutcomePayload(
-                session_id=context.session_id,
-                payload_id=context.payload_id,
+                session_id=payload.session_id,
+                payload_id=payload.payload_id,
                 ai_confidence_score=0.0,
                 eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
                 governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
@@ -132,15 +103,15 @@ class GovernanceRouter:
             )
 
         # 2. Anti-Double-Dipping Ledger Invariant
-        if (context.tokenized_citizen_id, context.active_season) in ledger:
+        if (payload.tokenized_citizen_id, payload.active_season) in ledger:
             logger.warning(
                 "Duplicate active claim detected for citizen=%s season=%s; rejecting",
-                context.tokenized_citizen_id[:16],
-                context.active_season,
+                payload.tokenized_citizen_id[:16],
+                payload.active_season,
             )
             return GovernanceOutcomePayload(
-                session_id=context.session_id,
-                payload_id=context.payload_id,
+                session_id=payload.session_id,
+                payload_id=payload.payload_id,
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
@@ -150,16 +121,16 @@ class GovernanceRouter:
 
         # 3. Sovereign Identity Registry Verification
         is_identity_verified = await self._identity_service.verify_identity_token(
-            context.tokenized_citizen_id
+            payload.tokenized_citizen_id
         )
         if not is_identity_verified:
             logger.warning(
                 "Unverified identity token for session=%s; rejecting",
-                context.session_id,
+                payload.session_id,
             )
             return GovernanceOutcomePayload(
-                session_id=context.session_id,
-                payload_id=context.payload_id,
+                session_id=payload.session_id,
+                payload_id=payload.payload_id,
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
@@ -172,17 +143,17 @@ class GovernanceRouter:
             extracted.domain_entities.get(DomainEntityKey.SURVEY_NUMBER, "LAND-REC-1002")
         )
         is_land_verified = await self._agri_service.verify_land_record(
-            context.tokenized_citizen_id, survey_number
+            payload.tokenized_citizen_id, survey_number
         )
         if not is_land_verified:
             logger.warning(
                 "Cadastral land record mismatch for survey=%s citizen=%s; rejecting",
                 survey_number,
-                context.tokenized_citizen_id[:16],
+                payload.tokenized_citizen_id[:16],
             )
             return GovernanceOutcomePayload(
-                session_id=context.session_id,
-                payload_id=context.payload_id,
+                session_id=payload.session_id,
+                payload_id=payload.payload_id,
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
@@ -194,12 +165,12 @@ class GovernanceRouter:
         if extracted.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
             logger.info(
                 "Straight-through automated payout approved for session=%s score=%.2f",
-                context.session_id,
+                payload.session_id,
                 extracted.ai_confidence_score,
             )
             return GovernanceOutcomePayload(
-                session_id=context.session_id,
-                payload_id=context.payload_id,
+                session_id=payload.session_id,
+                payload_id=payload.payload_id,
                 ai_confidence_score=extracted.ai_confidence_score,
                 eligibility_status=EligibilityStatus.ELIGIBLE,
                 governance_action=GovernanceAction.AUTO_APPROVE,
@@ -211,11 +182,11 @@ class GovernanceRouter:
         logger.info(
             "Low confidence claim score=%.2f for session=%s; routing to caseworker",
             extracted.ai_confidence_score,
-            context.session_id,
+            payload.session_id,
         )
         return GovernanceOutcomePayload(
-            session_id=context.session_id,
-            payload_id=context.payload_id,
+            session_id=payload.session_id,
+            payload_id=payload.payload_id,
             ai_confidence_score=extracted.ai_confidence_score,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
             governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,

@@ -118,6 +118,7 @@ src/
 │   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
 │   │   └── standardized_intake_payload.py
 │   ├── governance/                  # Layer 4 governance models & extraction payloads
+│   │   ├── claim_evaluation_payload.py
 │   │   ├── extracted_entity_payload.py
 │   │   └── governance_outcome_payload.py
 │   ├── caseworker/                  # Caseworker portal review staging & outcome models
@@ -185,6 +186,7 @@ tests/
 │   ├── public_agent/
 │   │   └── test_standardized_intake_payload.py
 │   ├── governance/
+│   │   ├── test_claim_evaluation_payload.py
 │   │   ├── test_extracted_entity_payload.py
 │   │   └── test_governance_outcome_payload.py
 │   ├── caseworker/

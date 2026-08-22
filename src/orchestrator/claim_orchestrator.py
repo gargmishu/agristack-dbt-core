@@ -26,15 +26,13 @@ from src.data_models.common import (
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
+    ClaimEvaluationPayload,
     ExtractedEntityPayload,
     GovernanceOutcomePayload,
 )
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.case_management_service import CaseManagementService
-from src.orchestrator.governance_router import (
-    ClaimEvaluationContext,
-    GovernanceRouter,
-)
+from src.orchestrator.governance_router import GovernanceRouter
 from src.services.ai import BhashiniService, SlmExtractor
 from src.services.dpi import PaymentRailService
 
@@ -272,7 +270,7 @@ class ClaimOrchestrator:
             )
 
         # --- GATE 3: Deterministic Governance Routing Matrix ---
-        context = ClaimEvaluationContext(
+        claim_payload = ClaimEvaluationPayload(
             session_id=session_id,
             payload_id=payload_id,
             tokenized_citizen_id=intake.tokenized_citizen_id,
@@ -280,7 +278,7 @@ class ClaimOrchestrator:
             active_season=active_season,
             approved_payouts_ledger=approved_payouts_ledger or set(),
         )
-        governance_outcome = await self._governance_router.evaluate_claim(context)
+        governance_outcome = await self._governance_router.evaluate_claim(claim_payload)
 
         disbursement_cb: DisbursementCallbackPayload | None = None
         staged_case_id: str | None = None
