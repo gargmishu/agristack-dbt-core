@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.data_models.common import (
