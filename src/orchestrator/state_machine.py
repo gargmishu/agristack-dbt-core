@@ -85,11 +85,12 @@ class StateMachine:
 
     Coordinates end-to-end processing across transcription, entity validation, and
     governance routing:
-    - Gate 1 (Ingress & Structure): Manages audio transcription or structured input bypass.
-    - Gate 2 (Intake & Intent): Validates mandatory entity completeness and manages
-      re-prompt loops.
-    - Gate 3 (Governance Routing): Evaluates eligibility rules and routes to auto-payout,
-      review, or rejection.
+    - Ingress Modality Processing (`process_ingress_payload` / Gate 1): Manages audio
+      transcription, SLM domain entity extraction, or structured menu bypass.
+    - Claim Completeness Validation (`check_claim_completeness` / Gate 2): Validates mandatory
+      domain entity completeness and manages multi-turn conversational re-prompt loops.
+    - Governance Routing (Gate 3): Evaluates eligibility rules and routes to auto-payout,
+      review, or rejection via `GovernanceRouter.evaluate_claim`.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
     """
@@ -109,13 +110,13 @@ class StateMachine:
         self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or PaymentRailService()
 
-    async def evaluate_gate1_ingress_structure(
+    async def process_ingress_payload(
         self, intake: PublicAgentStandardizedIntakePayload
     ) -> ExtractedEntityPayload:
         """Gate 1: Ingress & Structure Evaluation Gate.
 
-        Dispatches audio to ASR/NMT translation, executes sovereign SLM entity extraction,
-        or performs fast-path structured menu bypass (confidence = 1.0).
+        Dispatches audio to ASR/NMT translation, executes sovereign SLM domain entity
+        extraction, or performs fast-path structured menu bypass (confidence = 1.0).
 
         Args:
             intake: Validated PublicAgentStandardizedIntakePayload instance.
@@ -176,7 +177,7 @@ class StateMachine:
 
         return extracted
 
-    def evaluate_gate2_intake_validation(
+    def check_claim_completeness(
         self,
         extracted: ExtractedEntityPayload,
         attempt_count: int = 1,
@@ -199,22 +200,22 @@ class StateMachine:
         if extracted.application_intent != ApplicationIntent.APPLY_SUBSIDY:
             return False, []
 
-        missing_fields: list[str] = [
+        missing_entities: list[str] = [
             key.value
             for key in _MANDATORY_SUBSIDY_ENTITIES
             if key not in extracted.domain_entities
             or not str(extracted.domain_entities[key]).strip()
         ]
 
-        if missing_fields and attempt_count < _MAX_REPROMPT_ATTEMPTS:
+        if missing_entities and attempt_count < _MAX_REPROMPT_ATTEMPTS:
             logger.info(
-                "Gate 2: Missing mandatory fields=%s on attempt=%d; triggering re-prompt",
-                missing_fields,
+                "Gate 2: Missing mandatory entities=%s on attempt=%d; triggering re-prompt",
+                missing_entities,
                 attempt_count,
             )
-            return True, missing_fields
+            return True, missing_entities
 
-        return False, missing_fields
+        return False, missing_entities
 
     async def execute_orchestration_cycle(
         self,
@@ -239,19 +240,19 @@ class StateMachine:
         payload_id = f"ext-{uuid.uuid4().hex[:8]}"
 
         # --- GATE 1: Ingress & Structure Evaluation ---
-        extracted = await self.evaluate_gate1_ingress_structure(intake)
+        extracted = await self.process_ingress_payload(intake)
 
         # --- GATE 2: Intake & Intent Validation ---
-        requires_reprompt, missing_fields = self.evaluate_gate2_intake_validation(
+        requires_reprompt, missing_entities = self.check_claim_completeness(
             extracted, attempt_count=attempt_count
         )
 
         if requires_reprompt:
-            fields_str = ", ".join(missing_fields)
+            fields_str = ", ".join(missing_entities)
             reprompt_msg = (
                 f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {fields_str}"
             )
-            dummy_outcome = GovernanceOutcomePayload(
+            reprompt_outcome = GovernanceOutcomePayload(
                 session_id=session_id,
                 payload_id=payload_id,
                 ai_confidence_score=extracted.ai_confidence_score,
@@ -263,7 +264,7 @@ class StateMachine:
             return OrchestrationExecutionResult(
                 session_id=session_id,
                 application_intent=extracted.application_intent,
-                governance_outcome=dummy_outcome,
+                governance_outcome=reprompt_outcome,
                 extracted_entities=extracted,
                 requires_reprompt=True,
                 reprompt_message=reprompt_msg,

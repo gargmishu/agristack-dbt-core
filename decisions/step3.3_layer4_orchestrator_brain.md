@@ -45,7 +45,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 2. Gate 1: Ingress & Structure Evaluation Gate
+## 2. Gate 1: Ingress & Structure Evaluation Gate (`StateMachine.process_ingress_payload`)
 
 ### 2.1 Modality Dispatch & ASR/NMT Pipeline
 * **`PayloadType.AUDIO` (IVR voice calls & WhatsApp voice notes):**
@@ -62,7 +62,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 3. Gate 2: Intake & Intent Validation Gate
+## 3. Gate 2: Intake & Intent Validation Gate (`StateMachine.check_claim_completeness`)
 
 ### 3.1 Intent Classification & Routing
 * Evaluates the classified `ApplicationIntent`:
@@ -86,7 +86,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 4. Gate 3: Deterministic Governance Routing Matrix
+## 4. Gate 3: Deterministic Governance Routing Matrix (`GovernanceRouter.evaluate_claim`)
 
 ### 4.1 DPI Cross-Matching & Anti-Double-Dipping Checks
 Gate 3 evaluates three independent verification criteria:

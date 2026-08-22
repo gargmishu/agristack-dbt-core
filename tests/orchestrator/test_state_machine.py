@@ -23,7 +23,7 @@ MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b
 
 
 @pytest.mark.asyncio
-async def test_state_machine_gate1_structured_bypass() -> None:
+async def test_state_machine_process_ingress_payload_structured_bypass() -> None:
     state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_ussd_bypass_1",
@@ -36,7 +36,7 @@ async def test_state_machine_gate1_structured_bypass() -> None:
         received_at=datetime.now(UTC),
     )
 
-    extracted = await state_machine.evaluate_gate1_ingress_structure(intake)
+    extracted = await state_machine.process_ingress_payload(intake)
     assert extracted.is_structured_menu_bypass is True
     assert extracted.ai_confidence_score == 1.0
     assert extracted.application_intent == ApplicationIntent.APPLY_SUBSIDY
@@ -44,7 +44,7 @@ async def test_state_machine_gate1_structured_bypass() -> None:
 
 
 @pytest.mark.asyncio
-async def test_state_machine_gate1_audio_transcription() -> None:
+async def test_state_machine_process_ingress_payload_audio_transcription() -> None:
     state_machine = StateMachine()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_ivr_audio_1",
@@ -57,14 +57,14 @@ async def test_state_machine_gate1_audio_transcription() -> None:
         received_at=datetime.now(UTC),
     )
 
-    extracted = await state_machine.evaluate_gate1_ingress_structure(intake)
+    extracted = await state_machine.process_ingress_payload(intake)
     assert extracted.is_structured_menu_bypass is False
     assert extracted.application_intent == ApplicationIntent.APPLY_SUBSIDY
     assert extracted.ai_confidence_score >= 0.90  # noqa: PLR2004
 
 
 @pytest.mark.asyncio
-async def test_state_machine_gate1_audio_transcription_failure_and_slm_none() -> None:
+async def test_state_machine_process_ingress_payload_audio_failure_and_slm_none() -> None:
     mock_bhashini = BhashiniService()
     mock_bhashini.transcribe_audio = AsyncMock(side_effect=RuntimeError("ASR Timeout"))  # type: ignore[method-assign]
     mock_slm = SlmExtractor()
@@ -85,13 +85,13 @@ async def test_state_machine_gate1_audio_transcription_failure_and_slm_none() ->
         received_at=datetime.now(UTC),
     )
 
-    extracted = await state_machine.evaluate_gate1_ingress_structure(intake)
+    extracted = await state_machine.process_ingress_payload(intake)
     assert extracted.application_intent == ApplicationIntent.UNKNOWN
     assert extracted.ai_confidence_score == 0.40  # noqa: PLR2004
 
 
 @pytest.mark.asyncio
-async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
+async def test_state_machine_check_claim_completeness_reprompt_on_missing() -> None:
     state_machine = StateMachine()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
@@ -100,16 +100,12 @@ async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
     )
 
     # Attempt 1 -> Re-prompt
-    requires_reprompt, missing = state_machine.evaluate_gate2_intake_validation(
-        extracted, attempt_count=1
-    )
+    requires_reprompt, missing = state_machine.check_claim_completeness(extracted, attempt_count=1)
     assert requires_reprompt is True
     assert "crop_name" in missing
 
     # Attempt 3 -> Attempts exhausted, do not re-prompt
-    requires_reprompt_3, _ = state_machine.evaluate_gate2_intake_validation(
-        extracted, attempt_count=3
-    )
+    requires_reprompt_3, _ = state_machine.check_claim_completeness(extracted, attempt_count=3)
     assert requires_reprompt_3 is False
 
     # Non-subsidy intent -> no reprompt
@@ -118,7 +114,7 @@ async def test_state_machine_gate2_reprompt_on_missing_entities() -> None:
         ai_confidence_score=0.92,
         domain_entities={},
     )
-    assert state_machine.evaluate_gate2_intake_validation(status_extracted)[0] is False
+    assert state_machine.check_claim_completeness(status_extracted)[0] is False
 
 
 @pytest.mark.asyncio
