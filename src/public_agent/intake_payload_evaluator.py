@@ -10,7 +10,9 @@ Structured inputs (e.g. keypresses on USSD or IVR phone menus) have deterministi
 and parameter values. Bypassing AI/SLM entity extraction saves ~800ms GPU NLU latency and
 completely eliminates AI hallucinations for structured selections.
 
+See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
+See: decisions/step3.3_layer4_orchestrator_brain.md
 See: roadmap.md (Phase 2 Step 2.2 Layer 3)
 """
 
@@ -23,16 +25,17 @@ logger = logging.getLogger(__name__)
 
 
 class IntakeEvaluationResult(NamedTuple):
-    """Result of intake payload structure evaluation.
+    """Result of intake payload structure and NLU routing evaluation.
 
-    Encapsulates structural validity and NLU extraction requirement flags.
+    Encapsulates structural validity and NLU extraction requirement flags for Layer 4.
 
     Attributes:
         is_valid: True if the payload satisfies non-empty content and structure guards.
         requires_nlu_extraction: True if payload requires natural language extraction; False
-        if structured bypass applies.
-        evaluation_message: Descriptive message explaining the evaluation outcome.
+            if structured fast-path bypass applies.
+        evaluation_message: Descriptive explanation of the evaluation outcome.
 
+    See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
 
@@ -42,18 +45,19 @@ class IntakeEvaluationResult(NamedTuple):
 
 
 class IntakePayloadEvaluator:
-    """Evaluator classifying intake payload structure and extraction requirements.
+    """Evaluator classifying intake payload structure and NLU extraction requirements.
 
     Inspects `PublicAgentStandardizedIntakePayload` instances to determine whether natural
     language extraction is required or if structured bypass applies.
 
     Evaluation Rules:
     - Structured Inputs (`MENU_SELECTION`, `DTMF_SELECTION`): Bypasses NLU extraction
-      (`requires_nlu_extraction=False`).
-    - Unstructured Inputs (`FREE_TEXT`): Routes to NLU extraction
-      (`requires_nlu_extraction=True`).
+      (`requires_nlu_extraction=False`) and enables direct deterministic entity mapping.
+    - Unstructured Inputs (`FREE_TEXT`): Routes to NLU extraction (`requires_nlu_extraction=True`)
+      for ASR transcription and SLM domain entity parsing.
     - Content Validation: Rejects empty or whitespace-only inputs (`is_valid=False`).
 
+    See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
 
