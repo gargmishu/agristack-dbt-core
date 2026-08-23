@@ -110,6 +110,117 @@ class ClaimOrchestrator:
         self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or PaymentRailService()
 
+    # -------------------------------------------------------------------------
+    # Primary Public Workflow Entrypoint
+    # -------------------------------------------------------------------------
+
+    async def execute_orchestration_cycle(
+        self,
+        intake: PublicAgentStandardizedIntakePayload,
+        attempt_count: int = 1,
+        approved_payouts_ledger: set[tuple[str, str]] | None = None,
+        active_season: CropSeason = "KHARIF-2026",
+    ) -> OrchestrationExecutionResult:
+        """Executes complete end-to-end orchestration pipeline across all 3 evaluation gates.
+
+        Args:
+            intake: Validated PublicAgentStandardizedIntakePayload from Layer 3.
+            attempt_count: Current attempt count for multi-turn conversational loop.
+            approved_payouts_ledger: Set of approved (citizen_token, season) claims.
+            active_season: Active welfare scheme season identifier.
+
+        Returns:
+            OrchestrationExecutionResult with finalized governance action, tracking IDs,
+            and payment/caseworker staging outcomes.
+        """
+        session_id = intake.session_id
+        payload_id = f"ext-{uuid.uuid4().hex[:8]}"
+
+        # --- GATE 1: Ingress & Structure Evaluation ---
+        extracted_entities = await self.process_ingress_payload(intake)
+
+        # --- GATE 2: Intake & Intent Validation ---
+        requires_reprompt, missing_entities = self.check_claim_completeness(
+            extracted_entities, attempt_count=attempt_count
+        )
+
+        if requires_reprompt:
+            fields_str = ", ".join(missing_entities)
+            reprompt_msg = (
+                f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {fields_str}"
+            )
+            reprompt_outcome = GovernanceOutcomePayload(
+                session_id=session_id,
+                payload_id=payload_id,
+                ai_confidence_score=extracted_entities.ai_confidence_score,
+                eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
+                governance_action=GovernanceAction.REQUEST_MORE_INFO,
+                escalation_case_id=f"SPP-CASE-2026-{secrets.randbelow(900000) + 100000:06d}",
+                evaluated_at=datetime.now(UTC),
+            )
+            return OrchestrationExecutionResult(
+                session_id=session_id,
+                application_intent=extracted_entities.application_intent,
+                governance_outcome=reprompt_outcome,
+                extracted_entities=extracted_entities,
+                requires_reprompt=True,
+                reprompt_message=reprompt_msg,
+            )
+
+        # --- GATE 3: Deterministic Governance Routing Matrix ---
+        claim_payload = ClaimEvaluationPayload(
+            session_id=session_id,
+            payload_id=payload_id,
+            tokenized_citizen_id=intake.tokenized_citizen_id,
+            extracted_payload=extracted_entities,
+            active_season=active_season,
+            approved_payouts_ledger=approved_payouts_ledger or set(),
+        )
+        governance_outcome = await self._governance_router.evaluate_claim(claim_payload)
+
+        disbursement_cb: DisbursementCallbackPayload | None = None
+        staged_case_id: str | None = None
+
+        # Post-Decision Processing: Automated Payout Dispatch vs. Caseworker Staging
+        if governance_outcome.governance_action.is_approval:
+            # Wire dispatch over sovereign payment rails
+            disbursement_cb = await self._payment_rail.initiate_disbursement(governance_outcome)
+        elif (
+            governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id
+        ):
+            # Stage review ticket into Caseworker Dashboard
+            staged_case_id = governance_outcome.escalation_case_id
+            case_payload = CaseworkerCaseReviewPayload(
+                escalation_case_id=governance_outcome.escalation_case_id,
+                session_id=session_id,
+                payload_id=payload_id,
+                tokenized_citizen_id=intake.tokenized_citizen_id,
+                application_intent=extracted_entities.application_intent,
+                extracted_entities=extracted_entities.domain_entities,
+                unprocessed_input_content=intake.unprocessed_input_content,
+                escalation_reason=(
+                    EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
+                    if extracted_entities.is_adversarial_attempt
+                    else EscalationReasonCode.MISSING_MANDATORY_ENTITIES
+                ),
+                staged_at=datetime.now(UTC),
+            )
+            await self._case_service.stage_incident_ticket(case_payload)
+
+        return OrchestrationExecutionResult(
+            session_id=session_id,
+            application_intent=extracted_entities.application_intent,
+            governance_outcome=governance_outcome,
+            extracted_entities=extracted_entities,
+            requires_reprompt=False,
+            disbursement_callback=disbursement_cb,
+            caseworker_ticket_id=staged_case_id,
+        )
+
+    # -------------------------------------------------------------------------
+    # Public Gate Processing Stages
+    # -------------------------------------------------------------------------
+
     async def process_ingress_payload(
         self, intake: PublicAgentStandardizedIntakePayload
     ) -> ExtractedEntityPayload:
@@ -217,108 +328,9 @@ class ClaimOrchestrator:
 
         return False, missing_entities
 
-    async def execute_orchestration_cycle(
-        self,
-        intake: PublicAgentStandardizedIntakePayload,
-        attempt_count: int = 1,
-        approved_payouts_ledger: set[tuple[str, str]] | None = None,
-        active_season: CropSeason = "KHARIF-2026",
-    ) -> OrchestrationExecutionResult:
-        """Executes complete end-to-end orchestration pipeline across all 3 evaluation gates.
-
-        Args:
-            intake: Validated PublicAgentStandardizedIntakePayload from Layer 3.
-            attempt_count: Current attempt count for multi-turn conversational loop.
-            approved_payouts_ledger: Set of approved (citizen_token, season) claims.
-            active_season: Active welfare scheme season identifier.
-
-        Returns:
-            OrchestrationExecutionResult with finalized governance action, tracking IDs,
-            and payment/caseworker staging outcomes.
-        """
-        session_id = intake.session_id
-        payload_id = f"ext-{uuid.uuid4().hex[:8]}"
-
-        # --- GATE 1: Ingress & Structure Evaluation ---
-        extracted_entities = await self.process_ingress_payload(intake)
-
-        # --- GATE 2: Intake & Intent Validation ---
-        requires_reprompt, missing_entities = self.check_claim_completeness(
-            extracted_entities, attempt_count=attempt_count
-        )
-
-        if requires_reprompt:
-            fields_str = ", ".join(missing_entities)
-            reprompt_msg = (
-                f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {fields_str}"
-            )
-            reprompt_outcome = GovernanceOutcomePayload(
-                session_id=session_id,
-                payload_id=payload_id,
-                ai_confidence_score=extracted_entities.ai_confidence_score,
-                eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
-                governance_action=GovernanceAction.REQUEST_MORE_INFO,
-                escalation_case_id=f"SPP-CASE-2026-{secrets.randbelow(900000) + 100000:06d}",
-                evaluated_at=datetime.now(UTC),
-            )
-            return OrchestrationExecutionResult(
-                session_id=session_id,
-                application_intent=extracted_entities.application_intent,
-                governance_outcome=reprompt_outcome,
-                extracted_entities=extracted_entities,
-                requires_reprompt=True,
-                reprompt_message=reprompt_msg,
-            )
-
-        # --- GATE 3: Deterministic Governance Routing Matrix ---
-        claim_payload = ClaimEvaluationPayload(
-            session_id=session_id,
-            payload_id=payload_id,
-            tokenized_citizen_id=intake.tokenized_citizen_id,
-            extracted_payload=extracted_entities,
-            active_season=active_season,
-            approved_payouts_ledger=approved_payouts_ledger or set(),
-        )
-        governance_outcome = await self._governance_router.evaluate_claim(claim_payload)
-
-        disbursement_cb: DisbursementCallbackPayload | None = None
-        staged_case_id: str | None = None
-
-        # Post-Decision Processing: Automated Payout Dispatch vs. Caseworker Staging
-        if governance_outcome.governance_action.is_approval:
-            # Wire dispatch over sovereign payment rails
-            disbursement_cb = await self._payment_rail.initiate_disbursement(governance_outcome)
-        elif (
-            governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id
-        ):
-            # Stage review ticket into Caseworker Dashboard
-            staged_case_id = governance_outcome.escalation_case_id
-            case_payload = CaseworkerCaseReviewPayload(
-                escalation_case_id=governance_outcome.escalation_case_id,
-                session_id=session_id,
-                payload_id=payload_id,
-                tokenized_citizen_id=intake.tokenized_citizen_id,
-                application_intent=extracted_entities.application_intent,
-                extracted_entities=extracted_entities.domain_entities,
-                unprocessed_input_content=intake.unprocessed_input_content,
-                escalation_reason=(
-                    EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
-                    if extracted_entities.is_adversarial_attempt
-                    else EscalationReasonCode.MISSING_MANDATORY_ENTITIES
-                ),
-                staged_at=datetime.now(UTC),
-            )
-            await self._case_service.stage_incident_ticket(case_payload)
-
-        return OrchestrationExecutionResult(
-            session_id=session_id,
-            application_intent=extracted_entities.application_intent,
-            governance_outcome=governance_outcome,
-            extracted_entities=extracted_entities,
-            requires_reprompt=False,
-            disbursement_callback=disbursement_cb,
-            caseworker_ticket_id=staged_case_id,
-        )
+    # -------------------------------------------------------------------------
+    # Private Helper Methods
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def _create_fallback_extracted_payload() -> ExtractedEntityPayload:
