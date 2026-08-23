@@ -10,6 +10,8 @@ from src.data_models.common import (
     StructureLevel,
 )
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
+from src.data_models.raw_ingress import WhatsAppIngressPayload
+from src.gateway import IngestionFirewall, RateLimiter, ZeroTrustIdentityTokenizer
 from src.public_agent import PublicAgentApi
 from src.public_agent.intake_payload_evaluator import (
     IntakeEvaluationResult,
@@ -60,3 +62,76 @@ async def test_public_agent_api_rejects_invalid_evaluator_outcome() -> None:
 
     with pytest.raises(ValueError, match="Invalid intake payload: Malformed structural directive"):
         await api.submit_payload(payload)
+
+
+@pytest.mark.asyncio
+async def test_public_agent_api_process_claim_intake_e2e() -> None:
+    api = PublicAgentApi()
+    payload = PublicAgentStandardizedIntakePayload(
+        session_id="sess_e2e_100",
+        tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale=LanguageLocale.HINDI,
+        unprocessed_input_content="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
+        received_at=datetime.now(UTC),
+    )
+
+    result = await api.process_claim_intake(payload)
+    assert result.session_id == "sess_e2e_100"
+    assert result.evaluation_result.is_valid is True
+    assert result.orchestration_result.governance_outcome.governance_action.is_approval
+    assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
+
+
+@pytest.mark.asyncio
+async def test_public_agent_api_process_claim_intake_reprompt() -> None:
+    api = PublicAgentApi()
+    payload = PublicAgentStandardizedIntakePayload(
+        session_id="sess_reprompt_100",
+        tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale=LanguageLocale.HINDI,
+        unprocessed_input_content="missing crop details",
+        received_at=datetime.now(UTC),
+    )
+
+    result = await api.process_claim_intake(payload, attempt_count=1)
+    assert result.session_id == "sess_reprompt_100"
+    assert result.orchestration_result.requires_reprompt is True
+    assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
+
+
+@pytest.mark.asyncio
+async def test_public_agent_api_process_raw_ingress_e2e(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_pepper_public_agent_123")
+    api = PublicAgentApi()
+    raw_whatsapp = WhatsAppIngressPayload(
+        session_id="sess_raw_200",
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.123456",
+        payload_type=PayloadType.TEXT,
+        text_body="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
+        received_at=datetime.now(UTC),
+    )
+
+    result = await api.process_raw_ingress(
+        raw_payload=raw_whatsapp,
+    )
+    assert result.session_id == "sess_raw_200"
+    assert result.channel_type == ChannelType.WHATSAPP
+    assert result.orchestration_result.governance_outcome.governance_action.is_approval
+    assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
+
+
+@pytest.mark.asyncio
+async def test_public_agent_api_with_custom_firewall_injection() -> None:
+    custom_firewall = IngestionFirewall(
+        tokenizer=ZeroTrustIdentityTokenizer(pepper_key="a" * 32),
+        rate_limiter=RateLimiter(),
+    )
+    api = PublicAgentApi(firewall=custom_firewall)
+    assert api.firewall is custom_firewall
