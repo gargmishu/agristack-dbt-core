@@ -18,6 +18,7 @@ from typing import Final
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.data_models.common import (
     ApplicationIntent,
+    CropSeason,
     DomainEntities,
     DomainEntityKey,
     EligibilityStatus,
@@ -221,7 +222,7 @@ class ClaimOrchestrator:
         intake: PublicAgentStandardizedIntakePayload,
         attempt_count: int = 1,
         approved_payouts_ledger: set[tuple[str, str]] | None = None,
-        active_season: str = "KHARIF-2026",
+        active_season: CropSeason = "KHARIF-2026",
     ) -> OrchestrationExecutionResult:
         """Executes complete end-to-end orchestration pipeline across all 3 evaluation gates.
 
@@ -313,7 +314,7 @@ class ClaimOrchestrator:
             session_id=session_id,
             application_intent=extracted_entities.application_intent,
             governance_outcome=governance_outcome,
-            extracted_entities=extracted_entities   ,
+            extracted_entities=extracted_entities,
             requires_reprompt=False,
             disbursement_callback=disbursement_cb,
             caseworker_ticket_id=staged_case_id,
