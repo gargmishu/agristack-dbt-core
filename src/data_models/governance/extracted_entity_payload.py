@@ -1,4 +1,13 @@
-"""SLM structured entity extraction payload schema (Layer 3 -> Layer 4)."""
+"""SLM structured entity extraction payload schema (Layer 3 -> Layer4).
+
+Represents structured intent and domain parameters produced by the SLM/NLU pipeline
+(or fast-path structured menu bypass) and consumed by the Layer 4 ClaimOrchestrator
+and GovernanceRouter.
+
+See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
+See: decisions/step3.2_security_and_ingestion_firewalls.md
+See: decisions/step3.3_layer4_orchestrator_brain.md
+"""
 
 from pydantic import Field, model_validator
 
@@ -14,7 +23,8 @@ class ExtractedEntityPayload(StrictBaseModel):
     """Data model representing structured entities extracted from citizen interactions.
 
     Encapsulates parsed application intent, domain entity parameters, and AI confidence
-    score.
+    score for consumption by Layer 4 completeness validation (Gate 2) and governance
+    routing (Gate 3).
 
     Invariants:
     - If `is_adversarial_attempt` is True, `domain_entities` is automatically reset to `{}`
@@ -23,6 +33,7 @@ class ExtractedEntityPayload(StrictBaseModel):
 
     See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
     See: decisions/step3.2_security_and_ingestion_firewalls.md
+    See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 
     application_intent: ApplicationIntent
