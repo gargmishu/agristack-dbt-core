@@ -86,7 +86,7 @@ src/
 │   ├── public_agent_api.py          # Public Agent Gateway API Surface
 │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
 ├── orchestrator/                    # Layer 4 Orchestrator Brain & Governance Engine
-│   ├── governance_router.py         # Gate 3 decision matrix & threshold routing
+│   ├── claim_adjudicator.py         # Gate 3 decision matrix & threshold adjudication
 │   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate pipeline
 │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
 ├── services/                        # External DPI Registries & AI Adapter Services ONLY

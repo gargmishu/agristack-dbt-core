@@ -43,7 +43,7 @@
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Layer 4: Orchestrator Brain & Governance (`src/orchestrator/`)         │
 │ • ClaimOrchestrator (3-Gate workflow orchestration & pipeline coordinator) │
-│ • GovernanceRouter (Automated Payout vs. Caseworker Review vs. Reject) │
+│ • ClaimAdjudicator (Automated Payout vs. Caseworker Review vs. Reject) │
 │ • CaseManagementService (Internal review queues & OpenSPP ticket sync) │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │

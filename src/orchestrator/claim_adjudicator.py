@@ -1,4 +1,4 @@
-"""Layer 4 Governance Engine: Decision Matrix Router.
+"""Layer 4 Governance Engine: Claim Adjudicator (Gate 3 Decision Matrix).
 
 Evaluates citizen claims against AI confidence thresholds, sovereign identity records,
 cadastral landholdings, and anti-double-dipping ledgers to assign authoritative
@@ -36,11 +36,10 @@ logger = logging.getLogger(__name__)
 _AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
 
 
-class GovernanceRouter:
+class ClaimAdjudicator:
     """Evaluates governance decision matrix based on confidence and registry eligibility.
 
-    Coordinates eligibility verification across sovereign identity and land registry
-    clients,
+    Coordinates eligibility verification across sovereign identity and land registry clients,
     generating authoritative `GovernanceOutcomePayload` determinations.
 
     Decision Rules:
@@ -59,7 +58,7 @@ class GovernanceRouter:
         identity_service: IdentityVerificationService | None = None,
         agri_service: AgriRegistryService | None = None,
     ) -> None:
-        """Initializes GovernanceRouter with required sovereign registry services.
+        """Initializes ClaimAdjudicator with required sovereign registry services.
 
         Args:
             identity_service: Identity verification client (defaults to standard mock).

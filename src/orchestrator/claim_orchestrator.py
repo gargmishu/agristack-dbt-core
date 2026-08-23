@@ -33,7 +33,7 @@ from src.data_models.governance import (
 )
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.case_management_service import CaseManagementService
-from src.orchestrator.governance_router import GovernanceRouter
+from src.orchestrator.claim_adjudicator import ClaimAdjudicator
 from src.services.ai import BhashiniService, SlmExtractor
 from src.services.dpi import PaymentRailService
 
@@ -89,8 +89,8 @@ class ClaimOrchestrator:
       transcription, SLM domain entity extraction, or structured menu bypass.
     - Claim Completeness Validation (`check_claim_completeness` / Gate 2): Validates mandatory
       domain entity completeness and manages multi-turn conversational re-prompt loops.
-    - Governance Routing (Gate 3): Evaluates eligibility rules and routes to auto-payout,
-      review, or rejection via `GovernanceRouter.evaluate_claim`.
+    - Governance Adjudication (Gate 3): Evaluates eligibility rules and routes to auto-payout,
+      review, or rejection via `ClaimAdjudicator.evaluate_claim`.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
     """
@@ -99,14 +99,14 @@ class ClaimOrchestrator:
         self,
         bhashini_service: BhashiniService | None = None,
         slm_extractor: SlmExtractor | None = None,
-        governance_router: GovernanceRouter | None = None,
+        claim_adjudicator: ClaimAdjudicator | None = None,
         case_management_service: CaseManagementService | None = None,
         payment_rail_service: PaymentRailService | None = None,
     ) -> None:
         """Initializes ClaimOrchestrator with required AI and DPI service dependencies."""
         self._bhashini = bhashini_service or BhashiniService()
         self._slm_extractor = slm_extractor or SlmExtractor()
-        self._governance_router = governance_router or GovernanceRouter()
+        self._claim_adjudicator = claim_adjudicator or ClaimAdjudicator()
         self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or PaymentRailService()
 
@@ -176,7 +176,7 @@ class ClaimOrchestrator:
             active_season=active_season,
             approved_payouts_ledger=approved_payouts_ledger or set(),
         )
-        governance_outcome = await self._governance_router.evaluate_claim(claim_payload)
+        governance_outcome = await self._claim_adjudicator.evaluate_claim(claim_payload)
 
         disbursement_cb: DisbursementCallbackPayload | None = None
         staged_case_id: str | None = None

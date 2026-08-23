@@ -11,15 +11,15 @@ from src.data_models.governance import (
     ClaimEvaluationPayload,
     ExtractedEntityPayload,
 )
-from src.orchestrator.governance_router import GovernanceRouter
+from src.orchestrator.claim_adjudicator import ClaimAdjudicator
 from src.services.dpi.dpi_mock_fixtures import UNVERIFIED_IDENTITY_PREFIX
 
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_duplicate_claim() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_duplicate_claim() -> None:
+    adjudicator = ClaimAdjudicator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.95,
@@ -38,14 +38,14 @@ async def test_governance_router_evaluate_claim_duplicate_claim() -> None:
         approved_payouts_ledger={(MOCK_CITIZEN_TOKEN, "KHARIF-2026")},
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert outcome.rejection_reason == RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_high_confidence_auto_approve() -> None:
+    adjudicator = ClaimAdjudicator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,
@@ -62,15 +62,15 @@ async def test_governance_router_evaluate_claim_high_confidence_auto_approve() -
         extracted_payload=extracted,
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_APPROVE
     assert outcome.disbursement_txn_id is not None
     assert outcome.disbursement_status == DisbursementStatus.PENDING
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_low_confidence_escalation() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_low_confidence_escalation() -> None:
+    adjudicator = ClaimAdjudicator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.70,
@@ -86,14 +86,14 @@ async def test_governance_router_evaluate_claim_low_confidence_escalation() -> N
         extracted_payload=extracted,
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
     assert outcome.escalation_case_id is not None
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_adversarial_zeroing() -> None:
+    adjudicator = ClaimAdjudicator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.95,
@@ -107,14 +107,14 @@ async def test_governance_router_evaluate_claim_adversarial_zeroing() -> None:
         extracted_payload=extracted,
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
     assert outcome.ai_confidence_score == 0.0
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_unverified_identity() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_unverified_identity() -> None:
+    adjudicator = ClaimAdjudicator()
     unverified_token = UNVERIFIED_IDENTITY_PREFIX + "a" * (64 - len(UNVERIFIED_IDENTITY_PREFIX))
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
@@ -128,14 +128,14 @@ async def test_governance_router_evaluate_claim_unverified_identity() -> None:
         extracted_payload=extracted,
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert outcome.rejection_reason == RejectionReasonCode.IDENTITY_NOT_VERIFIED
 
 
 @pytest.mark.asyncio
-async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
-    router = GovernanceRouter()
+async def test_claim_adjudicator_evaluate_claim_cadastral_mismatch() -> None:
+    adjudicator = ClaimAdjudicator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
         ai_confidence_score=0.92,
@@ -152,6 +152,6 @@ async def test_governance_router_evaluate_claim_cadastral_mismatch() -> None:
         extracted_payload=extracted,
     )
 
-    outcome = await router.evaluate_claim(context)
+    outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert outcome.rejection_reason == RejectionReasonCode.LAND_RECORD_NOT_FOUND

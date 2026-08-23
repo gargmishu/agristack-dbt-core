@@ -86,7 +86,7 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 4. Gate 3: Deterministic Governance Routing Matrix (`GovernanceRouter.evaluate_claim`)
+## 4. Gate 3: Deterministic Governance Routing Matrix (`ClaimAdjudicator.evaluate_claim`)
 
 ### 4.1 DPI Cross-Matching & Anti-Double-Dipping Checks
 Gate 3 evaluates three independent verification criteria:
@@ -121,6 +121,6 @@ Gate 3 evaluates three independent verification criteria:
 src/orchestrator/
 ├── __init__.py                 <-- Package exports
 ├── claim_orchestrator.py      <-- Core 3-Gate Claim Orchestrator & Execution Loop
-├── governance_router.py       <-- Decision Matrix Evaluator (Auto Approve/Reject/Review)
+├── claim_adjudicator.py       <-- Decision Matrix Evaluator (Auto Approve/Reject/Review)
 └── case_management_service.py <-- Internal Escalation Staging & Clarification Loops
 ```

@@ -27,7 +27,7 @@ This skill outlines language-level clean coding rules, naming conventions, objec
 * For operational components (gateways, connectors, routers, validators, and services), Python filenames in `snake_case` must strictly match their primary class name in `PascalCase`:
   * `carrier_auth_validator.py` $\rightarrow$ `CarrierAuthValidator`
   * `payment_rail_service.py` $\rightarrow$ `PaymentRailService`
-  * `governance_router.py` $\rightarrow$ `GovernanceRouter`
+  * `claim_adjudicator.py` $\rightarrow$ `ClaimAdjudicator`
 * Do not omit descriptive suffixes like `_validator`, `_service`, or `_connector` from module names.
 
 ---

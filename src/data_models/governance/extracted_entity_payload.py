@@ -2,7 +2,7 @@
 
 Represents structured intent and domain parameters produced by the SLM/NLU pipeline
 (or fast-path structured menu bypass) and consumed by the Layer 4 ClaimOrchestrator
-and GovernanceRouter.
+and ClaimAdjudicator.
 
 See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
 See: decisions/step3.2_security_and_ingestion_firewalls.md
