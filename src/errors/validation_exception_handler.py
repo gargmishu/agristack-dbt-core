@@ -1,3 +1,10 @@
+"""FastAPI exception handler for Pydantic ValidationError instances.
+
+Translates internal schema validation errors into standard RFC 7807 problem details payloads.
+
+See: decisions/step2.0_canonical_domain_schemas.md (Section 5)
+"""
+
 import logging
 
 from fastapi import Request, status

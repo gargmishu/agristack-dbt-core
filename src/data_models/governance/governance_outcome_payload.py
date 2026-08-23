@@ -1,3 +1,11 @@
+"""Layer 4 Governance Outcome payload schema.
+
+Represents authoritative adjudication verdicts, state transitions, and disbursement actions.
+
+See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
+See: decisions/step2.2_governance_flows_and_state_transitions.md
+"""
+
 from pydantic import Field, model_validator
 
 from src.data_models.common import (
