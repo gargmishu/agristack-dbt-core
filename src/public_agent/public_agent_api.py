@@ -1,15 +1,16 @@
 """Layer 3 Public Agent Gateway API (Layer 3 Intake Surface).
 
 Receives canonical, zero-PII PublicAgentStandardizedIntakePayload instances from the
-Layer 2 Security Gateway, evaluates intake structure routing via IntakePayloadEvaluator,
-and prepares standardized payloads for Layer 4 ClaimOrchestrator execution.
+Layer 2 Security Gateway (IngestionFirewall), evaluates intake structure and routing
+requirements via IntakePayloadEvaluator, and prepares validated payloads for Layer 4
+ClaimOrchestrator execution.
 
 Why decouple Layer 3 Public Agent Gateway from Layer 2 Security Gateway?
 1. Separation of Concerns: Layer 2 handles transport-level security (HMAC webhook signatures,
    Bearer tokens, token-bucket rate limiting, and in-memory PII tokenization into RAM).
-2. Domain Intake Routing: Layer 3 provides the public API surface for event intake, structural
-   intent evaluation (fast-path DTMF/menu bypass vs. SLM/NLU entity extraction), and session
-   correlation before submitting to Layer 4 governance orchestration.
+2. Domain Intake Routing: Layer 3 provides the public API surface for event intake and
+   structural intent evaluation (fast-path DTMF/menu bypass vs. SLM/NLU entity extraction)
+   before submitting to Layer 4 governance orchestration.
 
 See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
