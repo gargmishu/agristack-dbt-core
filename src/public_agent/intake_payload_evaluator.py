@@ -45,8 +45,7 @@ class IntakePayloadEvaluator:
     """Evaluator classifying intake payload structure and extraction requirements.
 
     Inspects `PublicAgentStandardizedIntakePayload` instances to determine whether natural
-    language
-    extraction is required or if structured bypass applies.
+    language extraction is required or if structured bypass applies.
 
     Evaluation Rules:
     - Structured Inputs (`MENU_SELECTION`, `DTMF_SELECTION`): Bypasses NLU extraction
