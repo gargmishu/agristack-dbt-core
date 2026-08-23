@@ -59,6 +59,8 @@
       │   │   ├── ai_mock_fixtures.py      # Deterministic AI simulation fixtures
       │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
       │   │   └── slm_extractor.py         # Sovereign structured entity extractor
+      │   ├── delivery/                    # Outbound Delivery Engine
+      │   │   └── multichannel_notification_service.py # Adaptive 4-channel delivery engine
       │   └── dpi/                         # Authoritative DPI Registries
       │       ├── dpi_mock_fixtures.py     # Deterministic registry simulation fixtures
       │       ├── agri_registry_service.py # AgriStack cadastral & crop cross-match
@@ -66,13 +68,14 @@
       │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
       │       └── payment_rail_service.py  # NPCI APBS / PFMS Treasury disbursement
       ├── errors/                          # RFC 7807 problem details exception handlers
-      │   └── handlers.py                  # FastAPI ValidationError handler
+      │   └── validation_exception_handler.py # FastAPI ValidationError handler
       └── data_models/                     # Domain data contracts & Pydantic schemas
           ├── common/                      # Foundational base schemas & enums
           ├── raw_ingress/                 # Layer 1 -> Layer 2 ingress payloads
           ├── public_agent/                # Layer 2 -> Layer 3 intake contracts
           ├── governance/                  # Layer 4 decision & entity schemas
           ├── caseworker/                  # Caseworker adjudication models
+          ├── delivery/                    # Outbound notification & request schemas
           └── disbursement/                # Financial clearing callback schemas
   ```
 

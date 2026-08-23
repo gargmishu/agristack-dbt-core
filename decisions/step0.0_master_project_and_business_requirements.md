@@ -110,7 +110,7 @@ $$\text{evaluation\_passed} = (\text{ai\_confidence\_score} \ge 0.85) \land (\te
                │ evaluation_passed == true                   │ evaluation_passed == false
                ▼                                             ▼
 ┌──────────────────────────────┐              ┌──────────────────────────────┐
-│   Step 09 Governance Router  │              │  Step 09 Governance Router   │
+│  Step 09 Claim Adjudicator   │              │  Step 09 Claim Adjudicator   │
 │  (FORWARD_TO_AUTOMATED_PAYOUT│              │(FORWARD_TO_INCIDENT_STAGING) │
 └──────────────┬───────────────┘              └──────────────┬───────────────┘
                │                                             │

@@ -53,7 +53,7 @@
 │ Foundational AI Blocks   │ │ Multichannel Delivery    │ │ Authoritative Registries │
 │ (`src/services/ai/`)     │ │ (`src/services/delivery/`)│ │ (`src/services/dpi/`)    │
 │ • BhashiniService        │ │ • Multichannel-          │ │ • IdentityVerification   │
-│   (ASR / NMT / TTS)      │ │   ConfirmationService    │ │ • AgriRegistryService    │
+│   (ASR / NMT / TTS)      │ │   NotificationService    │ │ • AgriRegistryService    │
 │ • SlmExtractor           │ │   (Adaptive 4-Channel    │ │ • SocialRegistryService  │
 │ • ai_mock_fixtures       │ │    Dispatch Engine)      │ │ • PaymentRailService     │
 └──────────────────────────┘ └──────────────────────────┘ └──────────────────────────┘
@@ -88,7 +88,9 @@ agristack-dbt-core/
 │   ├── step2.2_governance_flows_and_state_transitions.md
 │   ├── step3.1_foundational_mock_boundaries.md
 │   ├── step3.2_security_and_ingestion_firewalls.md
-│   └── step3.3_layer4_orchestrator_brain.md
+│   ├── step3.3_layer4_orchestrator_brain.md
+│   ├── step3.4_layer3_intake_gateway_and_connectors.md
+│   └── step3.5_adaptive_multichannel_confirmation_delivery.md
 ├── design-specs/                    # Declarative system specs & workflow schemas
 │   ├── step0-env-readiness/
 │   ├── step1-journey-channels/
@@ -103,8 +105,9 @@ agristack-dbt-core/
 │   ├── gateway/                     # Layer 2 Gateway & Perimeter Security
 │   ├── public_agent/                # Layer 3 Public Agent Intake Gateway
 │   ├── orchestrator/                # Layer 4 Orchestrator Brain & Governance
-│   ├── services/                    # Foundational AI & DPI Registry Services
+│   ├── services/                    # Foundational AI, Delivery & DPI Services
 │   │   ├── ai/                      # Bhashini ASR/NMT/TTS & SLM Entity Extractor
+│   │   ├── delivery/                # Adaptive 4-Channel Notification Delivery Service
 │   │   └── dpi/                     # Identity, Cadastral, OpenSPP & Payment Rails
 │   ├── data_models/                 # Canonical Pydantic v2 schemas
 │   │   ├── common/                  # StrictBaseModel, StrEnums, Constrained Types
@@ -112,6 +115,7 @@ agristack-dbt-core/
 │   │   ├── public_agent/            # PublicAgentStandardizedIntakePayload
 │   │   ├── governance/              # ExtractedEntityPayload, GovernanceOutcomePayload
 │   │   ├── caseworker/              # CaseReviewPayload, ReviewOutcomePayload
+│   │   ├── delivery/                # NotificationRequestPayload, OutboundNotificationPayload
 │   │   └── disbursement/            # DisbursementCallbackPayload
 │   └── errors/                      # RFC 7807 problem details exception handlers
 ├── tests/                           # Unit and integration test suite (1:1 mirror)
@@ -168,6 +172,8 @@ source .venv/bin/activate
 | [`step3.1`](decisions/step3.1_foundational_mock_boundaries.md) | Mock Boundaries | Deterministic offline simulation fixtures for AI and DPI services. |
 | [`step3.2`](decisions/step3.2_security_and_ingestion_firewalls.md) | Security Firewalls | Layer 2 perimeter firewall, rate limiting, and adversarial defense. |
 | [`step3.3`](decisions/step3.3_layer4_orchestrator_brain.md) | Orchestrator Brain | 3-Gate evaluation pipeline, decision routing, and caseworker staging. |
+| [`step3.4`](decisions/step3.4_layer3_intake_gateway_and_connectors.md) | Layer 3 Gateway & Connectors | Standardized event intake, structure evaluation, and carrier edge connectors. |
+| [`step3.5`](decisions/step3.5_adaptive_multichannel_confirmation_delivery.md) | Multichannel Delivery | Adaptive outbound dispatch engine for WhatsApp, IVR, USSD, and SMS. |
 
 ---
 

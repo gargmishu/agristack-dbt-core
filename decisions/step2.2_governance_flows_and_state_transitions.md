@@ -115,7 +115,7 @@ Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant a
    * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
    * Application status transitions to **`APPROVED`**.
    * System assigns an internal idempotency tracking key `disbursement_txn_id = "TXN-YYYY-XXXXXX"` and initializes `disbursement_status = PENDING`.
-   * The governance router issues `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` to trigger wire dispatch over the NPCI Aadhaar Payment Bridge.
+   * The claim adjudicator issues `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` to trigger wire dispatch over the NPCI Aadhaar Payment Bridge.
 3. **Outcome B — Automated Rejection (`REJECTED`):** If `eligibility_status == INELIGIBLE` OR a duplicate double-dipping claim is detected:
    * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_REJECT` and populates a descriptive `rejection_reason`.
    * Application status transitions directly to **`REJECTED`**.
@@ -128,7 +128,7 @@ Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant a
 Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 
 ```
-[ Evaluation (<0.85 / Anomaly) ] ➔ [ Governance Router ] ➔ [ Incident Ticket Staging ]
+[ Evaluation (<0.85 / Anomaly) ] ➔ [ Claim Adjudicator ] ➔ [ Incident Ticket Staging ]
                                                                              │
                                                                    (Creates SPP-CASE-YYYY-XXXXXX)
                                                                              │

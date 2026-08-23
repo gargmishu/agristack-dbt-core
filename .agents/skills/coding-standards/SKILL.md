@@ -37,7 +37,7 @@ This skill outlines language-level clean coding rules, naming conventions, objec
 Maintain clean top-down readability within every class:
 
 ### 2.1 Public-First / Private-at-Bottom Rule
-1. **Lifecycle & Constructors (Top)**: `__init__`, followed by class factories (`from_env`, `from_default`).
+1. **Lifecycle & Constructors (Top)**: `__init__`, followed by class factories (`from_env`).
 2. **Properties & Primary Public Workflow APIs (Upper Middle)**: Properties and primary execution entrypoints.
 3. **Public Component & Stage Methods (Lower Middle)**: Public helper methods and sub-stage handlers.
 4. **Private Helper Methods (Bottom)**: All internal private methods (prefixed with a leading underscore `_`) must be placed strictly at the **bottom** of the class definition below all public and static methods.
