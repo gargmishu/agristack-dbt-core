@@ -1,9 +1,8 @@
 """Layer 3 Public Agent Gateway API (Layer 3 Intake Surface).
 
 Receives canonical, zero-PII PublicAgentStandardizedIntakePayload instances from the
-Layer 2 Security Gateway (IngestionFirewall / PayloadCanonicalizer), evaluates intake
-structure and routing requirements via IntakePayloadEvaluator, and prepares standardized
-payloads for Layer 4 ClaimOrchestrator execution.
+Layer 2 Security Gateway, evaluates intake structure routing via IntakePayloadEvaluator,
+and prepares standardized payloads for Layer 4 ClaimOrchestrator execution.
 
 Why decouple Layer 3 Public Agent Gateway from Layer 2 Security Gateway?
 1. Separation of Concerns: Layer 2 handles transport-level security (HMAC webhook signatures,
@@ -12,12 +11,11 @@ Why decouple Layer 3 Public Agent Gateway from Layer 2 Security Gateway?
    intent evaluation (fast-path DTMF/menu bypass vs. SLM/NLU entity extraction), and session
    correlation before submitting to Layer 4 governance orchestration.
 3. Multi-Channel Normalization: Decouples channel-specific edge nuances (WhatsApp, IVR Voice,
-   USSD Menu, SMS) from the core claim evaluation state machine.
+   USSD Menu, SMS) from the core claim evaluation pipeline.
 
 See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 See: decisions/step3.3_layer4_orchestrator_brain.md
-See: roadmap.md (Phase 2 Step 2.2 Layer 3)
 """
 
 import logging
@@ -32,32 +30,21 @@ logger = logging.getLogger(__name__)
 
 
 class PublicAgentApi:
-    """Public Agent Gateway API providing intake submission and structure evaluation.
+    """Public Agent Gateway API providing standardized intake submission and routing evaluation.
 
-    Acts as the primary Layer 3 entrypoint that mediates between Layer 2 perimeter security
-    and Layer 4 claim orchestration. Submits standardized intake payloads for structural
-    evaluation and prepares verified payloads for downstream processing.
+    Serves as the primary Layer 3 entrypoint that bridges Layer 2 perimeter security and
+    Layer 4 claim orchestration. Inspects normalized, zero-PII intake payloads to classify
+    downstream extraction requirements before execution by `ClaimOrchestrator`.
 
-    Core Responsibilities:
-    - Intake Validation (`submit_payload`): Validates incoming normalized payloads against
-      non-empty content guards and structural compatibility rules via `IntakePayloadEvaluator`.
-    - Routing Classification: Determines whether a payload is a structured fast-path input
-      (DTMF/USSD keypress bypassing GPU NLU extraction) or an unstructured input requiring
-      speech-to-text (ASR) and Small Language Model (SLM) domain entity extraction.
-    - Zero-PII Invariant: Operates strictly on pre-tokenized 64-character SHA-256 HMAC citizen
-      identity tokens (`HmacCitizenToken`), guaranteeing that cleartext identifiers never enter
-      the Layer 3 intake boundary.
-
-    See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
-    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
-    See: decisions/step3.3_layer4_orchestrator_brain.md
+    Routing Classification:
+    - Structured Inputs (DTMF / USSD menu choices): Evaluates fast-path bypass
+      (`requires_nlu_extraction=False`) to avoid GPU NLU latency and eliminate AI hallucinations.
+    - Unstructured Inputs (Free text / Voice audio): Routes to NLU extraction
+      (`requires_nlu_extraction=True`) for ASR speech transcription and SLM entity parsing.
     """
 
     def __init__(self, evaluator: IntakePayloadEvaluator | None = None) -> None:
-        """Initializes PublicAgentApi with an IntakePayloadEvaluator instance.
-
-        Follows optional dependency injection, defaulting to a standard IntakePayloadEvaluator
-        instance if none is provided.
+        """Initializes PublicAgentApi with an optional IntakePayloadEvaluator instance.
 
         Args:
             evaluator: Optional IntakePayloadEvaluator instance (defaults to standard evaluator).
@@ -67,24 +54,23 @@ class PublicAgentApi:
     async def submit_payload(
         self, payload: PublicAgentStandardizedIntakePayload
     ) -> tuple[PublicAgentStandardizedIntakePayload, IntakeEvaluationResult]:
-        """Submits and evaluates a standardized intake payload for Layer 4 orchestration.
+        """Evaluates intake payload structure and returns verified payload with routing flags.
 
-        Validates that the incoming payload meets structural and content sanity requirements,
-        and determines the downstream processing path (structured menu bypass vs. NLU/SLM
-        entity extraction pipeline).
+        Performs content sanity checks and determines whether the incoming interaction requires
+        natural language processing (SLM extraction) or can follow a deterministic structured path.
 
         Args:
-            payload: Validated, zero-PII PublicAgentStandardizedIntakePayload from Layer 2.
+            payload: Validated PublicAgentStandardizedIntakePayload from Layer 2 Gateway.
 
         Returns:
             Tuple of:
             - PublicAgentStandardizedIntakePayload: The validated intake payload ready for
-              Layer 4 ClaimOrchestrator.execute_orchestration_cycle().
-            - IntakeEvaluationResult: Structural evaluation outcome detailing whether NLU
-              extraction is required (`requires_nlu_extraction`) and descriptive status messages.
+              Layer 4 claim orchestration.
+            - IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
+              `requires_nlu_extraction`, and descriptive status notes.
 
         Raises:
-            ValueError: If the payload fails structural validation, contains empty/whitespace-only
+            ValueError: If payload fails structural validation, contains empty or whitespace-only
                 content, or violates channel-structure compatibility constraints.
         """
         evaluation_result = self._evaluator.evaluate_payload(payload)
