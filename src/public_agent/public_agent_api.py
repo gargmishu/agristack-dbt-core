@@ -113,7 +113,7 @@ class PublicAgentApi:
         self._firewall = firewall or IngestionFirewall.from_env()
 
     # -------------------------------------------------------------------------
-    # Primary Public Workflow Entrypoints
+    # Primary Public Workflow Entrypoint
     # -------------------------------------------------------------------------
 
     async def process_raw_ingress(
@@ -143,19 +143,23 @@ class PublicAgentApi:
             language_locale=language_locale,
         )
 
-        return await self.process_claim_intake(
+        return await self._process_claim_intake(
             payload=intake_payload,
             is_adversarial=is_adversarial,
             attempt_count=attempt_count,
         )
 
-    async def process_claim_intake(
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
+
+    async def _process_claim_intake(
         self,
         payload: PublicAgentStandardizedIntakePayload,
         is_adversarial: bool = False,
         attempt_count: int = 1,
     ) -> PublicAgentIntakeResult:
-        """Executes full claim processing pipeline from intake payload to outbound receipt.
+        """Executes internal claim processing pipeline from intake payload to outbound receipt.
 
         Args:
             payload: Normalized zero-PII standardized intake payload from Layer 2 firewall.
@@ -168,7 +172,7 @@ class PublicAgentApi:
         Raises:
             ValueError: If payload structure or downstream execution fails validation constraints.
         """
-        validated_payload, eval_result = await self.submit_payload(payload)
+        validated_payload, eval_result = await self._submit_payload(payload)
 
         orchestration_result = await self._orchestrator.execute_orchestration_cycle(
             intake=validated_payload,
@@ -192,7 +196,7 @@ class PublicAgentApi:
             transmission_ack=dispatch_result.transmission_ack,
         )
 
-    async def submit_payload(
+    async def _submit_payload(
         self, payload: PublicAgentStandardizedIntakePayload
     ) -> tuple[PublicAgentStandardizedIntakePayload, IntakeEvaluationResult]:
         """Evaluates intake payload structure and returns verified payload with routing flags.
@@ -230,10 +234,6 @@ class PublicAgentApi:
             evaluation_result.requires_nlu_extraction,
         )
         return payload, evaluation_result
-
-    # -------------------------------------------------------------------------
-    # Private Helper Methods (Strictly at Bottom)
-    # -------------------------------------------------------------------------
 
     @staticmethod
     def _build_notification_request(

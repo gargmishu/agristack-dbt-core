@@ -33,7 +33,7 @@ async def test_public_agent_api_submit_valid_payload() -> None:
         received_at=datetime.now(UTC),
     )
 
-    ret_payload, evaluation = await api.submit_payload(payload)
+    ret_payload, evaluation = await api._submit_payload(payload)
     assert ret_payload.session_id == "sess_12345678"
     assert evaluation.is_valid is True
     assert evaluation.requires_nlu_extraction is True
@@ -61,11 +61,11 @@ async def test_public_agent_api_rejects_invalid_evaluator_outcome() -> None:
     )
 
     with pytest.raises(ValueError, match="Invalid intake payload: Malformed structural directive"):
-        await api.submit_payload(payload)
+        await api._submit_payload(payload)
 
 
 @pytest.mark.asyncio
-async def test_public_agent_api_process_claim_intake_e2e() -> None:
+async def test_public_agent_api_process_claim_intake_internal() -> None:
     api = PublicAgentApi()
     payload = PublicAgentStandardizedIntakePayload(
         session_id="sess_e2e_100",
@@ -78,7 +78,7 @@ async def test_public_agent_api_process_claim_intake_e2e() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = await api.process_claim_intake(payload)
+    result = await api._process_claim_intake(payload)
     assert result.session_id == "sess_e2e_100"
     assert result.evaluation_result.is_valid is True
     assert result.orchestration_result.governance_outcome.governance_action.is_approval
@@ -99,7 +99,7 @@ async def test_public_agent_api_process_claim_intake_reprompt() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = await api.process_claim_intake(payload, attempt_count=1)
+    result = await api._process_claim_intake(payload, attempt_count=1)
     assert result.session_id == "sess_reprompt_100"
     assert result.orchestration_result.requires_reprompt is True
     assert result.transmission_ack.carrier_reference_id.startswith("wamid.")

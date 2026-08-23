@@ -30,7 +30,7 @@ sequenceDiagram
     L2-->>L1: Return (Standardized Intake Payload, is_adversarial)
 
     %% Step 3: Layer 3 Public Agent Gateway
-    L1->>L3: Submit Standardized Payload (submit_payload)
+    L1->>L3: Submit Standardized Payload (_submit_payload)
     Note over L3: Evaluates Structure Level & Routing<br/>(IntakePayloadEvaluator)
     L3-->>L1: Return Intake Evaluation Result
 
@@ -125,7 +125,7 @@ The standardized intake contract enters Layer 3 for structure classification, an
 
 ```mermaid
 flowchart TD
-    H["PublicAgentStandardizedIntakePayload"] --> I["PublicAgentApi.submit_payload"]
+    H["PublicAgentStandardizedIntakePayload"] --> I["PublicAgentApi._submit_payload"]
     I --> J["IntakePayloadEvaluator.evaluate_payload"]
     
     J --> K{"Structure Level Check"}
