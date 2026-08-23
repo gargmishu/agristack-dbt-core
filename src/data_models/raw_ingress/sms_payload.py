@@ -1,6 +1,6 @@
 """SMS messaging carrier ingress payload schema (Layer 1 -> Layer 2)."""
 
-from pydantic import Field, model_validator
+from pydantic import Field
 
 from src.data_models.common import (
     ChannelMessageId,
@@ -37,10 +37,3 @@ class SmsIngressPayload(StrictBaseModel):
         ...,
         description="UTC timestamp when carrier SMS gateway received message",
     )
-
-    @model_validator(mode="after")
-    def validate_non_empty_text(self) -> "SmsIngressPayload":
-        """Ensures that text_body is not whitespace-only."""
-        if not self.text_body or not self.text_body.strip():
-            raise ValueError("text_body cannot be whitespace-only")
-        return self

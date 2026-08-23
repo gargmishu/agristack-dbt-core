@@ -65,6 +65,34 @@ async def test_case_management_process_officer_review() -> None:
     assert service.list_review_audit_entries(review.escalation_case_id) == [review]
     assert service.get_staged_case(review.escalation_case_id) is None
 
+    # Reviewing an unstaged / already-processed ticket should return False
+    unstaged_res = await service.process_officer_review(review)
+    assert unstaged_res is False
+
+
+@pytest.mark.asyncio
+async def test_case_management_process_officer_review_unsupported_action(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = CaseManagementService()
+    await service.stage_incident_ticket(build_case())
+
+    # Construct review outcome with action outside
+    # (MANUAL_APPROVE, MANUAL_REJECT, REQUEST_MORE_INFO)
+    # Using object.__setattr__ to bypass Pydantic model validator for unit testing service guard
+    review = CaseworkerReviewOutcomePayload(
+        escalation_case_id="SPP-CASE-2026-100200",
+        reviewer_id="OFFICER-UUID-12345",
+        governance_action=GovernanceAction.MANUAL_APPROVE,
+        review_notes="Field inspection verified land ownership",
+        approved_amount=5000.0,
+        rejection_reason=None,
+        reviewed_at=datetime.now(UTC),
+    )
+    object.__setattr__(review, "governance_action", GovernanceAction.AUTO_APPROVE)
+    res = await service.process_officer_review(review)
+    assert res is False
+
 
 @pytest.mark.asyncio
 async def test_case_management_resolve_citizen_clarification() -> None:

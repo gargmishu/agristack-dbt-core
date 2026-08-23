@@ -61,13 +61,6 @@ class OutboundNotificationPayload(StrictBaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_non_empty_message(self) -> "OutboundNotificationPayload":
-        """Ensures that formatted notification message is not empty or whitespace."""
-        if not self.formatted_message or not self.formatted_message.strip():
-            raise ValueError("formatted_message cannot be empty or whitespace-only")
-        return self
-
-    @model_validator(mode="after")
     def validate_ussd_character_ceiling(self) -> "OutboundNotificationPayload":
         """Enforces 160-character ceiling for USSD channel to prevent carrier signaling errors."""
         if (

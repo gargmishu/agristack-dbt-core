@@ -315,3 +315,74 @@ async def test_env_and_custom_injection_dispatch(
 
     res_custom_sms = await custom_service.dispatch_notification(sms_req)
     assert res_custom_sms.transmission_ack.interface_id == "MANUAL_SMS"
+
+
+@pytest.mark.asyncio
+async def test_prepare_ivr_voice_rejection_hindi_and_english(
+    delivery_service: MultichannelNotificationService,
+) -> None:
+    req_hi = NotificationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.IVR_VOICE,
+        governance_action=GovernanceAction.AUTO_REJECT,
+        language_locale=LanguageLocale.HINDI,
+        rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+    )
+    payload_hi = await delivery_service.prepare_notification(req_hi)
+    assert "Aapka aavedan aswikrit kiya gaya hai" in payload_hi.formatted_message
+
+    req_en = NotificationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.IVR_VOICE,
+        governance_action=GovernanceAction.AUTO_REJECT,
+        language_locale=LanguageLocale.ENGLISH,
+        rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
+    )
+    payload_en = await delivery_service.prepare_notification(req_en)
+    assert "Your application could not be approved" in payload_en.formatted_message
+
+
+@pytest.mark.asyncio
+async def test_prepare_ivr_voice_reprompt_hindi_and_english(
+    delivery_service: MultichannelNotificationService,
+) -> None:
+    req_hi = NotificationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.IVR_VOICE,
+        governance_action=GovernanceAction.REQUEST_MORE_INFO,
+        language_locale=LanguageLocale.HINDI,
+        missing_entity=DomainEntityKey.BANK_ACCOUNT_LAST4,
+    )
+    payload_hi = await delivery_service.prepare_notification(req_hi)
+    assert "Kripya apna" in payload_hi.formatted_message
+
+    req_en = NotificationRequestPayload(
+        session_id="sess_12345678",
+        channel_type=ChannelType.IVR_VOICE,
+        governance_action=GovernanceAction.REQUEST_MORE_INFO,
+        language_locale=LanguageLocale.ENGLISH,
+        missing_entity=DomainEntityKey.DISTRICT,
+    )
+    payload_en = await delivery_service.prepare_notification(req_en)
+    assert "Please provide your" in payload_en.formatted_message
+
+
+def test_format_entity_label_edge_cases() -> None:
+    assert (
+        MultichannelNotificationService._format_entity_label(None, is_hindi=False)
+        == "required details"
+    )
+    assert (
+        MultichannelNotificationService._format_entity_label(None, is_hindi=True)
+        == "kripya vivaran"
+    )
+    assert (
+        MultichannelNotificationService._format_entity_label(DomainEntityKey.VILLAGE, is_hindi=True)
+        == "gaon"
+    )
+    assert (
+        MultichannelNotificationService._format_entity_label(
+            DomainEntityKey.VILLAGE, is_hindi=False
+        )
+        == "village"
+    )

@@ -64,3 +64,33 @@ def test_get_pepper_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "   ")
     with pytest.raises(ValueError, match="Required environment variable 'AGRISTACK_PEPPER_SECRET'"):
         get_pepper_secret()
+
+
+def test_rate_limit_missing_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("RATE_LIMIT_PER_MINUTE", raising=False)
+    with pytest.raises(
+        ValueError, match="Required environment variable 'RATE_LIMIT_PER_MINUTE' is missing."
+    ):
+        get_rate_per_minute()
+
+
+def test_rate_limit_non_integer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "invalid_number")
+    with pytest.raises(
+        ValueError, match="Environment variable 'RATE_LIMIT_PER_MINUTE' must be an integer."
+    ):
+        get_rate_per_minute()
+
+
+def test_rate_limit_non_positive(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "0")
+    with pytest.raises(
+        ValueError, match="Environment variable 'RATE_LIMIT_PER_MINUTE' must be positive."
+    ):
+        get_rate_per_minute()
+
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "-10")
+    with pytest.raises(
+        ValueError, match="Environment variable 'RATE_LIMIT_PER_MINUTE' must be positive."
+    ):
+        get_rate_per_minute()

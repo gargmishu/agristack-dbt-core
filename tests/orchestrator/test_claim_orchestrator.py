@@ -211,3 +211,30 @@ async def test_claim_orchestrator_full_cycle_adversarial_escalates_to_caseworker
     assert result.governance_outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
     assert result.caseworker_ticket_id is not None
     assert result.caseworker_ticket_id.startswith("SPP-CASE-2026-")
+
+
+@pytest.mark.asyncio
+async def test_claim_orchestrator_slm_extraction_none_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    orchestrator = ClaimOrchestrator()
+    intake = PublicAgentStandardizedIntakePayload(
+        session_id="sess_fallback_1",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale=LanguageLocale.HINDI,
+        unprocessed_input_content="Unparseable content",
+        received_at=datetime.now(UTC),
+    )
+
+    async def mock_extract_none(*args: object, **kwargs: object) -> None:
+        return None
+
+    expected_fallback_score = 0.40
+    monkeypatch.setattr(orchestrator._slm_extractor, "extract_entities", mock_extract_none)
+    result = await orchestrator.execute_orchestration_cycle(intake)
+    assert result.extracted_entities.ai_confidence_score == expected_fallback_score
+    assert result.extracted_entities.application_intent == ApplicationIntent.UNKNOWN
+    assert result.governance_outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
