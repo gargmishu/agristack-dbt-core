@@ -161,7 +161,7 @@ class ClaimOrchestrator:
         )
 
         # Post-Decision Processing: Payment Dispatch or Caseworker Staging
-        disbursement_cb, staged_case_id = await self._handle_post_decision(
+        disbursement_callback, staged_case_id = await self._handle_post_decision(
             intake=intake,
             payload_id=payload_id,
             extracted_entities=extracted_entities,
@@ -174,7 +174,7 @@ class ClaimOrchestrator:
             governance_outcome=governance_outcome,
             extracted_entities=extracted_entities,
             requires_reprompt=False,
-            disbursement_callback=disbursement_cb,
+            disbursement_callback=disbursement_callback,
             caseworker_ticket_id=staged_case_id,
         )
 
@@ -381,8 +381,10 @@ class ClaimOrchestrator:
             escalation_case_id if staged for caseworker review).
         """
         if governance_outcome.governance_action.is_approval:
-            disbursement_cb = await self._payment_rail.initiate_disbursement(governance_outcome)
-            return disbursement_cb, None
+            disbursement_callback = await self._payment_rail.initiate_disbursement(
+                governance_outcome
+            )
+            return disbursement_callback, None
 
         if governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id:
             staged_case_id = await self._stage_caseworker_ticket(

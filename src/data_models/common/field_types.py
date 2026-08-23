@@ -135,7 +135,7 @@ CropSeason = Annotated[
 ]
 
 
-def validate_utc_freshness(dt: datetime) -> datetime:
+def validate_utc_freshness(timestamp: datetime) -> datetime:
     """Ensures timestamp is UTC and rejects future timestamps >5s (clock-skew violation).
 
     Why 5s? A tight 5-second window accommodates legitimate NTP server drift between edge
@@ -143,7 +143,7 @@ def validate_utc_freshness(dt: datetime) -> datetime:
     attacks.
 
     Args:
-        dt: Datetime object to validate and normalize to UTC.
+        timestamp: Datetime object to validate and normalize to UTC.
 
     Returns:
         Validated timezone-aware UTC datetime.
@@ -152,11 +152,11 @@ def validate_utc_freshness(dt: datetime) -> datetime:
         ValueError: If timestamp is more than 5 seconds in the future.
     """
     now = datetime.now(UTC)
-    parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
+    parsed_datetime = timestamp if timestamp.tzinfo is not None else timestamp.replace(tzinfo=UTC)
 
-    if (parsed_dt - now).total_seconds() > _MAX_CLOCK_SKEW_SECONDS:
+    if (parsed_datetime - now).total_seconds() > _MAX_CLOCK_SKEW_SECONDS:
         raise ValueError("Timestamp cannot be >5 seconds in the future (clock-skew violation)")
-    return parsed_dt
+    return parsed_datetime
 
 
 UtcTimestamp = Annotated[
