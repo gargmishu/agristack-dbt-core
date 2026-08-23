@@ -19,7 +19,7 @@ from src.public_agent.intake_payload_evaluator import (
 
 @pytest.mark.asyncio
 async def test_public_agent_api_submit_valid_payload() -> None:
-    api = PublicAgentApi.from_default()
+    api = PublicAgentApi()
     payload = PublicAgentStandardizedIntakePayload(
         session_id="sess_12345678",
         tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",

@@ -53,25 +53,16 @@ class PublicAgentApi:
     See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 
-    def __init__(self, evaluator: IntakePayloadEvaluator) -> None:
-        """Initializes PublicAgentApi with an explicit IntakePayloadEvaluator instance.
+    def __init__(self, evaluator: IntakePayloadEvaluator | None = None) -> None:
+        """Initializes PublicAgentApi with an IntakePayloadEvaluator instance.
 
-        Follows strict dependency injection to allow custom or mock structural evaluators
-        during unit and integration testing.
+        Follows optional dependency injection, defaulting to a standard IntakePayloadEvaluator
+        instance if none is provided.
 
         Args:
-            evaluator: Non-nullable IntakePayloadEvaluator instance.
+            evaluator: Optional IntakePayloadEvaluator instance (defaults to standard evaluator).
         """
-        self._evaluator = evaluator
-
-    @classmethod
-    def from_default(cls) -> "PublicAgentApi":
-        """Factory constructor instantiating PublicAgentApi with standard evaluator.
-
-        Returns:
-            PublicAgentApi configured with the default IntakePayloadEvaluator.
-        """
-        return cls(evaluator=IntakePayloadEvaluator())
+        self._evaluator = evaluator or IntakePayloadEvaluator()
 
     async def submit_payload(
         self, payload: PublicAgentStandardizedIntakePayload

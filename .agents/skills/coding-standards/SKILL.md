@@ -93,29 +93,30 @@ class ComponentService:
   * **Correct**: `if status == ApplicationStatus.APPROVED:`
   * **Incorrect**: `if str(status) == ApplicationStatus.APPROVED.value:`
 
-### 3.4 Strict Dependency Injection & Non-Nullable Constructors
-* **No Magic `None` Defaults in `__init__`**: Avoid accepting `None` as a parameter default in `__init__` to silently fall back to environment variable reads or default creation. Doing so obscures dependency contracts and masks configuration bugs.
-* **Explicit Injected Dependencies**: Constructor parameters for core classes must be non-nullable.
-* **Factory Class Methods**: Use `@classmethod` factories (`from_env(cls)`, `from_default(cls)`) when default or environment-based construction is needed.
+### 3.4 Dependency Injection & Factory Methods
+* **Optional Collaborators**: For internal domain components and stateless collaborators, use standard optional dependency injection in `__init__` (e.g., `service: SomeService | None = None` with `self._service = service or SomeService()`).
+* **Environment Configuration**: When construction requires reading secrets or configuration from environment variables (e.g. pepper keys, rate limit settings), use explicit `@classmethod` factories like `from_env(cls)`.
+* **No Redundant `from_default()`**: Avoid creating redundant `from_default()` methods when `__init__()` can directly provide the default instantiation.
 
 ```python
-# CORRECT: Explicit constructor + factory method
-class IngestionGateway:
-    def __init__(self, tokenizer: Tokenizer, rate_limiter: RateLimiter) -> None:
-        self._tokenizer = tokenizer
-        self._rate_limiter = rate_limiter
+# CORRECT: Optional dependency injection for internal services
+class ClaimOrchestrator:
+    def __init__(
+        self,
+        bhashini_service: BhashiniService | None = None,
+        slm_extractor: SlmExtractor | None = None,
+    ) -> None:
+        self._bhashini = bhashini_service or BhashiniService()
+        self._slm_extractor = slm_extractor or SlmExtractor()
+
+# CORRECT: Factory class method for environment-configured components
+class ZeroTrustIdentityTokenizer:
+    def __init__(self, pepper_key: str) -> None:
+        self._pepper_key = pepper_key.encode("utf-8")
 
     @classmethod
-    def from_env(cls) -> "IngestionGateway":
-        return cls(
-            tokenizer=Tokenizer.from_env(),
-            rate_limiter=RateLimiter.from_env(),
-        )
-
-# INCORRECT: Magic None fallback in __init__
-class IngestionGateway:
-    def __init__(self, tokenizer: Tokenizer | None = None) -> None:
-        self._tokenizer = tokenizer or Tokenizer.from_env()
+    def from_env(cls) -> "ZeroTrustIdentityTokenizer":
+        return cls(pepper_key=get_pepper_secret())
 ```
 
 ---
