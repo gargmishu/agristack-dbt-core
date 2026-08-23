@@ -335,7 +335,7 @@ class DomainEntityKey(StrEnum):
 class ThreatCategory(StrEnum):
     """Classification categories for detected adversarial prompt injection attacks.
 
-    Identifies specific attack vectors neutralized by Layer 2 `AdversarialPromptFirewall`:
+    Identifies specific attack vectors neutralized by Layer 2 perimeter security:
     - `SYSTEM_OVERRIDE`: Attempts to bypass instructions via system prompts or escape
       keywords.
     - `ROLE_USURPATION`: Attempts to instruct the AI to adopt an unauthorized administrative

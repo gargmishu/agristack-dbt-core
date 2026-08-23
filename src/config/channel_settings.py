@@ -60,6 +60,17 @@ def get_pepper_secret() -> str:
 
 
 def _get_positive_int(variable_name: str) -> int:
+    """Reads and validates a positive integer from the environment.
+
+    Args:
+        variable_name: Environment variable name to parse.
+
+    Returns:
+        Positive integer parsed from environment.
+
+    Raises:
+        ValueError: If environment variable is missing, not an integer, or not positive.
+    """
     value = os.getenv(variable_name)
     if value is None:
         raise ValueError(f"Required environment variable '{variable_name}' is missing.")

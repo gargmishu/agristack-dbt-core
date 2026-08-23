@@ -43,7 +43,7 @@ class SmsConnector:
     """
 
     def __init__(self, interface_id: str | None = None) -> None:
-        """Initializes SmsConnector with carrier SMS gateway interface identifier.
+        """Initializes carrier SMS connector with gateway interface identifier.
 
         Args:
             interface_id: Optional SMS carrier interface identifier (defaults to env or

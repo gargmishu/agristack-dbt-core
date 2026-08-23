@@ -47,7 +47,7 @@ class UssdConnector:
     """
 
     def __init__(self, interface_id: str | None = None) -> None:
-        """Initializes UssdConnector with SS7/SIGTRAN carrier interface identifier.
+        """Initializes cellular signaling connector with SS7/SIGTRAN interface identifier.
 
         Args:
             interface_id: Optional USSD interface identifier (defaults to env or config).

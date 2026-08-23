@@ -44,7 +44,7 @@ class IvrConnector:
     """
 
     def __init__(self, interface_id: str | None = None) -> None:
-        """Initializes IvrConnector with SIP telephony gateway interface identifier.
+        """Initializes telephony connector with SIP gateway interface identifier.
 
         Args:
             interface_id: Optional IVR interface identifier (defaults to env or config).

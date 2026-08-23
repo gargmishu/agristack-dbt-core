@@ -74,14 +74,14 @@ class MultichannelNotificationService:
         ussd_connector: UssdConnector | None = None,
         sms_connector: SmsConnector | None = None,
     ) -> None:
-        """Initializes MultichannelNotificationService with injected dependencies.
+        """Initializes multi-channel notification delivery service with injected dependencies.
 
         Args:
-            bhashini_service: Optional BhashiniService instance for TTS voice synthesis.
-            whatsapp_connector: Optional WhatsApp connector instance.
-            ivr_connector: Optional IVR voice connector instance.
-            ussd_connector: Optional USSD signaling connector instance.
-            sms_connector: Optional SMS carrier connector instance.
+            bhashini_service: Optional speech synthesis service instance.
+            whatsapp_connector: Optional messaging connector instance.
+            ivr_connector: Optional telephony voice connector instance.
+            ussd_connector: Optional signaling connector instance.
+            sms_connector: Optional carrier SMS connector instance.
         """
         self._bhashini_service = bhashini_service or BhashiniService()
         self._whatsapp_connector = whatsapp_connector or WhatsAppConnector()

@@ -6,12 +6,9 @@ registries.
 Why operate exclusively on Zero-PII HMAC tokens?
 Cleartext PII (phone numbers, Aadhaar numbers, cleartext names) is strictly forbidden from
 touching persistent database ledgers or disk storage under Aadhaar Act §29 and national
-privacy
-mandates. While active tokenization occurs at the Layer 2 perimeter via
-ZeroTrustIdentityTokenizer,
+privacy mandates. While active tokenization occurs at the Layer 2 perimeter,
 all downstream registry verification operates exclusively on pre-computed 64-character hex
-tokens
-(`HmacCitizenToken`).
+tokens (`HmacCitizenToken`).
 
 See: decisions/step0.3_zero_trust_tokenization.md
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)

@@ -90,7 +90,7 @@ class ClaimOrchestrator:
     - Claim Completeness Validation (`check_claim_completeness` / Gate 2): Validates mandatory
       domain entity completeness and manages multi-turn conversational re-prompt loops.
     - Governance Adjudication (Gate 3): Evaluates eligibility rules and routes to auto-payout,
-      review, or rejection via `ClaimAdjudicator.evaluate_claim`.
+      review, or rejection via the adjudication decision matrix.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
     """
@@ -103,7 +103,7 @@ class ClaimOrchestrator:
         case_management_service: CaseManagementService | None = None,
         payment_rail_service: PaymentRailService | None = None,
     ) -> None:
-        """Initializes ClaimOrchestrator with required AI and DPI service dependencies."""
+        """Initializes the claim orchestrator with required AI and DPI service dependencies."""
         self._bhashini = bhashini_service or BhashiniService()
         self._slm_extractor = slm_extractor or SlmExtractor()
         self._claim_adjudicator = claim_adjudicator or ClaimAdjudicator()
@@ -301,7 +301,7 @@ class ClaimOrchestrator:
         active_season: CropSeason,
         approved_payouts_ledger: set[tuple[str, str]] | None,
     ) -> GovernanceOutcomePayload:
-        """Constructs context and invokes ClaimAdjudicator for Gate 3 policy evaluation."""
+        """Constructs context and invokes Gate 3 policy adjudication."""
         claim_payload = ClaimEvaluationPayload(
             session_id=intake.session_id,
             payload_id=payload_id,
@@ -370,7 +370,7 @@ class ClaimOrchestrator:
         extracted_entities: ExtractedEntityPayload,
         escalation_case_id: str,
     ) -> str:
-        """Constructs and stages an escalation ticket in the CaseManagementService."""
+        """Constructs and stages an escalation ticket in the case management service."""
         case_payload = CaseworkerCaseReviewPayload(
             escalation_case_id=escalation_case_id,
             session_id=intake.session_id,

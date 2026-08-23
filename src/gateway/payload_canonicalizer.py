@@ -99,6 +99,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
+        """Canonicalizes WhatsApp webhook payload into standardized intake contract."""
         if payload.payload_type.is_audio:
             unprocessed_content = str(payload.audio_recording_url)
             structure_level = StructureLevel.FREE_TEXT
@@ -126,6 +127,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
+        """Canonicalizes IVR voice call payload into standardized intake contract."""
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
             tokenized_citizen_id=tokenized_id,
@@ -143,6 +145,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
+        """Canonicalizes USSD signaling payload into standardized intake contract."""
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
             tokenized_citizen_id=tokenized_id,
@@ -160,6 +163,7 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
+        """Canonicalizes SMS text payload into standardized intake contract."""
         unprocessed_content = PiiPurgeGuard.redact_all(
             payload.text_body, session_id=payload.session_id
         )

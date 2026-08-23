@@ -58,7 +58,7 @@ class ClaimAdjudicator:
         identity_service: IdentityVerificationService | None = None,
         agri_service: AgriRegistryService | None = None,
     ) -> None:
-        """Initializes ClaimAdjudicator with required sovereign registry services.
+        """Initializes the claim adjudicator with required sovereign registry services.
 
         Args:
             identity_service: Identity verification client (defaults to standard mock).

@@ -1,8 +1,7 @@
-"""SLM structured entity extraction payload schema (Layer 3 -> Layer4).
+"""SLM structured entity extraction payload schema (Layer 3 -> Layer 4).
 
 Represents structured intent and domain parameters produced by the SLM/NLU pipeline
-(or fast-path structured menu bypass) and consumed by the Layer 4 ClaimOrchestrator
-and ClaimAdjudicator.
+(or fast-path structured menu bypass) and consumed by Layer 4 orchestration and adjudication.
 
 See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
 See: decisions/step3.2_security_and_ingestion_firewalls.md

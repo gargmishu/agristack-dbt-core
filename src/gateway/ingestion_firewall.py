@@ -37,14 +37,11 @@ class IngestionFirewall:
     and payload normalization into a single ingress validation pipeline.
 
     Pipeline Operations:
-    1. Rate Limiting (`RateLimiter`): Enforces request quota per caller identity.
-    2. Canonicalization & Tokenization (`PayloadCanonicalizer`): Converts raw ingress
-       payloads into
-       `PublicAgentStandardizedIntakePayload` with pseudonymous 64-char HMAC citizen tokens.
-    3. PII Purge Sentinel (`PiiPurgeGuard.assert_zero_pii`): Verifies that cleartext
-       identifiers do not exist.
-    4. Adversarial Prompt Scanning (`AdversarialPromptFirewall`): Checks content for
-       injection patterns.
+    1. Rate Limiting: Enforces request quotas per caller identity.
+    2. Canonicalization & Tokenization: Converts raw ingress payloads into standardized
+       intake contracts with pseudonymous 64-char HMAC citizen tokens.
+    3. Zero-PII Sentinel: Verifies that no cleartext identifiers leak into downstream fields.
+    4. Adversarial Prompt Scanning: Checks content for prompt injection and override patterns.
 
     See: decisions/step3.2_security_and_ingestion_firewalls.md
     See: decisions/step0.3_zero_trust_tokenization.md
@@ -58,8 +55,8 @@ class IngestionFirewall:
         """Initializes all firewall members from injected security components.
 
         Args:
-            tokenizer: Non-nullable ZeroTrustIdentityTokenizer instance.
-            rate_limiter: RateLimiter instance controlling ingress request quotas.
+            tokenizer: Identity tokenizer component.
+            rate_limiter: Rate limiter component controlling ingress request quotas.
         """
         self._tokenizer = tokenizer
         self._rate_limiter = rate_limiter

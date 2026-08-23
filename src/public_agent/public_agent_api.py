@@ -1,9 +1,8 @@
 """Layer 3 Public Agent Gateway API (Layer 3 Intake Surface).
 
-Receives canonical, zero-PII PublicAgentStandardizedIntakePayload instances from the
-Layer 2 Security Gateway (IngestionFirewall), evaluates intake structure and routing
-requirements via IntakePayloadEvaluator, and prepares validated payloads for Layer 4
-ClaimOrchestrator execution.
+Receives canonical, zero-PII standardized intake payloads from the Layer 2 Security
+Gateway, evaluates intake structure and routing requirements, and prepares validated
+payloads for Layer 4 orchestration execution.
 
 Why decouple Layer 3 Public Agent Gateway from Layer 2 Security Gateway?
 1. Separation of Concerns: Layer 2 handles transport-level security (HMAC webhook signatures,
@@ -33,7 +32,7 @@ class PublicAgentApi:
 
     Serves as the primary Layer 3 entrypoint that bridges Layer 2 perimeter security and
     Layer 4 claim orchestration. Inspects normalized, zero-PII intake payloads to classify
-    downstream extraction requirements before execution by `ClaimOrchestrator`.
+    downstream extraction requirements before execution by Layer 4 orchestration.
 
     Routing Classification:
     - Structured Inputs (DTMF / USSD menu choices): Evaluates fast-path bypass
@@ -43,10 +42,10 @@ class PublicAgentApi:
     """
 
     def __init__(self, evaluator: IntakePayloadEvaluator | None = None) -> None:
-        """Initializes PublicAgentApi with an optional IntakePayloadEvaluator instance.
+        """Initializes the public agent gateway with an optional intake evaluator instance.
 
         Args:
-            evaluator: Optional IntakePayloadEvaluator instance (defaults to standard evaluator).
+            evaluator: Optional intake evaluator instance (defaults to standard evaluator).
         """
         self._evaluator = evaluator or IntakePayloadEvaluator()
 

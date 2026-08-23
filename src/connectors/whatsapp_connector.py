@@ -46,7 +46,7 @@ class WhatsAppConnector:
     """
 
     def __init__(self, interface_id: str | None = None) -> None:
-        """Initializes WhatsAppConnector with carrier interface identifier.
+        """Initializes messaging connector with carrier interface identifier.
 
         Args:
             interface_id: Optional carrier webhook interface identifier (defaults to env or
