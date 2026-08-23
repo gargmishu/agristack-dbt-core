@@ -11,6 +11,8 @@
 
 ## 🏛️ Architectural Overview (4-Layer System)
 
+> 📘 **Deep Dive:** For detailed Mermaid sequence and step-by-step pipeline diagrams from channel ingress to final decision, see the [End-to-End Architecture & Code Flow Guide](docs/end_to_end_code_flow.md).
+
 ```
 [ Citizen Channels: WhatsApp | IVR Voice | USSD | SMS ]
                         │ (Raw carrier payloads: audio URLs, text, DTMF)
