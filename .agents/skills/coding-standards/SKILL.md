@@ -1,370 +1,164 @@
 ---
 name: coding-standards
-description: Coding rules, naming conventions, package structure, and modularity guidelines established for AgriStack core development. Use whenever designing, refactoring, or writing Python models, validators, or package structures.
+description: Universal Python coding rules, naming conventions, method visibility, dependency injection, and clean code best practices, independent of specific business logic. Use whenever designing, refactoring, writing, or structuring Python classes, functions, and test suites.
 ---
 
-# AgriStack Core Coding Standards & Guidelines
+# Universal Python Coding Standards & Best Practices
 
-This document defines the architectural, structural, and coding standards established for the AgriStack codebase. All new code, refactorings, and schema definitions must strictly adhere to these principles.
-
----
-
-## 0. "Shift-Left" First-Principles Engineering Methodology (Preventing Errors Right From the Outset)
-
-To prevent logical errors, state inconsistencies, and validation gaps **before writing a single line of implementation code**:
-
-### 0.1 Contract Truth Table Specification (Pre-Implementation Mandate)
-Before defining any domain model, validator, or state-machine router, write down an explicit **Contract Truth Table** defining for every single field:
-1. **Field Name & Type**: Type alias with domain constraints.
-2. **Cardinality & Nullability**: Is it Required, Optional, or Strictly Forbidden (`None`) per state?
-3. **Non-Empty / Non-Whitespace Guard**: Does every text/string field explicitly reject empty strings and whitespace (`.strip()`)?
-4. **Foreign Key Survival**: Does this field carry an upstream audit ID (`session_id`, `payload_id`, `escalation_case_id`)?
-
-### 0.2 Default Non-Empty Guard Rule for Text Fields
-Every string field representing text, reasons, notes, or input content MUST have an explicit non-empty guard (`min_length=1` or `model_validator` checking `.strip()`) unless explicitly declared as `None` or optional.
-
-### 0.3 Exhaustive State-Matrix Pre-Check
-Before writing validator methods, map out **100% of Enum states** in a matrix table. Reconcile automated machine paths (where human context `escalation_case_id = None`) against human adjudication paths (where `escalation_case_id` is required).
+This skill outlines language-level clean coding rules, naming conventions, object-oriented design principles, and verification standards. These guidelines are **independent of business logic** and must be adhered to across all modules.
 
 ---
 
 ## 1. Naming Conventions
 
-### 1.1 Class & Type Alias Naming (Strict PascalCase / Upper CamelCase)
-* **Capitalize Acronyms as Words**: Multi-word acronyms in class names and type aliases must treat acronyms as capitalized words (Upper CamelCase) rather than ALL-CAPS to avoid visual collisions (e.g., `CC` collisions) and maintain readability.
-  * **Correct**: `IvrIngressPayload`, `UssdIngressPayload`, `HmacCitizenToken`, `WhatsAppIngressPayload`
+### 1.1 Classes and Type Aliases (PascalCase / Upper CamelCase)
+* **Acronyms as Capitalized Words**: Treat multi-word acronyms as capitalized words (Upper CamelCase) rather than ALL-CAPS to avoid visual collisions (e.g. `CC` ambiguity) and ensure readability.
+  * **Correct**: `IvrIngressPayload`, `UssdIngressPayload`, `HmacCitizenToken`, `WhatsAppIngressPayload`, `HttpClient`, `HttpUrl`
   * **Incorrect**: `IVRIngressPayload`, `USSDIngressPayload`, `HMACCitizenToken`, `WhatsappIngressPayload`
-* **Align with Standard Libraries & Pydantic**: Matches conventions like `HttpUrl`, `HttpClient`, and `hashlib.pbkdf2_hmac`.
 
-### 1.2 Attribute & Field Naming (`snake_case`)
-* All model attributes, function parameters, and variables must strictly use `snake_case`.
-* Constants that are implementation details must use uppercase `SNAKE_CASE` with a leading underscore (for example, `_SIGNATURE_PREFIX`, `_BEARER_PREFIX`, and `_DEFAULT_PEPPER_ENV_VAR`). Public configuration defaults, domain policy tables, and test fixtures may remain unprefixed when they are intentionally part of the module's usable surface.
+### 1.2 Attributes, Variables, and Functions (`snake_case`)
+* All function names, method names, instance attributes, function parameters, and local variables must strictly use `snake_case`.
 
-### 1.3 Timestamp Attribute Standard (`<action>_at`)
-* All timestamp fields across all 4 architecture layers must follow the clean **`<action>_at`** convention. Avoid redundant `_timestamp` suffixes.
-  * `received_at`: UTC timestamp when raw carrier ingress or Layer 3 intake payload arrived.
-  * `evaluated_at`: UTC timestamp when rules engine evaluation outcome was rendered.
-  * `reviewed_at`: UTC timestamp when officer submitted review outcome on dashboard.
-  * `staged_at`: UTC timestamp when incident ticket was staged in caseworker queue.
-  * `cleared_at`: UTC timestamp when payment rail cleared transaction.
+### 1.3 Constants and Private Module Variables
+* **Internal Constants**: Private constants and implementation details must use uppercase `SNAKE_CASE` prefixed with a leading underscore (e.g., `_SIGNATURE_PREFIX`, `_BEARER_PREFIX`, `_MAX_RETRY_COUNT`).
+* **Public Constants**: Exported configuration defaults, public policy mappings, and test fixtures may remain unprefixed `UPPER_SNAKE_CASE` when intentionally part of the public module surface.
 
-### 1.4 Unified Session Key (`session_id`)
-* The primary session key tracking end-to-end communication across all layers must be named **`session_id`** (typed with `SessionId`).
-* Avoid layer-specific stutter like `channel_session_id`.
-
-### 1.5 Phone Number Standard (`originating_phone_number`)
-* Use `originating_phone_number` consistently across all Layer 1 ingress payloads (e.g., WhatsApp, IVR, USSD).
-
-### 1.6 Module-to-Class Naming Symmetry
-* For operational components (gateways, connectors, orchestrator rules, and services), Python module filenames in `snake_case` must strictly match their primary class names in `PascalCase` (e.g., `CarrierAuthValidator` in `carrier_auth_validator.py`, `PaymentRailService` in `payment_rail_service.py`). Do not omit descriptive suffixes like `_validator`, `_tokenizer`, or `_service` from module names.
-
-### 1.7 Domain Schema Namespacing
-* Within categorized domain model subpackages (`raw_ingress`, `caseworker`, `disbursement`), file names represent the schema entity (e.g. `review_outcome_payload.py`), while model class names may include the domain namespace prefix (e.g. `CaseworkerReviewOutcomePayload`) to avoid symbol collisions when imported into cross-domain contexts.
+### 1.4 Module-to-Class Naming Symmetry
+* For operational components (gateways, connectors, routers, validators, and services), Python filenames in `snake_case` must strictly match their primary class name in `PascalCase`:
+  * `carrier_auth_validator.py` $\rightarrow$ `CarrierAuthValidator`
+  * `payment_rail_service.py` $\rightarrow$ `PaymentRailService`
+  * `governance_router.py` $\rightarrow$ `GovernanceRouter`
+* Do not omit descriptive suffixes like `_validator`, `_service`, or `_connector` from module names.
 
 ---
 
-## 2. Package & Directory Structure
+## 2. Method Visibility, Ordering & Clean Class Layout
 
-### 2.1 Categorized Domain Subpackages
-Organize domain models and services into logical, single-purpose subpackages under `src/`:
+Maintain clean top-down readability within every class:
 
-```
-src/
-├── connectors/                      # Layer 1 Channel Edge Connectors
-│   ├── whatsapp_connector.py
-│   ├── ivr_connector.py
-│   ├── ussd_connector.py
-│   └── sms_connector.py
-├── gateway/                         # Layer 2 Gateway & Perimeter Security
-│   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
-│   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
-│   ├── pii_purge_guard.py           # In-memory Zero-PII sanitizer & assertion sentinel
-│   ├── adversarial_prompt_firewall.py # Adversarial prompt injection & override defense
-│   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
-│   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
-│   └── ingestion_firewall.py        # Unified Layer 2 perimeter firewall facade
-├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
-│   ├── public_agent_api.py          # Public Agent Gateway API Surface
-│   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
-├── orchestrator/                    # Layer 4 Orchestrator Brain & Governance Engine
-│   ├── governance_router.py         # Decision matrix & threshold routing
-│   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate pipeline
-│   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
-├── services/                        # External DPI Registries & AI Adapter Services ONLY
-│   ├── ai/
-│   │   ├── ai_mock_fixtures.py
-│   │   ├── bhashini_service.py
-│   │   └── slm_extractor.py
-│   ├── delivery/
-│   │   └── multichannel_confirmation_service.py
-│   └── dpi/
-│       ├── dpi_mock_fixtures.py
-│       ├── agri_registry_service.py
-│       ├── identity_verification_service.py
-│       ├── payment_rail_service.py
-│       └── social_registry_service.py # External OpenSPP registry boundary client
-├── errors/                          # RFC 7807 problem details exception handlers
-│   └── validation_exception_handler.py
-├── data_models/                     # Domain data contracts & Pydantic validation schemas
-│   ├── common/                      # Shared foundational primitives & type annotations
-│   │   ├── base.py                  # StrictBaseModel definition
-│   │   ├── enums.py                 # StrEnum definitions
-│   │   └── field_types.py           # Constrained Annotated type aliases & validators
-│   ├── raw_ingress/                 # Layer 1 -> Layer 2 carrier raw ingress payloads
-│   │   ├── ivr_payload.py
-│   │   ├── sms_payload.py
-│   │   ├── ussd_payload.py
-│   │   └── whatsapp_payload.py
-│   ├── public_agent/                # Layer 2 -> Layer 3 normalized intake contracts
-│   │   └── standardized_intake_payload.py
-│   ├── governance/                  # Layer 4 governance models & extraction payloads
-│   │   ├── claim_evaluation_payload.py
-│   │   ├── extracted_entity_payload.py
-│   │   └── governance_outcome_payload.py
-│   ├── caseworker/                  # Caseworker portal review staging & outcome models
-│   │   ├── case_review_payload.py
-│   │   └── review_outcome_payload.py
-│   ├── delivery/                    # Layer 4 outbound multichannel delivery contracts
-│   │   ├── confirmation_dispatch_result.py
-│   │   ├── confirmation_request_payload.py
-│   │   ├── outbound_confirmation_payload.py
-│   │   └── transmission_ack.py
-│   └── disbursement/                # Financial clearing callback models
-│       └── disbursement_callback_payload.py
-```
-
-### 2.2 Strict Test Hierarchy Mirroring
-The test suite under `tests/` must mirror `src/` 1:1. Each source module must have a corresponding test file in the matching subdirectory:
-
-```
-tests/
-├── connectors/
-│   ├── test_whatsapp_connector.py
-│   ├── test_ivr_connector.py
-│   ├── test_ussd_connector.py
-│   └── test_sms_connector.py
-├── gateway/
-│   ├── test_carrier_auth_validator.py
-│   ├── test_zero_trust_identity_tokenizer.py
-│   ├── test_pii_purge_guard.py
-│   ├── test_adversarial_prompt_firewall.py
-│   ├── test_payload_canonicalizer.py
-│   ├── test_rate_limiter.py
-│   └── test_ingestion_firewall.py
-├── public_agent/
-│   ├── test_public_agent_api.py
-│   └── test_intake_payload_evaluator.py
-├── orchestrator/
-│   ├── test_governance_router.py
-│   ├── test_claim_orchestrator.py
-│   └── test_case_management_service.py
-├── services/
-│   ├── ai/
-│   │   ├── test_ai_mock_fixtures.py
-│   │   ├── test_bhashini_service.py
-│   │   └── test_slm_extractor.py
-│   ├── delivery/
-│   │   └── test_multichannel_confirmation_service.py
-│   └── dpi/
-│       ├── test_dpi_mock_fixtures.py
-│       ├── test_agri_registry_service.py
-│       ├── test_identity_verification_service.py
-│       ├── test_payment_rail_service.py
-│       └── test_social_registry_service.py
-├── errors/
-│   └── test_validation_exception_handler.py
-├── data_models/
-│   ├── common/
-│   │   ├── test_base.py
-│   │   ├── test_enums.py
-│   │   └── test_field_types.py
-│   ├── raw_ingress/
-│   │   ├── test_ivr_payload.py
-│   │   ├── test_sms_payload.py
-│   │   ├── test_ussd_payload.py
-│   │   └── test_whatsapp_payload.py
-│   ├── public_agent/
-│   │   └── test_standardized_intake_payload.py
-│   ├── governance/
-│   │   ├── test_claim_evaluation_payload.py
-│   │   ├── test_extracted_entity_payload.py
-│   │   └── test_governance_outcome_payload.py
-│   ├── caseworker/
-│   │   ├── test_case_review_payload.py
-│   │   └── test_review_outcome_payload.py
-│   ├── delivery/
-│   │   ├── test_confirmation_dispatch_result.py
-│   │   ├── test_confirmation_request_payload.py
-│   │   ├── test_outbound_confirmation_payload.py
-│   │   └── test_transmission_ack.py
-│   └── disbursement/
-│       └── test_disbursement_callback_payload.py
-```
-
----
-
-## 3. Modular Code, Documentation & Rationale (SRP)
-
-### 3.1 Focused Model Validators
-* Split validation logic into separate, single-purpose `@model_validator(mode="after")` methods rather than creating monolithic validator functions.
-* **Keep Cyclomatic Complexity Low**: Each validator method should validate one concern (e.g. non-empty check, matrix compatibility, format validation). Keep branch count under 12 to eliminate `# noqa: PLR0912` suppressions.
+### 2.1 Public-First / Private-at-Bottom Rule
+1. **Lifecycle & Constructors (Top)**: `__init__`, followed by class factories (`from_env`, `from_default`).
+2. **Properties & Primary Public Workflow APIs (Upper Middle)**: Properties and primary execution entrypoints.
+3. **Public Component & Stage Methods (Lower Middle)**: Public helper methods and sub-stage handlers.
+4. **Private Helper Methods (Bottom)**: All internal private methods (prefixed with a leading underscore `_`) must be placed strictly at the **bottom** of the class definition below all public and static methods.
 
 ```python
-# GOOD: Focused single-responsibility validators
-@model_validator(mode="after")
-def validate_non_empty_content(self) -> "PublicAgentStandardizedIntakePayload":
-    if not self.unprocessed_input_content or not self.unprocessed_input_content.strip():
-        raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
-    return self
+class ComponentService:
+    """Service class demonstrating clean method ordering."""
 
-@model_validator(mode="after")
-def validate_channel_structure_matrix(self) -> "PublicAgentStandardizedIntakePayload":
-    # Validate channel_type vs structure_level compatibility matrix
-    return self
+    def __init__(self, dependency: DependencyClient) -> None:
+        """Initializes service with required dependency."""
+        self._dependency = dependency
 
-@model_validator(mode="after")
-def validate_content_format(self) -> "PublicAgentStandardizedIntakePayload":
-    # Validate content formatting (URL, DTMF regex, max length)
-    return self
+    @classmethod
+    def from_env(cls) -> "ComponentService":
+        """Factory constructor building instance from environment."""
+        return cls(dependency=DependencyClient.from_env())
+
+    # -------------------------------------------------------------------------
+    # Primary Public APIs
+    # -------------------------------------------------------------------------
+
+    async def execute_workflow(self, request: RequestPayload) -> ResponsePayload:
+        """Primary public entrypoint executing the end-to-end workflow."""
+        validated = self.validate_stage(request)
+        return await self._dispatch_internal(validated)
+
+    def validate_stage(self, request: RequestPayload) -> ValidatedPayload:
+        """Public validation sub-stage."""
+        ...
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
+
+    async def _dispatch_internal(self, payload: ValidatedPayload) -> ResponsePayload:
+        """Internal private helper handling dispatching logic."""
+        ...
 ```
 
-### 3.2 Direct Enum Member Comparisons
-* Domain Enums inherit from `StrEnum`. Compare Enum members directly (`self.payload_type == PayloadType.AUDIO`) instead of using `.value` or wrapping with `str(...)`.
-* **Correct**: `if self.payload_type == PayloadType.AUDIO:`
-* **Incorrect**: `if str(self.payload_type) == PayloadType.AUDIO.value:`
+---
 
-### 3.3 Explicit Rationale Comments ("WHY" Explanations)
-* Always add comments or docstrings explaining **why** a non-obvious constraint, length formula, or security override exists:
-  * **Identity Pseudonymization**: Document why `tokenized_citizen_id` is agnostic to identity source (MSISDN vs. UIDAI Token UID under Aadhaar Act §29).
-  * **Resource Ceilings**: Document why `AudioDurationSeconds` caps at 600s (prevents GPU memory overflow and context truncation on SLM workers).
-  * **Security Zeroing**: Document why `object.__setattr__` is used to override frozen models during prompt-injection neutralization.
+## 3. Modularity & Single Responsibility Principle (SRP)
 
-### 3.4 Architecture Decision Record (ADR) References
-* All model classes, validation handlers, and foundational modules **must include reference links to their respective ADR `.md` files** in `decisions/`:
+### 3.1 Low Cyclomatic Complexity
+* Keep branch count and nesting shallow (cyclomatic complexity $< 12$).
+* Eliminate complex branching with early returns, lookup dictionaries, or decomposed private helper methods. Avoid `# noqa: PLR0912` suppressions.
+
+### 3.2 Focused Single-Responsibility Functions
+* Every function or validator should validate or perform exactly **one concern** (e.g. non-empty check, matrix compatibility, or format validation).
+
+### 3.3 Direct Enum Comparisons
+* When comparing `StrEnum` members, compare them directly without redundant `.value` or `str(...)` casting:
+  * **Correct**: `if status == ApplicationStatus.APPROVED:`
+  * **Incorrect**: `if str(status) == ApplicationStatus.APPROVED.value:`
+
+### 3.4 Strict Dependency Injection & Non-Nullable Constructors
+* **No Magic `None` Defaults in `__init__`**: Avoid accepting `None` as a parameter default in `__init__` to silently fall back to environment variable reads or default creation. Doing so obscures dependency contracts and masks configuration bugs.
+* **Explicit Injected Dependencies**: Constructor parameters for core classes must be non-nullable.
+* **Factory Class Methods**: Use `@classmethod` factories (`from_env(cls)`, `from_default(cls)`) when default or environment-based construction is needed.
 
 ```python
-class PublicAgentStandardizedIntakePayload(StrictBaseModel):
-    """Normalized, zero-PII public agent intake payload (Layer 2 -> Layer 3).
+# CORRECT: Explicit constructor + factory method
+class IngestionGateway:
+    def __init__(self, tokenizer: Tokenizer, rate_limiter: RateLimiter) -> None:
+        self._tokenizer = tokenizer
+        self._rate_limiter = rate_limiter
 
-    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
-    See: decisions/step0.3_zero_trust_tokenization.md
-    """
+    @classmethod
+    def from_env(cls) -> "IngestionGateway":
+        return cls(
+            tokenizer=Tokenizer.from_env(),
+            rate_limiter=RateLimiter.from_env(),
+        )
+
+# INCORRECT: Magic None fallback in __init__
+class IngestionGateway:
+    def __init__(self, tokenizer: Tokenizer | None = None) -> None:
+        self._tokenizer = tokenizer or Tokenizer.from_env()
 ```
 
-### 3.5 Model-Agnostic Comments & Future-Proofing
-* **Avoid Specific Vendor/Model Names**: Never hardcode specific model, vendor, or framework names (e.g. `Ollama`, `LLaMA-3`, `Whisper`, `GPT-4`) in code comments or docstrings, as underlying AI models will evolve or be replaced.
-* **Use Architectural Role Terms**: Always use generic, role-based terminology:
-  * **Correct**: `SLM/NLU extraction pipeline`, `ASR/STT audio transcription worker`, `AI governance engine`
-  * **Incorrect**: `Ollama pipeline`, `Whisper transcription worker`, `LLaMA model`
+---
 
-### 3.6 Method Ordering & Placement of Private Helpers
-* **Public Interface First**: Constructors (`__init__`), factory class methods (`from_env`, `from_default`), and public domain/orchestration interface methods must be declared first in class definitions.
-* **Private Helpers at the Bottom**: All internal private helper methods (prefixed with a leading underscore `_`, e.g., `_extract_inspectable_text`, `_canonicalize_whatsapp`) must strictly be placed at the **bottom** of the class definition below all public, static, and class methods.
-* **Module-Level Helpers**: Module-level private functions should similarly reside below primary class definitions or at the bottom of the module to maintain clean, top-down readability for engineers.
+## 4. Clean Refactoring & Technical Debt Prevention
 
-### 3.7 Clean Method Renaming & Legacy Caller Elimination
-* **Atomic Refactoring Across Callers**: When renaming or refactoring a method, function, or class, atomically migrate 100% of internal callers, test cases, and fixture references across the repository in the same change.
-* **Eliminate Legacy Shims & Forwarding Aliases**: Do not retain temporary backward-compatibility wrappers, aliases, or forwarding stubs (e.g., `validate_and_canonicalize`, `validate_whatsapp_signature`) once callers are migrated. Delete deprecated names immediately to eliminate dead code paths, avoid technical debt, and keep the public API unambiguous.
+### 4.1 Atomic Caller Migration
+* When renaming a class, method, or function, atomically migrate 100% of internal callers, test cases, and fixture references across the repository in the same change.
+
+### 4.2 Immediate Elimination of Legacy Shims
+* Do not retain temporary backward-compatibility aliases, wrappers, or forwarding shims once callers have been migrated.
+* Delete deprecated names immediately to eliminate dead code paths, maintain single sources of truth, and keep APIs clean.
 
 ---
 
-## 4. Strict Type Safety & Immutability
+## 5. Architectural Documentation & Role-Based Terminology
 
-### 4.1 Base Model Configuration (`StrictBaseModel`)
-All domain models must inherit from `StrictBaseModel`, which enforces strict security and immutability:
+### 5.1 Model-Agnostic Docstrings & Comments
+* **Avoid Specific Vendor/Model Names**: Never hardcode specific third-party model, vendor, or framework names (e.g. `Ollama`, `Whisper`, `LLaMA`, `GPT-4`) in code comments or docstrings.
+* **Use Architectural Role Terms**: Always describe components by their structural and functional role:
+  * **Correct**: `SLM entity extraction pipeline`, `ASR audio transcription worker`, `NMT translation service`
+  * **Incorrect**: `Ollama model call`, `Whisper transcription worker`, `GPT-4 fallback`
 
-```python
-class StrictBaseModel(BaseModel):
-    """Base model for all inter-layer payloads.
+### 5.2 Explicit "WHY" Rationale Comments
+* Always add comments explaining **why** a non-obvious constraint, formula, or boundary condition exists, rather than merely restating what the code does.
 
-    See: decisions/step2.0_canonical_domain_schemas.md#31-base-configuration-strictbasemodel
-    See: decisions/step1.2_runtime_strictness_linting.md
-    """
-    model_config = ConfigDict(
-        extra="forbid",             # Rejects unexpected / injected keys
-        frozen=True,                # Guarantees immutability post-instantiation
-        validate_assignment=True,   # Validates assignments if unfrozen
-        str_strip_whitespace=True,  # Auto-strips leading/trailing whitespace
-        use_enum_values=True,       # Coerces enum values for clean serialization
-    )
+---
+
+## 6. Test Hierarchy Symmetry & Verification
+
+### 6.1 1:1 Mirroring
+* The test directory tree under `tests/` must mirror `src/` 1:1. Each source module `src/foo/bar.py` must have a corresponding test file `tests/foo/test_bar.py`.
+
+### 6.2 Pre-Commit Verification Suite
+Always run the complete verification suite before completing any code change:
+
+```bash
+# 1. Format & Linting
+.venv/bin/ruff format . && .venv/bin/ruff check --fix .
+
+# 2. Test Suite
+.venv/bin/pytest
+
+# 3. Static Type Checking
+.venv/bin/mypy src tests
 ```
-
-### 4.2 Reusable Constrained Types (`src/data_models/common/field_types.py`) vs. Inline Model Fields
-
-#### 4.2.1 When to Promote to `field_types.py` (Centralized Type Aliases)
-Promote a field to `src/data_models/common/field_types.py` as an `Annotated[T, Field(...)]` type alias when:
-* **Cross-Cutting Identifiers & Keys**: The field crosses **2 or more architecture layers, channels, or lifecycle states** (e.g. `SessionId`, `PhoneNumberE164`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `UnprocessedInputContent`). Centralization prevents schema and validation drift across microservices.
-* **System-Wide Security & Compliance Invariants**: The field enforces non-negotiable platform-level constraints:
-  * Zero-Trust anonymity (`HmacCitizenToken`: exact 64-character SHA-256 hex digest under Aadhaar Act §29).
-  * Anti-replay / clock-skew freshness (`UtcTimestamp`: 5-second maximum future skew check via `AfterValidator`).
-  * Resource protection ceilings (`AudioDurationSeconds`: bounded $[1, 600]$ seconds to protect SLM/ASR GPU workers from Out-Of-Memory crashes).
-  * Confidence scoring bounds (`AiConfidenceScore`: bounded $[0.0, 1.0]$).
-
-#### 4.2.2 When to Keep Field Definitions Inline in Domain Models
-Keep field constraints inline within their specific domain model class when:
-* **Protocol / Channel-Specific Framing**: The field belongs strictly to a single transport adapter or carrier protocol (e.g. `channel_message_id` for WhatsApp `wamid` deduplication; `ussd_service_code` for GSM SS7 `*147#` shortcodes).
-* **Stage-Specific Lifecycle Metadata**: The attribute exists only at a single adjudication step (e.g. `reviewer_id` in caseworker review; `bank_reference_id` in bank callback).
-* **Context-Varying Free Text**: The length bounds depend on the specific business role (e.g. `text_body` $\le 1000$ chars, `review_notes` $5 \le \text{len} \le 2000$, `unprocessed_input_content` $\le 5000$).
-
-#### 4.2.3 Pydantic v2 Metadata Inheritance & Avoiding Redundant `Field(...)`
-* **Rely on Centralized Metadata**: When a model field uses a type alias from `field_types.py`, declare it cleanly as `field_name: FieldType` without redundant `Field(...)` wrapping:
-  ```python
-  # CORRECT: Clean, relies on centralized bounds and default description in field_types.py
-  session_id: SessionId
-  tokenized_citizen_id: HmacCitizenToken
-
-  # INCORRECT: Redundant duplicate description / empty Field wrapping
-  tokenized_citizen_id: HmacCitizenToken = Field(
-      ..., description="Zero-PII SHA-256 HMAC citizen identity token"
-  )
-  ```
-* **Contextual Override Only**: Use `Field(..., description="...")` on a typed field *only* when providing domain-specific documentation that intentionally overrides the generic base description in generated OpenAPI schemas.
-
-### 4.3 Strict Dependency Injection & Non-Nullable Constructors
-* **No Magic `None` Fallbacks in Constructors**: Never accept `None` as a default parameter value in class constructors (`__init__`) to implicitly trigger default instantiation or environment variable reads. Doing so obscures dependency contracts and masks upstream configuration bugs.
-* **Explicit Dependency Injection**: Constructor parameters for core domain components, gateways, and services must be strictly non-nullable (e.g., `pepper_key: str`, `tokenizer: ZeroTrustIdentityTokenizer`).
-* **Dedicated Factory Class Methods**: When effortless construction from default components or environment variables is desired, implement explicit `@classmethod` factories (e.g., `from_env(cls)` or `from_default(cls)`).
-* **Permitted Nullability**: `None` is acceptable as a parameter value only at perimeter security boundaries (to evaluate absent HTTP headers cleanly) and within Pydantic schema state matrices representing inapplicable state fields.
-
----
-
-## 5. Systemic Logical Error Prevention & Verification Methodology
-
-To systematically prevent logical errors anywhere across the system (models, connectors, orchestrators, state machines, and API boundaries):
-
-### 5.1 Lifecycle Dataflow Tracing
-* **Trace Across Boundaries**: Never design validation rules or logic for a single component in isolation. Always trace:
-  1. *Origin*: Where did this payload or state originate?
-  2. *Survival*: What foreign keys or context must survive across this transition to maintain auditability?
-  3. *Destination*: Who consumes this payload next, and what guarantees do they expect?
-
-### 5.2 Global System Invariants
-Code validators and business logic against non-negotiable system invariants:
-* **Identity Invariant**: Zero cleartext PII in Layer 3 and Layer 4 contracts.
-* **Auditability Invariant**: Every human manual adjudication MUST reference the escalation ticket ID (`SPP-CASE-...`) and carry officer audit notes (`review_notes`).
-* **Financial Invariant**: Payout transaction IDs (`disbursement_txn_id`) and statuses exist ONLY for approved outcomes; rejection reasons exist ONLY for rejected outcomes.
-* **Security Zeroing Invariant**: Adversarial injection attempts strictly zero confidence scores (`0.0`) and wipe extracted entities.
-* **Fail-Fast Configuration & Secrets Invariant**: Never define fallback cryptographic keys or default production secrets in code. If an environment-injected secret (e.g. cryptographic pepper key, bearer token) is missing or empty, fail fast immediately with an explicit exception (`ValueError` or `RuntimeError`). Do not fall back to insecure default strings.
-
-### 5.3 Exhaustive Matrix & Property-Based Testing
-* **100% Enum Coverage**: State machine models and decision routers must use `@pytest.mark.parametrize` across 100% of Enum members to verify required, optional, and forbidden fields for every state.
-* **Property-Based Verification**: Use property-based testing to stress-test logical boundaries against unexpected edge-case combinations.
-
----
-
-## 6. Verification Checklist
-
-Before committing any changes to models, schemas, or logic:
-
-1. **Ruff Linter & Formatter**:
-   ```bash
-   .venv/bin/ruff check --fix . && .venv/bin/ruff format .
-   ```
-2. **Pytest Test Suite**:
-   ```bash
-   .venv/bin/pytest
-   ```
-3. **MyPy Static Type Checker**:
-   ```bash
-   .venv/bin/mypy src tests
-   ```
