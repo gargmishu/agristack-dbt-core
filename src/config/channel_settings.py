@@ -15,42 +15,77 @@ DEFAULT_HELPLINE_NUMBER: Final[str] = "1800-180-1551"
 
 
 def get_whatsapp_interface_id() -> str:
-    """Returns configured WhatsApp webhook interface ID from environment or default."""
+    """Returns configured WhatsApp webhook interface ID from environment or default.
+
+    Returns:
+        Configured WhatsApp interface ID string.
+    """
     return os.getenv("WHATSAPP_INTERFACE_ID", DEFAULT_WHATSAPP_INTERFACE)
 
 
 def get_ivr_interface_id() -> str:
-    """Returns configured IVR telephony interface ID from environment or default."""
+    """Returns configured IVR telephony interface ID from environment or default.
+
+    Returns:
+        Configured IVR telephony interface ID string.
+    """
     return os.getenv("IVR_INTERFACE_ID", DEFAULT_IVR_INTERFACE)
 
 
 def get_ussd_interface_id() -> str:
-    """Returns configured USSD signaling interface ID from environment or default."""
+    """Returns configured USSD signaling interface ID from environment or default.
+
+    Returns:
+        Configured USSD interface ID string.
+    """
     return os.getenv("USSD_INTERFACE_ID", DEFAULT_USSD_INTERFACE)
 
 
 def get_sms_interface_id() -> str:
-    """Returns configured SMS gateway interface ID from environment or default."""
+    """Returns configured SMS gateway interface ID from environment or default.
+
+    Returns:
+        Configured SMS gateway interface ID string.
+    """
     return os.getenv("SMS_INTERFACE_ID", DEFAULT_SMS_INTERFACE)
 
 
 def get_helpline_number() -> str:
-    """Returns configured grievance helpline number from environment or default."""
+    """Returns configured grievance helpline number from environment or default.
+
+    Returns:
+        Toll-free helpline phone number string.
+    """
     return os.getenv("HELPLINE_NUMBER", DEFAULT_HELPLINE_NUMBER)
 
 
 def get_rate_per_minute() -> int:
-    """Returns the configured sustained ingress rate limit per minute."""
+    """Returns the configured sustained ingress rate limit per minute.
+
+    Returns:
+        Positive integer representing allowed requests per minute.
+    """
     return _get_positive_int("RATE_LIMIT_PER_MINUTE")
 
 
 def get_rate_limit_capacity() -> int:
-    """Returns the configured ingress burst capacity."""
+    """Returns the configured ingress burst capacity.
+
+    Returns:
+        Positive integer representing maximum burst token capacity.
+    """
     return _get_positive_int("RATE_LIMIT_CAPACITY")
 
 
 def get_pepper_secret() -> str:
-    """Returns configured cryptographic pepper secret for Zero-PII HMAC tokenization."""
+    """Returns configured cryptographic pepper secret for Zero-PII HMAC tokenization.
+
+    Returns:
+        Non-empty pepper secret string.
+
+    Raises:
+        ValueError: If environment variable 'AGRISTACK_PEPPER_SECRET' is missing or empty.
+    """
     pepper_secret = os.getenv("AGRISTACK_PEPPER_SECRET")
     if not pepper_secret or not pepper_secret.strip():
         raise ValueError(

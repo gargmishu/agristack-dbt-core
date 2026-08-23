@@ -301,7 +301,18 @@ class ClaimOrchestrator:
         active_season: CropSeason,
         approved_payouts_ledger: set[tuple[str, str]] | None,
     ) -> GovernanceOutcomePayload:
-        """Constructs context and invokes Gate 3 policy adjudication."""
+        """Constructs context and invokes Gate 3 policy adjudication.
+
+        Args:
+            intake: Standardized intake payload containing session and citizen token.
+            payload_id: Unique extraction payload identifier.
+            extracted_entities: Extracted domain entities and AI confidence score.
+            active_season: Active crop season for anti-duplicate claim evaluation.
+            approved_payouts_ledger: Set of approved (citizen_token, season) tuples.
+
+        Returns:
+            GovernanceOutcomePayload containing the adjudication verdict.
+        """
         claim_payload = ClaimEvaluationPayload(
             session_id=intake.session_id,
             payload_id=payload_id,
@@ -319,7 +330,17 @@ class ClaimOrchestrator:
         extracted_entities: ExtractedEntityPayload,
         missing_entities: list[str],
     ) -> OrchestrationExecutionResult:
-        """Constructs reprompt governance outcome and execution result for incomplete claims."""
+        """Constructs reprompt governance outcome and execution result for incomplete claims.
+
+        Args:
+            session_id: Active session identifier.
+            payload_id: Unique extraction payload identifier.
+            extracted_entities: Partial extracted domain entities.
+            missing_entities: List of missing mandatory entity field names.
+
+        Returns:
+            OrchestrationExecutionResult populated with reprompt instructions.
+        """
         fields_str = ", ".join(missing_entities)
         reprompt_msg = f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {fields_str}"
         reprompt_outcome = GovernanceOutcomePayload(
@@ -347,7 +368,18 @@ class ClaimOrchestrator:
         extracted_entities: ExtractedEntityPayload,
         governance_outcome: GovernanceOutcomePayload,
     ) -> tuple[DisbursementCallbackPayload | None, str | None]:
-        """Dispatches automated payouts or stages caseworker tickets based on adjudication."""
+        """Dispatches automated payouts or stages caseworker tickets based on adjudication.
+
+        Args:
+            intake: Standardized intake payload with session and citizen tokens.
+            payload_id: Unique extraction payload identifier.
+            extracted_entities: Extracted domain entities payload.
+            governance_outcome: Outcome verdict from Gate 3 adjudication.
+
+        Returns:
+            Tuple of (DisbursementCallbackPayload if approved payout dispatched,
+            escalation_case_id if staged for caseworker review).
+        """
         if governance_outcome.governance_action.is_approval:
             disbursement_cb = await self._payment_rail.initiate_disbursement(governance_outcome)
             return disbursement_cb, None
@@ -370,7 +402,17 @@ class ClaimOrchestrator:
         extracted_entities: ExtractedEntityPayload,
         escalation_case_id: str,
     ) -> str:
-        """Constructs and stages an escalation ticket in the case management service."""
+        """Constructs and stages an escalation ticket in the case management service.
+
+        Args:
+            intake: Standardized intake payload with session and raw content.
+            payload_id: Unique extraction payload identifier.
+            extracted_entities: Extracted domain entities payload.
+            escalation_case_id: Pre-generated escalation case identifier.
+
+        Returns:
+            The staged escalation case identifier string.
+        """
         case_payload = CaseworkerCaseReviewPayload(
             escalation_case_id=escalation_case_id,
             session_id=intake.session_id,
@@ -399,6 +441,9 @@ class ClaimOrchestrator:
         - 0.40 represents benign low model confidence / unparseable speech (e.g. ambient farm
           noise, dialect mismatch, or transcription timeout), routing safely to the standard
           caseworker review queue (ROUTE_FOR_MANUAL_REVIEW) without false security alarms.
+
+        Returns:
+            ExtractedEntityPayload initialized with 0.40 confidence and UNKNOWN intent.
         """
         return ExtractedEntityPayload(
             application_intent=ApplicationIntent.UNKNOWN,

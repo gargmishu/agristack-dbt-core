@@ -99,7 +99,16 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        """Canonicalizes WhatsApp webhook payload into standardized intake contract."""
+        """Canonicalizes WhatsApp webhook payload into standardized intake contract.
+
+        Args:
+            payload: WhatsApp ingress payload with text or audio URL.
+            tokenized_id: 64-character SHA-256 HMAC citizen identity token.
+            language_locale: Target language locale identifier.
+
+        Returns:
+            Canonicalized PublicAgentStandardizedIntakePayload instance.
+        """
         if payload.payload_type.is_audio:
             unprocessed_content = str(payload.audio_recording_url)
             structure_level = StructureLevel.FREE_TEXT
@@ -127,7 +136,16 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        """Canonicalizes IVR voice call payload into standardized intake contract."""
+        """Canonicalizes IVR voice call payload into standardized intake contract.
+
+        Args:
+            payload: IVR telephony ingress payload with audio URL.
+            tokenized_id: 64-character SHA-256 HMAC citizen identity token.
+            language_locale: Target language locale identifier.
+
+        Returns:
+            Canonicalized PublicAgentStandardizedIntakePayload instance.
+        """
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
             tokenized_citizen_id=tokenized_id,
@@ -145,7 +163,16 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        """Canonicalizes USSD signaling payload into standardized intake contract."""
+        """Canonicalizes USSD signaling payload into standardized intake contract.
+
+        Args:
+            payload: USSD ingress payload with digit selection string.
+            tokenized_id: 64-character SHA-256 HMAC citizen identity token.
+            language_locale: Target language locale identifier.
+
+        Returns:
+            Canonicalized PublicAgentStandardizedIntakePayload instance.
+        """
         return PublicAgentStandardizedIntakePayload(
             session_id=payload.session_id,
             tokenized_citizen_id=tokenized_id,
@@ -163,7 +190,16 @@ class PayloadCanonicalizer:
         tokenized_id: str,
         language_locale: LanguageLocale,
     ) -> PublicAgentStandardizedIntakePayload:
-        """Canonicalizes SMS text payload into standardized intake contract."""
+        """Canonicalizes SMS text payload into standardized intake contract.
+
+        Args:
+            payload: SMS carrier ingress payload with raw message text.
+            tokenized_id: 64-character SHA-256 HMAC citizen identity token.
+            language_locale: Target language locale identifier.
+
+        Returns:
+            Canonicalized PublicAgentStandardizedIntakePayload instance.
+        """
         unprocessed_content = PiiPurgeGuard.redact_all(
             payload.text_body, session_id=payload.session_id
         )

@@ -84,32 +84,71 @@ class CaseManagementService:
         return True
 
     def get_staged_case(self, escalation_case_id: str) -> CaseworkerCaseReviewPayload | None:
-        """Retrieves a staged case review payload by escalation incident ticket ID."""
+        """Retrieves a staged case review payload by escalation incident ticket ID.
+
+        Args:
+            escalation_case_id: The unique incident case ticket identifier string.
+
+        Returns:
+            CaseworkerCaseReviewPayload if found, None otherwise.
+        """
         return self._staged_cases.get(escalation_case_id)
 
     def list_staged_cases(self) -> list[CaseworkerCaseReviewPayload]:
-        """Returns all currently staged caseworker incident review tickets."""
+        """Returns all currently staged caseworker incident review tickets.
+
+        Returns:
+            List of all staged CaseworkerCaseReviewPayload instances.
+        """
         return list(self._staged_cases.values())
 
     def get_case_status(self, escalation_case_id: str) -> ApplicationStatus | None:
-        """Returns the current lifecycle status for a staged or reviewed case."""
+        """Returns the current lifecycle status for a staged or reviewed case.
+
+        Args:
+            escalation_case_id: The unique incident case ticket identifier string.
+
+        Returns:
+            Current ApplicationStatus enum value if case exists, None otherwise.
+        """
         return self._case_statuses.get(escalation_case_id)
 
     def list_review_audit_entries(
         self, escalation_case_id: str
     ) -> list[CaseworkerReviewOutcomePayload]:
-        """Returns a chronological copy of the audit history for one escalation case."""
+        """Returns a chronological copy of the audit history for one escalation case.
+
+        Args:
+            escalation_case_id: The unique incident case ticket identifier string.
+
+        Returns:
+            List of CaseworkerReviewOutcomePayload entries in chronological order.
+        """
         return list(self._review_audit_log.get(escalation_case_id, []))
 
     def get_citizen_clarification(self, escalation_case_id: str) -> str | None:
-        """Returns the latest citizen clarification recorded for an escalation case."""
+        """Returns the latest citizen clarification recorded for an escalation case.
+
+        Args:
+            escalation_case_id: The unique incident case ticket identifier string.
+
+        Returns:
+            Latest clarification text string if available, None otherwise.
+        """
         clarifications = self.get_citizen_clarifications(escalation_case_id)
         return clarifications[-1].text if clarifications else None
 
     def get_citizen_clarifications(
         self, escalation_case_id: str
     ) -> list[CitizenClarificationPayload]:
-        """Returns a copy of all citizen clarifications recorded for an escalation case."""
+        """Returns a copy of all citizen clarifications recorded for an escalation case.
+
+        Args:
+            escalation_case_id: The unique incident case ticket identifier string.
+
+        Returns:
+            List of CitizenClarificationPayload objects in historical order.
+        """
         case_record = self._case_records.get(escalation_case_id)
         return list(case_record.clarification_history) if case_record else []
 

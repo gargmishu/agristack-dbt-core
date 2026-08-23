@@ -108,7 +108,16 @@ class IngestionFirewall:
         signature_header: str | None,
         app_secret: str,
     ) -> bool:
-        """Verifies carrier SHA-256 HMAC payload signatures (e.g. Meta WhatsApp, BSPs)."""
+        """Verifies carrier SHA-256 HMAC payload signatures (e.g. Meta WhatsApp, BSPs).
+
+        Args:
+            payload_bytes: Raw request body bytes.
+            signature_header: The value of the signature header (e.g., X-Hub-Signature-256).
+            app_secret: Shared HMAC secret key.
+
+        Returns:
+            True if signature is valid and authentic, False otherwise.
+        """
         return CarrierAuthValidator.validate_hmac_signature(
             payload_bytes=payload_bytes,
             signature_header=signature_header,
@@ -120,7 +129,15 @@ class IngestionFirewall:
         auth_header: str | None,
         expected_token: str,
     ) -> bool:
-        """Verifies carrier bearer token for IVR (SIP), USSD (SS7), and SMS gateway requests."""
+        """Verifies carrier bearer token for IVR (SIP), USSD (SS7), and SMS gateway requests.
+
+        Args:
+            auth_header: Authorization header string (e.g. 'Bearer <token>').
+            expected_token: Shared carrier bearer token secret.
+
+        Returns:
+            True if bearer token matches, False otherwise.
+        """
         return CarrierAuthValidator.validate_carrier_bearer_token(
             auth_header=auth_header,
             expected_token=expected_token,
@@ -205,7 +222,14 @@ class IngestionFirewall:
         | UssdIngressPayload
         | SmsIngressPayload,
     ) -> str | None:
-        """Extracts free-form text content for ingress prompt injection screening."""
+        """Extracts free-form text content for ingress prompt injection screening.
+
+        Args:
+            payload: Raw carrier ingress payload across supported channels.
+
+        Returns:
+            Extractable text string if payload contains text, or None if audio/digit menu.
+        """
         if isinstance(payload, WhatsAppIngressPayload | SmsIngressPayload) and payload.text_body:
             return payload.text_body
         return None

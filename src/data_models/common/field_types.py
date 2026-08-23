@@ -141,6 +141,15 @@ def validate_utc_freshness(dt: datetime) -> datetime:
     Why 5s? A tight 5-second window accommodates legitimate NTP server drift between edge
     connectors and core microservices while strictly blocking future-timestamp replay
     attacks.
+
+    Args:
+        dt: Datetime object to validate and normalize to UTC.
+
+    Returns:
+        Validated timezone-aware UTC datetime.
+
+    Raises:
+        ValueError: If timestamp is more than 5 seconds in the future.
     """
     now = datetime.now(UTC)
     parsed_dt = dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)

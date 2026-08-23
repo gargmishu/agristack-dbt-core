@@ -111,12 +111,26 @@ class AdversarialPromptFirewall:
 
     @classmethod
     def is_adversarial(cls, input_text: str) -> bool:
-        """Convenience method returning True if text contains adversarial patterns."""
+        """Convenience method returning True if text contains adversarial patterns.
+
+        Args:
+            input_text: Raw citizen text or transcribed speech string.
+
+        Returns:
+            True if text matches adversarial prompt injection patterns, False otherwise.
+        """
         flagged, _ = cls.inspect(input_text)
         return flagged
 
     @classmethod
     def get_threat_category(cls, input_text: str) -> ThreatCategory | None:
-        """Convenience method returning ThreatCategory if text is adversarial, else None."""
+        """Convenience method returning ThreatCategory if text is adversarial, else None.
+
+        Args:
+            input_text: Raw citizen text or transcribed speech string.
+
+        Returns:
+            ThreatCategory enum value if text is adversarial, None otherwise.
+        """
         _, category = cls.inspect(input_text)
         return category

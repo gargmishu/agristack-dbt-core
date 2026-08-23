@@ -120,7 +120,14 @@ class PiiPurgeGuard:
 
     @classmethod
     def _contains_cleartext_phone(cls, text: str) -> bool:
-        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers."""
+        """Checks if a string contains raw E.164 or 10-digit Indian phone numbers.
+
+        Args:
+            text: Input string to scan for cleartext phone number patterns.
+
+        Returns:
+            True if cleartext phone pattern is found, False otherwise.
+        """
         if not text or not text.strip():
             return False
         clean = text.strip()
@@ -128,19 +135,40 @@ class PiiPurgeGuard:
 
     @classmethod
     def _contains_cleartext_aadhaar(cls, text: str) -> bool:
-        """Checks if a string contains a 12-digit Aadhaar number pattern."""
+        """Checks if a string contains a 12-digit Aadhaar number pattern.
+
+        Args:
+            text: Input string to scan for Aadhaar patterns.
+
+        Returns:
+            True if cleartext 12-digit Aadhaar pattern is found, False otherwise.
+        """
         if not text or not text.strip():
             return False
         return bool(_AADHAAR_PATTERN.search(text.strip()))
 
     @classmethod
     def _redact_phone_numbers(cls, text: str) -> str:
-        """Replaces cleartext E.164 and 10-digit Indian phone numbers with [REDACTED]."""
+        """Replaces cleartext E.164 and 10-digit Indian phone numbers with [REDACTED].
+
+        Args:
+            text: Input string with potential phone numbers.
+
+        Returns:
+            Sanitized text with phone numbers replaced by [REDACTED].
+        """
         result = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
         result = _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, result)
         return result
 
     @classmethod
     def _redact_aadhaar_numbers(cls, text: str) -> str:
-        """Replaces cleartext 12-digit Aadhaar UID patterns with [REDACTED]."""
+        """Replaces cleartext 12-digit Aadhaar UID patterns with [REDACTED].
+
+        Args:
+            text: Input string with potential Aadhaar numbers.
+
+        Returns:
+            Sanitized text with 12-digit Aadhaar patterns replaced by [REDACTED].
+        """
         return _AADHAAR_PATTERN.sub(_REDACTION_MARKER, text)

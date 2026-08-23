@@ -180,7 +180,14 @@ class MultichannelNotificationService:
     # -------------------------------------------------------------------------
 
     def _format_rich_card(self, request: NotificationRequestPayload) -> str:
-        """Formats rich WhatsApp markdown card message."""
+        """Formats rich WhatsApp markdown card message.
+
+        Args:
+            request: Notification request containing action and outcome details.
+
+        Returns:
+            Formatted Markdown card string for WhatsApp channel.
+        """
         if request.governance_action.is_approval:
             return (
                 "🌾 *AgriStack Sovereign Relief Confirmation*\n\n"
@@ -214,7 +221,14 @@ class MultichannelNotificationService:
         )
 
     def _format_spoken_voice_text(self, request: NotificationRequestPayload) -> str:
-        """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis."""
+        """Formats vernacular text string for Bhashini Text-To-Speech (TTS) synthesis.
+
+        Args:
+            request: Notification request containing action and locale details.
+
+        Returns:
+            Phonetically formatted vernacular text string for voice synthesis.
+        """
         is_hindi = request.language_locale.is_hindi
         if request.governance_action.is_approval:
             return (
@@ -247,7 +261,14 @@ class MultichannelNotificationService:
         )
 
     def _format_plain_text(self, request: NotificationRequestPayload) -> str:
-        """Formats compact plain text string strictly under 160 characters for SMS and USSD."""
+        """Formats compact plain text string strictly under 160 characters for SMS and USSD.
+
+        Args:
+            request: Notification request containing action and outcome details.
+
+        Returns:
+            Concise text string strictly bounded to maximum 160 characters.
+        """
         if request.governance_action.is_approval:
             msg = f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."
         elif request.governance_action.is_review:
@@ -267,7 +288,15 @@ class MultichannelNotificationService:
 
     @staticmethod
     def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:
-        """Returns human-readable, channel-adapted label for a DomainEntityKey."""
+        """Returns human-readable, channel-adapted label for a DomainEntityKey.
+
+        Args:
+            entity: Domain entity key to format, or None.
+            is_hindi: Whether to format the label in Hindi vernacular.
+
+        Returns:
+            Channel-adapted human-readable string label.
+        """
         if entity is None:
             return "kripya vivaran" if is_hindi else "required details"
         if is_hindi:
