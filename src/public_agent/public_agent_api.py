@@ -10,8 +10,6 @@ Why decouple Layer 3 Public Agent Gateway from Layer 2 Security Gateway?
 2. Domain Intake Routing: Layer 3 provides the public API surface for event intake, structural
    intent evaluation (fast-path DTMF/menu bypass vs. SLM/NLU entity extraction), and session
    correlation before submitting to Layer 4 governance orchestration.
-3. Multi-Channel Normalization: Decouples channel-specific edge nuances (WhatsApp, IVR Voice,
-   USSD Menu, SMS) from the core claim evaluation pipeline.
 
 See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
