@@ -11,7 +11,7 @@ from src.data_models.common import (
     LanguageLocale,
     NotificationDeliveryStatus,
 )
-from src.data_models.delivery import (
+from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
     OutboundNotificationPayload,
 )

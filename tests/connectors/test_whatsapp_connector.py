@@ -11,7 +11,7 @@ from src.data_models.common import (
     NotificationDeliveryStatus,
     PayloadType,
 )
-from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
+from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 EXPECTED_DURATION = 15

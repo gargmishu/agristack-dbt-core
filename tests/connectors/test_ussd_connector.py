@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.config import DEFAULT_USSD_INTERFACE
 from src.connectors import UssdConnector
 from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
-from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
+from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import UssdIngressPayload
 
 

@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.data_models.common import ChannelType, NotificationDeliveryStatus
-from src.data_models.delivery import TransmissionAck
+from src.data_models.notification import TransmissionAck
 
 
 def test_transmission_ack_valid() -> None:

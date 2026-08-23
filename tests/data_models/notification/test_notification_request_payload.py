@@ -10,7 +10,7 @@ from src.data_models.common import (
     LanguageLocale,
     RejectionReasonCode,
 )
-from src.data_models.delivery import NotificationRequestPayload
+from src.data_models.notification import NotificationRequestPayload
 
 
 def test_notification_request_valid() -> None:

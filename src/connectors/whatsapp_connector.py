@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from src.config import get_whatsapp_interface_id
 from src.data_models.common import ChannelType
-from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
+from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)

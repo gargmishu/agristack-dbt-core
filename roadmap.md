@@ -59,8 +59,8 @@
       │   │   ├── ai_mock_fixtures.py      # Deterministic AI simulation fixtures
       │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
       │   │   └── slm_extractor.py         # Sovereign structured entity extractor
-      │   ├── delivery/                    # Outbound Delivery Engine
-      │   │   └── multichannel_notification_service.py # Adaptive 4-channel delivery engine
+      │   ├── notification/                # Outbound Notification Engine
+      │   │   └── multichannel_notification_service.py # Adaptive 4-channel notification service
       │   └── dpi/                         # Authoritative DPI Registries
       │       ├── dpi_mock_fixtures.py     # Deterministic registry simulation fixtures
       │       ├── agri_registry_service.py # AgriStack cadastral & crop cross-match
@@ -75,7 +75,7 @@
           ├── public_agent/                # Layer 2 -> Layer 3 intake contracts
           ├── governance/                  # Layer 4 decision & entity schemas
           ├── caseworker/                  # Caseworker adjudication models
-          ├── delivery/                    # Outbound notification & request schemas
+          ├── notification/                # Outbound notification & request schemas
           └── disbursement/                # Financial clearing callback schemas
   ```
 

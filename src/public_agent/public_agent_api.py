@@ -27,7 +27,7 @@ from src.data_models.common import (
     LanguageLocale,
     SessionId,
 )
-from src.data_models.delivery import (
+from src.data_models.notification import (
     NotificationDispatchResult,
     NotificationRequestPayload,
     TransmissionAck,
@@ -47,7 +47,9 @@ from src.public_agent.intake_payload_evaluator import (
     IntakeEvaluationResult,
     IntakePayloadEvaluator,
 )
-from src.services.delivery.multichannel_notification_service import MultichannelNotificationService
+from src.services.notification.multichannel_notification_service import (
+    MultichannelNotificationService,
+)
 
 if TYPE_CHECKING:
     pass

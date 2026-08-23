@@ -25,7 +25,7 @@ from src.data_models.common import (
     DomainEntityKey,
     NotificationDeliveryStatus,
 )
-from src.data_models.delivery import (
+from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
     NotificationDispatchResult,
     NotificationRequestPayload,

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from src.config import DEFAULT_SMS_INTERFACE
 from src.connectors import SmsConnector
 from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
-from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
+from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import SmsIngressPayload
 
 

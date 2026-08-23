@@ -53,7 +53,7 @@
              ▼                          ▼                          ▼
 ┌──────────────────────────┐ ┌──────────────────────────┐ ┌──────────────────────────┐
 │ Foundational AI Blocks   │ │ Multichannel Delivery    │ │ Authoritative Registries │
-│ (`src/services/ai/`)     │ │ (`src/services/delivery/`)│ │ (`src/services/dpi/`)    │
+│ (`src/services/ai/`)     │ │ (`src/services/notification/`)│ │ (`src/services/dpi/`) │
 │ • BhashiniService        │ │ • Multichannel-          │ │ • IdentityVerification   │
 │   (ASR / NMT / TTS)      │ │   NotificationService    │ │ • AgriRegistryService    │
 │ • SlmExtractor           │ │   (Adaptive 4-Channel    │ │ • SocialRegistryService  │
@@ -107,9 +107,9 @@ agristack-dbt-core/
 │   ├── gateway/                     # Layer 2 Gateway & Perimeter Security
 │   ├── public_agent/                # Layer 3 Public Agent Intake Gateway
 │   ├── orchestrator/                # Layer 4 Orchestrator Brain & Governance
-│   ├── services/                    # Foundational AI, Delivery & DPI Services
+│   ├── services/                    # Foundational AI, Notification & DPI Services
 │   │   ├── ai/                      # Bhashini ASR/NMT/TTS & SLM Entity Extractor
-│   │   ├── delivery/                # Adaptive 4-Channel Notification Delivery Service
+│   │   ├── notification/            # Adaptive 4-Channel Notification Dispatch Service
 │   │   └── dpi/                     # Identity, Cadastral, OpenSPP & Payment Rails
 │   ├── data_models/                 # Canonical Pydantic v2 schemas
 │   │   ├── common/                  # StrictBaseModel, StrEnums, Constrained Types
@@ -117,7 +117,7 @@ agristack-dbt-core/
 │   │   ├── public_agent/            # PublicAgentStandardizedIntakePayload
 │   │   ├── governance/              # ExtractedEntityPayload, GovernanceOutcomePayload
 │   │   ├── caseworker/              # CaseReviewPayload, ReviewOutcomePayload
-│   │   ├── delivery/                # NotificationRequestPayload, OutboundNotificationPayload
+│   │   ├── notification/            # NotificationRequestPayload, OutboundNotificationPayload
 │   │   └── disbursement/            # DisbursementCallbackPayload
 │   └── errors/                      # RFC 7807 problem details exception handlers
 ├── tests/                           # Unit and integration test suite (1:1 mirror)

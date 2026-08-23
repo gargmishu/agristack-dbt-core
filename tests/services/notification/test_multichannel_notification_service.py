@@ -21,14 +21,14 @@ from src.data_models.common import (
     NotificationDeliveryStatus,
     RejectionReasonCode,
 )
-from src.data_models.delivery import (
+from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
     NotificationDispatchResult,
     NotificationRequestPayload,
     TransmissionAck,
 )
 from src.services.ai.bhashini_service import BhashiniService
-from src.services.delivery import MultichannelNotificationService
+from src.services.notification import MultichannelNotificationService
 
 
 @pytest.fixture

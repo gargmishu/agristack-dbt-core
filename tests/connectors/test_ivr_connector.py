@@ -6,7 +6,7 @@ from pydantic import HttpUrl, ValidationError
 from src.config import DEFAULT_IVR_INTERFACE
 from src.connectors import IvrConnector
 from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
-from src.data_models.delivery import OutboundNotificationPayload, TransmissionAck
+from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
 EXPECTED_DURATION = 45
