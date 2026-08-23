@@ -40,8 +40,6 @@ from src.data_models.raw_ingress import (
     WhatsAppIngressPayload,
 )
 from src.gateway.ingestion_firewall import IngestionFirewall
-from src.gateway.rate_limiter import RateLimiter
-from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 from src.orchestrator.claim_orchestrator import ClaimOrchestrator, OrchestrationExecutionResult
 from src.public_agent.intake_payload_evaluator import (
     IntakeEvaluationResult,
@@ -112,56 +110,44 @@ class PublicAgentApi:
         self._evaluator = evaluator or IntakePayloadEvaluator()
         self._orchestrator = orchestrator or ClaimOrchestrator()
         self._delivery_service = delivery_service or MultichannelNotificationService()
-        self._firewall = firewall
+        self._firewall = firewall or IngestionFirewall.from_env()
 
-    @property
-    def firewall(self) -> IngestionFirewall:
-        """Returns the configured or lazily initialized IngestionFirewall instance."""
-        if self._firewall is None:
-            self._firewall = IngestionFirewall(
-                tokenizer=ZeroTrustIdentityTokenizer.from_env(),
-                rate_limiter=RateLimiter(),
-            )
-        return self._firewall
+    # -------------------------------------------------------------------------
+    # Primary Public Workflow Entrypoints
+    # -------------------------------------------------------------------------
 
-    async def submit_payload(
-        self, payload: PublicAgentStandardizedIntakePayload
-    ) -> tuple[PublicAgentStandardizedIntakePayload, IntakeEvaluationResult]:
-        """Evaluates intake payload structure and returns verified payload with routing flags.
-
-        Performs content sanity checks and determines whether the incoming interaction requires
-        natural language processing (SLM extraction) or can follow a deterministic structured path.
+    async def process_raw_ingress(
+        self,
+        raw_payload: (
+            WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload | SmsIngressPayload
+        ),
+        language_locale: LanguageLocale = LanguageLocale.HINDI,
+        attempt_count: int = 1,
+    ) -> PublicAgentIntakeResult:
+        """Executes full end-to-end flow from raw carrier webhook to citizen transmission receipt.
 
         Args:
-            payload: Validated PublicAgentStandardizedIntakePayload from Layer 2 Gateway.
+            raw_payload: Typed carrier ingress payload (WhatsApp, IVR, USSD, or SMS).
+            language_locale: Target BCP-47 language locale (default: 'hi-IN').
+            attempt_count: Current conversation turn attempt number.
 
         Returns:
-            Tuple of:
-            - PublicAgentStandardizedIntakePayload: The validated intake payload ready for
-              Layer 4 claim orchestration.
-            - IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
-              `requires_nlu_extraction`, and descriptive status notes.
+            PublicAgentIntakeResult containing full end-to-end outcome and transmission receipt.
 
         Raises:
-            ValueError: If payload fails structural validation, contains empty or whitespace-only
-                content, or violates channel-structure compatibility constraints.
+            PermissionError: If rate limit is exceeded.
+            ValueError: If authentication fails, PII check fails, or payload is invalid.
         """
-        evaluation_result = self._evaluator.evaluate_payload(payload)
-        if not evaluation_result.is_valid:
-            logger.warning(
-                "PublicAgentApi rejected payload for session=%s: %s",
-                payload.session_id,
-                evaluation_result.evaluation_message,
-            )
-            raise ValueError(f"Invalid intake payload: {evaluation_result.evaluation_message}")
-
-        logger.info(
-            "PublicAgentApi accepted payload for session=%s, channel=%s, nlu_required=%s",
-            payload.session_id,
-            payload.channel_type,
-            evaluation_result.requires_nlu_extraction,
+        intake_payload, is_adversarial = self._firewall.process_ingress(
+            payload=raw_payload,
+            language_locale=language_locale,
         )
-        return payload, evaluation_result
+
+        return await self.process_claim_intake(
+            payload=intake_payload,
+            is_adversarial=is_adversarial,
+            attempt_count=attempt_count,
+        )
 
     async def process_claim_intake(
         self,
@@ -206,38 +192,48 @@ class PublicAgentApi:
             transmission_ack=dispatch_result.transmission_ack,
         )
 
-    async def process_raw_ingress(
-        self,
-        raw_payload: (
-            WhatsAppIngressPayload | IvrIngressPayload | UssdIngressPayload | SmsIngressPayload
-        ),
-        language_locale: LanguageLocale = LanguageLocale.HINDI,
-        attempt_count: int = 1,
-    ) -> PublicAgentIntakeResult:
-        """Executes full end-to-end flow from raw carrier webhook to citizen transmission receipt.
+    async def submit_payload(
+        self, payload: PublicAgentStandardizedIntakePayload
+    ) -> tuple[PublicAgentStandardizedIntakePayload, IntakeEvaluationResult]:
+        """Evaluates intake payload structure and returns verified payload with routing flags.
+
+        Performs content sanity checks and determines whether the incoming interaction requires
+        natural language processing (SLM extraction) or can follow a deterministic structured path.
 
         Args:
-            raw_payload: Typed carrier ingress payload (WhatsApp, IVR, USSD, or SMS).
-            language_locale: Target BCP-47 language locale (default: 'hi-IN').
-            attempt_count: Current conversation turn attempt number.
+            payload: Validated PublicAgentStandardizedIntakePayload from Layer 2 Gateway.
 
         Returns:
-            PublicAgentIntakeResult containing full end-to-end outcome and transmission receipt.
+            Tuple of:
+            - PublicAgentStandardizedIntakePayload: The validated intake payload ready for
+              Layer 4 claim orchestration.
+            - IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
+              `requires_nlu_extraction`, and descriptive status notes.
 
         Raises:
-            PermissionError: If rate limit is exceeded.
-            ValueError: If authentication fails, PII check fails, or payload is invalid.
+            ValueError: If payload fails structural validation, contains empty or whitespace-only
+                content, or violates channel-structure compatibility constraints.
         """
-        intake_payload, is_adversarial = self.firewall.process_ingress(
-            payload=raw_payload,
-            language_locale=language_locale,
-        )
+        evaluation_result = self._evaluator.evaluate_payload(payload)
+        if not evaluation_result.is_valid:
+            logger.warning(
+                "PublicAgentApi rejected payload for session=%s: %s",
+                payload.session_id,
+                evaluation_result.evaluation_message,
+            )
+            raise ValueError(f"Invalid intake payload: {evaluation_result.evaluation_message}")
 
-        return await self.process_claim_intake(
-            payload=intake_payload,
-            is_adversarial=is_adversarial,
-            attempt_count=attempt_count,
+        logger.info(
+            "PublicAgentApi accepted payload for session=%s, channel=%s, nlu_required=%s",
+            payload.session_id,
+            payload.channel_type,
+            evaluation_result.requires_nlu_extraction,
         )
+        return payload, evaluation_result
+
+    # -------------------------------------------------------------------------
+    # Private Helper Methods (Strictly at Bottom)
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def _build_notification_request(

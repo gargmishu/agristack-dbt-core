@@ -34,21 +34,27 @@ This skill outlines language-level clean coding rules, naming conventions, objec
 
 ## 2. Method Visibility, Ordering & Clean Class Layout
 
-Maintain clean top-down readability within every class:
+Maintain clean top-down readability and strict encapsulation within every class:
 
-### 2.1 Public-First / Private-at-Bottom Rule
+### 2.1 Principle of Least Visibility & Strict Encapsulation
+* **Default to Private**: Every method, helper function, validator, and formatter must default to private (prefixed with a leading underscore `_`) unless it is an explicitly designed public API contract.
+* **No Leaky Internal Helpers**: Internal formatting routines, state builders, parsing algorithms, and connector dispatches must never be exposed publicly.
+* **Encapsulate Collaborators**: Do not expose internal dependency instances (e.g., `self._firewall`, `self._orchestrator`, `self._evaluator`, `self._social_service`) as public properties or getters unless consumers specifically require documented read-only introspection.
+
+### 2.2 Public-First / Private-at-Bottom Ordering Rule
+Classes must strictly follow a 4-tier top-down ordering:
 1. **Lifecycle & Constructors (Top)**: `__init__`, followed by class factories (`from_env`).
-2. **Properties & Primary Public Workflow APIs (Upper Middle)**: Properties and primary execution entrypoints.
-3. **Public Component & Stage Methods (Lower Middle)**: Public helper methods and sub-stage handlers.
-4. **Private Helper Methods (Bottom)**: All internal private methods (prefixed with a leading underscore `_`) must be placed strictly at the **bottom** of the class definition below all public and static methods.
+2. **Primary Public Workflow Entrypoints (Upper Middle)**: The primary end-to-end execution methods.
+3. **Public Component & Stage Methods (Lower Middle)**: Public sub-stage handlers and modular public entrypoints.
+4. **Private Helper Methods (Bottom)**: All internal private methods (prefixed with `_`) must be placed strictly at the **bottom** of the class definition below all public methods, grouped under a clear section banner.
 
 ```python
 class ComponentService:
-    """Service class demonstrating clean method ordering."""
+    """Service class demonstrating clean method ordering and least visibility."""
 
-    def __init__(self, dependency: DependencyClient) -> None:
+    def __init__(self, dependency: DependencyClient | None = None) -> None:
         """Initializes service with required dependency."""
-        self._dependency = dependency
+        self._dependency = dependency or DependencyClient()
 
     @classmethod
     def from_env(cls) -> "ComponentService":
@@ -56,7 +62,7 @@ class ComponentService:
         return cls(dependency=DependencyClient.from_env())
 
     # -------------------------------------------------------------------------
-    # Primary Public APIs
+    # Primary Public Workflow Entrypoints
     # -------------------------------------------------------------------------
 
     async def execute_workflow(self, request: RequestPayload) -> ResponsePayload:
@@ -66,11 +72,15 @@ class ComponentService:
 
     def validate_stage(self, request: RequestPayload) -> ValidatedPayload:
         """Public validation sub-stage."""
-        ...
+        return self._normalize_payload(request)
 
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
+
+    def _normalize_payload(self, request: RequestPayload) -> ValidatedPayload:
+        """Internal private helper normalizing raw request."""
+        ...
 
     async def _dispatch_internal(self, payload: ValidatedPayload) -> ResponsePayload:
         """Internal private helper handling dispatching logic."""

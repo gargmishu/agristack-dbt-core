@@ -134,4 +134,13 @@ async def test_public_agent_api_with_custom_firewall_injection() -> None:
         rate_limiter=RateLimiter(),
     )
     api = PublicAgentApi(firewall=custom_firewall)
-    assert api.firewall is custom_firewall
+    raw_whatsapp = WhatsAppIngressPayload(
+        session_id="sess_custom_fw_1",
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.custom_fw",
+        payload_type=PayloadType.TEXT,
+        text_body="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
+        received_at=datetime.now(UTC),
+    )
+    result = await api.process_raw_ingress(raw_payload=raw_whatsapp)
+    assert result.session_id == "sess_custom_fw_1"
