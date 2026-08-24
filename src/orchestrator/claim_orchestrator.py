@@ -137,10 +137,10 @@ class ClaimOrchestrator:
         payload_id = f"ext-{uuid.uuid4().hex[:8]}"
 
         # Gate 1: Ingress Modality & SLM Entity Extraction
-        extracted_entities = await self.process_ingress_payload(intake)
+        extracted_entities = await self._process_ingress_payload(intake)
 
         # Gate 2: Intake Completeness & Reprompt Validation
-        requires_reprompt, missing_entities = self.check_claim_completeness(
+        requires_reprompt, missing_entities = self._check_claim_completeness(
             extracted_entities, attempt_count=attempt_count
         )
         if requires_reprompt:
@@ -179,10 +179,10 @@ class ClaimOrchestrator:
         )
 
     # -------------------------------------------------------------------------
-    # Public Gate Processing Stages
+    # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
 
-    async def process_ingress_payload(
+    async def _process_ingress_payload(
         self, intake: PublicAgentStandardizedIntakePayload
     ) -> ExtractedEntityPayload:
         """Gate 1: Ingress & Structure Evaluation Gate.
@@ -249,7 +249,7 @@ class ClaimOrchestrator:
 
         return extracted_entities
 
-    def check_claim_completeness(
+    def _check_claim_completeness(
         self,
         extracted: ExtractedEntityPayload,
         attempt_count: int = 1,

@@ -47,7 +47,7 @@ async def test_prepare_whatsapp_auto_approve(
         language_locale=LanguageLocale.ENGLISH,
         disbursement_txn_id="TXN-2026-981245",
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert payload.session_id == "sess_12345678"
     assert payload.channel_type == ChannelType.WHATSAPP
     assert payload.delivery_status == NotificationDeliveryStatus.DELIVERED
@@ -67,7 +67,7 @@ async def test_prepare_whatsapp_manual_review(
         language_locale=LanguageLocale.ENGLISH,
         escalation_case_id="SPP-CASE-2026-100200",
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert payload.escalation_case_id == "SPP-CASE-2026-100200"
     assert "SPP-CASE-2026-100200" in payload.formatted_message
     assert "District Agricultural Officer" in payload.formatted_message
@@ -83,7 +83,7 @@ async def test_prepare_whatsapp_auto_reject(
         governance_action=GovernanceAction.AUTO_REJECT,
         rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert "INELIGIBLE_LAND_SIZE" in payload.formatted_message
     assert "1800-180-1551" in payload.formatted_message
 
@@ -98,7 +98,7 @@ async def test_prepare_whatsapp_reprompt_clarification(
         governance_action=GovernanceAction.REQUEST_MORE_INFO,
         missing_entity=DomainEntityKey.SURVEY_NUMBER,
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert "survey number" in payload.formatted_message
     assert "Reply directly" in payload.formatted_message
 
@@ -114,7 +114,7 @@ async def test_prepare_ivr_voice_hindi_synthesis(
         language_locale=LanguageLocale.HINDI,
         disbursement_txn_id="TXN-2026-981245",
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert payload.channel_type == ChannelType.IVR_VOICE
     assert payload.audio_playback_url is not None
     assert "https://" in str(payload.audio_playback_url)
@@ -132,7 +132,7 @@ async def test_prepare_ivr_voice_english_synthesis(
         language_locale=LanguageLocale.ENGLISH,
         escalation_case_id="SPP-CASE-2026-100200",
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert payload.audio_playback_url is not None
     assert "forwarded to the district officer" in payload.formatted_message
 
@@ -156,7 +156,7 @@ async def test_prepare_ussd_length_boundary(
             rejection_reason=RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON,
             missing_entity=DomainEntityKey.VILLAGE,
         )
-        payload = await delivery_service.prepare_notification(req)
+        payload = await delivery_service._prepare_notification(req)
         assert len(payload.formatted_message) <= MAX_USSD_CHARACTERS
         assert payload.audio_playback_url is None
 
@@ -171,7 +171,7 @@ async def test_prepare_sms_delivery(
         governance_action=GovernanceAction.AUTO_APPROVE,
         disbursement_txn_id="TXN-2026-981245",
     )
-    payload = await delivery_service.prepare_notification(req)
+    payload = await delivery_service._prepare_notification(req)
     assert payload.channel_type == ChannelType.SMS
     assert "TXN-2026-981245" in payload.formatted_message
     assert "DBT" in payload.formatted_message
@@ -328,7 +328,7 @@ async def test_prepare_ivr_voice_rejection_hindi_and_english(
         language_locale=LanguageLocale.HINDI,
         rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
     )
-    payload_hi = await delivery_service.prepare_notification(req_hi)
+    payload_hi = await delivery_service._prepare_notification(req_hi)
     assert "Aapka aavedan aswikrit kiya gaya hai" in payload_hi.formatted_message
 
     req_en = NotificationRequestPayload(
@@ -338,7 +338,7 @@ async def test_prepare_ivr_voice_rejection_hindi_and_english(
         language_locale=LanguageLocale.ENGLISH,
         rejection_reason=RejectionReasonCode.INELIGIBLE_LAND_SIZE,
     )
-    payload_en = await delivery_service.prepare_notification(req_en)
+    payload_en = await delivery_service._prepare_notification(req_en)
     assert "Your application could not be approved" in payload_en.formatted_message
 
 
@@ -353,7 +353,7 @@ async def test_prepare_ivr_voice_reprompt_hindi_and_english(
         language_locale=LanguageLocale.HINDI,
         missing_entity=DomainEntityKey.BANK_ACCOUNT_LAST4,
     )
-    payload_hi = await delivery_service.prepare_notification(req_hi)
+    payload_hi = await delivery_service._prepare_notification(req_hi)
     assert "Kripya apna" in payload_hi.formatted_message
 
     req_en = NotificationRequestPayload(
@@ -363,7 +363,7 @@ async def test_prepare_ivr_voice_reprompt_hindi_and_english(
         language_locale=LanguageLocale.ENGLISH,
         missing_entity=DomainEntityKey.DISTRICT,
     )
-    payload_en = await delivery_service.prepare_notification(req_en)
+    payload_en = await delivery_service._prepare_notification(req_en)
     assert "Please provide your" in payload_en.formatted_message
 
 

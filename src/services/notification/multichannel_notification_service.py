@@ -90,10 +90,40 @@ class MultichannelNotificationService:
         self._sms_connector = sms_connector or SmsConnector()
 
     # -------------------------------------------------------------------------
-    # Public API
+    # Primary Public Workflow Entrypoint
     # -------------------------------------------------------------------------
 
-    async def prepare_notification(
+    async def dispatch_notification(
+        self, request: NotificationRequestPayload
+    ) -> NotificationDispatchResult:
+        """Prepares and dispatches notification through the appropriate edge connector.
+
+        Args:
+            request: Validated NotificationRequestPayload specifying channel and
+            determination.
+
+        Returns:
+            NotificationDispatchResult with payload and carrier TransmissionAck receipt.
+        """
+        payload = await self._prepare_notification(request)
+        transmission_ack = await self._dispatch_to_connector(payload)
+
+        logger.info(
+            "Dispatched notification for session=%s across channel=%s with status=%s",
+            payload.session_id,
+            payload.channel_type,
+            payload.delivery_status,
+        )
+        return NotificationDispatchResult(
+            payload=payload,
+            transmission_ack=transmission_ack,
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
+
+    async def _prepare_notification(
         self, request: NotificationRequestPayload
     ) -> OutboundNotificationPayload:
         """Prepares channel-adapted OutboundNotificationPayload with synthesized audio if voice.
@@ -140,44 +170,23 @@ class MultichannelNotificationService:
             delivered_at=datetime.now(UTC),
         )
 
-    async def dispatch_notification(
-        self, request: NotificationRequestPayload
-    ) -> NotificationDispatchResult:
-        """Prepares and dispatches notification through the appropriate edge connector.
+    async def _dispatch_to_connector(self, payload: OutboundNotificationPayload) -> TransmissionAck:
+        """Dispatches outbound payload to the appropriate channel connector.
 
         Args:
-            request: Validated NotificationRequestPayload specifying channel and
-            determination.
+            payload: Prepared OutboundNotificationPayload.
 
         Returns:
-            NotificationDispatchResult with payload and carrier TransmissionAck receipt.
+            TransmissionAck from the carrier connector.
         """
-        payload = await self.prepare_notification(request)
-
-        transmission_ack: TransmissionAck
-        if request.channel_type == ChannelType.WHATSAPP:
-            transmission_ack = await self._whatsapp_connector.send_outbound_notification(payload)
-        elif request.channel_type == ChannelType.IVR_VOICE:
-            transmission_ack = await self._ivr_connector.send_outbound_notification(payload)
-        elif request.channel_type == ChannelType.USSD:
-            transmission_ack = await self._ussd_connector.send_outbound_notification(payload)
+        if payload.channel_type == ChannelType.WHATSAPP:
+            return await self._whatsapp_connector.send_outbound_notification(payload)
+        elif payload.channel_type == ChannelType.IVR_VOICE:
+            return await self._ivr_connector.send_outbound_notification(payload)
+        elif payload.channel_type == ChannelType.USSD:
+            return await self._ussd_connector.send_outbound_notification(payload)
         else:  # SMS
-            transmission_ack = await self._sms_connector.send_outbound_notification(payload)
-
-        logger.info(
-            "Dispatched notification for session=%s across channel=%s with status=%s",
-            payload.session_id,
-            payload.channel_type,
-            payload.delivery_status,
-        )
-        return NotificationDispatchResult(
-            payload=payload,
-            transmission_ack=transmission_ack,
-        )
-
-    # -------------------------------------------------------------------------
-    # Private Channel Formatters & Label Helpers
-    # -------------------------------------------------------------------------
+            return await self._sms_connector.send_outbound_notification(payload)
 
     def _format_rich_card(self, request: NotificationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message.

@@ -132,7 +132,7 @@ flowchart TD
     K -- "DTMF / MENU_SELECTION" --> L["Structured Fast-Path Bypass<br/>requires_nlu_extraction = False"]
     K -- "FREE_TEXT" --> M["NLU Extraction Path<br/>requires_nlu_extraction = True"]
     
-    L --> N["ClaimOrchestrator.process_ingress_payload (Gate 1)"]
+    L --> N["ClaimOrchestrator._process_ingress_payload (Gate 1)"]
     M --> N
 
     N --> O{"Modality Dispatch"}
@@ -153,7 +153,7 @@ Gate 2 evaluates domain intent, checks for required fields, and coordinates mult
 
 ```mermaid
 flowchart TD
-    S["ExtractedEntityPayload"] --> T["ClaimOrchestrator.check_claim_completeness (Gate 2)"]
+    S["ExtractedEntityPayload"] --> T["ClaimOrchestrator._check_claim_completeness (Gate 2)"]
     
     T --> U{"Is Structured Bypass or Adversarial?"}
     U -- "Yes" --> V["Bypass Gate 2 Completeness Check"]

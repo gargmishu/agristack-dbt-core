@@ -36,7 +36,7 @@ async def test_claim_orchestrator_process_ingress_payload_structured_bypass() ->
         received_at=datetime.now(UTC),
     )
 
-    extracted = await orchestrator.process_ingress_payload(intake)
+    extracted = await orchestrator._process_ingress_payload(intake)
     assert extracted.is_structured_menu_bypass is True
     assert extracted.ai_confidence_score == 1.0
     assert extracted.application_intent == ApplicationIntent.APPLY_SUBSIDY
@@ -44,7 +44,7 @@ async def test_claim_orchestrator_process_ingress_payload_structured_bypass() ->
 
 
 @pytest.mark.asyncio
-async def test_claim_orchestrator_process_ingress_payload_audio_transcription() -> None:
+async def test_claim_orchestrator__process_ingress_payload_audio_transcription() -> None:
     orchestrator = ClaimOrchestrator()
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_ivr_audio_1",
@@ -57,14 +57,14 @@ async def test_claim_orchestrator_process_ingress_payload_audio_transcription() 
         received_at=datetime.now(UTC),
     )
 
-    extracted = await orchestrator.process_ingress_payload(intake)
+    extracted = await orchestrator._process_ingress_payload(intake)
     assert extracted.is_structured_menu_bypass is False
     assert extracted.application_intent == ApplicationIntent.APPLY_SUBSIDY
     assert extracted.ai_confidence_score >= 0.90  # noqa: PLR2004
 
 
 @pytest.mark.asyncio
-async def test_claim_orchestrator_process_ingress_payload_audio_failure_and_slm_none() -> None:
+async def test_claim_orchestrator__process_ingress_payload_audio_failure_and_slm_none() -> None:
     mock_bhashini = BhashiniService()
     mock_bhashini.transcribe_audio = AsyncMock(side_effect=RuntimeError("ASR Timeout"))  # type: ignore[method-assign]
     mock_slm = SlmExtractor()
@@ -85,13 +85,13 @@ async def test_claim_orchestrator_process_ingress_payload_audio_failure_and_slm_
         received_at=datetime.now(UTC),
     )
 
-    extracted = await orchestrator.process_ingress_payload(intake)
+    extracted = await orchestrator._process_ingress_payload(intake)
     assert extracted.application_intent == ApplicationIntent.UNKNOWN
     assert extracted.ai_confidence_score == 0.40  # noqa: PLR2004
 
 
 @pytest.mark.asyncio
-async def test_claim_orchestrator_check_claim_completeness_reprompt_on_missing() -> None:
+async def test_claim_orchestrator__check_claim_completeness_reprompt_on_missing() -> None:
     orchestrator = ClaimOrchestrator()
     extracted = ExtractedEntityPayload(
         application_intent=ApplicationIntent.APPLY_SUBSIDY,
@@ -100,12 +100,12 @@ async def test_claim_orchestrator_check_claim_completeness_reprompt_on_missing()
     )
 
     # Attempt 1 -> Re-prompt
-    requires_reprompt, missing = orchestrator.check_claim_completeness(extracted, attempt_count=1)
+    requires_reprompt, missing = orchestrator._check_claim_completeness(extracted, attempt_count=1)
     assert requires_reprompt is True
     assert "crop_name" in missing
 
     # Attempt 3 -> Attempts exhausted, do not re-prompt
-    requires_reprompt_3, _ = orchestrator.check_claim_completeness(extracted, attempt_count=3)
+    requires_reprompt_3, _ = orchestrator._check_claim_completeness(extracted, attempt_count=3)
     assert requires_reprompt_3 is False
 
     # Non-subsidy intent -> no reprompt
@@ -114,7 +114,7 @@ async def test_claim_orchestrator_check_claim_completeness_reprompt_on_missing()
         ai_confidence_score=0.92,
         domain_entities={},
     )
-    assert orchestrator.check_claim_completeness(status_extracted)[0] is False
+    assert orchestrator._check_claim_completeness(status_extracted)[0] is False
 
 
 @pytest.mark.asyncio
