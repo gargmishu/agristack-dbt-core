@@ -36,11 +36,13 @@ To interact with downstream systems and maintain transactional consistency witho
 All highly sensitive identifiers (e.g., Aadhaar) must be hashed immediately upon extraction. We have objectively evaluated several alternatives and selected **HMAC-SHA256**; see [hashing_algorithm_evaluation.md](./hashing_algorithm_evaluation.md) for the complete rationale.
 - **Function:** `HMAC-SHA256`
 - **Key Strategy:** Use a secure, environment-injected cryptographic pepper/salt (`pepper_salt`) that is never stored in the database but rather managed via environment variables/secrets manager.
+- **Mathematical Specification:** `tokenized_citizen_id = HMAC-SHA256(pepper_salt, normalized_raw_identifier)` resulting in an exact 64-character hexadecimal pseudonymous string.
+
 - **Implementation (Concept):**
   ```javascript
   const crypto = require('crypto');
 
-  function tokenizePII(rawId, pepperSalt) {
+  function tokenizeIdentifier(rawId, pepperSalt) {
       return crypto.createHmac('sha256', pepperSalt)
                    .update(rawId)
                    .digest('hex');
