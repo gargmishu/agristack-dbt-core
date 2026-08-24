@@ -63,7 +63,7 @@
 
 ### **Why this specific sequence? (Inside-Out vs. Outside-In)**
 
-If we built "Outside-In" (Connectors $\rightarrow$ Gateway API $\rightarrow$ Brain $\rightarrow$ External Services), we would create massive roadblocks for the AI:
+If we built "Outside-In" (Connectors => Gateway API => Brain => External Services), we would create massive roadblocks for the AI:
 
 1. **The "Dangling Wire" problem:** If you ask an AI to build the WhatsApp connector first, it has no Gateway API to send the data to, so it will *hallucinate* a fake endpoint.
 2. **Testing Bottlenecks:** If you build the Brain before the Mocks, the Brain will try to call external services that don't exist yet, making it impossible to test if your core routing logic actually works until the very end of the project.
