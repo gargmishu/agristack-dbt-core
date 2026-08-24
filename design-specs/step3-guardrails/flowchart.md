@@ -53,7 +53,7 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
                 v                                  v
  +-----------------------------+    +------------------------------+
  | [ACTION] [AI BLOCK]         |    | [CHECK] Evaluate             |
- | RUN speech_to_text()        |    | 'structure_level'            |
+ | Speech-to-Text Transcription|    | 'structure_level'            |
  | Converts audio to raw text  |    | (Free-text vs menu press)    |
  +-----------------------------+    +------------------------------+
                  \                                /        |
@@ -64,7 +64,7 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
                              v                             v
                   +--------------------------------+   [Bypass AI]
                   | [ACTION] [AI BLOCK]            |       |
-                  | RUN structured_extract() (SLM) |       |
+                  | SLM Entity Extraction Engine   |       |
                   | EMITS: ai_confidence_score     |       |
                   +--------------------------------+       |
                                   |                        |
@@ -92,20 +92,20 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
                                                             v
                                             +--------------------------------+
                                             | [ACTION] [DPI BLOCK]           |
-                                            | identity_verify() (Aadhaar)    |
+                                            | Identity Verification (MOSIP)  |
                                             +--------------------------------+
                                                             |
                                                             v
                                             +--------------------------------+
                                             | [ACTION] [DPI BLOCK]           |
-                                            | eligibility_verify() (KISAN)   |
+                                            | Cadastral Cross-Match (KISAN)  |
                                             | EMITS: eligibility_status      |
                                             +--------------------------------+
                                                             |
                                                             v
                                             +--------------------------------+
                                             | [ACTION] [DPI BLOCK]           |
-                                            | submit_application()           |
+                                            | Social Benefits Staging        |
                                             | (Logs Case in OpenSPP)         |
                                             +--------------------------------+
                                                             |
@@ -120,7 +120,7 @@ Here is the fully updated master architecture diagram. The specific AI and DPI b
        v                            v                            v
  +-------------------------+  +--------------------+  +--------------------+
  | [ACTION] [DPI BLOCK]    |  | [ACTION] HUMAN     |  | [ACTION] AUTO-     |
- | payments.disburse()     |  | REVIEW GATE        |  | REJECT GATE        |
+ | Treasury Disbursement   |  | REVIEW GATE        |  | REJECT GATE        |
  | (PFMS/APBS Payout)      |  | Escalate to Officer|  | Set case REJECTED  |
  +-------------------------+  +--------------------+  +--------------------+
        \                            |                          /
