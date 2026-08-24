@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary & Architectural Overview
 
-This document defines the architectural specifications, transport ingestion lifecycle, and public API gateway contracts for **Phase 3, Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors** (and **Step 3.4.1: API Access Layer Architecture Decision**) of the AgriStack Zero-Trust DPI Orchestrator.
+This document defines the architectural specifications, transport ingestion lifecycle, and public API gateway contracts for **Phase 3, Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors** of the AgriStack Zero-Trust DPI Orchestrator.
 
 The ingress architecture decouples carrier transport protocols, perimeter security validation, and public agent intake evaluation:
 
