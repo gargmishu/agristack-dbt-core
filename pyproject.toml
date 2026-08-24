@@ -60,7 +60,9 @@ warn_required_dynamic_aliases = true
 
 [tool.pyright]
 include = ["src", "tests"]
-extraPaths = ["."]
+extraPaths = [".", ".venv/lib/python3.13/site-packages"]
+venvPath = "."
+venv = ".venv"
 executionEnvironments = [
   { root = "." }
 ]

@@ -1,9 +1,12 @@
 {
   "include": ["src", "tests"],
-  "extraPaths": ["."],
+  "extraPaths": [".", ".venv/lib/python3.13/site-packages"],
+  "venvPath": ".",
+  "venv": ".venv",
   "executionEnvironments": [
     {
       "root": "."
     }
   ]
 }
+
