@@ -104,31 +104,7 @@ The Intake Evaluator inspects the payload structure level:
 
 ---
 
-## 5. Step 3.4.1 Architectural Decision: Thin Application Service vs. Database-Native Endpoints
-
-### Context & Options Considered
-
-In Step 3.4.1, we evaluated two architectural paradigms for the API Access Layer:
-1. **Option A: Database-Native Direct Endpoints (PostgREST / Supabase REST)**: Exposing database tables/views directly via auto-generated HTTP endpoints.
-2. **Option B: Thin Application-Layer Gateway Service (FastAPI / Pydantic v2)**: Implementing a dedicated application service sitting between carrier connectors and internal orchestration services.
-
-### Comparative Evaluation Matrix
-
-| Architectural Dimension | Option A: Database-Native REST (PostgREST) | Option B: Thin Application Service (FastAPI) [SELECTED] |
-| :--- | :--- | :--- |
-| **Zero-Trust PII Tokenization** | ❌ Hard: Raw PII would reach database transport logs before in-memory hashing. | ✅ **Native:** In-memory RAM tokenization occurs *before* data touches disk or database. |
-| **Carrier Auth & HMAC Signatures** | ❌ Complex: Difficult to verify Meta `X-Hub-Signature-256` or SIP headers in DB views. | ✅ **Native:** Custom cryptographic auth validator middleware. |
-| **Dynamic Multimodal Routing** | ❌ Static: Cannot orchestrate Bhashini ASR, NMT translation, or SLM inference dynamically. | ✅ **Native:** Asynchronous service coordinating external AI and DPI microservices. |
-| **Rate Limiting & Threat Defense** | ⚠️ Generic: Basic connection limits; lacks prompt injection inspection. | ✅ **Native:** Token-bucket limiter and regex threat firewall. |
-| **Type Safety & Domain Contracts** | ⚠️ SQL-level constraints; lacks rich runtime validation models. | ✅ **Native:** Strict domain models with extra-field prohibition and custom validators. |
-
-### Decision
-**Adopt Option B: Thin Application-Layer Service.**
-The zero-PII security mandate, cryptographic webhook verification, adversarial firewall scanning, and fast-path structured menu routing strictly require application-level execution in volatile RAM before any state persistence occurs.
-
----
-
-## 6. Architectural Responsibilities Matrix
+## 5. Architectural Responsibilities Matrix
 
 | Architectural Layer | Subsystem / Component | Primary Responsibilities |
 | :--- | :--- | :--- |
