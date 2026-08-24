@@ -85,9 +85,9 @@ class ClaimOrchestrator:
 
     Coordinates end-to-end processing across transcription, entity validation, and
     governance routing:
-    - Ingress Modality Processing (`process_ingress_payload` / Gate 1): Manages audio
+    - Ingress Modality Processing (Gate 1): Manages audio
       transcription, SLM domain entity extraction, or structured menu bypass.
-    - Claim Completeness Validation (`check_claim_completeness` / Gate 2): Validates mandatory
+    - Claim Completeness Validation (Gate 2): Validates mandatory
       domain entity completeness and manages multi-turn conversational re-prompt loops.
     - Governance Adjudication (Gate 3): Evaluates eligibility rules and routes to auto-payout,
       review, or rejection via the adjudication decision matrix.
