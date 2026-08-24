@@ -60,8 +60,7 @@ class MultichannelNotificationService:
 
     Operations:
     - `prepare_and_dispatch`: Constructs an `OutboundNotificationPayload` and dispatches it
-      via
-      the target connector, returning a `NotificationDispatchResult`.
+      via the target connector, returning a `NotificationDispatchResult`.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
