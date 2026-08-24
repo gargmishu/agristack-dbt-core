@@ -87,7 +87,7 @@ Financial clearing states track the execution of funds transfer over national cl
 
 * **`PENDING` (Internal Queue):** Assigned when a claim is **approved** along with our internal `disbursement_txn_id`. Bridges the time gap while the approved claim waits for payment dispatch. Notice that rejected claims never enter the disbursement lifecycle.
 * **`INITIATED` (Wire Dispatch):** Assigned when the transaction request is transmitted across system boundaries over NPCI APBS / PFMS rails using our internal `disbursement_txn_id` as the instruction idempotency key.
-* **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (`DisbursementCallbackPayload`) when funds reach the citizen account. Strictly requires the bank to return an external bank-generated transaction clearing ID / UTR (`bank_reference_id`).
+* **`SUCCESS` (Terminal Clearance):** Confirmed by bank callback (*Payment Clearing Callback Contract*) when funds reach the citizen account. Strictly requires the bank to return an external bank-generated transaction clearing ID / UTR (`bank_reference_id`).
 * **`FAILED` / `RETURNED` (Terminal Failure):** Confirmed by bank callback when clearing fails (requires non-empty `failure_reason_code`, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`).
 
 ---
@@ -105,19 +105,19 @@ Targeted at high-confidence (`>= 0.85`), zero-anomaly claims requiring instant a
       ▼                                                                                                                     ▼
 [ Outcome A: ELIGIBLE ]                                                                                      [ Outcome B: INELIGIBLE / DUPLICATE ]
       │                                                                                                                     │
-      ├─► Emit GovernanceOutcomePayload (AUTO_APPROVE / AUTOMATED_PAYOUT)                                                   ├─► Emit GovernanceOutcomePayload (AUTO_REJECT)
+      ├─► Emit Governance Outcome Decision (AUTO_APPROVE / AUTOMATED_PAYOUT)                                                ├─► Emit Governance Outcome Decision (AUTO_REJECT)
       ├─► Transition Application Status ➔ APPROVED                                                                          ├─► Transition Application Status ➔ REJECTED
       └─► Assign disbursement_txn_id & status = PENDING ──► [ Payment Rail ]                                                └─► Bypass Financial Clearing (No disbursement_txn_id)
 ```
 
 1. **Confidence & Eligibility Evaluation:** The evaluation engine validates that `ai_confidence_score >= 0.85`. It then evaluates eligibility criteria (`eligibility_status`) and checks against `tokenized_identity_hash` in `application_governance_ledger` to verify the citizen has not already received an approved payout for the active season.
 2. **Outcome A — Automated Approval (`APPROVED`):** If `eligibility_status == ELIGIBLE` and no duplicate claim exists:
-   * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
+   * Layer 4 emits the Governance Outcome Decision with `governance_action = AUTO_APPROVE` (or `AUTOMATED_PAYOUT`).
    * Application status transitions to **`APPROVED`**.
    * System assigns an internal idempotency tracking key `disbursement_txn_id = "TXN-YYYY-XXXXXX"` and initializes `disbursement_status = PENDING`.
    * The claim adjudicator issues `FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT` to trigger wire dispatch over the NPCI Aadhaar Payment Bridge.
 3. **Outcome B — Automated Rejection (`REJECTED`):** If `eligibility_status == INELIGIBLE` OR a duplicate double-dipping claim is detected:
-   * Layer 4 emits `GovernanceOutcomePayload` with `governance_action = AUTO_REJECT` and populates a descriptive `rejection_reason`.
+   * Layer 4 emits the Governance Outcome Decision with `governance_action = AUTO_REJECT` and populates a descriptive `rejection_reason`.
    * Application status transitions directly to **`REJECTED`**.
    * `disbursement_txn_id`, `disbursement_status`, and `escalation_case_id` remain `None`. The financial clearing flow is bypassed entirely.
 
@@ -136,10 +136,10 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
 [ Application Decision Pipeline ] ◄─── (Submits Review) ◄─── [ Caseworker Review Dashboard ]
 ```
 
-1. **Incident Staging:** System creates incident ticket `SPP-CASE-YYYY-XXXXXX` and emits `CaseworkerCaseReviewPayload`:
+1. **Incident Staging:** System creates incident ticket `SPP-CASE-YYYY-XXXXXX` and emits the Caseworker Case Review Payload:
    * `unprocessed_input_content` carries raw citizen text/audio URL (**must not be empty**).
    * `extracted_entities` carries extracted parameters, but **may be empty `{}`** if AI extraction failed completely.
-2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits `CaseworkerReviewOutcomePayload`:
+2. **Officer Adjudication:** Human officer inspects case in District Review Dashboard and submits the Caseworker Review Outcome Decision:
    * **Option A — `MANUAL_APPROVE`:** Must provide `approved_amount > 0.0` and `review_notes` (min length 5). System assigns `disbursement_txn_id` with `disbursement_status = PENDING`.
    * **Option B — `MANUAL_REJECT`:** Must provide `rejection_reason` and `review_notes`. Application transitions to `REJECTED`.
    * **Option C — `REQUEST_MORE_INFO`:** Must provide `review_notes` detailing missing info. Application transitions to **`INFO_REQUESTED`** so the system can re-engage the citizen over WhatsApp/USSD.
@@ -154,12 +154,12 @@ Targeted at ambiguous, low-confidence ($<0.85$), or unparseable input claims.
                                                                             │
                                                           (Bank Clearing / UTR Generation)
                                                                             │
-[ Governance Ledger ] ◄── (DisbursementCallbackPayload with bank_reference_id) ─┘
+[ Governance Ledger ] ◄── (Payment Clearing Callback with bank_reference_id) ─┘
   └─ Sets SUCCESS (with bank_reference_id UTR) or FAILED (with failure_reason_code)
 ```
 
 1. **Dispatch:** Payment worker queries approved claims where `disbursement_status == PENDING` and transmits batch instructions to NPCI / PFMS using our internal `disbursement_txn_id`, updating status to `INITIATED`.
-2. **Callback Handling:** External bank rails send an asynchronous status callback (`DisbursementCallbackPayload`):
+2. **Callback Handling:** External bank rails send an asynchronous status callback (*Payment Clearing Callback Contract*):
    * Matches against our internal instructional order key `disbursement_txn_id`.
    * If `disbursement_status == SUCCESS`: Strictly requires the bank-generated external transaction ID / UTR (`bank_reference_id`). Sets `failure_reason_code = None`, confirming successful payout clearing.
    * If `disbursement_status in (FAILED, RETURNED)`: Requires non-empty `failure_reason_code` (e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`, `NAME_MISMATCH`).
