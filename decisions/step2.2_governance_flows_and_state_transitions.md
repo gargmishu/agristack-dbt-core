@@ -172,14 +172,14 @@ To adhere to architectural DRY principles and eliminate documentation drift, the
 
 ### 4.1 Workflow to Domain Schema Mapping
 
-Every governance state transition defined in Section 2 and executed via the workflows in Section 3 binds directly to a validated domain payload contract from Step 2.0:
+Every governance state transition defined in Section 2 and executed via the workflows in Section 3 binds directly to a validated domain contract:
 
-| Governance Workflow / Execution Flow | Canonical Data Schema Contract | Implementation Repository Module |
+| Governance Workflow / Execution Flow | Canonical Data Schema Contract | Consuming Architectural Layer |
 | :--- | :--- | :--- |
-| **Flow 1: Straight-Through Processing** | `GovernanceOutcomePayload` | [governance_outcome_payload.py](../src/data_models/governance/governance_outcome_payload.py) |
-| **Flow 2: Incident Ticket Staging** | `CaseworkerCaseReviewPayload` | [case_review_payload.py](../src/data_models/caseworker/case_review_payload.py) |
-| **Flow 2: Officer Adjudication** | `CaseworkerReviewOutcomePayload` | [review_outcome_payload.py](../src/data_models/caseworker/review_outcome_payload.py) |
-| **Flow 3: Treasury Payment Clearing** | `DisbursementCallbackPayload` | [disbursement_callback_payload.py](../src/data_models/disbursement/disbursement_callback_payload.py) |
+| **Flow 1: Straight-Through Processing** | *Governance Adjudication Outcome* | Layer 4 Orchestration Brain |
+| **Flow 2: Incident Ticket Staging** | *Caseworker Case Review Contract* | Layer 4 Case Management Service |
+| **Flow 2: Officer Adjudication** | *Caseworker Review Outcome Contract* | Layer 4 Case Management Service |
+| **Flow 3: Treasury Payment Clearing** | *Disbursement Callback Contract* | Layer 4 Payment Rails Integration |
 
 ---
 

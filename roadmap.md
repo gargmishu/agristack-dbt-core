@@ -29,55 +29,18 @@
   * **Layer 4: Orchestrator Brain** (State machine and governance decision routing engines).
   * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, agricultural land registries, social protection case staging, and payment rails).
 
-  *Example Recommended Folder Tree:*
-  ```text
-  agristack-dbt-core/
-  ├── pyproject.toml
-  └── src/
-      ├── connectors/                      # Layer 1 Channel Edge Connectors
-      │   ├── whatsapp_connector.py        # Text/Audio (.ogg) cleartext webhook
-      │   ├── ivr_connector.py             # Voice stream (.wav) SIP gateway
-      │   ├── ussd_connector.py            # Menu signaling (*147#) bypass connector
-      │   └── sms_connector.py             # Transactional DLT SMS gateway
-      ├── gateway/                         # Layer 2 Gateway & Perimeter Security
-      │   ├── carrier_auth_validator.py    # Webhook HMAC signature & Bearer token verification
-      │   ├── zero_trust_identity_tokenizer.py # RAM-only SHA-256 HMAC Zero-PII identity tokenization
-      │   ├── pii_purge_guard.py           # In-memory Zero-PII sanitizer & assertion sentinel
-      │   ├── adversarial_prompt_firewall.py # Regex prompt injection & override defense
-      │   ├── payload_canonicalizer.py     # Ingress payload canonicalization (Raw -> StandardizedIntake)
-      │   ├── rate_limiter.py              # Token bucket rate limiter & quota guard
-      │   └── ingestion_firewall.py        # Unified Layer 2 perimeter firewall facade
-      ├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
-      │   ├── public_agent_api.py          # Public Agent Gateway API Surface
-      │   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
-      ├── orchestrator/                    # Layer 4 DPI Workflow Execution Brain
-      │   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate execution loop
-      │   ├── claim_adjudicator.py         # Decision matrix & adjudication (Payout vs Review vs Reject)
-      │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
-      ├── services/                        # External Dependency Abstractions
-      │   ├── ai/                          # Foundational & Sector AI Blocks
-      │   │   ├── ai_mock_fixtures.py      # Deterministic AI simulation fixtures
-      │   │   ├── bhashini_service.py      # ASR, NMT Translation, and TTS blocks
-      │   │   └── slm_extractor.py         # Sovereign structured entity extractor
-      │   ├── notification/                # Outbound Notification Engine
-      │   │   └── multichannel_notification_service.py # Adaptive 4-channel notification service
-      │   └── dpi/                         # Authoritative DPI Registries
-      │       ├── dpi_mock_fixtures.py     # Deterministic registry simulation fixtures
-      │       ├── agri_registry_service.py # AgriStack cadastral & crop cross-match
-      │       ├── identity_verification_service.py # Aadhaar/MOSIP zero-PII token verification
-      │       ├── social_registry_service.py   # OpenSPP case lifecycle staging
-      │       └── payment_rail_service.py  # NPCI APBS / PFMS Treasury disbursement
-      ├── errors/                          # RFC 7807 problem details exception handlers
-      │   └── validation_exception_handler.py # FastAPI ValidationError handler
-      └── data_models/                     # Domain data contracts & Pydantic schemas
-          ├── common/                      # Foundational base schemas & enums
-          ├── raw_ingress/                 # Layer 1 -> Layer 2 ingress payloads
-          ├── public_agent/                # Layer 2 -> Layer 3 intake contracts
-          ├── governance/                  # Layer 4 decision & entity schemas
-          ├── caseworker/                  # Caseworker adjudication models
-          ├── notification/                # Outbound notification & request schemas
-          └── disbursement/                # Financial clearing callback schemas
-  ```
+  *Conceptual Subsystem Architecture:*
+  
+  | System Layer | Subsystem / Package | Architectural Responsibility |
+  | :--- | :--- | :--- |
+  | **Layer 1** | *Channel Edge Connectors* | Ingress protocol adapters for WhatsApp, IVR Voice, USSD, and SMS. |
+  | **Layer 2** | *Perimeter Security Gateway* | Ingress signature authentication, token-bucket rate limiting, RAM-only HMAC tokenization, PII purge sentinel, prompt firewall, and canonicalization. |
+  | **Layer 3** | *Public Agent Gateway* | Public agent intake API, structural classification, and fast-path NLU bypass evaluation. |
+  | **Layer 4** | *Orchestration Brain* | 3-gate claim orchestration engine, tri-state policy adjudicator, and caseworker management. |
+  | **Services** | *Sovereign AI Abstractions* | Bhashini Speech-to-Text (ASR), Machine Translation (NMT), Speech Synthesis (TTS), and Sovereign SLM Entity Extractor. |
+  | **Services** | *Outbound Notification Engine* | Adaptive multi-channel template rendering, text-to-speech audio formatting, and egress dispatch. |
+  | **Services** | *Authoritative DPI Registries* | MOSIP identity verification, AgriStack land record cross-matching, OpenSPP social case staging, and NPCI/PFMS payment rails. |
+  | **Contracts**| *Domain Data Contracts* | Immutable, validated Pydantic schemas enforcing Zero-Trust invariants across all layers. |
 
   *Rationale: This exact split maps directly to the layers in the flowchart and dependency taxonomy, guaranteeing Separation of Concerns so that a bug in a WhatsApp connector won't break core governance routing or identity tokenization.*
 

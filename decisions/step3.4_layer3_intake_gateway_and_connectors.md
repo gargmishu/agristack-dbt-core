@@ -9,34 +9,34 @@ The ingress architecture decouples carrier transport protocols, perimeter securi
 ```text
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 1: CHANNEL EDGE CONNECTORS                       │
-  │  - WhatsAppConnector (Meta Cloud API / BSP Webhooks)                  │
-  │  - IvrConnector      (SIP Trunk / Telephony Gateways)                 │
-  │  - UssdConnector     (SS7 / SIGTRAN Menu Signaling)                   │
-  │  - SmsConnector      (TRAI DLT Transactional SMS Webhooks)            │
+  │  - WhatsApp Connector (Meta Cloud API / BSP Webhooks)                  │
+  │  - IVR Voice Connector (SIP Trunk / Telephony Gateways)                │
+  │  - USSD Menu Connector (SS7 / SIGTRAN Menu Signaling)                  │
+  │  - SMS Gateway Connector (TRAI DLT Transactional SMS Webhooks)         │
   └───────────────────────────────────┬────────────────────────────────────┘
                                       │
                                       ▼ (Raw Ingress Payloads: WhatsApp/IVR/USSD/SMS)
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 2: PERIMETER SECURITY & GATEWAY                  │
-  │  - CarrierAuthValidator       (HMAC-SHA256 Signatures & Bearer Tokens) │
-  │  - RateLimiter                (Per-Caller Token-Bucket Quota)          │
-  │  - ZeroTrustIdentityTokenizer (RAM-Only SHA-256 HMAC Pseudonymization) │
-  │  - PiiPurgeGuard              (Zero Cleartext PII Assertion Sentinel)  │
-  │  - AdversarialPromptFirewall  (Prompt Injection & Jailbreak Defense)   │
-  │  - PayloadCanonicalizer       (Normalizes to Standardized Intake JSON) │
+  │  - Carrier Transport Authenticator (HMAC-SHA256 Signatures & Tokens)   │
+  │  - Ingress Rate Limiter (Per-Caller Token-Bucket Quota Sentinel)       │
+  │  - Zero-Trust Identity Tokenizer (RAM-Only SHA-256 HMAC Pseudonymization)
+  │  - PII Purge Sentinel (Zero Cleartext PII Invariant Check)             │
+  │  - Adversarial Prompt Firewall (Prompt Injection & Threat Defense)     │
+  │  - Ingress Payload Canonicalizer (Normalizes to Standardized Intake)   │
   └───────────────────────────────────┬────────────────────────────────────┘
                                       │
-                                      ▼ (PublicAgentStandardizedIntakePayload)
+                                      ▼ (Standardized Intake Contract)
   ┌────────────────────────────────────────────────────────────────────────┐
   │             LAYER 3: PUBLIC AGENT INTAKE GATEWAY SURFACE               │
-  │  - PublicAgentApi             (Public Intake API Surface)              │
-  │  - IntakePayloadEvaluator     (Structure Level & NLU Bypass Evaluator) │
+  │  - Public Agent API Surface (Perimeter Entrypoint)                     │
+  │  - Intake Payload Evaluator (Structure Level & NLU Bypass Evaluator)   │
   └───────────────────────────────────┬────────────────────────────────────┘
                                       │
-                                      ▼ (Prepared Intake Context)
+                                      ▼ (Evaluated Intake Context)
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 4: DPI ORCHESTRATOR BRAIN                        │
-  │  - ClaimOrchestrator          (Gate 1 -> Gate 2 -> Gate 3 Pipeline)    │
+  │  - Claim Orchestration Engine (Gate 1 -> Gate 2 -> Gate 3 Pipeline)    │
   └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -46,42 +46,42 @@ The ingress architecture decouples carrier transport protocols, perimeter securi
 
 Edge connectors interface with carrier networks and external telecommunication providers, validating raw payload structures and bridging transport-level communications.
 
-### 2.1 WhatsApp Connector (`WhatsAppConnector`)
+### 2.1 WhatsApp Connector
 * **Transport Protocol:** HTTPS Webhooks (Meta Graph API / WhatsApp Cloud API & authorized BSPs).
-* **Ingress Contract:** [`WhatsAppIngressPayload`](../src/data_models/raw_ingress/whatsapp_payload.py).
-* **Modality Invariant:** Strictly enforces mutual exclusivity between text messages (`text_body`) and voice recordings (`audio_recording_url`, `audio_duration_seconds`).
-* **Egress Dispatch:** Transmits formatted markdown notification cards and returns a `TransmissionAck` with a carrier message ID (`wamid`).
+* **Ingress Contract:** WhatsApp Ingress Contract.
+* **Modality Invariant:** Strictly enforces mutual exclusivity between text messages and voice recordings.
+* **Egress Dispatch:** Transmits formatted markdown notification cards and returns a carrier transmission acknowledgment receipt.
 
-### 2.2 IVR Telephony Connector (`IvrConnector`)
+### 2.2 IVR Telephony Connector
 * **Transport Protocol:** SIP Trunk / SS7 Telephony Gateway webhooks.
-* **Ingress Contract:** [`IvrIngressPayload`](../src/data_models/raw_ingress/ivr_payload.py).
-* **Audio Constraint:** Enforces valid signed audio URLs and duration boundaries between 1 and 600 seconds (`AudioDurationSeconds`).
+* **Ingress Contract:** IVR Voice Ingress Contract.
+* **Audio Constraint:** Enforces valid signed audio URLs and duration boundaries between 1 and 600 seconds.
 * **Egress Dispatch:** Dispatches pre-signed Bhashini TTS voice stream playback URLs.
 
-### 2.3 USSD Menu Signaling Connector (`UssdConnector`)
+### 2.3 USSD Menu Signaling Connector
 * **Transport Protocol:** Cellular SS7 / SIGTRAN signaling frames.
-* **Ingress Contract:** [`UssdIngressPayload`](../src/data_models/raw_ingress/ussd_payload.py).
+* **Ingress Contract:** USSD Ingress Contract.
 * **Shortcode & Digit Routing:** Validates routing shortcodes (e.g., `*147#`) and concatenated digit strings (e.g., `1*2*1`) bounded by menu depth calculations (max 64 characters).
 * **Egress Dispatch:** Transmits compact text strings strictly bounded to 160 characters (GSM 7-bit standard).
 
-### 2.4 SMS Connector (`SmsConnector`)
+### 2.4 SMS Connector
 * **Transport Protocol:** TRAI DLT-registered transactional SMS webhooks.
-* **Ingress Contract:** [`SmsIngressPayload`](../src/data_models/raw_ingress/sms_payload.py).
-* **Validation:** Enforces E.164 phone formatting, non-empty cleartext body, and unique `channel_message_id`.
+* **Ingress Contract:** SMS Ingress Contract.
+* **Validation:** Enforces E.164 phone formatting, non-empty cleartext body, and unique channel message identifier.
 * **Egress Dispatch:** Dispatches concise status updates and toll-free helpline references.
 
 ---
 
 ## 3. Layer 2: Ingestion Perimeter & Canonicalization
 
-Before raw carrier data enters Layer 3, [`IngestionFirewall`](../src/gateway/ingestion_firewall.py) and [`PayloadCanonicalizer`](../src/gateway/payload_canonicalizer.py) execute perimeter controls:
+Before raw carrier data enters Layer 3, the Perimeter Security Gateway executes perimeter controls:
 
-1. **Carrier Authentication:** [`CarrierAuthValidator`](../src/gateway/carrier_auth_validator.py) verifies `X-Hub-Signature-256` HMAC signatures or Bearer tokens.
-2. **Rate Limiting:** [`RateLimiter`](../src/gateway/rate_limiter.py) tracks request allowances per caller identifier.
-3. **RAM-Only Tokenization:** [`ZeroTrustIdentityTokenizer`](../src/gateway/zero_trust_identity_tokenizer.py) generates a 64-character SHA-256 HMAC digest (`HmacCitizenToken`) from the caller's MSISDN using `AGRISTACK_PEPPER_SECRET`.
-4. **PII Purge Sentinel:** [`PiiPurgeGuard`](../src/gateway/pii_purge_guard.py) asserts zero raw phone numbers or Aadhaar numbers leak into downstream fields.
-5. **Prompt Injection Inspection:** [`AdversarialPromptFirewall`](../src/gateway/adversarial_prompt_firewall.py) scans text inputs for injection and override patterns.
-6. **Canonical Schema Normalization:** Transforms raw inputs into the canonical cross-channel contract: [`PublicAgentStandardizedIntakePayload`](../src/data_models/public_agent/standardized_intake_payload.py).
+1. **Carrier Authentication:** Verifies `X-Hub-Signature-256` HMAC signatures or Bearer tokens via constant-time comparison.
+2. **Rate Limiting:** Tracks request allowances per caller identifier via a token-bucket algorithm.
+3. **RAM-Only Tokenization:** Generates a 64-character SHA-256 HMAC digest from the caller's MSISDN using an injected cryptographic pepper (`AGRISTACK_PEPPER_SECRET`).
+4. **PII Purge Sentinel:** Asserts zero raw phone numbers or Aadhaar numbers leak into downstream fields.
+5. **Prompt Injection Inspection:** Scans text inputs for injection, jailbreak, and override patterns.
+6. **Canonical Schema Normalization:** Transforms raw inputs into the canonical cross-channel contract (*Standardized Intake Payload*).
 
 ---
 
@@ -89,14 +89,14 @@ Before raw carrier data enters Layer 3, [`IngestionFirewall`](../src/gateway/ing
 
 Layer 3 provides the public API facade and structural routing classification:
 
-### 4.1 Public Agent API (`PublicAgentApi`)
-* Acts as the intake surface receiving [`PublicAgentStandardizedIntakePayload`](../src/data_models/public_agent/standardized_intake_payload.py).
-* Invokes [`IntakePayloadEvaluator`](../src/public_agent/intake_payload_evaluator.py) to assess structural integrity before forwarding to the Layer 4 state machine.
+### 4.1 Public Agent API
+* Acts as the public intake surface receiving the Standardized Intake Payload.
+* Invokes the Intake Payload Evaluator to assess structural integrity before forwarding to the Layer 4 state machine.
 
 ### 4.2 Structural Evaluation & Fast-Path Menu Bypass
-[`IntakePayloadEvaluator`](../src/public_agent/intake_payload_evaluator.py) inspects the payload `structure_level`:
+The Intake Evaluator inspects the payload structure level:
 
-| Structure Level (`StructureLevel`) | Modality / Channel | Evaluation Outcome (`IntakeEvaluationResult`) | Performance & Architectural Impact |
+| Structure Level | Modality / Channel | Evaluation Outcome | Performance & Architectural Impact |
 | :--- | :--- | :--- | :--- |
 | **`MENU_SELECTION` / `DTMF_SELECTION`** | USSD (`*147#`), IVR Keypad (`1#`) | `requires_nlu_extraction = False` (Structured Bypass) | **Saves ~800ms GPU inference latency** and completely eliminates AI hallucinations for deterministic menu choices. |
 | **`FREE_TEXT`** | WhatsApp Chat, SMS, Voice Notes | `requires_nlu_extraction = True` (NLU Routing) | Directs unstructured regional language text to the SLM entity extraction pipeline. |
@@ -117,10 +117,10 @@ In Step 3.4.1, we evaluated two architectural paradigms for the API Access Layer
 | Architectural Dimension | Option A: Database-Native REST (PostgREST) | Option B: Thin Application Service (FastAPI) [SELECTED] |
 | :--- | :--- | :--- |
 | **Zero-Trust PII Tokenization** | ❌ Hard: Raw PII would reach database transport logs before in-memory hashing. | ✅ **Native:** In-memory RAM tokenization occurs *before* data touches disk or database. |
-| **Carrier Auth & HMAC Signatures** | ❌ Complex: Difficult to verify Meta `X-Hub-Signature-256` or SIP headers in DB views. | ✅ **Native:** Custom cryptographic auth validator middleware (`CarrierAuthValidator`). |
-| **Dynamic Multimodal Routing** | ❌ Static: Cannot orchestrate Bhashini ASR, NMT translation, or SLM inference dynamically. | ✅ **Native:** Asynchronous Python service coordinating external AI and DPI microservices. |
-| **Rate Limiting & Threat Defense** | ⚠️ Generic: Basic connection limits; lacks prompt injection inspection. | ✅ **Native:** Token-bucket limiter (`RateLimiter`) and regex threat firewall (`AdversarialPromptFirewall`). |
-| **Type Safety & Domain Contracts** | ⚠️ SQL-level constraints; lacks rich Pydantic v2 runtime validation models. | ✅ **Native:** Strict Pydantic v2 domain models with extra-field prohibition and custom validators. |
+| **Carrier Auth & HMAC Signatures** | ❌ Complex: Difficult to verify Meta `X-Hub-Signature-256` or SIP headers in DB views. | ✅ **Native:** Custom cryptographic auth validator middleware. |
+| **Dynamic Multimodal Routing** | ❌ Static: Cannot orchestrate Bhashini ASR, NMT translation, or SLM inference dynamically. | ✅ **Native:** Asynchronous service coordinating external AI and DPI microservices. |
+| **Rate Limiting & Threat Defense** | ⚠️ Generic: Basic connection limits; lacks prompt injection inspection. | ✅ **Native:** Token-bucket limiter and regex threat firewall. |
+| **Type Safety & Domain Contracts** | ⚠️ SQL-level constraints; lacks rich runtime validation models. | ✅ **Native:** Strict domain models with extra-field prohibition and custom validators. |
 
 ### Decision
 **Adopt Option B: Thin Application-Layer Service.**
@@ -128,11 +128,11 @@ The zero-PII security mandate, cryptographic webhook verification, adversarial f
 
 ---
 
-## 6. Traceability Matrix & File Manifest
+## 6. Architectural Responsibilities Matrix
 
-| Roadmap Component | Implementation File | Primary Responsibilities |
+| Architectural Layer | Subsystem / Component | Primary Responsibilities |
 | :--- | :--- | :--- |
-| **Layer 1 Edge Connectors** | [`src/connectors/whatsapp_connector.py`](../src/connectors/whatsapp_connector.py)<br>[`src/connectors/ivr_connector.py`](../src/connectors/ivr_connector.py)<br>[`src/connectors/ussd_connector.py`](../src/connectors/ussd_connector.py)<br>[`src/connectors/sms_connector.py`](../src/connectors/sms_connector.py) | Carrier webhook reception, modality validation, and outbound dispatch. |
-| **Layer 2 Perimeter Security** | [`src/gateway/ingestion_firewall.py`](../src/gateway/ingestion_firewall.py)<br>[`src/gateway/carrier_auth_validator.py`](../src/gateway/carrier_auth_validator.py)<br>[`src/gateway/zero_trust_identity_tokenizer.py`](../src/gateway/zero_trust_identity_tokenizer.py)<br>[`src/gateway/pii_purge_guard.py`](../src/gateway/pii_purge_guard.py)<br>[`src/gateway/adversarial_prompt_firewall.py`](../src/gateway/adversarial_prompt_firewall.py)<br>[`src/gateway/payload_canonicalizer.py`](../src/gateway/payload_canonicalizer.py)<br>[`src/gateway/rate_limiter.py`](../src/gateway/rate_limiter.py) | Carrier auth, rate-limiting, RAM-only tokenization, PII purge, threat inspection, and canonicalization. |
-| **Layer 3 Public Intake API** | [`src/public_agent/public_agent_api.py`](../src/public_agent/public_agent_api.py)<br>[`src/public_agent/intake_payload_evaluator.py`](../src/public_agent/intake_payload_evaluator.py) | Public intake submission API, structure-level evaluation, and NLU bypass routing. |
-| **Domain Contracts** | [`src/data_models/raw_ingress/`](../src/data_models/raw_ingress/)<br>[`src/data_models/public_agent/`](../src/data_models/public_agent/) | Pydantic v2 raw ingress and standardized zero-PII intake payload schemas. |
+| **Layer 1 Edge Connectors** | *Carrier Connectors (WhatsApp, IVR, USSD, SMS)* | Carrier webhook reception, modality validation, and outbound dispatch. |
+| **Layer 2 Perimeter Security** | *Perimeter Security Gateway* | Carrier auth, rate-limiting, RAM-only tokenization, PII purge, threat inspection, and canonicalization. |
+| **Layer 3 Public Intake API** | *Public Agent Gateway* | Public intake submission API, structure-level evaluation, and NLU bypass routing. |
+| **Domain Contracts** | *Canonical Ingress & Intake Contracts* | Raw ingress and standardized zero-PII intake payload schemas. |

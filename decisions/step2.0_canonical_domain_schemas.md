@@ -14,7 +14,7 @@
 
 ## 1. Executive Summary
 
-This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized enums (`src/data_models/common/enums.py`) and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
+This document defines the implementation specifications for **Step 2.0 of the Master Roadmap**. To satisfy Zero-Trust security and prevent AI hallucination or malformed payload injection, all data passing between system layers (Layer 1 Connectors -> Layer 2 Gateways -> Layer 3 Public Agent Intake -> Layer 4 Orchestrator Brain) must be strictly validated at runtime using standardized canonical enums and **Pydantic v2** models with extra-field prohibition (`extra="forbid"`), immutable assignment, and explicit type checking.
 
 ---
 
@@ -64,7 +64,7 @@ class StrictBaseModel(BaseModel):
 
 ---
 
-### 3.2 Standardized Enums (`src/data_models/common/enums.py`)
+### 3.2 Standardized Canonical Enums
 
 Standardized enums establish a single source of truth across all architectural layers, eliminating "magic strings", securing SLM entity extraction against uncalibrated outputs, and providing 1:1 mapping with database `ENUM` types:
 
@@ -341,9 +341,9 @@ class UssdIngressPayload(StrictBaseModel):
 
 ---
 
-### 4.2 Public Agent Payload (`src/data_models/public_agent/standardized_intake_payload.py`)
+### 4.2 Standardized Intake Payload Contract
 
-This is the **immutable contract payload** submitted to `PublicAgentApi`. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
+This is the **immutable contract payload** submitted to the public intake gateway. Cleartext PII (raw phone numbers) is stripped, and only `tokenized_citizen_id` (SHA-256 HMAC token) is present. Here we define the **Layer 2 -> Layer 3** Schema:
 
 ```python
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
@@ -537,10 +537,10 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
 ---
 
-### 4.4 Caseworker Incident Staging & Review Schemas (`src/data_models/caseworker/`)
+### 4.4 Caseworker Incident Staging & Review Contracts
 
 #### 4.4.1 Case Review Payload
-Payload emitted by Step 11 (`caseworker_incident_staging`) to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
+Payload emitted during Caseworker Incident Staging to push complete case context into the District Agricultural Officer Review Ledger Dashboard queue when a session is escalated:
 
 ```python
 class CaseworkerCaseReviewPayload(StrictBaseModel):
@@ -591,7 +591,7 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
 
 ---
 
-### 4.5 Payment Clearing Callback Schema (`src/data_models/disbursement/disbursement_callback_payload.py`)
+### 4.5 Payment Clearing Callback Schema
 
 Incoming asynchronous payment status callback payload received from external payment clearing rails (PFMS / NPCI / OpenSPP) when financial transactions settle or fail:
 
@@ -620,7 +620,6 @@ class DisbursementCallbackPayload(StrictBaseModel):
 To prevent schema details or stack traces from leaking to external callers, FastAPI exception handlers format validation errors into RFC 7807 problem details:
 
 ```python
-# src/errors/validation_exception_handler.py
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -646,96 +645,47 @@ async def validation_exception_handler(incoming_request: Request, validation_err
 
 ---
 
-## 6. Physical File Implementation Plan
+## 6. Conceptual Domain Contract Hierarchy
 
-Step 2.0 establishes the following physical file structure and model export hierarchy:
+Step 2.0 establishes the following conceptual data contract taxonomy:
 
-```text
-agristack-dbt-core/
-├── src/
-│   ├── data_models/
-│   │   ├── __init__.py             <-- Centralized model exports for package-level imports
-│   │   ├── common/                 <-- Foundational primitives, enums, and constrained types
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py             <-- StrictBaseModel base configuration class
-│   │   │   ├── enums.py            <-- ChannelType, PayloadType, StructureLevel, ApplicationIntent, DomainEntityKey, EligibilityStatus, GovernanceAction, SessionStatus, ApplicationStatus, DisbursementStatus, ThreatCategory, LanguageLocale, RejectionReasonCode, EscalationReasonCode, DisbursementFailureCode
-│   │   │   └── field_types.py      <-- Constrained Annotated type aliases & UtcTimestamp clock-skew freshness validator
-│   │   ├── raw_ingress/            <-- Subpackage for Layer 1 carrier raw ingress schemas
-│   │   │   ├── __init__.py         <-- Exports WhatsAppIngressPayload, IvrIngressPayload, UssdIngressPayload
-│   │   │   ├── whatsapp_payload.py <-- WhatsAppIngressPayload
-│   │   │   ├── ivr_payload.py      <-- IvrIngressPayload
-│   │   │   └── ussd_payload.py     <-- UssdIngressPayload
-│   │   ├── public_agent/           <-- Subpackage for Layer 2 -> Layer 3 normalized intake contracts
-│   │   │   ├── __init__.py
-│   │   │   └── standardized_intake_payload.py <-- PublicAgentStandardizedIntakePayload
-│   │   ├── governance/             <-- Subpackage for Layer 3 -> Layer 4 governance schemas
-│   │   │   ├── __init__.py         <-- Exports ClaimEvaluationPayload, ExtractedEntityPayload, GovernanceOutcomePayload
-│   │   │   ├── claim_evaluation_payload.py    <-- ClaimEvaluationPayload
-│   │   │   ├── extracted_entity_payload.py    <-- ExtractedEntityPayload
-│   │   │   └── governance_outcome_payload.py  <-- GovernanceOutcomePayload
-│   │   ├── caseworker/             <-- Subpackage for Step 11 manual escalation schemas
-│   │   │   ├── __init__.py         <-- Exports CaseworkerCaseReviewPayload, CaseworkerReviewOutcomePayload
-│   │   │   ├── case_review_payload.py         <-- CaseworkerCaseReviewPayload
-│   │   │   └── review_outcome_payload.py      <-- CaseworkerReviewOutcomePayload
-│   │   └── disbursement/           <-- Subpackage for financial clearing callback schemas
-│   │       ├── __init__.py
-│   │       └── disbursement_callback_payload.py <-- DisbursementCallbackPayload
-│   └── errors/
-│       ├── __init__.py             <-- Error handler package exports
-│       └── handlers.py             <-- RFC 7807 validation_exception_handler implementation
-└── tests/
-    ├── data_models/
-    │   ├── common/
-    │   │   ├── test_base.py
-    │   │   ├── test_enums.py
-    │   │   └── test_field_types.py
-    │   ├── raw_ingress/
-    │   │   ├── test_ivr_payload.py
-    │   │   ├── test_ussd_payload.py
-    │   │   └── test_whatsapp_payload.py
-    │   ├── public_agent/
-    │   │   └── test_standardized_intake_payload.py <-- 2-type tuple validation & zero-PII HMAC token format tests
-    │   ├── governance/
-    │   │   ├── test_claim_evaluation_payload.py    <-- Pydantic input contract & field validation tests
-    │   │   ├── test_governance_outcome_payload.py  <-- Adversarial confidence zeroing, menu bypass, & governance action tests
-    │   │   └── test_extracted_entity_payload.py
-    │   ├── caseworker/
-    │   │   ├── test_case_review_payload.py         <-- Escalation ticket staging tests
-    │   │   └── test_review_outcome_payload.py      <-- Caseworker review action tests
-    │   └── disbursement/
-    │       └── test_disbursement_callback_payload.py <-- Bank clearing callback & terminal failure reason tests
-    └── errors/
-        └── test_validation_exception_handler.py        <-- RFC 7807 error format compliance & stack trace sanitization tests
-```
+| Contract Family | Conceptual Contract Name | Ingress / Egress Boundary | Primary Security & Governance Invariants |
+| :--- | :--- | :--- | :--- |
+| **Foundational Types** | *Strict Base Model* | Cross-cutting foundation | Rejects undeclared extra fields, enforces string whitespace trimming and immutability. |
+| **Foundational Types** | *Canonical Enums* | Cross-cutting foundation | Standardized enumeration of channels, modalities, intents, and statuses. |
+| **Foundational Types** | *Constrained Types & Clock-Skew Guard* | Cross-cutting foundation | SHA-256 HMAC regex, E.164 phone regex, 5-second UTC freshness assertion. |
+| **Raw Ingress** | *Carrier Raw Ingress Contracts* | Layer 1 $\rightarrow$ Layer 2 | Enforces carrier-native schemas for WhatsApp, IVR Voice, USSD, and SMS. |
+| **Public Agent** | *Standardized Intake Payload* | Layer 2 $\rightarrow$ Layer 3 | 64-char SHA-256 HMAC pseudonymous token, zero cleartext PII, normalized text. |
+| **Governance** | *Extracted Domain Entity Contract* | Layer 3 $\rightarrow$ Layer 4 Gate 1 | NLU extraction output, confidence scoring, security threat flagging. |
+| **Governance** | *Claim Evaluation & Determination Contract* | Layer 4 Gate 3 Adjudication | Tri-state governance action, financial state transition, and disbursement ID. |
+| **Caseworker** | *Caseworker Incident Review & Outcome* | Layer 4 Case Management | Manual adjudication ticket staging and officer decision logging. |
+| **Disbursement** | *Disbursement Callback Contract* | Layer 4 Payment Rails | Asynchronous bank clearing confirmation, UTR verification, failure codes. |
+| **Error Handling** | *RFC 7807 Problem Details* | API Boundary | Standardized machine-readable error response format. |
 
-### Module Responsibilities & Model Exports
+---
 
-1. **`src/data_models/common/base.py` (`StrictBaseModel`):**
-   Inherits from Pydantic `BaseModel`. Configures `extra="forbid"`, `str_strip_whitespace=True`, `use_enum_values=True`, and `frozen=True` (immutability). All payload classes inherit from `StrictBaseModel`.
+### Architectural Responsibilities
 
-2. **`src/data_models/common/enums.py`:**
-   Contains all canonical Python string Enums (`ChannelType`, `PayloadType`, `StructureLevel`, `ApplicationIntent`, `DomainEntityKey`, `EligibilityStatus`, `GovernanceAction`, `DisbursementStatus`).
+1. **Foundational Types & Base Model:**
+   Provides immutable, strict base model configuration rejecting unexpected payload keys, standardizes canonical enums, and validates constrained field formats.
 
-3. **`src/data_models/common/field_types.py`:**
-   Contains cross-cutting field type annotations (`SessionId`, `PhoneNumberE164`, `HmacCitizenToken`, `EscalationCaseId`, `DisbursementTxnId`, `ExtractionPayloadId`, `AudioDurationSeconds`, `AiConfidenceScore`) and the `UtcTimestamp` 5-second clock-skew freshness validator.
+2. **Carrier Raw Ingress Contracts:**
+   Validates transport-level carrier structures for WhatsApp, IVR voice calls, USSD menu signaling, and transactional SMS.
 
-4. **`src/data_models/raw_ingress/` Subpackage (`whatsapp_payload.py`, `ivr_payload.py`, `ussd_payload.py`):**
-   Contains Layer 1 -> Layer 2 carrier raw ingress payloads: `WhatsAppIngressPayload`, `IvrIngressPayload`, and `UssdIngressPayload`. Enforces E.164 phone regex, call duration ceiling (1 <= duration <= 600), audio URL syntax, and USSD shortcode regex (`^\*\d+(\*\d+)*#$`). Re-exported via `src/data_models/raw_ingress/__init__.py`.
+3. **Standardized Intake Payload:**
+   Defines the normalized, zero-PII cross-channel contract carrying only pseudonymous citizen tokens and redacted content.
 
-5. **`src/data_models/public_agent/standardized_intake_payload.py`:**
-   Contains Layer 2 -> Layer 3 public agent payload: `PublicAgentStandardizedIntakePayload`. Enforces 64-char SHA-256 HMAC identity tokens, BCP 47 language locales, 2-type tuple input content rules `(payload_type, structure_level)`, and 2-type tuple channel structure compatibility `(channel_type, payload_type)`.
+4. **Governance & Entity Extraction Contracts:**
+   Structures SLM entity extraction results and enforces the Gate 3 tri-state policy adjudication decision matrix.
 
-6. **`src/data_models/governance/` Subpackage (`extracted_entity_payload.py`, `governance_outcome_payload.py`):**
-   Contains Layer 3 -> Layer 4 schemas: `ExtractedEntityPayload` and `GovernanceOutcomePayload`. Enforces primitive scalar values in `domain_entities`, automatic confidence score zeroing (`ai_confidence_score = 0.0`) when `is_adversarial_attempt == True`, and conditional field rules for decision outcomes. Re-exported via `src/data_models/governance/__init__.py`.
+5. **Caseworker Review & Escalation Contracts:**
+   Manages manual review ticket lifecycle, officer decisions, audit notes, and citizen clarification follow-ups.
 
-7. **`src/data_models/caseworker/` Subpackage (`case_review_payload.py`, `review_outcome_payload.py`):**
-   Contains Step 11 manual escalation schemas: `CaseworkerCaseReviewPayload` (escalation ticket staging into District Officer Dashboard) and `CaseworkerReviewOutcomePayload` (manual adjudication review outcome submitted by human officer). Re-exported via `src/data_models/caseworker/__init__.py`.
+6. **Financial Disbursement Callbacks:**
+   Processes asynchronous wire transfer status receipts from national treasury payment clearing rails.
 
-8. **`src/data_models/disbursement/disbursement_callback_payload.py`:**
-   Contains asynchronous payment rail clearing schema: `DisbursementCallbackPayload` (processing bank callbacks from PFMS / NPCI / OpenSPP).
-
-9. **`src/errors/validation_exception_handler.py`:**
-   Implements `validation_exception_handler` to convert Pydantic validation failures into RFC 7807 problem details payloads, sanitizing internal implementation details while returning machine-readable `invalid_params` error arrays.
+7. **Standardized Problem Details Error Handling:**
+   Transforms validation errors into secure, standardized RFC 7807 problem details payloads without leaking internal stack traces.
 
 ---
 

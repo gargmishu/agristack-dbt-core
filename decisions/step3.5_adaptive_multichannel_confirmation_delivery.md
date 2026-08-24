@@ -2,21 +2,21 @@
 
 ## 1. Executive Summary & Delivery Principles
 
-This document defines the architectural specifications, message template bindings, channel formatting constraints, and outbound dispatch logic for **Phase 3, Step 3.5: Adaptive Multichannel Confirmation Delivery** (Step 12 in the Master DPI Workflow).
+This document defines the architectural specifications, message template bindings, channel formatting constraints, and outbound dispatch logic for **Phase 3, Step 3.5: Adaptive Multichannel Confirmation Delivery** in the Master DPI Architecture.
 
 The Confirmation Delivery engine receives final governance determination outcomes, caseworker escalation tickets, or re-prompt instructions, formats channel-native receipts adapted to the citizen's originating ingress channel (`WhatsApp`, `IVR Voice`, `USSD`, `SMS`), and dispatches outbound notifications back to the citizen.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 4: Governance Outcome / Escalation / Reprompt State  │
-│  - GovernanceOutcomePayload / CaseworkerCaseReviewPayload   │
+│  - Adjudication Outcome / Incident Review Ticket State      │
 └─────────────────────────────┬───────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│    STEP 12: MULTICHANNEL CONFIRMATION DISPATCH ENGINE       │
-│  - Template Resolver (Outcome + Channel + LanguageLocale)   │
-│  - Bhashini TTS Synthesizer (for IVR Voice audio playback)  │
+│    ADAPTIVE MULTICHANNEL CONFIRMATION DISPATCH ENGINE       │
+│  - Template Resolver (Outcome + Channel + Language Locale)  │
+│  - Speech Synthesizer TTS (for IVR Voice audio playback)    │
 │  - Channel Adapter (WhatsApp Card / USSD 160-char / SMS)    │
 └─────────────────────────────┬───────────────────────────────┘
                               │
@@ -30,19 +30,19 @@ The Confirmation Delivery engine receives final governance determination outcome
 
 ## 2. Channel-Native Formatting & Invariants
 
-### 2.1 WhatsApp (`ChannelType.WHATSAPP`)
+### 2.1 WhatsApp Channel
 * **Format:** Rich text markdown cards with emojis, clear scheme details, transactional identifiers (`disbursement_txn_id` or `escalation_case_id`), and next action guidance.
-* **Payload Modality:** `PayloadType.TEXT` or rich interactive card structure.
+* **Payload Modality:** Text or rich interactive card structure.
 
-### 2.2 IVR Voice Telephony (`ChannelType.IVR_VOICE`)
+### 2.2 IVR Voice Telephony
 * **Format:** Synthesized vernacular spoken audio stream.
-* **TTS Pipeline:** Transmits formatted text to [BhashiniService.synthesize_speech()](../src/services/ai/bhashini_service.py) in the citizen's `LanguageLocale` (e.g., `hi-IN`) and returns a signed `HttpUrl` audio playback stream URL.
+* **TTS Pipeline:** Transmits formatted text to the Sovereign Text-to-Speech (TTS) engine in the citizen's language locale (e.g., Hindi `hi-IN`) and returns a signed audio playback stream URL.
 
-### 2.3 USSD Menu Signaling (`ChannelType.USSD`)
+### 2.3 USSD Menu Signaling
 * **Format:** Compact plain text string.
 * **Constraint:** Strict **160-character ceiling** (GSM 7-bit standard constraint) to prevent network truncation or carrier frame fragmentation over SS7/SIGTRAN signaling.
 
-### 2.4 Transactional SMS (`ChannelType.SMS`)
+### 2.4 Transactional SMS
 * **Format:** Concise alphanumeric message summary with reference identifier and official toll-free helpline.
 
 ---
@@ -58,22 +58,17 @@ The Confirmation Delivery engine receives final governance determination outcome
 
 ---
 
-## 4. Architectural Implementation & Module Split
+## 4. Architectural Responsibilities
 
-```text
-src/
-├── data_models/
-│   ├── delivery/
-│   │   ├── __init__.py
-│   │   ├── notification_request_payload.py    <-- NotificationRequestPayload
-│   │   ├── outbound_notification_payload.py   <-- OutboundNotificationPayload & NotificationDeliveryStatus
-│   │   ├── notification_dispatch_result.py    <-- NotificationDispatchResult
-│   │   └── transmission_ack.py                <-- TransmissionAck
-├── services/
-│   └── delivery/
-│       ├── __init__.py
-│       └── multichannel_notification_service.py <-- Adaptive Template & Dispatch Service
-```
+* **Outbound Notification Models:** Define normalized contracts for notification requests, channel payloads, delivery statuses, and transmission receipts.
+* **Adaptive Multi-Channel Notification Service:** Resolves localized templates, executes text-to-speech synthesis for voice telephony, and routes outbound messages to the appropriate carrier connectors.
+
+---
+
+## 5. Security & Privacy Invariants
+
+1. **Zero-PII Outbound Invariant:** Outbound receipts reference only the `session_id`, `disbursement_txn_id`, or `escalation_case_id`. Unhashed citizen names, Aadhaar numbers, and bank account numbers are strictly omitted from confirmation strings.
+2. **Idempotent Dispatch:** Dispatches are keyed by `session_id` to ensure at-most-once outbound messaging per state transition.
 
 ---
 

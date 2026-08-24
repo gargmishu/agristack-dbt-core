@@ -21,7 +21,7 @@ Based on our multi-channel architecture, cleartext Personally Identifiable Infor
 > **Note:** Layer 1 and Layer 2 must never write cleartext PII to persistent storage or disk logs; they may only forward cleartext in-memory to L3/L4. Edge layers may only use orchestrator-issued tokens or ephemeral, tightly TTL'd encrypted caches when absolutely necessary.
 
 1. **Source Phone Number (ANI):** Reaches the system through channel connectors (WhatsApp webhook, IVR SIP gateway, USSD signaling). This is required initially for session tracking but poses a privacy risk if stored long-term in cleartext.
-2. **Citizen Identity Numbers (Aadhaar / Farmer ID):** Captured explicitly as part of the conversational AI extraction or USSD input to perform `identity_verify()` against DPI registries (e.g., MOSIP / Aadhaar).
+2. **Citizen Identity Numbers (Aadhaar / Farmer ID):** Captured explicitly as part of the conversational AI extraction or USSD input to perform identity verification against sovereign DPI registries (e.g., MOSIP / Aadhaar).
 3. **Location / Cadastral Data:** Geographic coordinates, property parcel identifiers, or farm boundary data may appear less sensitive in isolation, but once linked to a specific identity token they can be used to infer a person’s exact residence, land ownership, and movements. In that combined form, the data is treated as protected because it materially increases re-identification risk and privacy impact.
 > [!WARNING] **Cleartext Ban**
 > Under no circumstances will cleartext Aadhaar numbers or other highly sensitive citizen ID numbers be written to the database or written to disk-based application logs.
@@ -112,7 +112,7 @@ flowchart TB
 To guarantee compliance, the architecture must enforce explicit data purging rules:
 
 1. **Volatile RAM Only:** Variables containing cleartext PII must exist strictly within the lifecycle of the active application process memory.
-2. **Explicit Nullification:** Once tokenized and verified against the authoritative registry (via `identity_verify()`), the cleartext variable must be explicitly scoped to be cleaned up by the garbage collector immediately, and omitted from the DB model object.
+2. **Explicit Nullification:** Once tokenized and verified against the authoritative registry, the cleartext variable must be explicitly scoped to be cleaned up by the garbage collector immediately, and omitted from the DB model object.
 3. **Database Schema Constraints:** In Step 0.4 (Schema DDL), columns designed to store identity must be explicitly named to denote hashed data (e.g., `tokenized_identity_hash` instead of `aadhaar_number`). Explicit, token-specific column names prevent mistakes, make intent and auditability obvious, and enable precise DB-level constraints, indexing, and access controls so cleartext PII is never accidentally stored or queried.
 4. **Edge persistence restriction:** Layer 1 and Layer 2 must not persist cleartext PII to durable storage or disk logs; any temporary caches used by edge components must be encrypted, tightly TTL'd, access-controlled, and audited. Prefer keeping cleartext only in application RAM and using orchestrator-issued ephemeral tokens instead.
 
@@ -128,7 +128,7 @@ The Orchestrator resolves this by relying on the stateless nature of network pro
 1. **Turn 1 (Initiation):** A webhook arrives (`From: +919876543210`, `Message: "Hi"`).
   - Layer(s): `Layer 1` (Channel Edge) receives the webhook; `Layer 2` (API Access) forwards to `Layer 3` (Public Agent Intake) and/or `Layer 4` (Orchestrator Brain).
   - The Orchestrator (Layer 4) receives the payload in volatile RAM.
-  - The Orchestrator (Layer 4) hashes the phone number (`tokenizePII`) to generate `tokenized_phone_hash`.
+  - The Orchestrator (Layer 4) hashes the phone number to generate `tokenized_phone_hash`.
   - The Orchestrator (Layer 4) creates a new record in `session_telemetry_log` using the hash (persistent write).
   - The Orchestrator (Layer 4) replies to the webhook; the outbound reply traverses `Layer 3 -> Layer 2 -> Layer 1` to the channel provider.
   - The HTTP request ends, and Layer 4 purges cleartext from RAM (garbage collection / explicit nullification).
@@ -137,7 +137,7 @@ The Orchestrator resolves this by relying on the stateless nature of network pro
   - The Orchestrator (Layer 4) receives the cleartext phone number in volatile RAM *again*.
   - The Orchestrator (Layer 4) generates the `tokenized_phone_hash` to look up the active session in `session_telemetry_log` (DB read).
   - The Orchestrator (Layer 4) determines the claim data is now complete.
-  - The Orchestrator (Layer 4) calls `submit_application()` to the external OpenSPP registry (External DPI Vault) over secure HTTPS, sending **cleartext phone number** but only in-transit.
+  - The Orchestrator (Layer 4) transmits the complete application payload to the external OpenSPP registry (External DPI Vault) over secure HTTPS, sending **cleartext phone number** but only in-transit.
   - OpenSPP (External DPI Vault) securely stores the PII and returns an `openspp_case_id`.
   - The Orchestrator (Layer 4) writes the `openspp_case_id` to the `application_governance_ledger` (persistent write) along with the token hashes and provenance metadata.
   - The HTTP request ends, Layer 4 purges cleartext from RAM, and the cleartext phone number is dropped.

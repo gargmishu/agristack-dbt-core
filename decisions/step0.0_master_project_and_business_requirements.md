@@ -35,20 +35,20 @@ The platform provides a unified, inclusive interface catering to farmers of all 
 
 ### 2.2 Vernacular Speech & Language Processing Pipeline
 For `IVR_VOICE` and `WHATSAPP` channels, raw input undergoes multi-stage AI translation:
-1. **Speech-to-Text Transcription (`Step 02`):** Converts regional acoustic streams into written vernacular script using `BHASHINI_ASR_INFERENCE_CLUSTER` (e.g., `hi-IN`).
-2. **Text Translation & Normalization (`Step 03`):** Translates local idioms, regional dialects (e.g., Regional Haryanvi Hindi), and agricultural terminology into standardized administrative English using `BHASHINI_NMT_TRANSLATION_HUB`.
+1. **Speech-to-Text Transcription:** Converts regional acoustic streams into written vernacular script using Bhashini ASR (e.g., Hindi `hi-IN`).
+2. **Text Translation & Normalization:** Translates local idioms, regional dialects (e.g., Regional Haryanvi Hindi), and agricultural terminology into standardized administrative English using Bhashini NMT.
 3. **Adversarial Ingestion Safeguard:** If acoustic anomalies or prompt injection patterns are detected, security interceptors force the extraction confidence score to `0.00`, routing the session to human review.
 
 ### 2.3 Conversational Re-Prompt & Drop-off Prevention
-* **Adaptive Re-prompt Loop:** If AI extraction confidence is low ($<0.85$) and attempts $< 3$, Step 09 triggers `TRIGGER_CHANNEL_REPROMPT_INGRESS` (Step 12), re-prompting the citizen over WhatsApp/SMS for missing or ambiguous fields.
+* **Adaptive Re-prompt Loop:** If AI extraction confidence is low ($<0.85$) and attempts $< 3$, governance evaluation triggers conversational re-prompts through the Outbound Notification Engine, re-prompting the citizen over WhatsApp/SMS for missing or ambiguous fields.
 * **Drop-off Prevention Index:** Partial index `idx_active_session_resume` on `session_telemetry_log` allows citizens who disconnect mid-conversation to resume their active session seamlessly within a 10-minute window.
-* **USSD Hard Fallback:** USSD sessions cannot execute multi-turn re-prompts; low-confidence USSD claims route immediately to caseworker incident staging (`Step 11`).
+* **USSD Hard Fallback:** USSD sessions cannot execute multi-turn re-prompts; low-confidence USSD claims route immediately to Caseworker Incident Staging.
 
 ---
 
 ## 3. Zero-Trust Security, Privacy & Consent Requirements (Layer 2)
 
-### 3.1 Zero-PII Tokenization Architecture (`Step 05`)
+### 3.1 Zero-PII Tokenization Architecture
 To comply with sovereign data privacy regulations (DPDP Act / GDPR principles):
 * **hashing_algorithm:** SHA-256 with environment-injected salt & pepper (`ENV_INJECTED_SYSTEM_PEPPER_KEY`).
 * **RAM Masking:** Raw identifiers (Aadhaar / MSISDN) are held in volatile RAM only during tokenization and zero-masked before writing telemetry to disk.
@@ -56,7 +56,7 @@ To comply with sovereign data privacy regulations (DPDP Act / GDPR principles):
 
 ### 3.2 Consent Registry & Provenance Audit (`consent_registry`)
 Before any citizen data is processed or cross-matched against registries:
-1. **Explicit Opt-in (`Step 01`):** Requires explicit channel-native consent (WhatsApp button click "I Accept", IVR DTMF digit `1`, USSD digit `1`).
+1. **Explicit Opt-in:** Requires explicit channel-native consent (WhatsApp button click "I Accept", IVR DTMF digit `1`, USSD digit `1`).
 2. **Session-Bound Expiration:** Consent is valid for the active session and automatically expires after 10 minutes (`expires_at = NOW() + INTERVAL '10 minutes'`).
 3. **Consent Scope:** `IDENTITY_VERIFICATION` and `DATA_PROCESSING`.
 4. **Non-PII Provenance Metadata:** Captures consent method, policy version, device fingerprint, and confirmation receipt without storing raw IP addresses or PII.
@@ -66,10 +66,10 @@ Before any citizen data is processed or cross-matched against registries:
 
 ## 4. Analytical Data Transformation & Deduplication (Layer 3)
 
-### 4.1 dbt-Core Analytics Compaction (`Step 05_b`)
+### 4.1 Analytics Staging Compaction
 When citizens re-engage across multiple conversational attempts, multi-turn inputs generate intermediate state mutations.
 
-* **Target dbt Model:** `stg_session_extraction_details`
+* **Target Analytics Model:** `stg_session_extraction_details`
 * **Compaction Logic:** Compiles and materializes the latest accepted extraction payload (`COMMITTED` state), filtering out `SUPERSEDED` attempts before sovereign registry cross-matching.
 * **Deduplication Guarantee:** Ensures downstream matching queries operate strictly on clean, compacted citizen assertions.
 
@@ -77,47 +77,50 @@ When citizens re-engage across multiple conversational attempts, multi-turn inpu
 
 ## 5. Sovereign DPI Registry Cross-Matching & Staging (Layer 4)
 
-### 5.1 SLM Entity Extraction (`Step 04`)
-Localized Small Language Model (`ON_PREM_LOCAL_SLM_INFERENCE_INSTANCE`) extracts structured domain parameters:
+### 5.1 SLM Entity Extraction
+Localized Small Language Model extracts structured domain parameters:
 * `district_name` (e.g., `"Karnal"`)
 * `crop_type` (e.g., `"Paddy / Wheat"`)
 * `survey_number` / `cadastral_plot_id`
 * `reported_anomaly` / `crop_loss_percentage`
 * `claimed_amount`
 
-### 5.2 Federated AgriStack Registry Matching (`Step 06`)
-Cross-examines citizen assertions against federated sovereign registries (`FEDERATED_AGRISTACK_CORE_GATEWAY`):
+### 5.2 Federated AgriStack Registry Matching
+Cross-examines citizen assertions against federated sovereign registries:
 * **Strict Geographic Boundary Intersection:** Verifies parcel boundaries, land ownership deed, and seasonal crop survey data.
 * **Output:** `registry_match_flag = true/false` and `cadastral_plot_id`.
 
-### 5.3 OpenSPP Social Benefits Staging (`Step 07`)
+### 5.3 OpenSPP Social Benefits Staging
 When `registry_match_flag == true`, verified parameters are staged into the OpenSPP Social Protection Platform core registry, generating a unique `openspp_case_id`.
 
 ---
 
 ## 6. Governance Routing, Adjudication & Ledger Requirements (Layer 5)
 
-### 6.1 Threshold Evaluation Gate (`Step 08`)
+### 6.1 Threshold Evaluation Gate
 The rules engine evaluates claim criteria against state policy gates:
-$$\text{evaluation\_passed} = (\text{ai\_confidence\_score} \ge 0.85) \land (\text{registry\_match\_flag} == \text{true})$$
+
+```text
+evaluation_passed = (ai_confidence_score >= 0.85) and (registry_match_flag == True)
+```
 
 ```
                        ┌──────────────────────────────┐
-                       │ Step 08 Threshold Evaluation │
+                       │ Threshold Evaluation Gate    │
                        └──────────────┬───────────────┘
                                       │
                ┌──────────────────────┴──────────────────────┐
                │ evaluation_passed == true                   │ evaluation_passed == false
                ▼                                             ▼
 ┌──────────────────────────────┐              ┌──────────────────────────────┐
-│  Step 09 Claim Adjudicator   │              │  Step 09 Claim Adjudicator   │
+│  Claim Policy Adjudicator    │              │  Claim Policy Adjudicator    │
 │  (FORWARD_TO_AUTOMATED_PAYOUT│              │(FORWARD_TO_INCIDENT_STAGING) │
 └──────────────┬───────────────┘              └──────────────┬───────────────┘
                │                                             │
                ▼                                             ▼
 ┌──────────────────────────────┐              ┌──────────────────────────────┐
-│  Step 10: Automated Payout   │              │ Step 11: Incident Ticket     │
-│   (NPCI APBS / PFMS Rail)    │              │ Staging (SPP-CASE-2026-XXXX)│
+│  Automated Payout Rails      │              │ Incident Ticket Staging      │
+│   (NPCI APBS / PFMS Rail)    │              │ (SPP-CASE-2026-XXXX)         │
 └──────────────────────────────┘              └──────────────┬───────────────┘
                                                              │
                                                              ▼
@@ -132,29 +135,22 @@ $$\text{evaluation\_passed} = (\text{ai\_confidence\_score} \ge 0.85) \land (\te
 
 ### 6.2 Governance Decisions & Payload Validation Contracts
 
-#### A. `GovernanceOutcomePayload` (`src/data_models/governance/governance_outcome_payload.py`)
-Emitted when Layer 4 or Caseworker Adjudication finalizes a governance decision.
+#### A. Governance Determination Contract
+Emitted when Layer 4 Orchestrator or Caseworker Adjudication finalizes a governance decision.
 
-```python
-class GovernanceOutcomePayload(StrictBaseModel):
-    session_id: SessionId
-    payload_id: ExtractionPayloadId
-    ai_confidence_score: AiConfidenceScore
-    eligibility_status: EligibilityStatus
-    governance_action: GovernanceAction
-    disbursement_txn_id: DisbursementTxnId | None = Field(
-        None,
-        description="Idempotency tracking key generated at approval time for AUTO_APPROVE / MANUAL_APPROVE / AUTOMATED_PAYOUT",
-    )
-    disbursement_status: DisbursementStatus | None = Field(
-        None,
-        description="Initialized to PENDING/INITIATED at decision time; updated to SUCCESS/FAILED/RETURNED upon bank callback",
-    )
-    escalation_case_id: EscalationCaseId | None = None
-    rejection_reason: str | None = Field(None, description="Populated for AUTO_REJECT / MANUAL_REJECT")
-    review_notes: str | None = Field(None, max_length=2000, description="Internal caseworker audit notes")
-    evaluated_at: UtcTimestamp
-```
+| Contract Attribute | Type / Constraints | Description |
+| :--- | :--- | :--- |
+| `session_id` | UUID string | Ingress communication session identifier |
+| `payload_id` | Extraction Payload ID | Pointer to the accepted entity extraction payload |
+| `ai_confidence_score` | Float ($0.0 \dots 1.0$) | Weighted confidence score from SLM extraction |
+| `eligibility_status` | Enum (`ELIGIBLE`, `INELIGIBLE`, `REQUIRES_FURTHER_REVIEW`, `UNKNOWN`) | Verified eligibility state against DPI registries |
+| `governance_action` | Enum (`AUTO_APPROVE`, `MANUAL_APPROVE`, `AUTO_REJECT`, `MANUAL_REJECT`, `REQUEST_MORE_INFO`, `ROUTE_FOR_MANUAL_REVIEW`, `AUTOMATED_PAYOUT`, `HUMAN_REVIEW`) | Final governance action determined by policy matrix |
+| `disbursement_txn_id` | Idempotency Key (Optional) | Unique transaction ID generated at approval time |
+| `disbursement_status` | Enum (Optional) | Initial clearing state (`PENDING` / `INITIATED`) |
+| `escalation_case_id` | Case Ticket ID (Optional) | Human review incident ID (`SPP-CASE-YYYY-XXXXXX`) |
+| `rejection_reason` | String (Optional) | Non-empty rationale for rejections |
+| `review_notes` | String (Optional, max 2000 chars) | Internal caseworker audit rationale |
+| `evaluated_at` | UTC Timestamp | Adjudication completion timestamp |
 
 ##### Decision Validation Matrix:
 1. **`AUTO_APPROVE` / `AUTOMATED_PAYOUT` (Zero-Touch Straight-Through Processing):**
@@ -180,24 +176,20 @@ class GovernanceOutcomePayload(StrictBaseModel):
 
 ---
 
-#### B. `CaseworkerCaseReviewPayload` (`src/data_models/caseworker/case_review_payload.py`)
-Emitted by Step 11 (`caseworker_incident_staging`) to push case context to the District Officer Dashboard.
+#### B. Caseworker Case Review Contract
+Emitted during Caseworker Incident Staging to push case context to the District Officer Dashboard.
 
-```python
-class CaseworkerCaseReviewPayload(StrictBaseModel):
-    escalation_case_id: EscalationCaseId
-    session_id: SessionId
-    payload_id: ExtractionPayloadId
-    tokenized_citizen_id: HmacCitizenToken
-    application_intent: ApplicationIntent
-    extracted_entities: dict[DomainEntityKey, str | float | int] = Field(
-        default_factory=dict,
-        description="Extracted domain parameters. May be empty ({}) if escalation was triggered by AI extraction failure.",
-    )
-    unprocessed_input_content: str = Field(..., max_length=5000, description="Raw citizen text or signed audio URL")
-    escalation_reason: str = Field(..., max_length=512, description="Reason for escalation")
-    staged_at: UtcTimestamp
-```
+| Contract Attribute | Type / Constraints | Description |
+| :--- | :--- | :--- |
+| `escalation_case_id` | Case Ticket ID (`\w+-CASE-\d{4}-\d{6,}`) | Unique incident case ticket ID |
+| `session_id` | UUID string | Parent communication session ID |
+| `payload_id` | Extraction Payload ID | Pointer to the original extraction payload |
+| `tokenized_citizen_id` | SHA-256 HMAC Token (64 hex chars) | Zero-PII citizen pseudonym |
+| `application_intent` | Intent Enum | Target scheme intent |
+| `extracted_entities` | Key-Value Mapping | Extracted domain parameters (allowed to be `{}` if AI extraction failed) |
+| `unprocessed_input_content` | String (max 5000 chars) | Raw citizen text or signed audio URL pointer |
+| `escalation_reason` | String (max 512 chars) | Non-empty reason for human escalation |
+| `staged_at` | UTC Timestamp | Ticket creation timestamp |
 
 ##### Validation Rules:
 * `escalation_case_id` **must** match pattern `^\w+-CASE-\d{4}-\d{6,}$`.
@@ -207,19 +199,18 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
 
 ---
 
-#### C. `CaseworkerReviewOutcomePayload` (`src/data_models/caseworker/review_outcome_payload.py`)
+#### C. Caseworker Review Outcome Contract
 Submitted by a human officer adjudicating an escalated incident ticket.
 
-```python
-class CaseworkerReviewOutcomePayload(StrictBaseModel):
-    escalation_case_id: EscalationCaseId
-    reviewer_id: str = Field(..., min_length=5, max_length=128, description="UUID or Officer ID")
-    governance_action: GovernanceAction = Field(..., description="Must strictly be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO")
-    review_notes: str = Field(..., min_length=5, max_length=2000, description="Mandatory audit justification note")
-    approved_amount: float | None = Field(None, ge=0.0, description="Populated for MANUAL_APPROVE")
-    rejection_reason: str | None = Field(None, max_length=512, description="Populated for MANUAL_REJECT")
-    reviewed_at: UtcTimestamp
-```
+| Contract Attribute | Type / Constraints | Description |
+| :--- | :--- | :--- |
+| `escalation_case_id` | Case Ticket ID | Target incident case ticket identifier |
+| `reviewer_id` | String (5–128 chars) | Reviewing Officer UUID or Government ID |
+| `governance_action` | Enum (`MANUAL_APPROVE`, `MANUAL_REJECT`, `REQUEST_MORE_INFO`) | Officer adjudication action |
+| `review_notes` | String (5–2000 chars) | Mandatory non-whitespace audit rationale |
+| `approved_amount` | Float ($\ge 0.0$, Optional) | Approved disbursement amount (required for `MANUAL_APPROVE`) |
+| `rejection_reason` | String (max 512 chars, Optional) | Non-empty rejection justification (required for `MANUAL_REJECT`) |
+| `reviewed_at` | UTC Timestamp | Officer review completion timestamp |
 
 ##### Validation Rules:
 * `governance_action` **must** strictly be `MANUAL_APPROVE`, `MANUAL_REJECT`, or `REQUEST_MORE_INFO`.
@@ -232,25 +223,27 @@ class CaseworkerReviewOutcomePayload(StrictBaseModel):
 
 ## 7. Financial Disbursement & Payment Clearing Rail Requirements (Layer 6)
 
-### 7.1 Treasury Payment Clearance (`Step 10`)
+### 7.1 Treasury Payment Clearance Flow
 * **Target Clearing Rail:** National Payments Corporation of India (NPCI) Aadhaar Payment Bridge System (APBS) / Public Financial Management System (PFMS) Treasury Gateway.
 * **Idempotency Key:** `disbursement_txn_id` generated at decision finalization time to prevent duplicate bank transfers during retries.
-* **Wire Execution (`step_10`):** **`step_10_automated_payout_disbursement`** (or Treasury Integration Dispatcher) executes the transition from **`PENDING` $\rightarrow$ `INITIATED`** when transmitting the ISO 20022 / APBS payment message across system boundaries to NPCI/PFMS clearing rails.
-* **Initial State:** `disbursement_status = PENDING` (queued internally) $\rightarrow$ `INITIATED` (dispatched over wire via `step_10`).
+* **Wire Execution:** The Treasury Integration Dispatcher executes the transition from **`PENDING` $\rightarrow$ `INITIATED`** when transmitting the ISO 20022 / APBS payment message across system boundaries to NPCI/PFMS clearing rails.
+* **Initial State:** `disbursement_status = PENDING` (queued internally) $\rightarrow$ `INITIATED` (dispatched over wire).
 
-### 7.2 Asynchronous Payment Callback Schema (`DisbursementCallbackPayload`)
+### 7.2 Asynchronous Payment Clearing Callback Contract
 Received from PFMS / NPCI rails when bank settlement completes or fails:
 
-```python
-class DisbursementCallbackPayload(StrictBaseModel):
-    disbursement_txn_id: DisbursementTxnId
-    bank_reference_id: str | None = Field(
-        None, max_length=64, description="External banking UTR or clearing reference generated by NPCI/PFMS bank rail"
-    )
-    disbursement_status: DisbursementStatus = Field(..., description="Updated clearing state: SUCCESS, FAILED, RETURNED")
-    cleared_at: UtcTimestamp
-    failure_reason_code: str | None = Field(None, max_length=256, description="Populated if status is FAILED or RETURNED")
-```
+| Contract Attribute | Type / Constraints | Description |
+| :--- | :--- | :--- |
+| `disbursement_txn_id` | Idempotency Key (8–128 chars) | Unique internal payment order ID |
+| `bank_reference_id` | String (max 64 chars, Optional) | External banking UTR / clearing reference (required on `SUCCESS`) |
+| `disbursement_status` | Enum (`SUCCESS`, `FAILED`, `RETURNED`) | Terminal financial clearing state |
+| `cleared_at` | UTC Timestamp | Gateway settlement timestamp |
+| `failure_reason_code` | String (max 256 chars, Optional) | Banking failure reason code (required on `FAILED` or `RETURNED`) |
+
+#### Callback Validation Rules:
+1. `disbursement_status` **must** be a terminal state (`SUCCESS`, `FAILED`, `RETURNED`).
+2. **If `FAILED` or `RETURNED`:** `failure_reason_code` **is strictly required** (non-whitespace, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`, `NAME_MISMATCH`).
+3. **If `SUCCESS`:** `bank_reference_id` (UTR) **is strictly required** and `failure_reason_code` **must be `None`**.
 
 #### Callback Validation Rules:
 1. `disbursement_status` **must** be a terminal state (`SUCCESS`, `FAILED`, `RETURNED`).
