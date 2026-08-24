@@ -18,46 +18,45 @@
                         │ (Raw carrier payloads: audio URLs, text, DTMF)
                         ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│ Layer 1: Channel Edge Connectors (`src/connectors/`)                   │
-│ • WhatsAppConnector  • IvrConnector  • UssdConnector  • SmsConnector   │
+│ Layer 1: Channel Edge Connectors                                       │
+│ • WhatsApp Connector • IVR SIP Gateway • USSD Menu Adapter • SMS Relay │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
                                         ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│ Layer 2: Gateway & Perimeter Security (`src/gateway/`)                 │
-│ • CarrierAuthValidator (Webhook HMAC / Bearer verification)            │
-│ • ZeroTrustIdentityTokenizer (RAM-only SHA-256 HMAC pseudonymization)  │
-│ • PiiPurgeGuard (In-memory Zero-PII sanitizer & assertion sentinel)    │
-│ • AdversarialPromptFirewall (Injection & override defense)             │
-│ • RateLimiter (Token bucket quota guard)                               │
-│ • PayloadCanonicalizer (Transforms raw ingress into canonical intake)  │
-│ • IngestionFirewall (Unified perimeter security facade)                │
+│ Layer 2: Perimeter Security Gateway                                    │
+│ • Carrier Transport Authenticator (Webhook HMAC / Bearer verification) │
+│ • Zero-Trust Identity Tokenizer (RAM-only SHA-256 HMAC pseudonymization)│
+│ • PII Purge Sentinel (In-memory Zero-PII sanitizer & assertion guard)  │
+│ • Adversarial Prompt Firewall (Injection & system override defense)    │
+│ • Rate Limiter (Token bucket quota guard)                              │
+│ • Payload Canonicalizer (Transforms raw ingress into canonical intake) │
+│ • Perimeter Security Gateway (Unified perimeter security facade)       │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
-                                        ▼ (PublicAgentStandardizedIntakePayload)
+                                        ▼ (Standardized Intake Contract)
 ┌────────────────────────────────────────────────────────────────────────┐
-│ Layer 3: Public Agent Intake Gateway (`src/public_agent/`)             │
-│ • PublicAgentApi (Standardized event intake & schema gate)             │
-│ • IntakePayloadEvaluator (Intent & structure level routing evaluator)  │
+│ Layer 3: Public Agent Intake Gateway                                   │
+│ • Public Agent Gateway (Standardized event intake & schema gate)       │
+│ • Intake Payload Evaluator (Intent & structure level routing evaluator)│
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
                                         ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│ Layer 4: Orchestrator Brain & Governance (`src/orchestrator/`)         │
-│ • ClaimOrchestrator (3-Gate workflow orchestration & pipeline coordinator) │
-│ • ClaimAdjudicator (Automated Payout vs. Caseworker Review vs. Reject) │
-│ • CaseManagementService (Internal review queues & OpenSPP ticket sync) │
+│ Layer 4: Orchestrator Brain & Governance                               │
+│ • Claim Orchestration Engine (3-Gate workflow orchestration pipeline)  │
+│ • Claim Policy Adjudicator (Automated Payout vs. Review vs. Reject)    │
+│ • Case Management Service (Internal review queues & OpenSPP sync)      │
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
              ┌──────────────────────────┼──────────────────────────┐
              ▼                          ▼                          ▼
 ┌──────────────────────────┐ ┌──────────────────────────┐ ┌──────────────────────────┐
-│ Foundational AI Blocks   │ │ Multichannel Delivery    │ │ Authoritative Registries │
-│ (`src/services/ai/`)     │ │ (`src/services/notification/`)│ │ (`src/services/dpi/`) │
-│ • BhashiniService        │ │ • Multichannel-          │ │ • IdentityVerification   │
-│   (ASR / NMT / TTS)      │ │   NotificationService    │ │ • AgriRegistryService    │
-│ • SlmExtractor           │ │   (Adaptive 4-Channel    │ │ • SocialRegistryService  │
-│ • ai_mock_fixtures       │ │    Dispatch Engine)      │ │ • PaymentRailService     │
+│ Sovereign AI Blocks      │ │ Multichannel Delivery    │ │ Authoritative Registries │
+│ • Bhashini Services      │ │ • Adaptive Multi-Channel │ │ • Identity Verification  │
+│   (ASR / NMT / TTS)      │ │   Notification Engine    │ │ • AgriRegistry Service   │
+│ • Sovereign SLM Extractor│ │   (Adaptive 4-Channel    │ │ • SocialRegistry Service │
+│ • Simulation Fixtures    │ │    Dispatch Engine)      │ │ • PaymentRail Service    │
 └──────────────────────────┘ └──────────────────────────┘ └──────────────────────────┘
 ```
 
@@ -65,10 +64,10 @@
 
 ## 🔒 Zero-Trust Security & PII Architecture
 
-1. **In-Memory RAM-Only Tokenization**: Cleartext citizen identifiers (MSISDN phone numbers, 12-digit Aadhaar IDs) are tokenized at the Layer 2 ingestion boundary using a cryptographically peppered SHA-256 HMAC function (`ZeroTrustIdentityTokenizer`). Raw PII is never persisted to disk or written to database ledgers.
-2. **Zero-PII Purge Guard Sentinel**: `PiiPurgeGuard` strictly scans every canonicalized contract before passing into Layer 3, asserting that only 64-character hexadecimal HMAC tokens (`tokenized_citizen_id`) exist.
-3. **Adversarial Prompt Injection Defense**: `AdversarialPromptFirewall` inspects text inputs for system overrides, role usurpation, delimiter hijacking, and database injection attempts. Flagged attempts immediately set AI confidence scores to `0.0` and wipe extracted entities (`validate_adversarial_zeroing`).
-4. **Strict Immutability & Extra Key Prohibition**: All domain models inherit from `StrictBaseModel`, enforcing `extra="forbid"`, `frozen=True`, `str_strip_whitespace=True`, and `validate_assignment=True`.
+1. **In-Memory RAM-Only Tokenization**: Cleartext citizen identifiers (MSISDN phone numbers, 12-digit Aadhaar IDs) are tokenized at the Layer 2 ingestion boundary using a cryptographically peppered SHA-256 HMAC function (*Zero-Trust Identity Tokenizer*). Raw PII is never persisted to disk or written to database ledgers.
+2. **Zero-PII Purge Guard Sentinel**: The *PII Purge Sentinel* strictly scans every canonicalized contract before passing into Layer 3, asserting that only 64-character hexadecimal HMAC tokens (`tokenized_citizen_id`) exist.
+3. **Adversarial Prompt Injection Defense**: The *Adversarial Prompt Firewall* inspects text inputs for system overrides, role usurpation, delimiter hijacking, and database injection attempts. Flagged attempts immediately neutralize AI confidence scores to `0.0` and wipe extracted entities.
+4. **Strict Immutability & Extra Key Prohibition**: All domain models enforce strict immutability, extra key prohibition, whitespace stripping, and runtime type assignment validation.
 
 ---
 
@@ -111,14 +110,14 @@ agristack-dbt-core/
 │   │   ├── ai/                      # Bhashini ASR/NMT/TTS & SLM Entity Extractor
 │   │   ├── notification/            # Adaptive 4-Channel Notification Dispatch Service
 │   │   └── dpi/                     # Identity, Cadastral, OpenSPP & Payment Rails
-│   ├── data_models/                 # Canonical Pydantic v2 schemas
-│   │   ├── common/                  # StrictBaseModel, StrEnums, Constrained Types
+│   ├── data_models/                 # Canonical domain contracts
+│   │   ├── common/                  # Base models, Enums, Constrained Types
 │   │   ├── raw_ingress/             # WhatsApp, IVR, USSD raw carrier contracts
-│   │   ├── public_agent/            # PublicAgentStandardizedIntakePayload
-│   │   ├── governance/              # ExtractedEntityPayload, GovernanceOutcomePayload
-│   │   ├── caseworker/              # CaseReviewPayload, ReviewOutcomePayload
-│   │   ├── notification/            # NotificationRequestPayload, OutboundNotificationPayload
-│   │   └── disbursement/            # DisbursementCallbackPayload
+│   │   ├── public_agent/            # Standardized Intake Contracts
+│   │   ├── governance/              # Governance Outcome & Entity Contracts
+│   │   ├── caseworker/              # Case Review & Caseworker Adjudication Contracts
+│   │   ├── notification/            # Outbound Notification & Request Contracts
+│   │   └── disbursement/            # Payment Clearing Callback Contracts
 │   └── errors/                      # RFC 7807 problem details exception handlers
 ├── tests/                           # Unit and integration test suite (1:1 mirror)
 ├── pyproject.toml                   # Build, dependencies, Ruff, Mypy, and Pytest configs
