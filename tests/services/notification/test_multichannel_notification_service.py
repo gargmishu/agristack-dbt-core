@@ -23,7 +23,6 @@ from src.data_models.common import (
 )
 from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
-    NotificationDispatchResult,
     NotificationRequestPayload,
     TransmissionAck,
 )
@@ -187,12 +186,11 @@ async def test_dispatch_notification_whatsapp(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_notification(req)
-    assert isinstance(result, NotificationDispatchResult)
-    assert result.payload.session_id == "sess_12345678"
-    assert isinstance(result.transmission_ack, TransmissionAck)
-    assert result.transmission_ack.channel_type == ChannelType.WHATSAPP
-    assert result.transmission_ack.status == NotificationDeliveryStatus.DELIVERED
-    assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
+    assert isinstance(result, TransmissionAck)
+    assert result.session_id == "sess_12345678"
+    assert result.channel_type == ChannelType.WHATSAPP
+    assert result.status == NotificationDeliveryStatus.DELIVERED
+    assert result.carrier_reference_id.startswith("wamid.")
 
 
 @pytest.mark.asyncio
@@ -206,11 +204,10 @@ async def test_dispatch_notification_ivr_voice(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_notification(req)
-    assert isinstance(result, NotificationDispatchResult)
-    assert result.transmission_ack.interface_id == DEFAULT_IVR_INTERFACE
-    assert result.transmission_ack.channel_type == ChannelType.IVR_VOICE
-    assert result.transmission_ack.carrier_reference_id.startswith("sip-call-")
-    assert result.payload.audio_playback_url is not None
+    assert isinstance(result, TransmissionAck)
+    assert result.interface_id == DEFAULT_IVR_INTERFACE
+    assert result.channel_type == ChannelType.IVR_VOICE
+    assert result.carrier_reference_id.startswith("sip-call-")
 
 
 @pytest.mark.asyncio
@@ -224,9 +221,9 @@ async def test_dispatch_notification_ussd(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_notification(req)
-    assert isinstance(result, NotificationDispatchResult)
-    assert result.transmission_ack.interface_id == DEFAULT_USSD_INTERFACE
-    assert result.transmission_ack.channel_type == ChannelType.USSD
+    assert isinstance(result, TransmissionAck)
+    assert result.interface_id == DEFAULT_USSD_INTERFACE
+    assert result.channel_type == ChannelType.USSD
 
 
 @pytest.mark.asyncio
@@ -240,9 +237,9 @@ async def test_dispatch_notification_sms(
         disbursement_txn_id="TXN-2026-981245",
     )
     result = await delivery_service.dispatch_notification(req)
-    assert isinstance(result, NotificationDispatchResult)
-    assert result.transmission_ack.interface_id == DEFAULT_SMS_INTERFACE
-    assert result.transmission_ack.channel_type == ChannelType.SMS
+    assert isinstance(result, TransmissionAck)
+    assert result.interface_id == DEFAULT_SMS_INTERFACE
+    assert result.channel_type == ChannelType.SMS
 
 
 @pytest.mark.asyncio
@@ -263,7 +260,7 @@ async def test_env_and_custom_injection_dispatch(
         disbursement_txn_id="TXN-2026-981245",
     )
     wa_res = await env_service.dispatch_notification(wa_req)
-    assert wa_res.transmission_ack.interface_id == "CUSTOM_WHATSAPP_ENV"
+    assert wa_res.interface_id == "CUSTOM_WHATSAPP_ENV"
 
     ivr_req = NotificationRequestPayload(
         session_id="sess_12345678",
@@ -272,7 +269,7 @@ async def test_env_and_custom_injection_dispatch(
         disbursement_txn_id="TXN-2026-981245",
     )
     ivr_res = await env_service.dispatch_notification(ivr_req)
-    assert ivr_res.transmission_ack.interface_id == "CUSTOM_IVR_ENV"
+    assert ivr_res.interface_id == "CUSTOM_IVR_ENV"
 
     ussd_req = NotificationRequestPayload(
         session_id="sess_12345678",
@@ -281,7 +278,7 @@ async def test_env_and_custom_injection_dispatch(
         disbursement_txn_id="TXN-2026-981245",
     )
     ussd_res = await env_service.dispatch_notification(ussd_req)
-    assert ussd_res.transmission_ack.interface_id == "CUSTOM_USSD_ENV"
+    assert ussd_res.interface_id == "CUSTOM_USSD_ENV"
 
     sms_req = NotificationRequestPayload(
         session_id="sess_12345678",
@@ -290,7 +287,7 @@ async def test_env_and_custom_injection_dispatch(
         disbursement_txn_id="TXN-2026-981245",
     )
     sms_res = await env_service.dispatch_notification(sms_req)
-    assert sms_res.transmission_ack.interface_id == "CUSTOM_SMS_ENV"
+    assert sms_res.interface_id == "CUSTOM_SMS_ENV"
 
     custom_whatsapp = WhatsAppConnector(interface_id="MANUAL_WHATSAPP")
     custom_ivr = IvrConnector(interface_id="MANUAL_IVR")
@@ -304,16 +301,16 @@ async def test_env_and_custom_injection_dispatch(
         sms_connector=custom_sms,
     )
     res_custom_wa = await custom_service.dispatch_notification(wa_req)
-    assert res_custom_wa.transmission_ack.interface_id == "MANUAL_WHATSAPP"
+    assert res_custom_wa.interface_id == "MANUAL_WHATSAPP"
 
     res_custom_ivr = await custom_service.dispatch_notification(ivr_req)
-    assert res_custom_ivr.transmission_ack.interface_id == "MANUAL_IVR"
+    assert res_custom_ivr.interface_id == "MANUAL_IVR"
 
     res_custom_ussd = await custom_service.dispatch_notification(ussd_req)
-    assert res_custom_ussd.transmission_ack.interface_id == "MANUAL_USSD"
+    assert res_custom_ussd.interface_id == "MANUAL_USSD"
 
     res_custom_sms = await custom_service.dispatch_notification(sms_req)
-    assert res_custom_sms.transmission_ack.interface_id == "MANUAL_SMS"
+    assert res_custom_sms.interface_id == "MANUAL_SMS"
 
 
 @pytest.mark.asyncio

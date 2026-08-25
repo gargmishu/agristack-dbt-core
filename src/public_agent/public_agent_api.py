@@ -28,7 +28,6 @@ from src.data_models.common import (
     SessionId,
 )
 from src.data_models.notification import (
-    NotificationDispatchResult,
     NotificationRequestPayload,
     TransmissionAck,
 )
@@ -63,13 +62,13 @@ class PublicAgentIntakeResult:
         intake_payload: Normalized zero-PII standardized intake payload.
         evaluation_result: Intake structure and modality evaluation result.
         orchestration_result: Layer 4 claim orchestration execution outcome.
-        dispatch_result: Outbound notification dispatch result.
+        transmission_ack: Authoritative carrier transmission acknowledgment receipt.
     """
 
     intake_payload: PublicAgentStandardizedIntakePayload
     evaluation_result: IntakeEvaluationResult
     orchestration_result: OrchestrationExecutionResult
-    dispatch_result: NotificationDispatchResult
+    transmission_ack: TransmissionAck
 
     @property
     def session_id(self) -> SessionId:
@@ -80,11 +79,6 @@ class PublicAgentIntakeResult:
     def channel_type(self) -> ChannelType:
         """Ingress channel communication protocol."""
         return self.intake_payload.channel_type
-
-    @property
-    def transmission_ack(self) -> TransmissionAck:
-        """Authoritative carrier transmission acknowledgment receipt."""
-        return self.dispatch_result.transmission_ack
 
 
 class PublicAgentApi:
@@ -190,13 +184,13 @@ class PublicAgentApi:
             orch_result=orchestration_result,
         )
 
-        dispatch_result = await self._delivery_service.dispatch_notification(notification_request)
+        transmission_ack = await self._delivery_service.dispatch_notification(notification_request)
 
         return PublicAgentIntakeResult(
             intake_payload=payload,
             evaluation_result=eval_result,
             orchestration_result=orchestration_result,
-            dispatch_result=dispatch_result,
+            transmission_ack=transmission_ack,
         )
 
     async def _submit_payload(

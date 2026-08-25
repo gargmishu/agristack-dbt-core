@@ -27,7 +27,6 @@ from src.data_models.common import (
 )
 from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
-    NotificationDispatchResult,
     NotificationRequestPayload,
     OutboundNotificationPayload,
     TransmissionAck,
@@ -59,8 +58,8 @@ class MultichannelNotificationService:
     - USSD & SMS: Generates plain-text strings constrained to 160 characters.
 
     Operations:
-    - `prepare_and_dispatch`: Constructs an `OutboundNotificationPayload` and dispatches it
-      via the target connector, returning a `NotificationDispatchResult`.
+    - `dispatch_notification`: Constructs an `OutboundNotificationPayload` and dispatches it
+      via the target connector, returning a `TransmissionAck`.
 
     See: decisions/step3.5_adaptive_multichannel_confirmation_delivery.md
     """
@@ -92,17 +91,14 @@ class MultichannelNotificationService:
     # Primary Public Workflow Entrypoint
     # -------------------------------------------------------------------------
 
-    async def dispatch_notification(
-        self, request: NotificationRequestPayload
-    ) -> NotificationDispatchResult:
+    async def dispatch_notification(self, request: NotificationRequestPayload) -> TransmissionAck:
         """Prepares and dispatches notification through the appropriate edge connector.
 
         Args:
-            request: Validated NotificationRequestPayload specifying channel and
-            determination.
+            request: Validated NotificationRequestPayload specifying channel and determination.
 
         Returns:
-            NotificationDispatchResult with payload and carrier TransmissionAck receipt.
+            Authoritative carrier TransmissionAck receipt.
         """
         payload = await self._prepare_notification(request)
         transmission_ack = await self._dispatch_to_connector(payload)
@@ -113,10 +109,7 @@ class MultichannelNotificationService:
             payload.channel_type,
             payload.delivery_status,
         )
-        return NotificationDispatchResult(
-            payload=payload,
-            transmission_ack=transmission_ack,
-        )
+        return transmission_ack
 
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)

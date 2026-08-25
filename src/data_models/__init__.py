@@ -44,7 +44,6 @@ from src.data_models.governance import (
 )
 from src.data_models.notification import (
     MAX_USSD_CHARACTERS,
-    NotificationDispatchResult,
     NotificationRequestPayload,
     OutboundNotificationPayload,
     TransmissionAck,
@@ -84,7 +83,6 @@ __all__ = [
     "LanguageLocale",
     "MAX_USSD_CHARACTERS",
     "NotificationDeliveryStatus",
-    "NotificationDispatchResult",
     "NotificationRequestPayload",
     "OutboundNotificationPayload",
     "PayloadType",
