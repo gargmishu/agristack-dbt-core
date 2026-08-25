@@ -68,7 +68,6 @@ async def test_ivr_connector_send_outbound_notification() -> None:
         delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="Aapka aavedan swikrit ho gaya hai.",
         audio_playback_url=HttpUrl("https://bhashini.ai/audio_1.wav"),
-        disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
     )
     result = await connector.send_outbound_notification(payload)

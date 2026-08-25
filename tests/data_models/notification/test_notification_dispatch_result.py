@@ -23,7 +23,6 @@ def test_notification_dispatch_result_valid() -> None:
         governance_action=GovernanceAction.AUTO_APPROVE,
         delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="Claim Approved",
-        disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
     )
     ack = TransmissionAck(

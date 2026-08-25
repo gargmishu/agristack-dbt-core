@@ -164,8 +164,6 @@ class MultichannelNotificationService:
             delivery_status=NotificationDeliveryStatus.DELIVERED,
             formatted_message=message,
             audio_playback_url=audio_playback_url,
-            disbursement_txn_id=request.disbursement_txn_id,
-            escalation_case_id=request.escalation_case_id,
             delivered_at=datetime.now(UTC),
         )
 

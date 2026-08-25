@@ -100,13 +100,12 @@ async def test_claim_orchestrator__check_claim_completeness_reprompt_on_missing(
     )
 
     # Attempt 1 -> Re-prompt
-    requires_reprompt, missing = orchestrator._check_claim_completeness(extracted, attempt_count=1)
-    assert requires_reprompt is True
+    missing = orchestrator._check_claim_completeness(extracted, attempt_count=1)
     assert "crop_name" in missing
 
     # Attempt 3 -> Attempts exhausted, do not re-prompt
-    requires_reprompt_3, _ = orchestrator._check_claim_completeness(extracted, attempt_count=3)
-    assert requires_reprompt_3 is False
+    missing_3 = orchestrator._check_claim_completeness(extracted, attempt_count=3)
+    assert missing_3 == []
 
     # Non-subsidy intent -> no reprompt
     status_extracted = ExtractedEntityPayload(
@@ -114,7 +113,7 @@ async def test_claim_orchestrator__check_claim_completeness_reprompt_on_missing(
         ai_confidence_score=0.92,
         domain_entities={},
     )
-    assert orchestrator._check_claim_completeness(status_extracted)[0] is False
+    assert orchestrator._check_claim_completeness(status_extracted) == []
 
 
 @pytest.mark.asyncio

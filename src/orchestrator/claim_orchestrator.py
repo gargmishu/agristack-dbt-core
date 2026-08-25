@@ -140,10 +140,10 @@ class ClaimOrchestrator:
         extracted_entities = await self._process_ingress_payload(intake)
 
         # Gate 2: Intake Completeness & Reprompt Validation
-        requires_reprompt, missing_entities = self._check_claim_completeness(
+        missing_entities = self._check_claim_completeness(
             extracted_entities, attempt_count=attempt_count
         )
-        if requires_reprompt:
+        if missing_entities:
             return self._build_reprompt_result(
                 session_id=session_id,
                 payload_id=payload_id,
@@ -161,12 +161,21 @@ class ClaimOrchestrator:
         )
 
         # Post-Decision Processing: Payment Dispatch or Caseworker Staging
-        disbursement_callback, staged_case_id = await self._handle_post_decision(
-            intake=intake,
-            payload_id=payload_id,
-            extracted_entities=extracted_entities,
-            governance_outcome=governance_outcome,
-        )
+        disbursement_callback: DisbursementCallbackPayload | None = None
+        staged_case_id: str | None = None
+        if governance_outcome.governance_action.is_approval:
+            disbursement_callback = await self._payment_rail.initiate_disbursement(
+                governance_outcome
+            )
+        elif (
+            governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id
+        ):
+            staged_case_id = await self._stage_caseworker_ticket(
+                intake=intake,
+                payload_id=payload_id,
+                extracted_entities=extracted_entities,
+                escalation_case_id=governance_outcome.escalation_case_id,
+            )
 
         return OrchestrationExecutionResult(
             session_id=session_id,
@@ -253,7 +262,7 @@ class ClaimOrchestrator:
         self,
         extracted: ExtractedEntityPayload,
         attempt_count: int = 1,
-    ) -> tuple[bool, list[str]]:
+    ) -> list[str]:
         """Gate 2: Intake & Intent Validation Gate.
 
         Checks mandatory domain entities for subsidy claims and manages multi-turn
@@ -264,13 +273,14 @@ class ClaimOrchestrator:
             attempt_count: Current citizen interaction attempt counter (1 to 3).
 
         Returns:
-            Tuple of (requires_reprompt: bool, missing_entity_names: list[str]).
+            List of missing mandatory entity field names requiring reprompt, or empty list if
+            complete or maximum attempts reached.
         """
         if extracted.is_adversarial_attempt or extracted.is_structured_menu_bypass:
-            return False, []
+            return []
 
         if extracted.application_intent != ApplicationIntent.APPLY_SUBSIDY:
-            return False, []
+            return []
 
         missing_entities: list[str] = [
             key.value
@@ -285,9 +295,9 @@ class ClaimOrchestrator:
                 missing_entities,
                 attempt_count,
             )
-            return True, missing_entities
+            return missing_entities
 
-        return False, missing_entities
+        return []
 
     # -------------------------------------------------------------------------
     # Private Helper Methods
@@ -360,42 +370,6 @@ class ClaimOrchestrator:
             requires_reprompt=True,
             reprompt_message=reprompt_msg,
         )
-
-    async def _handle_post_decision(
-        self,
-        intake: PublicAgentStandardizedIntakePayload,
-        payload_id: str,
-        extracted_entities: ExtractedEntityPayload,
-        governance_outcome: GovernanceOutcomePayload,
-    ) -> tuple[DisbursementCallbackPayload | None, str | None]:
-        """Dispatches automated payouts or stages caseworker tickets based on adjudication.
-
-        Args:
-            intake: Standardized intake payload with session and citizen tokens.
-            payload_id: Unique extraction payload identifier.
-            extracted_entities: Extracted domain entities payload.
-            governance_outcome: Outcome verdict from Gate 3 adjudication.
-
-        Returns:
-            Tuple of (DisbursementCallbackPayload if approved payout dispatched,
-            escalation_case_id if staged for caseworker review).
-        """
-        if governance_outcome.governance_action.is_approval:
-            disbursement_callback = await self._payment_rail.initiate_disbursement(
-                governance_outcome
-            )
-            return disbursement_callback, None
-
-        if governance_outcome.governance_action.is_review and governance_outcome.escalation_case_id:
-            staged_case_id = await self._stage_caseworker_ticket(
-                intake=intake,
-                payload_id=payload_id,
-                extracted_entities=extracted_entities,
-                escalation_case_id=governance_outcome.escalation_case_id,
-            )
-            return None, staged_case_id
-
-        return None, None
 
     async def _stage_caseworker_ticket(
         self,

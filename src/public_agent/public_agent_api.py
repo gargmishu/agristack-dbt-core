@@ -60,22 +60,31 @@ class PublicAgentIntakeResult:
     """Consolidated end-to-end outcome from Public Agent intake and orchestration processing.
 
     Attributes:
-        session_id: Primary session tracking identifier.
-        channel_type: Ingress channel communication protocol.
         intake_payload: Normalized zero-PII standardized intake payload.
         evaluation_result: Intake structure and modality evaluation result.
         orchestration_result: Layer 4 claim orchestration execution outcome.
         dispatch_result: Outbound notification dispatch result.
-        transmission_ack: Authoritative carrier transmission acknowledgment receipt.
     """
 
-    session_id: SessionId
-    channel_type: ChannelType
     intake_payload: PublicAgentStandardizedIntakePayload
     evaluation_result: IntakeEvaluationResult
     orchestration_result: OrchestrationExecutionResult
     dispatch_result: NotificationDispatchResult
-    transmission_ack: TransmissionAck
+
+    @property
+    def session_id(self) -> SessionId:
+        """Primary session tracking identifier."""
+        return self.intake_payload.session_id
+
+    @property
+    def channel_type(self) -> ChannelType:
+        """Ingress channel communication protocol."""
+        return self.intake_payload.channel_type
+
+    @property
+    def transmission_ack(self) -> TransmissionAck:
+        """Authoritative carrier transmission acknowledgment receipt."""
+        return self.dispatch_result.transmission_ack
 
 
 class PublicAgentApi:
@@ -138,14 +147,13 @@ class PublicAgentApi:
             PermissionError: If rate limit is exceeded.
             ValueError: If authentication fails, PII check fails, or payload is invalid.
         """
-        intake_payload, is_adversarial = self._firewall.process_ingress(
+        intake_payload = self._firewall.process_ingress(
             payload=raw_payload,
             language_locale=language_locale,
         )
 
         return await self._process_claim_intake(
             payload=intake_payload,
-            is_adversarial=is_adversarial,
             attempt_count=attempt_count,
         )
 
@@ -156,14 +164,12 @@ class PublicAgentApi:
     async def _process_claim_intake(
         self,
         payload: PublicAgentStandardizedIntakePayload,
-        is_adversarial: bool = False,
         attempt_count: int = 1,
     ) -> PublicAgentIntakeResult:
         """Executes internal claim processing pipeline from intake payload to outbound receipt.
 
         Args:
             payload: Normalized zero-PII standardized intake payload from Layer 2 firewall.
-            is_adversarial: Security flag indicating whether prompt injection was neutralized.
             attempt_count: Current conversation turn attempt number for reprompt bounds.
 
         Returns:
@@ -172,34 +178,31 @@ class PublicAgentApi:
         Raises:
             ValueError: If payload structure or downstream execution fails validation constraints.
         """
-        validated_payload, eval_result = await self._submit_payload(payload)
+        eval_result = await self._submit_payload(payload)
 
         orchestration_result = await self._orchestrator.execute_orchestration_cycle(
-            intake=validated_payload,
+            intake=payload,
             attempt_count=attempt_count,
         )
 
         notification_request = self._build_notification_request(
-            intake=validated_payload,
+            intake=payload,
             orch_result=orchestration_result,
         )
 
         dispatch_result = await self._delivery_service.dispatch_notification(notification_request)
 
         return PublicAgentIntakeResult(
-            session_id=validated_payload.session_id,
-            channel_type=validated_payload.channel_type,
-            intake_payload=validated_payload,
+            intake_payload=payload,
             evaluation_result=eval_result,
             orchestration_result=orchestration_result,
             dispatch_result=dispatch_result,
-            transmission_ack=dispatch_result.transmission_ack,
         )
 
     async def _submit_payload(
         self, payload: PublicAgentStandardizedIntakePayload
-    ) -> tuple[PublicAgentStandardizedIntakePayload, IntakeEvaluationResult]:
-        """Evaluates intake payload structure and returns verified payload with routing flags.
+    ) -> IntakeEvaluationResult:
+        """Evaluates intake payload structure and returns verified routing evaluation outcome.
 
         Performs content sanity checks and determines whether the incoming interaction requires
         natural language processing (SLM extraction) or can follow a deterministic structured path.
@@ -208,11 +211,8 @@ class PublicAgentApi:
             payload: Validated PublicAgentStandardizedIntakePayload from Layer 2 Gateway.
 
         Returns:
-            Tuple of:
-            - PublicAgentStandardizedIntakePayload: The validated intake payload ready for
-              Layer 4 claim orchestration.
-            - IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
-              `requires_nlu_extraction`, and descriptive status notes.
+            IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
+            `requires_nlu_extraction`, and descriptive status notes.
 
         Raises:
             ValueError: If payload fails structural validation, contains empty or whitespace-only
@@ -233,7 +233,7 @@ class PublicAgentApi:
             payload.channel_type,
             evaluation_result.requires_nlu_extraction,
         )
-        return payload, evaluation_result
+        return evaluation_result
 
     @staticmethod
     def _build_notification_request(

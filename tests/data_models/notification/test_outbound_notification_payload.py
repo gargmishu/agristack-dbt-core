@@ -25,12 +25,10 @@ def test_outbound_payload_valid_whatsapp() -> None:
         governance_action=GovernanceAction.AUTO_APPROVE,
         delivery_status=NotificationDeliveryStatus.DELIVERED,
         formatted_message="*AgriStack Relief Approved!* Txn: TXN-2026-981245.",
-        disbursement_txn_id="TXN-2026-981245",
         delivered_at=datetime.now(UTC),
     )
     assert payload.session_id == "sess_12345678"
     assert payload.channel_type == ChannelType.WHATSAPP
-    assert payload.disbursement_txn_id == "TXN-2026-981245"
     assert payload.delivery_status == NotificationDeliveryStatus.DELIVERED
 
 
@@ -42,7 +40,6 @@ def test_outbound_payload_valid_ivr_voice() -> None:
         governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
         formatted_message="Aapka aavedan jaanch ke liye bhej diya gaya hai.",
         audio_playback_url=HttpUrl("https://bhashini-gateway.ai/synth/2026_hi_response_824921.wav"),
-        escalation_case_id="SPP-CASE-2026-981245",
         delivered_at=datetime.now(UTC),
     )
     assert payload.channel_type == ChannelType.IVR_VOICE
@@ -51,7 +48,6 @@ def test_outbound_payload_valid_ivr_voice() -> None:
         str(payload.audio_playback_url)
         == "https://bhashini-gateway.ai/synth/2026_hi_response_824921.wav"
     )
-    assert payload.escalation_case_id == "SPP-CASE-2026-981245"
 
 
 def test_outbound_payload_valid_ussd() -> None:
@@ -60,7 +56,6 @@ def test_outbound_payload_valid_ussd() -> None:
         channel_type=ChannelType.USSD,
         governance_action=GovernanceAction.AUTO_APPROVE,
         formatted_message="AgriStack: Claim Approved. Txn: TXN-2026-100200.",
-        disbursement_txn_id="TXN-2026-100200",
         delivered_at=datetime.now(UTC),
     )
     assert payload.channel_type == ChannelType.USSD

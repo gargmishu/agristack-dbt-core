@@ -4,8 +4,6 @@ from pydantic import Field, HttpUrl, model_validator
 
 from src.data_models.common import (
     ChannelType,
-    DisbursementTxnId,
-    EscalationCaseId,
     GovernanceAction,
     LanguageLocale,
     NotificationDeliveryStatus,
@@ -50,14 +48,6 @@ class OutboundNotificationPayload(StrictBaseModel):
     audio_playback_url: HttpUrl | None = Field(
         default=None,
         description="Pre-signed synthesized TTS audio stream URL for IVR voice playback",
-    )
-    disbursement_txn_id: DisbursementTxnId | None = Field(
-        default=None,
-        description="Populated when governance action is AUTO_APPROVE or MANUAL_APPROVE",
-    )
-    escalation_case_id: EscalationCaseId | None = Field(
-        default=None,
-        description="Populated when governance action is ROUTE_FOR_MANUAL_REVIEW or HUMAN_REVIEW",
     )
 
     @model_validator(mode="after")

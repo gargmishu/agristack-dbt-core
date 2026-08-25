@@ -78,26 +78,26 @@ class AdversarialPromptFirewall:
       amounts.
 
     Operations:
-    - `inspect`: Evaluates input text against known threat regex patterns and returns a
-      tuple
-      of `(is_adversarial, threat_category)`.
+    - `inspect`: Evaluates input text against known threat regex patterns and returns
+      `ThreatCategory` if matched, None otherwise.
+    - `is_adversarial`: Boolean convenience check returning True if threats are detected.
 
     See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 3)
     """
 
     @classmethod
-    def inspect(cls, input_text: str) -> tuple[bool, ThreatCategory | None]:
+    def inspect(cls, input_text: str) -> ThreatCategory | None:
         """Inspects input text for adversarial injection patterns.
 
         Args:
             input_text: Raw citizen text or transcribed speech string.
 
         Returns:
-            Tuple of (is_adversarial: bool, threat_category: ThreatCategory | None).
+            ThreatCategory if an adversarial threat pattern is detected, None otherwise.
         """
         cleaned_text = input_text.strip()
         if not cleaned_text:
-            return False, None
+            return None
 
         for category, pattern in _PROMPT_INJECTION_PATTERNS:
             if pattern.search(cleaned_text):
@@ -105,9 +105,9 @@ class AdversarialPromptFirewall:
                     "Adversarial prompt injection detected: category=%s",
                     category,
                 )
-                return True, category
+                return category
 
-        return False, None
+        return None
 
     @classmethod
     def is_adversarial(cls, input_text: str) -> bool:
@@ -119,18 +119,4 @@ class AdversarialPromptFirewall:
         Returns:
             True if text matches adversarial prompt injection patterns, False otherwise.
         """
-        flagged, _ = cls.inspect(input_text)
-        return flagged
-
-    @classmethod
-    def get_threat_category(cls, input_text: str) -> ThreatCategory | None:
-        """Convenience method returning ThreatCategory if text is adversarial, else None.
-
-        Args:
-            input_text: Raw citizen text or transcribed speech string.
-
-        Returns:
-            ThreatCategory enum value if text is adversarial, None otherwise.
-        """
-        _, category = cls.inspect(input_text)
-        return category
+        return cls.inspect(input_text) is not None

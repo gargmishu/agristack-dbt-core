@@ -68,7 +68,6 @@ async def test_prepare_whatsapp_manual_review(
         escalation_case_id="SPP-CASE-2026-100200",
     )
     payload = await delivery_service._prepare_notification(req)
-    assert payload.escalation_case_id == "SPP-CASE-2026-100200"
     assert "SPP-CASE-2026-100200" in payload.formatted_message
     assert "District Agricultural Officer" in payload.formatted_message
 

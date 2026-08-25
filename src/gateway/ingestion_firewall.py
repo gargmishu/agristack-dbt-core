@@ -84,7 +84,7 @@ class IngestionFirewall:
         | UssdIngressPayload
         | SmsIngressPayload,
         language_locale: LanguageLocale = LanguageLocale.HINDI,
-    ) -> tuple[PublicAgentStandardizedIntakePayload, bool]:
+    ) -> PublicAgentStandardizedIntakePayload:
         """Unified ingress pipeline orchestrator: validates security, tokenizes, and canonicalizes.
 
         Args:
@@ -92,15 +92,14 @@ class IngestionFirewall:
             language_locale: Target BCP-47 language locale (default: 'hi-IN').
 
         Returns:
-            Tuple of (standardized_payload, is_adversarial_detected).
+            PublicAgentStandardizedIntakePayload normalized for Layer 3 intake.
 
         Raises:
             PermissionError: If rate limit is exceeded.
             ValueError: If payload fails PII purge assertion.
         """
-        is_adversarial = self._inspect_security(payload)
-        standardized_payload = self._canonicalize(payload, language_locale=language_locale)
-        return standardized_payload, is_adversarial
+        self._inspect_security(payload)
+        return self._canonicalize(payload, language_locale=language_locale)
 
     @staticmethod
     def verify_carrier_webhook(
@@ -178,8 +177,8 @@ class IngestionFirewall:
         # Audio recordings (IVR/WhatsApp audio) are inspected downstream post-ASR transcription.
         raw_text = self._extract_inspectable_text(payload)
         if raw_text is not None:
-            is_adversarial, threat_category = AdversarialPromptFirewall.inspect(raw_text)
-            if is_adversarial:
+            threat_category = AdversarialPromptFirewall.inspect(raw_text)
+            if threat_category is not None:
                 logger.warning(
                     "Adversarial pattern detected during ingress session=%s category=%s",
                     payload.session_id,

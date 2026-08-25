@@ -54,11 +54,9 @@ from src.gateway.adversarial_prompt_firewall import AdversarialPromptFirewall
 def test_adversarial_prompt_firewall_flags_attacks(
     attack_text: str, expected_category: ThreatCategory
 ) -> None:
-    is_flagged, category = AdversarialPromptFirewall.inspect(attack_text)
-    assert is_flagged is True
+    category = AdversarialPromptFirewall.inspect(attack_text)
     assert category == expected_category
     assert AdversarialPromptFirewall.is_adversarial(attack_text) is True
-    assert AdversarialPromptFirewall.get_threat_category(attack_text) == expected_category
 
 
 @pytest.mark.parametrize(
@@ -74,8 +72,6 @@ def test_adversarial_prompt_firewall_flags_attacks(
     ],
 )
 def test_adversarial_prompt_firewall_allows_benign_text(benign_text: str) -> None:
-    is_flagged, category = AdversarialPromptFirewall.inspect(benign_text)
-    assert is_flagged is False
+    category = AdversarialPromptFirewall.inspect(benign_text)
     assert category is None
     assert AdversarialPromptFirewall.is_adversarial(benign_text) is False
-    assert AdversarialPromptFirewall.get_threat_category(benign_text) is None

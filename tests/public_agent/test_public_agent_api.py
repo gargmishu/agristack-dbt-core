@@ -33,8 +33,7 @@ async def test_public_agent_api_submit_valid_payload() -> None:
         received_at=datetime.now(UTC),
     )
 
-    ret_payload, evaluation = await api._submit_payload(payload)
-    assert ret_payload.session_id == "sess_12345678"
+    evaluation = await api._submit_payload(payload)
     assert evaluation.is_valid is True
     assert evaluation.requires_nlu_extraction is True
 
