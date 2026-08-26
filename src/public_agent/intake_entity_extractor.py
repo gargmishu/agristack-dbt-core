@@ -48,6 +48,10 @@ class IntakeEntityExtractor:
         self._bhashini = bhashini_service or BhashiniService()
         self._slm_extractor = slm_extractor or SlmExtractor()
 
+    # -------------------------------------------------------------------------
+    # Primary Public Workflow Entrypoint
+    # -------------------------------------------------------------------------
+
     async def extract_entities(
         self, intake: PublicAgentStandardizedIntakePayload
     ) -> ExtractedEntityPayload:
@@ -110,6 +114,10 @@ class IntakeEntityExtractor:
             return self._create_fallback_extracted_payload()
 
         return extracted_entities
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
 
     @staticmethod
     def _create_fallback_extracted_payload() -> ExtractedEntityPayload:

@@ -102,6 +102,8 @@ async def test_claim_orchestrator_full_cycle_happy_path_auto_approve() -> None:
         intake=intake,
         extracted_entities=valid_extracted,
     )
+    assert result.session_id == "sess_happy_path_1"
+    assert result.application_intent == ApplicationIntent.APPLY_SUBSIDY
     assert result.requires_reprompt is False
     assert result.governance_outcome.governance_action == GovernanceAction.AUTO_APPROVE
     assert result.governance_outcome.disbursement_txn_id is not None

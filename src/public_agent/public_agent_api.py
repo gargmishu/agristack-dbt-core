@@ -18,7 +18,6 @@ See: decisions/step3.3_layer4_orchestrator_brain.md
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from src.data_models.common import (
     ChannelType,
@@ -44,9 +43,6 @@ from src.public_agent.intake_entity_extractor import IntakeEntityExtractor
 from src.services.notification.multichannel_notification_service import (
     MultichannelNotificationService,
 )
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
