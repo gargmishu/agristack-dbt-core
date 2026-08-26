@@ -1,7 +1,6 @@
-"""Unit tests for SocialRegistryService (OpenSPP external DPI connector)."""
-
 from datetime import UTC, datetime
 
+import httpx
 import pytest
 
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
@@ -75,3 +74,61 @@ async def test_social_registry_query_beneficiary_eligibility() -> None:
     assert await service.query_beneficiary_eligibility(zero_hmac, "PM_KISAN") is False
     assert await service.query_beneficiary_eligibility(unverified_hmac, "PM_KISAN") is False
     assert await service.query_beneficiary_eligibility(valid_hmac, "   ") is False
+
+
+@pytest.mark.asyncio
+async def test_social_registry_live_endpoint_success() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers.get("Authorization") == "Bearer openspp_key"
+        return httpx.Response(200, json={"is_eligible": True, "scheme_id": "PM_KISAN"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    service = SocialRegistryService(
+        endpoint_url="https://openspp.gov.in",
+        api_key="openspp_key",
+        http_client=client,
+    )
+    is_eligible = await service.query_beneficiary_eligibility("a" * 64, "PM_KISAN")
+    assert is_eligible is True
+
+
+@pytest.mark.asyncio
+async def test_social_registry_live_endpoint_error_fallback() -> None:
+    def error_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="OpenSPP Gateway Timeout")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
+    service = SocialRegistryService(
+        endpoint_url="https://openspp.gov.in",
+        api_key="openspp_key",
+        http_client=client,
+    )
+    # Falls back to mock
+    is_eligible = await service.query_beneficiary_eligibility("a" * 64, "PM_KISAN")
+    assert is_eligible is True
+
+
+@pytest.mark.asyncio
+async def test_social_registry_ephemeral_client_error_fallback() -> None:
+    service = SocialRegistryService(
+        endpoint_url="http://invalid.unreachable.endpoint.local:9999",
+        api_key="openspp_key",
+    )
+    is_eligible = await service.query_beneficiary_eligibility("a" * 64, "PM_KISAN")
+    assert is_eligible is True
+
+
+@pytest.mark.asyncio
+async def test_social_registry_no_api_key_and_non_dict_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "Authorization" not in request.headers
+        return httpx.Response(200, json="invalid string response")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    service = SocialRegistryService(
+        endpoint_url="https://openspp.gov.in",
+        api_key=None,
+        http_client=client,
+    )
+    is_eligible = await service.query_beneficiary_eligibility("a" * 64, "PM_KISAN")
+    assert is_eligible is True

@@ -14,6 +14,9 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 from datetime import UTC, datetime
+from typing import Any, Final
+
+import httpx
 
 from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
@@ -25,21 +28,45 @@ from src.services.dpi.dpi_mock_fixtures import (
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_PAYMENT_TIMEOUT_SECONDS: Final[float] = 5.0
+_HTTP_STATUS_OK: Final[int] = 200
+
 
 class PaymentRailService:
     """Service client for Direct Benefit Transfer (DBT) payment rail clearing.
 
-    Dispatches automated payment clearing instructions and receives clearing status
-    callbacks.
+    Dispatches automated payment clearing instructions and receives clearing status callbacks.
 
-    Operations:
-    - `initiate_disbursement`: Sends payout instructions for approved governance outcomes
-      and
-      returns initial clearing status (`DisbursementCallbackPayload`).
+    Supports live REST endpoints with automatic, graceful fallback to deterministic local fixtures.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.4)
+    See: decisions/step3.6_live_service_integration.md
     """
+
+    def __init__(
+        self,
+        endpoint_url: str | None = None,
+        api_key: str | None = None,
+        http_client: httpx.AsyncClient | None = None,
+        timeout_seconds: float = _DEFAULT_PAYMENT_TIMEOUT_SECONDS,
+    ) -> None:
+        """Initializes payment rail client with optional live endpoint configuration.
+
+        Args:
+            endpoint_url: Optional base HTTP URL for live NPCI/PFMS payment service.
+            api_key: Optional authorization Bearer token or API key for live calls.
+            http_client: Optional async HTTP client for connection pooling.
+            timeout_seconds: Request timeout in seconds (default: 5.0s).
+        """
+        self._endpoint_url = endpoint_url.rstrip("/") if endpoint_url else None
+        self._api_key = api_key
+        self._http_client = http_client
+        self._timeout_seconds = timeout_seconds
+
+    # -------------------------------------------------------------------------
+    # Primary Public Workflow Entrypoints
+    # -------------------------------------------------------------------------
 
     async def initiate_disbursement(
         self, outcome: GovernanceOutcomePayload
@@ -65,6 +92,64 @@ class PaymentRailService:
             outcome.disbursement_txn_id,
         )
 
+        if self._endpoint_url:
+            live_result = await self._call_live_disburse(outcome)
+            if live_result is not None:
+                return live_result
+
+        return self._mock_initiate_disbursement(outcome)
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Live HTTP & Local Mock Handlers)
+    # -------------------------------------------------------------------------
+
+    async def _call_live_disburse(
+        self, outcome: GovernanceOutcomePayload
+    ) -> DisbursementCallbackPayload | None:
+        """Dispatches live payment clearing HTTP request with graceful fallback."""
+        target_url = f"{self._endpoint_url}/v1/payments/disburse"
+        payload: dict[str, Any] = {
+            "session_id": outcome.session_id,
+            "disbursement_txn_id": outcome.disbursement_txn_id,
+            "governance_action": outcome.governance_action.value,
+        }
+        headers = {"Content-Type": "application/json"}
+        if self._api_key:
+            headers["Authorization"] = f"Bearer {self._api_key}"
+
+        try:
+            if self._http_client:
+                response = await self._http_client.post(
+                    target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                )
+            else:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                    )
+            if response.status_code == _HTTP_STATUS_OK:
+                data = response.json()
+                if isinstance(data, dict):
+                    return DisbursementCallbackPayload.model_validate(data)
+            logger.warning(
+                "Live payment clearing returned status=%d for txn=%s",
+                response.status_code,
+                outcome.disbursement_txn_id,
+            )
+        except Exception as error:
+            logger.warning(
+                "Live payment call failed for txn=%s: %s; using mock fallback",
+                outcome.disbursement_txn_id,
+                error,
+            )
+        return None
+
+    @staticmethod
+    def _mock_initiate_disbursement(
+        outcome: GovernanceOutcomePayload,
+    ) -> DisbursementCallbackPayload:
+        """Deterministic local payment clearing simulation."""
+        assert outcome.disbursement_txn_id is not None
         if MOCK_PAYMENT_FAIL_TRIGGER in str(outcome.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED
             failure_reason = MOCK_PAYMENT_FAILURE_REASON

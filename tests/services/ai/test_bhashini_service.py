@@ -1,3 +1,4 @@
+import httpx
 import pytest
 
 from src.services.ai import BhashiniService
@@ -77,3 +78,86 @@ async def test_bhashini_service_synthesize_empty_text_raises() -> None:
     service = BhashiniService()
     with pytest.raises(ValueError, match="Cannot synthesize empty response text"):
         await service.synthesize_speech("   ", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_live_endpoints_success() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        assert request.headers.get("Authorization") == "Bearer test_secret_key"
+        if "/v1/asr/transcribe" in url_str:
+            return httpx.Response(200, json={"transcript": "Live transcribed Hindi speech"})
+        if "/v1/nmt/translate" in url_str:
+            return httpx.Response(200, json={"translated_text": "Live translated English text"})
+        if "/v1/tts/synthesize" in url_str:
+            return httpx.Response(
+                200, json={"audio_url": "https://cdn.bhashini.gov.in/live_audio.wav"}
+            )
+        return httpx.Response(404)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    service = BhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="test_secret_key",
+        http_client=client,
+    )
+
+    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
+    assert transcript == "Live transcribed Hindi speech"
+
+    translation = await service.translate_text("Namaste", "hi-IN", "en-IN")
+    assert translation == "Live translated English text"
+
+    tts_url = await service.synthesize_speech("Disbursement approved", "hi-IN")
+    assert tts_url == "https://cdn.bhashini.gov.in/live_audio.wav"
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_live_endpoints_error_fallback() -> None:
+    def error_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="Internal Server Error")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
+    service = BhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="test_secret_key",
+        http_client=client,
+    )
+
+    # Falls back to mock
+    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
+    assert len(transcript) > 0
+
+    translation = await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
+    assert len(translation) > 0
+
+    tts_url = await service.synthesize_speech("Aapka aavedan swikar hua", "hi-IN")
+    assert tts_url.startswith("https://")
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_ephemeral_client_success() -> None:
+    # Test path when http_client is None but endpoint_url is configured with an invalid/mock server
+    service = BhashiniService(
+        endpoint_url="http://invalid.unreachable.endpoint.local:9999",
+        api_key="test_secret_key",
+    )
+    # Falls back smoothly when network fails
+    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
+    assert len(transcript) > 0
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_no_api_key_and_non_dict_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "Authorization" not in request.headers
+        return httpx.Response(200, json=["unexpected_list_not_dict"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    service = BhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key=None,
+        http_client=client,
+    )
+    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
+    assert len(transcript) > 0
