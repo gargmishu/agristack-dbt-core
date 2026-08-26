@@ -40,7 +40,7 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway.ingestion_firewall import IngestionFirewall
 from src.orchestrator.claim_orchestrator import ClaimOrchestrator, OrchestrationExecutionResult
-from src.public_agent.intake_payload_evaluator import IntakePayloadEvaluator
+from src.public_agent.intake_entity_extractor import IntakeEntityExtractor
 from src.services.notification.multichannel_notification_service import (
     MultichannelNotificationService,
 )
@@ -91,7 +91,7 @@ class PublicAgentApi:
 
     def __init__(
         self,
-        evaluator: IntakePayloadEvaluator | None = None,
+        extractor: IntakeEntityExtractor | None = None,
         orchestrator: ClaimOrchestrator | None = None,
         delivery_service: MultichannelNotificationService | None = None,
         firewall: IngestionFirewall | None = None,
@@ -99,13 +99,13 @@ class PublicAgentApi:
         """Initializes the public agent gateway with required services.
 
         Args:
-            evaluator: Optional intake evaluator instance (defaults to standard evaluator).
+            extractor: Optional Layer 3 entity extractor (defaults to IntakeEntityExtractor).
             orchestrator: Optional Layer 4 claim orchestrator (defaults to ClaimOrchestrator).
             delivery_service: Optional outbound notification delivery engine (defaults to
                 MultichannelNotificationService).
             firewall: Optional Layer 2 perimeter security firewall (defaults to IngestionFirewall).
         """
-        self._evaluator = evaluator or IntakePayloadEvaluator()
+        self._extractor = extractor or IntakeEntityExtractor()
         self._orchestrator = orchestrator or ClaimOrchestrator()
         self._delivery_service = delivery_service or MultichannelNotificationService()
         self._firewall = firewall or IngestionFirewall.from_env()
@@ -142,16 +142,17 @@ class PublicAgentApi:
             language_locale=language_locale,
         )
 
-        # 2. Layer 3: Structure Level & NLU Routing Evaluation
-        self._evaluator.evaluate_payload(intake_payload)
+        # 2. Layer 3: Modality Handling & SLM Domain Entity Extraction
+        extracted_entities = await self._extractor.extract_entities(intake_payload)
 
-        # 3. Layer 4: Governance Brain & Adjudication Pipeline
+        # 3. Layer 4: Governance Brain & Policy Adjudication Pipeline
         orchestration_result = await self._orchestrator.execute_orchestration_cycle(
             intake=intake_payload,
+            extracted_entities=extracted_entities,
             attempt_count=attempt_count,
         )
 
-        # 4. Outbound Notification Preparation & Carrier Dispatch
+        # 4. Delivery: Outbound Notification Preparation & Carrier Dispatch
         notification_request = self._build_notification_request(
             intake=intake_payload,
             orchestration_result=orchestration_result,

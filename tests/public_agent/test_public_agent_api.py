@@ -1,58 +1,14 @@
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
 
 import pytest
 
 from src.data_models.common import (
     ChannelType,
-    LanguageLocale,
     PayloadType,
-    StructureLevel,
 )
-from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 from src.gateway import IngestionFirewall, RateLimiter, ZeroTrustIdentityTokenizer
-from src.public_agent import IntakePayloadEvaluator, PublicAgentApi
-
-
-@pytest.mark.asyncio
-async def test_public_agent_api_submit_valid_payload() -> None:
-    evaluator = IntakePayloadEvaluator()
-    payload = PublicAgentStandardizedIntakePayload(
-        session_id="sess_12345678",
-        tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
-        channel_type=ChannelType.IVR_VOICE,
-        payload_type=PayloadType.AUDIO,
-        structure_level=StructureLevel.FREE_TEXT,
-        language_locale=LanguageLocale.HINDI,
-        unprocessed_input_content="https://sip-gateway.telecom.in/audio/voice_call.wav",
-        received_at=datetime.now(UTC),
-    )
-
-    # Valid payload evaluates successfully without raising
-    evaluator.evaluate_payload(payload)
-
-
-@pytest.mark.asyncio
-async def test_public_agent_api_rejects_invalid_evaluator_outcome(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_pepper_public_agent_123")
-    mock_evaluator = MagicMock(spec=IntakePayloadEvaluator)
-    mock_evaluator.evaluate_payload.side_effect = ValueError("Malformed structural directive")
-
-    api = PublicAgentApi(evaluator=mock_evaluator)
-    raw_whatsapp = WhatsAppIngressPayload(
-        session_id="sess_12345678",
-        originating_phone_number="+919876543210",
-        channel_message_id="wamid.123456",
-        payload_type=PayloadType.TEXT,
-        text_body="Mera khet",
-        received_at=datetime.now(UTC),
-    )
-
-    with pytest.raises(ValueError, match="Malformed structural directive"):
-        await api.process_raw_ingress(raw_payload=raw_whatsapp)
+from src.public_agent import IntakeEntityExtractor, PublicAgentApi
 
 
 @pytest.mark.asyncio
@@ -136,3 +92,23 @@ async def test_public_agent_api_with_custom_firewall_injection() -> None:
     )
     result = await api.process_raw_ingress(raw_payload=raw_whatsapp)
     assert result.session_id == "sess_custom_fw_1"
+
+
+@pytest.mark.asyncio
+async def test_public_agent_api_with_custom_extractor_injection(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_pepper_public_agent_123")
+    custom_extractor = IntakeEntityExtractor()
+    api = PublicAgentApi(extractor=custom_extractor)
+    raw_whatsapp = WhatsAppIngressPayload(
+        session_id="sess_custom_ext_1",
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.custom_ext",
+        payload_type=PayloadType.TEXT,
+        text_body="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
+        received_at=datetime.now(UTC),
+    )
+    result = await api.process_raw_ingress(raw_payload=raw_whatsapp)
+    assert result.session_id == "sess_custom_ext_1"
+    assert result.orchestration_result.governance_outcome.governance_action.is_approval

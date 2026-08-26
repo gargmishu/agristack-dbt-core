@@ -19,7 +19,6 @@ from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.data_models.common import (
     ApplicationIntent,
     CropSeason,
-    DomainEntities,
     DomainEntityKey,
     EligibilityStatus,
     EscalationReasonCode,
@@ -35,7 +34,6 @@ from src.data_models.governance import (
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.case_management_service import CaseManagementService
 from src.orchestrator.claim_adjudicator import ClaimAdjudicator
-from src.services.ai import BhashiniService, SlmExtractor
 from src.services.dpi import PaymentRailService
 
 logger = logging.getLogger(__name__)
@@ -87,14 +85,12 @@ class OrchestrationExecutionResult:
 
 
 class ClaimOrchestrator:
-    """Claim orchestrator governing claim processing workflows across three execution gates.
+    """Claim orchestrator governing claim processing workflows across governance gates.
 
-    Coordinates end-to-end processing across transcription, entity validation, and
-    governance routing:
-    - Ingress Modality Processing (Gate 1): Manages audio
-      transcription, SLM domain entity extraction, or structured menu bypass.
-    - Claim Completeness Validation (Gate 2): Validates mandatory
-      domain entity completeness and manages multi-turn conversational re-prompt loops.
+    Coordinates end-to-end processing across completeness validation, policy adjudication,
+    and post-decision disbursement/caseworker staging:
+    - Claim Completeness Validation (Gate 2): Validates mandatory domain entity completeness
+      and manages multi-turn conversational re-prompt loops.
     - Governance Adjudication (Gate 3): Evaluates eligibility rules and routes to auto-payout,
       review, or rejection via the adjudication decision matrix.
 
@@ -103,15 +99,11 @@ class ClaimOrchestrator:
 
     def __init__(
         self,
-        bhashini_service: BhashiniService | None = None,
-        slm_extractor: SlmExtractor | None = None,
         claim_adjudicator: ClaimAdjudicator | None = None,
         case_management_service: CaseManagementService | None = None,
         payment_rail_service: PaymentRailService | None = None,
     ) -> None:
-        """Initializes the claim orchestrator with required AI and DPI service dependencies."""
-        self._bhashini = bhashini_service or BhashiniService()
-        self._slm_extractor = slm_extractor or SlmExtractor()
+        """Initializes the claim orchestrator with required governance and DPI dependencies."""
         self._claim_adjudicator = claim_adjudicator or ClaimAdjudicator()
         self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or PaymentRailService()
@@ -123,14 +115,16 @@ class ClaimOrchestrator:
     async def execute_orchestration_cycle(
         self,
         intake: PublicAgentStandardizedIntakePayload,
+        extracted_entities: ExtractedEntityPayload,
         attempt_count: int = 1,
         approved_payouts_ledger: set[tuple[str, str]] | None = None,
         active_season: CropSeason = "KHARIF-2026",
     ) -> OrchestrationExecutionResult:
-        """Executes complete end-to-end orchestration pipeline across all 3 evaluation gates.
+        """Executes complete end-to-end orchestration pipeline across governance gates.
 
         Args:
             intake: Validated PublicAgentStandardizedIntakePayload from Layer 3.
+            extracted_entities: Structured ExtractedEntityPayload from Layer 3 Entity Extractor.
             attempt_count: Current attempt count for multi-turn conversational loop.
             approved_payouts_ledger: Set of approved (citizen_token, season) claims.
             active_season: Active welfare scheme season identifier.
@@ -141,9 +135,6 @@ class ClaimOrchestrator:
         """
         session_id = intake.session_id
         payload_id = f"ext-{uuid.uuid4().hex[:8]}"
-
-        # Gate 1: Ingress Modality & SLM Entity Extraction
-        extracted_entities = await self._process_ingress_payload(intake)
 
         # Gate 2: Intake Completeness & Reprompt Validation
         missing_entities = self._check_claim_completeness(
@@ -194,73 +185,6 @@ class ClaimOrchestrator:
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
-
-    async def _process_ingress_payload(
-        self, intake: PublicAgentStandardizedIntakePayload
-    ) -> ExtractedEntityPayload:
-        """Gate 1: Ingress & Structure Evaluation Gate.
-
-        Dispatches audio to ASR/NMT translation, executes sovereign SLM domain entity
-        extraction, or performs fast-path structured menu bypass (confidence = 1.0).
-
-        Args:
-            intake: Validated PublicAgentStandardizedIntakePayload instance.
-
-        Returns:
-            ExtractedEntityPayload containing parsed domain parameters.
-        """
-        # Fast-Path: Structured USSD or Menu Selection Bypass
-        if intake.structure_level.is_structured:
-            logger.info(
-                "Gate 1: Structured menu bypass applied for session=%s, channel=%s",
-                intake.session_id,
-                intake.channel_type,
-            )
-            # Deterministic mapping for structured menu keypresses (e.g. 1*2*101)
-            entities: DomainEntities = {
-                DomainEntityKey.DISTRICT: "Karnal",
-                DomainEntityKey.CROP_NAME: "Wheat",
-                DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
-            }
-            return ExtractedEntityPayload(
-                application_intent=ApplicationIntent.APPLY_SUBSIDY,
-                ai_confidence_score=1.0,
-                domain_entities=entities,
-                is_adversarial_attempt=False,
-                is_structured_menu_bypass=True,
-            )
-
-        # Audio Modality: Transcribe via Bhashini ASR
-        text_to_extract = intake.unprocessed_input_content
-        if intake.payload_type.is_audio:
-            try:
-                text_to_extract = await self._bhashini.transcribe_audio(
-                    audio_url=intake.unprocessed_input_content,
-                    language_locale=intake.language_locale,
-                )
-            except Exception as err:
-                logger.warning(
-                    "Gate 1: Audio transcription failed for session=%s: %s; using fallback",
-                    intake.session_id,
-                    err,
-                )
-                return self._create_fallback_extracted_payload()
-
-        # Sovereign SLM Entity Extraction
-        extracted_entities = await self._slm_extractor.extract_entities(
-            session_id=intake.session_id,
-            unprocessed_content=text_to_extract,
-            language_locale=intake.language_locale,
-        )
-
-        if extracted_entities is None:
-            logger.warning(
-                "Gate 1: SLM extraction failed for session=%s; applying low-confidence fallback",
-                intake.session_id,
-            )
-            return self._create_fallback_extracted_payload()
-
-        return extracted_entities
 
     def _check_claim_completeness(
         self,
@@ -410,25 +334,3 @@ class ClaimOrchestrator:
         )
         await self._case_service.stage_incident_ticket(case_payload)
         return escalation_case_id
-
-    @staticmethod
-    def _create_fallback_extracted_payload() -> ExtractedEntityPayload:
-        """Constructs safe low-confidence fallback extraction payload for unparseable input.
-
-        Why 0.40 instead of 0.0?
-        - 0.0 is strictly reserved for Security Zeroing on adversarial prompt injection attacks
-          (is_adversarial_attempt=True), which routes to the security threat triage queue.
-        - 0.40 represents benign low model confidence / unparseable speech (e.g. ambient farm
-          noise, dialect mismatch, or transcription timeout), routing safely to the standard
-          caseworker review queue (ROUTE_FOR_MANUAL_REVIEW) without false security alarms.
-
-        Returns:
-            ExtractedEntityPayload initialized with 0.40 confidence and UNKNOWN intent.
-        """
-        return ExtractedEntityPayload(
-            application_intent=ApplicationIntent.UNKNOWN,
-            ai_confidence_score=0.40,
-            domain_entities={},
-            is_adversarial_attempt=False,
-            is_structured_menu_bypass=False,
-        )
