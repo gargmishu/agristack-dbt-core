@@ -35,7 +35,7 @@
   | :--- | :--- | :--- |
   | **Layer 1** | *Channel Edge Connectors* | Ingress protocol adapters for WhatsApp, IVR Voice, USSD, and SMS. |
   | **Layer 2** | *Perimeter Security Gateway* | Ingress signature authentication, token-bucket rate limiting, RAM-only HMAC tokenization, PII purge sentinel, prompt firewall, and canonicalization. |
-  | **Layer 3** | *Public Agent Gateway* | Public agent intake API, structural classification, and fast-path NLU bypass evaluation. |
+  | **Layer 3** | *Public Agent Gateway* | Public agent intake API, speech transcription, USSD bypass, and SLM domain entity extraction. |
   | **Layer 4** | *Orchestration Brain* | 3-gate claim orchestration engine, tri-state policy adjudicator, and caseworker management. |
   | **Services** | *Sovereign AI Abstractions* | Bhashini Speech-to-Text (ASR), Machine Translation (NMT), Speech Synthesis (TTS), and Sovereign SLM Entity Extractor. |
   | **Services** | *Outbound Notification Engine* | Adaptive multi-channel template rendering, text-to-speech audio formatting, and egress dispatch. |
