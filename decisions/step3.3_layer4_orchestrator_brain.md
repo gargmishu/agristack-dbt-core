@@ -1,23 +1,15 @@
-# Step 3.3: Layer 4 Orchestrator Brain & Three Evaluation Gates Architecture
+# Step 3.3: Layer 4 Orchestrator Brain & Governance Architecture
 
 ## 1. Executive Summary & Orchestration Principles
 
 This document defines the architectural specifications, state transitions, gatekeeping algorithms, and execution logic for **Phase 3, Step 3.3: Layer 4 Orchestrator Brain** within the AgriStack Zero-Trust DPI Orchestrator.
 
-The Orchestrator Brain coordinates the end-to-end processing pipeline from normalized, zero-PII Layer 3 intake contracts (*Standardized Intake Payload*) through three deterministic evaluation gates, concluding in either straight-through automated benefit clearing, manual caseworker escalation, or deterministic automated rejection.
+The Orchestrator Brain coordinates the policy evaluation pipeline from structured domain entity contracts (*Extracted Domain Entity Contract*) through deterministic governance gates, concluding in either straight-through automated benefit clearing, manual caseworker escalation, or deterministic automated rejection.
 
 ```
-[ Layer 3: Normalized Zero-PII Intake Contract ]
+[ Layer 3: Extracted Domain Entity Contract & Intake Context ]
                        │
                        ▼
- ┌─────────────────────────────────────────────────────────────┐
- │       GATE 1: INGRESS & STRUCTURE EVALUATION GATE           │
- │  - Audio vs. Text Modality Routing (Bhashini ASR/NMT)       │
- │  - Structured USSD/Menu Fast-Path Bypass (Score = 1.0)      │
- │  - Sovereign SLM Entity Extractor Execution                 │
- └─────────────────────────────┬───────────────────────────────┘
-                               │
-                               ▼
  ┌─────────────────────────────────────────────────────────────┐
  │       GATE 2: INTAKE & INTENT VALIDATION GATE               │
  │  - Intent Classification (apply_subsidy vs status inquiry)  │
@@ -45,20 +37,14 @@ The Orchestrator Brain coordinates the end-to-end processing pipeline from norma
 
 ---
 
-## 2. Gate 1: Ingress & Structure Evaluation Gate
+## 2. Perception Decoupling & Ingress Modality Handling (Layer 3)
 
-### 2.1 Modality Dispatch & ASR/NMT Pipeline
-* **Audio Ingress (IVR voice calls & WhatsApp voice notes):**
-  * Transmits the pre-signed URL pointer to the Speech-to-Text Service (Bhashini ASR) to generate the vernacular text transcript.
-  * If the audio stream is in an Indic regional dialect (e.g. Hindi `hi-IN`), dispatches to the Machine Translation Service (Bhashini NMT) to normalize domain entities while retaining vernacular nuances.
-* **Text Ingress (WhatsApp text & SMS):**
-  * Directs raw text into the SLM extraction pipeline if structured as free text.
+Modality handling (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, and SLM domain entity parsing) is encapsulated in Layer 3 (*Intake Entity Extractor*). Layer 4 operates exclusively on validated, structured domain entity contracts:
 
-### 2.2 Structured Fast-Path Menu Bypass
-* When the intake structure is DTMF or menu selection:
-  * **Zero-Inference Fast Path:** Completely bypasses GPU SLM NLU entity extraction (saving ~800ms inference latency and eliminating AI hallucinations).
-  * **Deterministic Mapping:** Directs keypress sequences (e.g. `1*2*101` from USSD or WhatsApp numeric buttons) to deterministic lookup tables.
-  * **Confidence Invariant:** Enforces confidence score $= 1.0$ and flags the payload as a structured menu bypass.
+### 2.1 Modality Dispatch in Layer 3
+* **Audio Ingress (IVR voice calls & WhatsApp voice notes):** Transmits the audio URL to the Speech-to-Text Service (Bhashini ASR) to generate the text transcript before SLM extraction.
+* **Structured USSD / Menu Ingress:** Executes deterministic keypress mapping (saving ~800ms GPU latency, confidence = 1.0).
+* **Free-Text Ingress (WhatsApp & SMS):** Dispatches directly to the sovereign SLM domain entity extraction pipeline.
 
 ---
 
@@ -117,6 +103,6 @@ Gate 3 evaluates three independent verification criteria:
 
 ## 6. Layer 4 Architectural Responsibilities
 
-* **Claim Orchestrator Engine:** Coordinates the 3-gate execution cycle from intake ingestion to payout/caseworker staging.
+* **Claim Orchestrator Engine:** Coordinates the governance execution cycle from entity intake to payout/caseworker staging.
 * **Claim Adjudication Engine:** Enforces the deterministic Gate 3 rules matrix (Auto-Approve vs. Manual Review vs. Auto-Reject).
 * **Case Management Service:** Manages incident tickets, officer adjudication workflows, audit trails, and citizen clarification loops.
