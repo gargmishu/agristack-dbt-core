@@ -29,14 +29,14 @@ The ingress architecture decouples carrier transport protocols, perimeter securi
                                       ▼ (Standardized Intake Contract)
   ┌────────────────────────────────────────────────────────────────────────┐
   │             LAYER 3: PUBLIC AGENT INTAKE GATEWAY SURFACE               │
-  │  - Public Agent API Surface (Perimeter Entrypoint)                     │
-  │  - Intake Payload Evaluator (Structure Level & NLU Bypass Evaluator)   │
+  │  - Public Agent API Surface (Perimeter Entrypoint & Workflow Facade)   │
+  │  - Intake Entity Extractor (Modality Transcription & SLM Extraction)   │
   └───────────────────────────────────┬────────────────────────────────────┘
                                       │
-                                      ▼ (Evaluated Intake Context)
+                                      ▼ (Extracted Domain Entity Contract)
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 4: DPI ORCHESTRATOR BRAIN                        │
-  │  - Claim Orchestration Engine (Gate 1 -> Gate 2 -> Gate 3 Pipeline)    │
+  │  - Claim Governance Engine (Gate 2 Completeness -> Gate 3 Adjudication)│
   └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -87,20 +87,20 @@ Before raw carrier data enters Layer 3, the Perimeter Security Gateway executes 
 
 ## 4. Layer 3: Public Agent Intake Gateway Surface
 
-Layer 3 provides the public API facade and structural routing classification:
+Layer 3 provides the public API facade and modal entity extraction:
 
 ### 4.1 Public Agent API
-* Acts as the public intake surface receiving the Standardized Intake Payload.
-* Invokes the Intake Payload Evaluator to assess structural integrity before forwarding to the Layer 4 state machine.
+* Acts as the public intake surface bridging Layer 2 perimeter security, Layer 3 entity extraction, Layer 4 governance, and outbound delivery.
+* Executes the end-to-end processing pipeline from carrier ingress to citizen confirmation delivery.
 
-### 4.2 Structural Evaluation & Fast-Path Menu Bypass
-The Intake Evaluator inspects the payload structure level:
+### 4.2 Intake Entity Extractor & Fast-Path Menu Bypass
+The Intake Entity Extractor converts standardized intake contracts into structured domain entity contracts:
 
-| Structure Level | Modality / Channel | Evaluation Outcome | Performance & Architectural Impact |
+| Structure Level / Modality | Ingress Type | Processing Path | Performance & Architectural Impact |
 | :--- | :--- | :--- | :--- |
-| **`MENU_SELECTION` / `DTMF_SELECTION`** | USSD (`*147#`), IVR Keypad (`1#`) | `requires_nlu_extraction = False` (Structured Bypass) | **Saves ~800ms GPU inference latency** and completely eliminates AI hallucinations for deterministic menu choices. |
-| **`FREE_TEXT`** | WhatsApp Chat, SMS, Voice Notes | `requires_nlu_extraction = True` (NLU Routing) | Directs unstructured regional language text to the SLM entity extraction pipeline. |
-| **Empty / Whitespace** | Any | `is_valid = False` (Rejected) | Rejects malformed or whitespace-only inputs at the intake boundary. |
+| **`MENU_SELECTION` / `DTMF_SELECTION`** | USSD (`*147#`), IVR Keypad (`1#`) | **Structured Bypass** (Deterministic Mapping) | **Saves ~800ms GPU inference latency** and completely eliminates AI hallucinations for deterministic menu choices (Confidence = 1.0). |
+| **`FREE_TEXT` (Audio Modality)** | IVR Voice Calls, WhatsApp Audio | **Speech ASR + Sovereign SLM** | Transcribes audio via Speech-to-Text (Bhashini ASR) and parses domain parameters via Small Language Models. |
+| **`FREE_TEXT` (Text Modality)** | WhatsApp Chat, SMS | **Sovereign SLM** | Parses unstructured regional language text into canonical domain parameters (`district`, `crop_name`, `survey_number`). |
 
 ---
 
@@ -110,5 +110,6 @@ The Intake Evaluator inspects the payload structure level:
 | :--- | :--- | :--- |
 | **Layer 1 Edge Connectors** | *Carrier Connectors (WhatsApp, IVR, USSD, SMS)* | Carrier webhook reception, modality validation, and outbound dispatch. |
 | **Layer 2 Perimeter Security** | *Perimeter Security Gateway* | Carrier auth, rate-limiting, RAM-only tokenization, PII purge, threat inspection, and canonicalization. |
-| **Layer 3 Public Intake API** | *Public Agent Gateway* | Public intake submission API, structure-level evaluation, and NLU bypass routing. |
-| **Domain Contracts** | *Canonical Ingress & Intake Contracts* | Raw ingress and standardized zero-PII intake payload schemas. |
+| **Layer 3 Public Intake API** | *Public Agent Gateway & Intake Entity Extractor* | Public intake submission API, speech transcription, USSD menu bypass, and SLM domain entity extraction. |
+| **Layer 4 Governance Brain** | *Claim Governance Engine* | Mandatory completeness validation, multi-turn reprompting, deterministic policy adjudication, and disbursement staging. |
+| **Domain Contracts** | *Canonical Ingress, Intake & Entity Contracts* | Raw ingress, standardized zero-PII intake, and extracted entity payload schemas. |

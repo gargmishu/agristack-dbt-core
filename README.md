@@ -37,14 +37,14 @@
                                         ▼ (Standardized Intake Contract)
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Layer 3: Public Agent Intake Gateway                                   │
-│ • Public Agent Gateway (Standardized event intake & schema gate)       │
-│ • Intake Payload Evaluator (Intent & structure level routing evaluator)│
+│ • Public Agent Gateway (Perimeter event intake & workflow coordinator) │
+│ • Intake Entity Extractor (Speech ASR, USSD bypass & SLM entity parsing)│
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
-                                        ▼
+                                        ▼ (Extracted Domain Entity Contract)
 ┌────────────────────────────────────────────────────────────────────────┐
 │ Layer 4: Orchestrator Brain & Governance                               │
-│ • Claim Orchestration Engine (3-Gate workflow orchestration pipeline)  │
+│ • Claim Orchestration Engine (Completeness validation & policy engine) │
 │ • Claim Policy Adjudicator (Automated Payout vs. Review vs. Reject)    │
 │ • Case Management Service (Internal review queues & OpenSPP sync)      │
 └───────────────────────────────────────┬────────────────────────────────┘

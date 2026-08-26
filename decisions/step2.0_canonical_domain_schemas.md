@@ -656,7 +656,7 @@ Step 2.0 establishes the following conceptual data contract taxonomy:
 | **Foundational Types** | *Constrained Types & Clock-Skew Guard* | Cross-cutting foundation | SHA-256 HMAC regex, E.164 phone regex, 5-second UTC freshness assertion. |
 | **Raw Ingress** | *Carrier Raw Ingress Contracts* | Layer 1 $\rightarrow$ Layer 2 | Enforces carrier-native schemas for WhatsApp, IVR Voice, USSD, and SMS. |
 | **Public Agent** | *Standardized Intake Payload* | Layer 2 $\rightarrow$ Layer 3 | 64-char SHA-256 HMAC pseudonymous token, zero cleartext PII, normalized text. |
-| **Governance** | *Extracted Domain Entity Contract* | Layer 3 $\rightarrow$ Layer 4 Gate 1 | NLU extraction output, confidence scoring, security threat flagging. |
+| **Governance** | *Extracted Domain Entity Contract* | Layer 3 $\rightarrow$ Layer 4 Governance | NLU extraction output, confidence scoring, security threat flagging. |
 | **Governance** | *Claim Evaluation & Determination Contract* | Layer 4 Gate 3 Adjudication | Tri-state governance action, financial state transition, and disbursement ID. |
 | **Caseworker** | *Caseworker Incident Review & Outcome* | Layer 4 Case Management | Manual adjudication ticket staging and officer decision logging. |
 | **Disbursement** | *Disbursement Callback Contract* | Layer 4 Payment Rails | Asynchronous bank clearing confirmation, UTR verification, failure codes. |

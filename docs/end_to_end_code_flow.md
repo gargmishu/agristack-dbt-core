@@ -12,9 +12,9 @@ sequenceDiagram
     actor Citizen as 🌾 Citizen
     participant L1 as Layer 1: Edge Connectors<br/>(WhatsApp / IVR / USSD / SMS)
     participant L2 as Layer 2: Perimeter Security Gateway<br/>(Auth / Rate Limiting / Tokenizer)
-    participant L3 as Layer 3: Public Agent Gateway<br/>(Intake & Structure Evaluator)
-    participant L4_Orch as Layer 4: Claim Orchestration Brain<br/>(Gate 1 & Gate 2 Coordinator)
+    participant L3 as Layer 3: Public Agent Gateway<br/>(Intake & Entity Extractor)
     participant AI as Sovereign AI Services<br/>(Bhashini ASR/NMT & SLM Extractor)
+    participant L4_Orch as Layer 4: Claim Governance Engine<br/>(Completeness & Policy Coordinator)
     participant L4_Adj as Layer 4: Governance Adjudication<br/>(Gate 3 Decision Matrix)
     participant DPI as Authoritative Sovereign Registries<br/>(MOSIP / AgriStack / PFMS)
     participant L4_Case as Layer 4: Case Management<br/>(Escalation Queue & Audit Log)
@@ -29,29 +29,26 @@ sequenceDiagram
     Note over L2: 1. Constant-Time HMAC Signature Check<br/>2. Token Bucket Rate Limiting<br/>3. Adversarial Prompt Injection Scan<br/>4. SHA-256 HMAC Identity Tokenization in RAM<br/>5. Strict Zero-PII Purge Assertion
     L2-->>L1: Return Standardized Intake Contract & Security Flags
 
-    %% Step 3: Layer 3 Public Agent Gateway
+    %% Step 3: Layer 3 Public Agent Gateway & Entity Extraction
     L1->>L3: Submit Standardized Intake Contract
-    Note over L3: Evaluates Structure Level & Routing<br/>(Fast-path DTMF vs. Free-text NLU)
-    L3-->>L1: Return Intake Evaluation Result
-
-    %% Step 4: Layer 4 Claim Orchestration
-    L1->>L4_Orch: Execute Orchestration Cycle
     
-    %% Gate 1: Ingress Modality & SLM Entity Extraction
     rect rgb(240, 248, 255)
-    Note over L4_Orch,AI: GATE 1: Modality Intake & Entity Extraction
+    Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction
     alt Ingress Modality is Audio
-        L4_Orch->>AI: Transcribe & Translate (Speech-to-Text & Translation)
-        AI-->>L4_Orch: Vernacular Text Transcript
-        L4_Orch->>AI: Extract Domain Entities (Sovereign SLM)
-        AI-->>L4_Orch: Extracted Domain Entities & Confidence Score
+        L3->>AI: Transcribe Audio (Bhashini Speech-to-Text ASR)
+        AI-->>L3: Vernacular Text Transcript
+        L3->>AI: Extract Domain Entities (Sovereign SLM)
+        AI-->>L3: Extracted Domain Entities & Confidence Score
     else Structure Level is Menu / DTMF Selection
-        Note over L4_Orch: Structured Fast-Path Bypass<br/>(Confidence = 1.0, bypasses GPU SLM)
+        Note over L3: Structured Fast-Path Bypass<br/>(Confidence = 1.0, bypasses GPU SLM)
     else Ingress Modality is Free Text
-        L4_Orch->>AI: Extract Domain Entities (Sovereign SLM)
-        AI-->>L4_Orch: Extracted Domain Entities & Confidence Score
+        L3->>AI: Extract Domain Entities (Sovereign SLM)
+        AI-->>L3: Extracted Domain Entities & Confidence Score
     end
     end
+
+    %% Step 4: Layer 4 Claim Orchestration & Governance
+    L3->>L4_Orch: Execute Governance Cycle (Intake + Extracted Entities)
 
     %% Gate 2: Mandatory Entity Completeness & Multi-Turn Reprompts
     rect rgb(255, 250, 240)
@@ -119,29 +116,21 @@ flowchart TD
 
 ---
 
-### Phase 2: Layer 3 Intake Evaluation & Layer 4 Gate 1
+### Phase 2: Layer 3 Modality Handling & SLM Entity Extraction
 
-The standardized intake contract enters Layer 3 for structure classification, and Layer 4 Gate 1 executes modality handling:
+The standardized intake contract enters Layer 3 for speech transcription and SLM domain entity extraction:
 
 ```mermaid
 flowchart TD
-    H["Standardized Intake Contract"] --> I["Public Agent Gateway<br/>Structural Intake Evaluation"]
-    I --> J["Intake Payload Evaluator<br/>Content & Routing Classification"]
+    H["Standardized Intake Contract"] --> I["Public Agent Gateway<br/>Intake Entity Extractor"]
     
-    J --> K{"Structure Level Check"}
-    K -- "DTMF / Menu Selection" --> L["Structured Fast-Path Bypass<br/>requires_nlu_extraction = False"]
-    K -- "Free-Text Input" --> M["NLU Extraction Path<br/>requires_nlu_extraction = True"]
-    
-    L --> N["Layer 4 Orchestrator<br/>Gate 1: Modality & Entity Extraction"]
-    M --> N
-
-    N --> O{"Modality Dispatch"}
+    I --> O{"Modality Dispatch"}
     O -- "Audio Voice Stream" --> P["Bhashini Speech-to-Text ASR<br/>+ Machine Translation NMT"]
     P --> Q["Sovereign SLM Entity Extractor"]
     O -- "Structured Text Keypress" --> R["Direct Deterministic Entity Mapping<br/>Confidence = 1.0, Bypass GPU SLM"]
     O -- "Free-Text Message" --> Q
     
-    Q --> S["Extracted Entity Contract<br/>(Intent, Entities, Confidence Score)"]
+    Q --> S["Extracted Domain Entity Contract<br/>(Intent, Entities, Confidence Score)"]
     R --> S
 ```
 
@@ -225,8 +214,7 @@ flowchart TD
 | :--- | :--- | :--- | :--- |
 | **Layer 1 Ingress** | *Carrier Ingress Contracts (WhatsApp, IVR, USSD, SMS)* | Raw phone number (`E.164`), raw text body or signed audio URL. | Layer 2 Perimeter Security Gateway |
 | **Layer 2 Security** | *Standardized Intake Payload* | 64-character SHA-256 HMAC pseudonymous citizen token. Zero cleartext PII. Redacted text content. | Layer 3 Public Agent Gateway |
-| **Layer 3 Intake** | *Intake Evaluation Result* | Validity flag, NLU extraction requirement (fast-path bypass flag). | Layer 4 Claim Orchestration Brain |
-| **Gate 1 Extractor** | *Extracted Domain Entity Contract* | Application intent, domain entities map, AI confidence score, security threat flag. | Layer 4 Claim Orchestration Brain |
-| **Gate 3 Adjudication** | *Claim Evaluation Contract $\rightarrow$ Governance Determination Outcome* | Governance action (`AUTO_APPROVE` / `ROUTE_FOR_MANUAL_REVIEW` / `AUTO_REJECT`), transaction ID, escalation case ID. | Sovereign Payment Rails / Caseworker Management Service |
+| **Layer 3 Perception & Extraction** | *Extracted Domain Entity Contract* | Application intent, domain entities map, AI confidence score, security threat flag. | Layer 4 Claim Governance Engine |
+| **Layer 4 Adjudication** | *Claim Evaluation Contract $\rightarrow$ Governance Determination Outcome* | Governance action (`AUTO_APPROVE` / `ROUTE_FOR_MANUAL_REVIEW` / `AUTO_REJECT`), transaction ID, escalation case ID. | Sovereign Payment Rails / Caseworker Management Service |
 | **Delivery Egress** | *Outbound Notification Request $\rightarrow$ Channel Notification Payload $\rightarrow$ Transmission Acknowledgment* | Adapted message string ($\le 160$ chars for USSD/SMS, Markdown card for WhatsApp, TTS URL for IVR), carrier message reference ID. | Originating Carrier Gateway $\rightarrow$ Citizen Device |
 

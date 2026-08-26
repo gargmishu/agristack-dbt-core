@@ -39,17 +39,16 @@ The platform is structured into four strictly decoupled architectural layers:
                          ▼
 ┌────────────────────────────────────────────────────────┐
 │ Layer 3: Public Agent Intake Gateway                   │
-│ - Fast-path structured bypass evaluation (DTMF/USSD)   │
-│ - Free-text NLU routing evaluation                     │
-│ - Intake content sanity & non-empty validation         │
+│ - Modality handling (Bhashini speech-to-text ASR)      │
+│ - Fast-path structured bypass (DTMF/USSD)              │
+│ - Sovereign SLM domain entity extraction               │
 └────────────────────────┬───────────────────────────────┘
-                         │ Evaluated Standardized Payload
+                         │ ExtractedEntityPayload (Structured Domain Contract)
                          ▼
 ┌────────────────────────────────────────────────────────┐
 │ Layer 4: Orchestrator Brain & Governance Engine        │
-│ - Gate 1: Modality intake & SLM domain entity extraction│
-│ - Gate 2: Mandatory completeness & reprompt matrix     │
-│ - Gate 3: Deterministic rules matrix (Approve/Review/Reject)
+│ - Mandatory completeness & reprompt matrix (Gate 2)    │
+│ - Deterministic policy rules matrix (Approve/Review/Reject) (Gate 3)│
 │ - Post-decision payment dispatch & caseworker staging  │
 └───────────┬────────────────────────────────┬───────────┘
             │                                │
@@ -84,10 +83,10 @@ src/
 │   └── ingestion_firewall.py        # Unified Layer 2 perimeter firewall facade
 ├── public_agent/                    # Layer 3 Public Agent Intake Gateway Surface
 │   ├── public_agent_api.py          # Public Agent Gateway API Surface
-│   └── intake_payload_evaluator.py  # Structure level & NLU routing evaluator
+│   └── intake_entity_extractor.py   # Modality handling & SLM domain entity extractor
 ├── orchestrator/                    # Layer 4 Orchestrator Brain & Governance Engine
 │   ├── claim_adjudicator.py         # Gate 3 decision matrix & threshold adjudication
-│   ├── claim_orchestrator.py        # End-to-end claim orchestration & 3-gate pipeline
+│   ├── claim_orchestrator.py        # End-to-end claim governance & policy orchestration
 │   └── case_management_service.py   # Layer 4 internal caseworker queue & review service
 ├── services/                        # External DPI Registries & AI Adapter Services ONLY
 │   ├── ai/                          # Foundational & sovereign AI model clients
