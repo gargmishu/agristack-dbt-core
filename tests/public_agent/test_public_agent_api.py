@@ -33,7 +33,7 @@ async def test_public_agent_api_submit_valid_payload() -> None:
         received_at=datetime.now(UTC),
     )
 
-    evaluation = await api._submit_payload(payload)
+    evaluation = api._evaluate_intake_payload(payload)
     assert evaluation.is_valid is True
     assert evaluation.requires_nlu_extraction is True
 
@@ -60,24 +60,25 @@ async def test_public_agent_api_rejects_invalid_evaluator_outcome() -> None:
     )
 
     with pytest.raises(ValueError, match="Invalid intake payload: Malformed structural directive"):
-        await api._submit_payload(payload)
+        api._evaluate_intake_payload(payload)
 
 
 @pytest.mark.asyncio
-async def test_public_agent_api_process_claim_intake_internal() -> None:
+async def test_public_agent_api_process_raw_ingress_approval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_pepper_public_agent_123")
     api = PublicAgentApi()
-    payload = PublicAgentStandardizedIntakePayload(
+    raw_whatsapp = WhatsAppIngressPayload(
         session_id="sess_e2e_100",
-        tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
-        channel_type=ChannelType.WHATSAPP,
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.123456",
         payload_type=PayloadType.TEXT,
-        structure_level=StructureLevel.FREE_TEXT,
-        language_locale=LanguageLocale.HINDI,
-        unprocessed_input_content="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
+        text_body="Mera khet 2.5 acre hai, fasal gehu, survey 101/2, zila Meerut",
         received_at=datetime.now(UTC),
     )
 
-    result = await api._process_claim_intake(payload)
+    result = await api.process_raw_ingress(raw_payload=raw_whatsapp)
     assert result.session_id == "sess_e2e_100"
     assert result.evaluation_result.is_valid is True
     assert result.orchestration_result.governance_outcome.governance_action.is_approval
@@ -85,20 +86,21 @@ async def test_public_agent_api_process_claim_intake_internal() -> None:
 
 
 @pytest.mark.asyncio
-async def test_public_agent_api_process_claim_intake_reprompt() -> None:
+async def test_public_agent_api_process_raw_ingress_reprompt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", "test_pepper_public_agent_123")
     api = PublicAgentApi()
-    payload = PublicAgentStandardizedIntakePayload(
+    raw_whatsapp = WhatsAppIngressPayload(
         session_id="sess_reprompt_100",
-        tokenized_citizen_id="a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
-        channel_type=ChannelType.WHATSAPP,
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.reprompt_123",
         payload_type=PayloadType.TEXT,
-        structure_level=StructureLevel.FREE_TEXT,
-        language_locale=LanguageLocale.HINDI,
-        unprocessed_input_content="missing crop details",
+        text_body="missing crop details",
         received_at=datetime.now(UTC),
     )
 
-    result = await api._process_claim_intake(payload, attempt_count=1)
+    result = await api.process_raw_ingress(raw_payload=raw_whatsapp, attempt_count=1)
     assert result.session_id == "sess_reprompt_100"
     assert result.orchestration_result.requires_reprompt is True
     assert result.transmission_ack.carrier_reference_id.startswith("wamid.")

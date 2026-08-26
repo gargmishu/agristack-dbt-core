@@ -141,59 +141,40 @@ class PublicAgentApi:
             PermissionError: If rate limit is exceeded.
             ValueError: If authentication fails, PII check fails, or payload is invalid.
         """
+        # 1. Layer 2: Ingress Firewall, Tokenization & Canonicalization
         intake_payload = self._firewall.process_ingress(
             payload=raw_payload,
             language_locale=language_locale,
         )
 
-        return await self._process_claim_intake(
-            payload=intake_payload,
+        # 2. Layer 3: Structure Level & NLU Routing Evaluation
+        evaluation_result = self._evaluate_intake_payload(intake_payload)
+
+        # 3. Layer 4: Governance Brain & Adjudication Pipeline
+        orchestration_result = await self._orchestrator.execute_orchestration_cycle(
+            intake=intake_payload,
             attempt_count=attempt_count,
+        )
+
+        # 4. Outbound Notification Preparation & Carrier Dispatch
+        notification_request = self._build_notification_request(
+            intake=intake_payload,
+            orchestration_result=orchestration_result,
+        )
+        transmission_ack = await self._delivery_service.dispatch_notification(notification_request)
+
+        return PublicAgentIntakeResult(
+            intake_payload=intake_payload,
+            evaluation_result=evaluation_result,
+            orchestration_result=orchestration_result,
+            transmission_ack=transmission_ack,
         )
 
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
 
-    async def _process_claim_intake(
-        self,
-        payload: PublicAgentStandardizedIntakePayload,
-        attempt_count: int = 1,
-    ) -> PublicAgentIntakeResult:
-        """Executes internal claim processing pipeline from intake payload to outbound receipt.
-
-        Args:
-            payload: Normalized zero-PII standardized intake payload from Layer 2 firewall.
-            attempt_count: Current conversation turn attempt number for reprompt bounds.
-
-        Returns:
-            PublicAgentIntakeResult containing the full execution lifecycle telemetry and receipt.
-
-        Raises:
-            ValueError: If payload structure or downstream execution fails validation constraints.
-        """
-        evaluation_result = await self._submit_payload(payload)
-
-        orchestration_result = await self._orchestrator.execute_orchestration_cycle(
-            intake=payload,
-            attempt_count=attempt_count,
-        )
-
-        notification_request = self._build_notification_request(
-            intake=payload,
-            orchestration_result=orchestration_result,
-        )
-
-        transmission_ack = await self._delivery_service.dispatch_notification(notification_request)
-
-        return PublicAgentIntakeResult(
-            intake_payload=payload,
-            evaluation_result=evaluation_result,
-            orchestration_result=orchestration_result,
-            transmission_ack=transmission_ack,
-        )
-
-    async def _submit_payload(
+    def _evaluate_intake_payload(
         self, payload: PublicAgentStandardizedIntakePayload
     ) -> IntakeEvaluationResult:
         """Evaluates intake payload structure and returns verified routing evaluation outcome.
