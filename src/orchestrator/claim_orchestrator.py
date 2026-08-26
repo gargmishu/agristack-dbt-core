@@ -197,7 +197,7 @@ class ClaimOrchestrator:
         conversational re-prompt loops (up to 3 attempts).
 
         Args:
-            extracted: ExtractedEntityPayload output from Gate 1.
+            extracted: ExtractedEntityPayload output from Layer 3 Entity Extractor.
             attempt_count: Current citizen interaction attempt counter (1 to 3).
 
         Returns:
