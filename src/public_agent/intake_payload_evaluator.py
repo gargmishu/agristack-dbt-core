@@ -17,31 +17,10 @@ See: roadmap.md (Phase 2 Step 2.2 Layer 3)
 """
 
 import logging
-from typing import NamedTuple
 
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
-
-
-class IntakeEvaluationResult(NamedTuple):
-    """Result of intake payload structure and NLU routing evaluation.
-
-    Encapsulates structural validity and NLU extraction requirement flags for Layer 4.
-
-    Attributes:
-        is_valid: True if the payload satisfies non-empty content and structure guards.
-        requires_nlu_extraction: True if payload requires natural language extraction; False
-            if structured fast-path bypass applies.
-        evaluation_message: Descriptive explanation of the evaluation outcome.
-
-    See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
-    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
-    """
-
-    is_valid: bool
-    requires_nlu_extraction: bool
-    evaluation_message: str
 
 
 class IntakePayloadEvaluator:
@@ -52,37 +31,30 @@ class IntakePayloadEvaluator:
 
     Evaluation Rules:
     - Structured Inputs (`MENU_SELECTION`, `DTMF_SELECTION`): Bypasses NLU extraction
-      (`requires_nlu_extraction=False`) and enables direct deterministic entity mapping.
-    - Unstructured Inputs (`FREE_TEXT`): Routes to NLU extraction (`requires_nlu_extraction=True`)
-      for ASR transcription and SLM domain entity parsing.
-    - Content Validation: Rejects empty or whitespace-only inputs (`is_valid=False`).
+      and enables direct deterministic entity mapping.
+    - Unstructured Inputs (`FREE_TEXT`): Routes to NLU extraction for ASR transcription
+      and SLM domain entity parsing.
+    - Content Validation: Rejects empty or whitespace-only inputs by raising `ValueError`.
 
     See: decisions/step3.4_layer3_intake_gateway_and_connectors.md
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
     """
 
-    def evaluate_payload(
-        self, payload: PublicAgentStandardizedIntakePayload
-    ) -> IntakeEvaluationResult:
-        """Evaluates payload structure level and determines downstream routing path.
+    def evaluate_payload(self, payload: PublicAgentStandardizedIntakePayload) -> None:
+        """Evaluates payload structure level and validates routing prerequisites.
 
         Args:
             payload: Validated PublicAgentStandardizedIntakePayload instance.
 
-        Returns:
-            IntakeEvaluationResult indicating validity and whether NLU extraction is
-            required.
+        Raises:
+            ValueError: If unprocessed_input_content is empty or whitespace-only.
         """
         if not payload.unprocessed_input_content or not payload.unprocessed_input_content.strip():
             logger.warning(
                 "Intake evaluation failed: empty unprocessed_input_content for session=%s",
                 payload.session_id,
             )
-            return IntakeEvaluationResult(
-                is_valid=False,
-                requires_nlu_extraction=False,
-                evaluation_message="unprocessed_input_content cannot be empty or whitespace-only",
-            )
+            raise ValueError("unprocessed_input_content cannot be empty or whitespace-only")
 
         if payload.structure_level.is_structured:
             # Fast-path structured bypass: Saves ~800ms GPU NLU latency and avoids hallucinations.
@@ -92,11 +64,6 @@ class IntakePayloadEvaluator:
                 payload.channel_type,
                 payload.structure_level,
             )
-            return IntakeEvaluationResult(
-                is_valid=True,
-                requires_nlu_extraction=False,
-                evaluation_message="Structured input cleared for direct deterministic processing",
-            )
         else:
             # Free-text NLU path: Requires ASR/NMT translation and SLM entity extraction.
             logger.info(
@@ -104,9 +71,4 @@ class IntakePayloadEvaluator:
                 payload.session_id,
                 payload.channel_type,
                 payload.payload_type,
-            )
-            return IntakeEvaluationResult(
-                is_valid=True,
-                requires_nlu_extraction=True,
-                evaluation_message="Free-text input cleared for SLM entity extraction pipeline",
             )

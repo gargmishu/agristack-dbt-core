@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+import pytest
+
 from src.data_models.common import (
     ChannelType,
     LanguageLocale,
@@ -25,10 +27,8 @@ def test_intake_payload_evaluator_dtmf_structured_bypass() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = evaluator.evaluate_payload(payload)
-    assert result.is_valid is True
-    assert result.requires_nlu_extraction is False
-    assert "Structured input cleared" in result.evaluation_message
+    # Valid structured bypass clears evaluation without raising
+    evaluator.evaluate_payload(payload)
 
 
 def test_intake_payload_evaluator_free_text_requires_nlu() -> None:
@@ -44,10 +44,8 @@ def test_intake_payload_evaluator_free_text_requires_nlu() -> None:
         received_at=datetime.now(UTC),
     )
 
-    result = evaluator.evaluate_payload(payload)
-    assert result.is_valid is True
-    assert result.requires_nlu_extraction is True
-    assert "Free-text input cleared" in result.evaluation_message
+    # Valid free-text NLU path clears evaluation without raising
+    evaluator.evaluate_payload(payload)
 
 
 def test_intake_payload_evaluator_empty_content_rejected() -> None:
@@ -64,7 +62,5 @@ def test_intake_payload_evaluator_empty_content_rejected() -> None:
     )
     object.__setattr__(payload, "unprocessed_input_content", "   ")
 
-    result = evaluator.evaluate_payload(payload)
-    assert result.is_valid is False
-    assert result.requires_nlu_extraction is False
-    assert "cannot be empty or whitespace-only" in result.evaluation_message
+    with pytest.raises(ValueError, match="cannot be empty or whitespace-only"):
+        evaluator.evaluate_payload(payload)

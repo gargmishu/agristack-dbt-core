@@ -40,10 +40,7 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway.ingestion_firewall import IngestionFirewall
 from src.orchestrator.claim_orchestrator import ClaimOrchestrator, OrchestrationExecutionResult
-from src.public_agent.intake_payload_evaluator import (
-    IntakeEvaluationResult,
-    IntakePayloadEvaluator,
-)
+from src.public_agent.intake_payload_evaluator import IntakePayloadEvaluator
 from src.services.notification.multichannel_notification_service import (
     MultichannelNotificationService,
 )
@@ -60,13 +57,11 @@ class PublicAgentIntakeResult:
 
     Attributes:
         intake_payload: Normalized zero-PII standardized intake payload.
-        evaluation_result: Intake structure and modality evaluation result.
         orchestration_result: Layer 4 claim orchestration execution outcome.
         transmission_ack: Authoritative carrier transmission acknowledgment receipt.
     """
 
     intake_payload: PublicAgentStandardizedIntakePayload
-    evaluation_result: IntakeEvaluationResult
     orchestration_result: OrchestrationExecutionResult
     transmission_ack: TransmissionAck
 
@@ -148,7 +143,7 @@ class PublicAgentApi:
         )
 
         # 2. Layer 3: Structure Level & NLU Routing Evaluation
-        evaluation_result = self._evaluate_intake_payload(intake_payload)
+        self._evaluator.evaluate_payload(intake_payload)
 
         # 3. Layer 4: Governance Brain & Adjudication Pipeline
         orchestration_result = await self._orchestrator.execute_orchestration_cycle(
@@ -165,7 +160,6 @@ class PublicAgentApi:
 
         return PublicAgentIntakeResult(
             intake_payload=intake_payload,
-            evaluation_result=evaluation_result,
             orchestration_result=orchestration_result,
             transmission_ack=transmission_ack,
         )
@@ -173,42 +167,6 @@ class PublicAgentApi:
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
-
-    def _evaluate_intake_payload(
-        self, payload: PublicAgentStandardizedIntakePayload
-    ) -> IntakeEvaluationResult:
-        """Evaluates intake payload structure and returns verified routing evaluation outcome.
-
-        Performs content sanity checks and determines whether the incoming interaction requires
-        natural language processing (SLM extraction) or can follow a deterministic structured path.
-
-        Args:
-            payload: Validated PublicAgentStandardizedIntakePayload from Layer 2 Gateway.
-
-        Returns:
-            IntakeEvaluationResult: Structural evaluation outcome containing `is_valid`,
-            `requires_nlu_extraction`, and descriptive status notes.
-
-        Raises:
-            ValueError: If payload fails structural validation, contains empty or whitespace-only
-                content, or violates channel-structure compatibility constraints.
-        """
-        evaluation_result = self._evaluator.evaluate_payload(payload)
-        if not evaluation_result.is_valid:
-            logger.warning(
-                "PublicAgentApi rejected payload for session=%s: %s",
-                payload.session_id,
-                evaluation_result.evaluation_message,
-            )
-            raise ValueError(f"Invalid intake payload: {evaluation_result.evaluation_message}")
-
-        logger.info(
-            "PublicAgentApi accepted payload for session=%s, channel=%s, nlu_required=%s",
-            payload.session_id,
-            payload.channel_type,
-            evaluation_result.requires_nlu_extraction,
-        )
-        return evaluation_result
 
     @staticmethod
     def _build_notification_request(
