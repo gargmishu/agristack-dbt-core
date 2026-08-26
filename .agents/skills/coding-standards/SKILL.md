@@ -9,21 +9,35 @@ This skill outlines language-level clean coding rules, naming conventions, objec
 
 ---
 
-## 1. Naming Conventions
+## 1. Naming Conventions & Semantic Clarity
 
-### 1.1 Classes and Type Aliases (PascalCase / Upper CamelCase)
+### 1.1 Unambiguous, Self-Documenting Names (Zero Cryptic Abbreviations)
+* **Never Use Cryptic Truncations**: Prohibit short-hand abbreviations, truncated names, or single/two-letter identifiers across all classes, functions, arguments, instance attributes, and local variables.
+  * **Incorrect**: `orch_result`, `eval_result`, `carrier_ref`, `bank_ref`, `msg`, `kw`, `k`, `res`, `req`, `fw`, `std_payload`, `err`, `loc`, `cid`
+  * **Correct**: `orchestration_result`, `evaluation_result`, `carrier_reference_id`, `bank_reference_id`, `message`, `keyword`, `response`, `request`, `firewall`, `standardized_payload`, `error`, `language_locale`, `citizen_identifier`
+* **Descriptive Function & Method Names**: Functions and methods must use explicit verb-noun phrases that clearly communicate intent, action, and outcome:
+  * **Correct**: `execute_orchestration_cycle`, `dispatch_notification`, `stage_incident_ticket`, `verify_carrier_webhook`, `evaluate_payload`
+  * **Incorrect**: `process`, `run`, `handle_data`, `check`, `do_eval`
+* **Self-Documenting Arguments**: Parameter names must explicitly describe the expected data contract and semantic role rather than using generic or shortened labels:
+  * **Correct**: `def _build_notification_request(intake: PublicAgentStandardizedIntakePayload, orchestration_result: OrchestrationExecutionResult)`
+  * **Incorrect**: `def _build_notification_request(intake, orch_result)` or `def _build_notification_request(payload, res)`
+* **Descriptive, Role-Based Class Names**: Classes must use full, descriptive nouns or noun phrases representing their domain entity, gateway boundary, or service responsibility:
+  * **Correct**: `MultichannelNotificationService`, `PublicAgentStandardizedIntakePayload`, `ZeroTrustIdentityTokenizer`, `ClaimAdjudicator`
+  * **Incorrect**: `NotifService`, `AgentAPI`, `Tokenizer`, `AdjudicatorHelper`
+
+### 1.2 Classes and Type Aliases (PascalCase / Upper CamelCase)
 * **Acronyms as Capitalized Words**: Treat multi-word acronyms as capitalized words (Upper CamelCase) rather than ALL-CAPS to avoid visual collisions (e.g. `CC` ambiguity) and ensure readability.
   * **Correct**: `IvrIngressPayload`, `UssdIngressPayload`, `HmacCitizenToken`, `WhatsAppIngressPayload`, `HttpClient`, `HttpUrl`
   * **Incorrect**: `IVRIngressPayload`, `USSDIngressPayload`, `HMACCitizenToken`, `WhatsappIngressPayload`
 
-### 1.2 Attributes, Variables, and Functions (`snake_case`)
+### 1.3 Attributes, Variables, and Functions (`snake_case`)
 * All function names, method names, instance attributes, function parameters, and local variables must strictly use `snake_case`.
 
-### 1.3 Constants and Private Module Variables
+### 1.4 Constants and Private Module Variables
 * **Internal Constants**: Private constants and implementation details must use uppercase `SNAKE_CASE` prefixed with a leading underscore (e.g., `_SIGNATURE_PREFIX`, `_BEARER_PREFIX`, `_MAX_RETRY_COUNT`).
 * **Public Constants**: Exported configuration defaults, public policy mappings, and test fixtures may remain unprefixed `UPPER_SNAKE_CASE` when intentionally part of the public module surface.
 
-### 1.4 Module-to-Class Naming Symmetry
+### 1.5 Module-to-Class Naming Symmetry
 * For operational components (gateways, connectors, routers, validators, and services), Python filenames in `snake_case` must strictly match their primary class name in `PascalCase`:
   * `carrier_auth_validator.py` $\rightarrow$ `CarrierAuthValidator`
   * `payment_rail_service.py` $\rightarrow$ `PaymentRailService`
