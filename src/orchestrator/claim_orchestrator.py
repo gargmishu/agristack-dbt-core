@@ -1,8 +1,8 @@
-"""Layer 4 Governance Engine: Claim Orchestrator & 3-Gate Execution Pipeline.
+"""Layer 4 Governance Engine: Claim Orchestrator & Policy Execution Pipeline.
 
-Coordinates end-to-end citizen claim processing across multimodal ingress transcription,
-claim completeness validation, multi-turn conversational reprompts, and deterministic
-governance routing.
+Coordinates citizen claim governance across mandatory completeness validation,
+multi-turn conversational reprompts, deterministic policy adjudication, and
+post-decision payment/caseworker execution.
 
 See: decisions/step3.3_layer4_orchestrator_brain.md
 See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
