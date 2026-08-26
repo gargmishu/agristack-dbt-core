@@ -24,6 +24,7 @@ from src.data_models.common import (
     EligibilityStatus,
     EscalationReasonCode,
     GovernanceAction,
+    SessionId,
 )
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import (
@@ -55,29 +56,34 @@ class OrchestrationExecutionResult:
     next steps.
 
     Attributes:
-        session_id: Primary session tracking identifier.
-        application_intent: Classified citizen intent driving workflow routing.
         governance_outcome: Governance adjudication verdict.
         extracted_entities: Extracted domain parameter dictionary.
         requires_reprompt: True if mandatory entity completeness failed and requires citizen
-        clarification.
+            clarification.
         reprompt_message: Clarification prompt message if reprompt is required.
         disbursement_callback: Payment clearing callback receipt if automated payout was
-        initiated.
-        caseworker_ticket_id: Escalation ticket ID (`SPP-CASE-YYYY-XXXXXX`) if staged for
-        review.
+            initiated.
+        caseworker_ticket_id: Escalation ticket ID (`SPP-CASE-YYYY-XXXXXX`) if staged for review.
 
     See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
-    session_id: str
-    application_intent: ApplicationIntent
     governance_outcome: GovernanceOutcomePayload
     extracted_entities: ExtractedEntityPayload
     requires_reprompt: bool = False
     reprompt_message: str | None = None
     disbursement_callback: DisbursementCallbackPayload | None = None
     caseworker_ticket_id: str | None = None
+
+    @property
+    def session_id(self) -> SessionId:
+        """Primary session tracking identifier."""
+        return self.governance_outcome.session_id
+
+    @property
+    def application_intent(self) -> ApplicationIntent:
+        """Classified citizen intent driving workflow routing."""
+        return self.extracted_entities.application_intent
 
 
 class ClaimOrchestrator:
@@ -178,8 +184,6 @@ class ClaimOrchestrator:
             )
 
         return OrchestrationExecutionResult(
-            session_id=session_id,
-            application_intent=extracted_entities.application_intent,
             governance_outcome=governance_outcome,
             extracted_entities=extracted_entities,
             requires_reprompt=False,
@@ -363,8 +367,6 @@ class ClaimOrchestrator:
             evaluated_at=datetime.now(UTC),
         )
         return OrchestrationExecutionResult(
-            session_id=session_id,
-            application_intent=extracted_entities.application_intent,
             governance_outcome=reprompt_outcome,
             extracted_entities=extracted_entities,
             requires_reprompt=True,
