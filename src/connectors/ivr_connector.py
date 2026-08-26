@@ -85,17 +85,17 @@ class IvrConnector:
         Returns:
             Strict TransmissionAck receipt with carrier reference ID.
         """
-        carrier_ref = f"sip-call-{uuid4().hex[:12]}"
+        carrier_reference_id = f"sip-call-{uuid4().hex[:12]}"
         logger.info(
             "Transmitting outbound IVR voice audio for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            carrier_ref,
+            carrier_reference_id,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.IVR_VOICE,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            carrier_reference_id=carrier_ref,
+            carrier_reference_id=carrier_reference_id,
         )

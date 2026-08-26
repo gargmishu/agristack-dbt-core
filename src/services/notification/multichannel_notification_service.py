@@ -269,21 +269,23 @@ class MultichannelNotificationService:
             Concise text string strictly bounded to maximum 160 characters.
         """
         if request.governance_action.is_approval:
-            msg = f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."
+            message = (
+                f"AgriStack: Claim Approved. Txn: {request.disbursement_txn_id}. DBT initiated."
+            )
         elif request.governance_action.is_review:
-            msg = (
+            message = (
                 f"AgriStack: Claim Under Review. Ticket: {request.escalation_case_id}. "
                 "Officer review pending."
             )
         elif request.governance_action.is_rejection:
             helpline = get_helpline_number()
-            msg = f"AgriStack: Claim Rejected ({request.rejection_reason}). Help: {helpline}."
+            message = f"AgriStack: Claim Rejected ({request.rejection_reason}). Help: {helpline}."
         else:
             entity_label = self._format_entity_label(request.missing_entity, is_hindi=False)
-            msg = f"AgriStack: Missing {entity_label}. Reply to update."
+            message = f"AgriStack: Missing {entity_label}. Reply to update."
 
         # Enforce hard 160 character boundary
-        return msg[:MAX_USSD_CHARACTERS]
+        return message[:MAX_USSD_CHARACTERS]
 
     @staticmethod
     def _format_entity_label(entity: DomainEntityKey | None, is_hindi: bool = False) -> str:

@@ -88,17 +88,17 @@ class UssdConnector:
         Returns:
             Strict TransmissionAck receipt with carrier reference ID.
         """
-        carrier_ref = f"ussd-sig-{uuid4().hex[:12]}"
+        carrier_reference_id = f"ussd-sig-{uuid4().hex[:12]}"
         logger.info(
             "Pushing outbound USSD string for session=%s, interface=%s, carrier_ref=%s",
             payload.session_id,
             self._interface_id,
-            carrier_ref,
+            carrier_reference_id,
         )
         return TransmissionAck(
             interface_id=self._interface_id,
             channel_type=ChannelType.USSD,
             session_id=payload.session_id,
             status=payload.delivery_status,
-            carrier_reference_id=carrier_ref,
+            carrier_reference_id=carrier_reference_id,
         )

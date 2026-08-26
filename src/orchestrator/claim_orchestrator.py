@@ -355,8 +355,10 @@ class ClaimOrchestrator:
         Returns:
             OrchestrationExecutionResult populated with reprompt instructions.
         """
-        fields_str = ", ".join(missing_entities)
-        reprompt_msg = f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {fields_str}"
+        missing_fields_text = ", ".join(missing_entities)
+        reprompt_message = (
+            f"Kripya apne aavedan ke liye nimnlikhit jankari pradan karein: {missing_fields_text}"
+        )
         reprompt_outcome = GovernanceOutcomePayload(
             session_id=session_id,
             payload_id=payload_id,
@@ -370,7 +372,7 @@ class ClaimOrchestrator:
             governance_outcome=reprompt_outcome,
             extracted_entities=extracted_entities,
             requires_reprompt=True,
-            reprompt_message=reprompt_msg,
+            reprompt_message=reprompt_message,
         )
 
     async def _stage_caseworker_ticket(

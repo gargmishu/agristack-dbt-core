@@ -80,12 +80,12 @@ class ClaimAdjudicator:
             Fully validated GovernanceOutcomePayload representing the adjudication outcome.
         """
         ledger = payload.approved_payouts_ledger or set()
-        short_id = f"{secrets.randbelow(900000) + 100000:06d}"
-        now = datetime.now(UTC)
-        extracted = payload.extracted_payload
+        case_ticket_suffix = f"{secrets.randbelow(900000) + 100000:06d}"
+        evaluated_at = datetime.now(UTC)
+        extracted_payload = payload.extracted_payload
 
         # 1. Security Check: Adversarial Prompt Injection Zeroing Invariant
-        if extracted.is_adversarial_attempt or extracted.ai_confidence_score == 0.0:
+        if extracted_payload.is_adversarial_attempt or extracted_payload.ai_confidence_score == 0.0:
             logger.warning(
                 "Adversarial attempt or zero-confidence claim flagged for session=%s; "
                 "routing to caseworker review",
@@ -97,8 +97,8 @@ class ClaimAdjudicator:
                 ai_confidence_score=0.0,
                 eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
                 governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
-                escalation_case_id=f"SPP-CASE-2026-{short_id}",
-                evaluated_at=now,
+                escalation_case_id=f"SPP-CASE-2026-{case_ticket_suffix}",
+                evaluated_at=evaluated_at,
             )
 
         # 2. Anti-Double-Dipping Ledger Invariant
@@ -111,11 +111,11 @@ class ClaimAdjudicator:
             return GovernanceOutcomePayload(
                 session_id=payload.session_id,
                 payload_id=payload.payload_id,
-                ai_confidence_score=extracted.ai_confidence_score,
+                ai_confidence_score=extracted_payload.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
                 rejection_reason=RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON,
-                evaluated_at=now,
+                evaluated_at=evaluated_at,
             )
 
         # 3. Sovereign Identity Registry Verification
@@ -130,16 +130,16 @@ class ClaimAdjudicator:
             return GovernanceOutcomePayload(
                 session_id=payload.session_id,
                 payload_id=payload.payload_id,
-                ai_confidence_score=extracted.ai_confidence_score,
+                ai_confidence_score=extracted_payload.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
                 rejection_reason=RejectionReasonCode.IDENTITY_NOT_VERIFIED,
-                evaluated_at=now,
+                evaluated_at=evaluated_at,
             )
 
         # 4. Cadastral Land & Crop Record Cross-Matching
         survey_number = str(
-            extracted.domain_entities.get(DomainEntityKey.SURVEY_NUMBER, "LAND-REC-1002")
+            extracted_payload.domain_entities.get(DomainEntityKey.SURVEY_NUMBER, "LAND-REC-1002")
         )
         is_land_verified = await self._agri_service.verify_land_record(
             payload.tokenized_citizen_id, survey_number
@@ -153,42 +153,42 @@ class ClaimAdjudicator:
             return GovernanceOutcomePayload(
                 session_id=payload.session_id,
                 payload_id=payload.payload_id,
-                ai_confidence_score=extracted.ai_confidence_score,
+                ai_confidence_score=extracted_payload.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
                 rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
-                evaluated_at=now,
+                evaluated_at=evaluated_at,
             )
 
         # 5. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
-        if extracted.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
+        if extracted_payload.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
             logger.info(
                 "Straight-through automated payout approved for session=%s score=%.2f",
                 payload.session_id,
-                extracted.ai_confidence_score,
+                extracted_payload.ai_confidence_score,
             )
             return GovernanceOutcomePayload(
                 session_id=payload.session_id,
                 payload_id=payload.payload_id,
-                ai_confidence_score=extracted.ai_confidence_score,
+                ai_confidence_score=extracted_payload.ai_confidence_score,
                 eligibility_status=EligibilityStatus.ELIGIBLE,
                 governance_action=GovernanceAction.AUTO_APPROVE,
-                disbursement_txn_id=f"TXN-2026-{short_id}",
+                disbursement_txn_id=f"TXN-2026-{case_ticket_suffix}",
                 disbursement_status=DisbursementStatus.PENDING,
-                evaluated_at=now,
+                evaluated_at=evaluated_at,
             )
 
         logger.info(
             "Low confidence claim score=%.2f for session=%s; routing to caseworker",
-            extracted.ai_confidence_score,
+            extracted_payload.ai_confidence_score,
             payload.session_id,
         )
         return GovernanceOutcomePayload(
             session_id=payload.session_id,
             payload_id=payload.payload_id,
-            ai_confidence_score=extracted.ai_confidence_score,
+            ai_confidence_score=extracted_payload.ai_confidence_score,
             eligibility_status=EligibilityStatus.REQUIRES_REVIEW,
             governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
-            escalation_case_id=f"SPP-CASE-2026-{short_id}",
-            evaluated_at=now,
+            escalation_case_id=f"SPP-CASE-2026-{case_ticket_suffix}",
+            evaluated_at=evaluated_at,
         )

@@ -172,7 +172,7 @@ class PublicAgentApi:
         Raises:
             ValueError: If payload structure or downstream execution fails validation constraints.
         """
-        eval_result = await self._submit_payload(payload)
+        evaluation_result = await self._submit_payload(payload)
 
         orchestration_result = await self._orchestrator.execute_orchestration_cycle(
             intake=payload,
@@ -181,14 +181,14 @@ class PublicAgentApi:
 
         notification_request = self._build_notification_request(
             intake=payload,
-            orch_result=orchestration_result,
+            orchestration_result=orchestration_result,
         )
 
         transmission_ack = await self._delivery_service.dispatch_notification(notification_request)
 
         return PublicAgentIntakeResult(
             intake_payload=payload,
-            evaluation_result=eval_result,
+            evaluation_result=evaluation_result,
             orchestration_result=orchestration_result,
             transmission_ack=transmission_ack,
         )
@@ -232,18 +232,18 @@ class PublicAgentApi:
     @staticmethod
     def _build_notification_request(
         intake: PublicAgentStandardizedIntakePayload,
-        orch_result: OrchestrationExecutionResult,
+        orchestration_result: OrchestrationExecutionResult,
     ) -> NotificationRequestPayload:
         """Translates orchestration outcome into an outbound notification request payload.
 
         Args:
             intake: Active standardized intake payload.
-            orch_result: Outcome returned by ClaimOrchestrator.
+            orchestration_result: Outcome returned by ClaimOrchestrator.
 
         Returns:
             Validated NotificationRequestPayload.
         """
-        outcome = orch_result.governance_outcome
+        outcome = orchestration_result.governance_outcome
         missing_entity: DomainEntityKey | None = None
 
         if outcome.governance_action == GovernanceAction.REQUEST_MORE_INFO:

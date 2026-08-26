@@ -65,18 +65,18 @@ class SlmExtractor:
         if "error" in content_lower or not unprocessed_content.strip():
             return None
 
-        is_adversarial = any(kw in content_lower for kw in ADVERSARIAL_INJECTION_KEYWORDS)
+        is_adversarial = any(keyword in content_lower for keyword in ADVERSARIAL_INJECTION_KEYWORDS)
         if is_adversarial:
             logger.warning(
                 "SLM detected adversarial injection keywords for session=%s",
                 session_id,
             )
 
-        if any(k in content_lower for k in SUBSIDY_CLAIM_KEYWORDS):
+        if any(keyword in content_lower for keyword in SUBSIDY_CLAIM_KEYWORDS):
             rule = MOCK_SLM_RULES["subsidy_claim"]
-        elif any(k in content_lower for k in STATUS_CHECK_KEYWORDS):
+        elif any(keyword in content_lower for keyword in STATUS_CHECK_KEYWORDS):
             rule = MOCK_SLM_RULES["status_check"]
-        elif any(k in content_lower for k in MISSING_ENTITY_KEYWORDS):
+        elif any(keyword in content_lower for keyword in MISSING_ENTITY_KEYWORDS):
             rule = MOCK_SLM_RULES["missing_entity"]
         else:
             rule = MOCK_SLM_RULES["default_fallback"]

@@ -67,23 +67,23 @@ class PaymentRailService:
 
         if MOCK_PAYMENT_FAIL_TRIGGER in str(outcome.disbursement_txn_id).upper():
             status = DisbursementStatus.FAILED
-            reason = MOCK_PAYMENT_FAILURE_REASON
-            bank_ref = f"NPCI-REJ-{str(outcome.disbursement_txn_id)[-6:]}"
+            failure_reason = MOCK_PAYMENT_FAILURE_REASON
+            bank_reference_id = f"NPCI-REJ-{str(outcome.disbursement_txn_id)[-6:]}"
             logger.warning(
                 "Payment clearing failed for session=%s, txn=%s, reason=%s",
                 outcome.session_id,
                 outcome.disbursement_txn_id,
-                reason,
+                failure_reason,
             )
         else:
             status = DisbursementStatus.SUCCESS
-            reason = None
-            bank_ref = f"NPCI-UTR-{str(outcome.disbursement_txn_id)[-6:]}"
+            failure_reason = None
+            bank_reference_id = f"NPCI-UTR-{str(outcome.disbursement_txn_id)[-6:]}"
 
         return DisbursementCallbackPayload(
             disbursement_txn_id=outcome.disbursement_txn_id,
-            bank_reference_id=bank_ref,
+            bank_reference_id=bank_reference_id,
             disbursement_status=status,
             cleared_at=datetime.now(UTC),
-            failure_reason_code=reason,
+            failure_reason_code=failure_reason,
         )
