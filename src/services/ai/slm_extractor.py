@@ -10,7 +10,13 @@ Why local sovereign SLM models?
 Sovereign data governance requires processing citizen intent within local memory perimeters
 without transmitting un-tokenized queries to remote third-party APIs.
 
+In production environments, enforces live HTTPS communication with strict fail-fast configuration
+and fail-closed error handling (no mock fallback). In non-production, supports deterministic
+mock simulation for offline testing.
+
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.5)
+See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
+See: decisions/step3.6_live_service_integration.md
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
@@ -19,7 +25,17 @@ from typing import Final
 
 import httpx
 
+from src.config.service_settings import (
+    get_slm_api_key,
+    get_slm_endpoint,
+    is_production,
+)
 from src.data_models.governance import ExtractedEntityPayload
+from src.errors.service_errors import (
+    ServiceAuthenticationError,
+    ServiceConfigurationError,
+    ServiceUnavailableError,
+)
 from src.services.ai.ai_mock_fixtures import (
     ADVERSARIAL_INJECTION_KEYWORDS,
     MISSING_ENTITY_KEYWORDS,
@@ -27,11 +43,14 @@ from src.services.ai.ai_mock_fixtures import (
     STATUS_CHECK_KEYWORDS,
     SUBSIDY_CLAIM_KEYWORDS,
 )
+from src.services.http_client_pool import get_shared_http_client
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_SLM_TIMEOUT_SECONDS: Final[float] = 2.0
 _HTTP_STATUS_OK: Final[int] = 200
+_HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
+_HTTP_STATUS_FORBIDDEN: Final[int] = 403
 
 
 class SlmExtractor:
@@ -44,7 +63,8 @@ class SlmExtractor:
     - Entity Extraction (`extract_entities`): Extracts parameters and computes confidence.
     - Adversarial Defense: Flags inputs with prompt injection patterns.
 
-    Supports live REST endpoints with automatic, graceful fallback to deterministic local fixtures.
+    In production, mandates live endpoint configuration and pooled persistent HTTP transport.
+    In development/testing, supports offline mock simulations.
 
     See: decisions/step2.0_canonical_domain_schemas.md#slm-extracted-entity-payload
     See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
@@ -57,19 +77,55 @@ class SlmExtractor:
         api_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
         timeout_seconds: float = _DEFAULT_SLM_TIMEOUT_SECONDS,
+        require_live: bool | None = None,
     ) -> None:
-        """Initializes SLM extractor with optional live endpoint configuration.
+        """Initializes SLM extractor.
 
         Args:
-            endpoint_url: Optional base HTTP URL for live SLM extraction service.
-            api_key: Optional authorization Bearer token or API key for live calls.
-            http_client: Optional async HTTP client for connection pooling.
+            endpoint_url: Base HTTP URL for live SLM extraction service.
+            api_key: Authorization Bearer token or API key for live calls.
+            http_client: Async HTTP client for connection pooling.
             timeout_seconds: Request timeout in seconds (default: 2.0s).
+            require_live: Whether live endpoints are required (defaults to is_production()).
+
+        Raises:
+            ServiceConfigurationError: In production mode if endpoint_url or api_key is missing.
         """
-        self._endpoint_url = endpoint_url.rstrip("/") if endpoint_url else None
-        self._api_key = api_key
-        self._http_client = http_client
+        self._require_live = is_production() if require_live is None else require_live
+        self._http_client: httpx.AsyncClient | None
+
+        if self._require_live:
+            if not endpoint_url or not endpoint_url.strip():
+                raise ServiceConfigurationError(
+                    "Live Sovereign SLM endpoint URL is required in production mode."
+                )
+            if not api_key or not api_key.strip():
+                raise ServiceConfigurationError(
+                    "Live Sovereign SLM API key is required in production mode."
+                )
+            self._http_client = http_client or get_shared_http_client()
+        else:
+            self._http_client = http_client
+
+        self._endpoint_url = (
+            endpoint_url.rstrip("/") if endpoint_url and endpoint_url.strip() else None
+        )
+        self._api_key = api_key.strip() if api_key and api_key.strip() else None
         self._timeout_seconds = timeout_seconds
+
+    @classmethod
+    def from_env(
+        cls,
+        http_client: httpx.AsyncClient | None = None,
+        require_live: bool | None = None,
+    ) -> "SlmExtractor":
+        """Factory constructor building instance from validated environment settings."""
+        return cls(
+            endpoint_url=get_slm_endpoint(),
+            api_key=get_slm_api_key(),
+            http_client=http_client,
+            require_live=require_live,
+        )
 
     # -------------------------------------------------------------------------
     # Primary Public Workflow Entrypoints
@@ -88,6 +144,11 @@ class SlmExtractor:
         Returns:
             ExtractedEntityPayload containing extracted parameters and AI confidence score,
             or None if extraction could not be completed.
+
+        Raises:
+            ServiceUnavailableError: In live mode if external SLM service fails or times out.
+            ServiceAuthenticationError: In live mode if external SLM service returns 401/403.
+            ServiceConfigurationError: In live mode if live endpoint is not configured.
         """
         logger.info("Extracting entities for session=%s locale=%s", session_id, language_locale)
 
@@ -100,6 +161,15 @@ class SlmExtractor:
             )
             if live_result is not None:
                 return live_result
+            if self._require_live:
+                raise ServiceUnavailableError(
+                    f"Live Sovereign SLM extraction failed for session '{session_id}'."
+                )
+
+        if self._require_live:
+            raise ServiceConfigurationError(
+                "Sovereign SLM cannot execute: live endpoint is required in production."
+            )
 
         return self._mock_extract_entities(session_id, unprocessed_content)
 
@@ -110,7 +180,7 @@ class SlmExtractor:
     async def _call_live_extract(
         self, session_id: str, unprocessed_content: str, language_locale: str
     ) -> ExtractedEntityPayload | None:
-        """Dispatches live SLM extraction HTTP request with graceful fallback."""
+        """Dispatches live SLM extraction HTTP request."""
         target_url = f"{self._endpoint_url}/v1/extract"
         payload = {
             "session_id": session_id,
@@ -122,30 +192,37 @@ class SlmExtractor:
             headers["Authorization"] = f"Bearer {self._api_key}"
 
         try:
-            if self._http_client:
-                response = await self._http_client.post(
-                    target_url, json=payload, headers=headers, timeout=self._timeout_seconds
-                )
-            else:
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(
-                        target_url, json=payload, headers=headers, timeout=self._timeout_seconds
-                    )
+            client = self._http_client or get_shared_http_client()
+            response = await client.post(
+                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+            )
             if response.status_code == _HTTP_STATUS_OK:
                 data = response.json()
                 if isinstance(data, dict):
                     return ExtractedEntityPayload.model_validate(data)
+            elif response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
+                if self._require_live:
+                    raise ServiceAuthenticationError(
+                        f"SLM extraction authentication failed with status={response.status_code}"
+                    )
             logger.warning(
-                "Live SLM extraction returned non-200 status=%d for session=%s",
+                "Live SLM extraction returned status=%d for session=%s",
                 response.status_code,
                 session_id,
             )
+        except (ServiceAuthenticationError, ServiceUnavailableError):
+            raise
         except Exception as error:
             logger.warning(
-                "Live SLM call failed for session=%s: %s; using mock fallback",
+                "Live SLM extraction call failed for session=%s: %s; fallback_allowed=%s",
                 session_id,
                 error,
+                not self._require_live,
             )
+            if self._require_live:
+                raise ServiceUnavailableError(
+                    f"Live SLM extraction failed for session '{session_id}': {error}"
+                ) from error
         return None
 
     @staticmethod
