@@ -97,11 +97,13 @@ class SlmExtractor:
         if self._require_live:
             if not endpoint_url or not endpoint_url.strip():
                 raise ServiceConfigurationError(
-                    "Live Sovereign SLM endpoint URL is required in production mode."
+                    "Live Sovereign SLM endpoint URL is required in production mode.",
+                    service_name="slm",
                 )
             if not api_key or not api_key.strip():
                 raise ServiceConfigurationError(
-                    "Live Sovereign SLM API key is required in production mode."
+                    "Live Sovereign SLM API key is required in production mode.",
+                    service_name="slm",
                 )
             self._http_client = http_client or get_shared_http_client()
         else:
@@ -163,12 +165,14 @@ class SlmExtractor:
                 return live_result
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live Sovereign SLM extraction failed for session '{session_id}'."
+                    f"Live Sovereign SLM extraction failed for session '{session_id}'.",
+                    service_name="slm",
                 )
 
         if self._require_live:
             raise ServiceConfigurationError(
-                "Sovereign SLM cannot execute: live endpoint is required in production."
+                "Sovereign SLM cannot execute: live endpoint is required in production.",
+                service_name="slm",
             )
 
         return self._mock_extract_entities(session_id, unprocessed_content)
@@ -203,7 +207,9 @@ class SlmExtractor:
             elif response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
                 if self._require_live:
                     raise ServiceAuthenticationError(
-                        f"SLM extraction authentication failed with status={response.status_code}"
+                        f"SLM extraction authentication failed with status={response.status_code}",
+                        service_name="slm",
+                        status_code=response.status_code,
                     )
             logger.warning(
                 "Live SLM extraction returned status=%d for session=%s",
@@ -221,7 +227,8 @@ class SlmExtractor:
             )
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live SLM extraction failed for session '{session_id}': {error}"
+                    f"Live SLM extraction failed for session '{session_id}': {error}",
+                    service_name="slm",
                 ) from error
         return None
 

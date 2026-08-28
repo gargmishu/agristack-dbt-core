@@ -91,11 +91,13 @@ class BhashiniService:
         if self._require_live:
             if not endpoint_url or not endpoint_url.strip():
                 raise ServiceConfigurationError(
-                    "Live Bhashini API endpoint URL is required in production mode."
+                    "Live Bhashini API endpoint URL is required in production mode.",
+                    service_name="bhashini",
                 )
             if not api_key or not api_key.strip():
                 raise ServiceConfigurationError(
-                    "Live Bhashini API key is required in production mode."
+                    "Live Bhashini API key is required in production mode.",
+                    service_name="bhashini",
                 )
             self._http_client = http_client or get_shared_http_client()
         else:
@@ -149,12 +151,14 @@ class BhashiniService:
                 return live_result
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live Bhashini ASR transcription failed for audio URL hash '{url_hash}'."
+                    f"Live Bhashini ASR transcription failed for audio URL hash '{url_hash}'.",
+                    service_name="bhashini",
                 )
 
         if self._require_live:
             raise ServiceConfigurationError(
-                "Bhashini ASR cannot execute: live endpoint is required in production."
+                "Bhashini ASR cannot execute: live endpoint is required in production.",
+                service_name="bhashini",
             )
 
         return self._mock_transcribe_audio(audio_url, language_locale)
@@ -187,12 +191,14 @@ class BhashiniService:
                 return live_result
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live Bhashini NMT translation failed from {source_locale} to {target_locale}."
+                    f"Live Bhashini NMT failed from {source_locale} to {target_locale}.",
+                    service_name="bhashini",
                 )
 
         if self._require_live:
             raise ServiceConfigurationError(
-                "Bhashini NMT cannot execute: live endpoint is required in production."
+                "Bhashini NMT cannot execute: live endpoint is required in production.",
+                service_name="bhashini",
             )
 
         return self._mock_translate_text(text, source_locale, target_locale)
@@ -222,12 +228,14 @@ class BhashiniService:
                 return live_result
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live Bhashini TTS synthesis failed for locale '{language_locale}'."
+                    f"Live Bhashini TTS synthesis failed for locale '{language_locale}'.",
+                    service_name="bhashini",
                 )
 
         if self._require_live:
             raise ServiceConfigurationError(
-                "Bhashini TTS cannot execute: live endpoint is required in production."
+                "Bhashini TTS cannot execute: live endpoint is required in production.",
+                service_name="bhashini",
             )
 
         return self._mock_synthesize_speech(text, language_locale)
@@ -285,7 +293,9 @@ class BhashiniService:
             elif response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
                 if self._require_live:
                     raise ServiceAuthenticationError(
-                        f"Bhashini authentication failed with status={response.status_code}"
+                        f"Bhashini authentication failed with status={response.status_code}",
+                        service_name="bhashini",
+                        status_code=response.status_code,
                     )
             logger.warning("Live service call to %s returned status=%d", url, response.status_code)
         except (ServiceAuthenticationError, ServiceUnavailableError):
@@ -299,7 +309,8 @@ class BhashiniService:
             )
             if self._require_live:
                 raise ServiceUnavailableError(
-                    f"Live Bhashini API call to {url} failed: {error}"
+                    f"Live Bhashini API call to {url} failed: {error}",
+                    service_name="bhashini",
                 ) from error
         return None
 

@@ -174,9 +174,13 @@ def _get_service_setting(
     stripped_value = raw_value.strip() if raw_value else None
 
     if is_production() and is_required_in_production and not stripped_value:
+        # Extract service prefix (e.g., 'BHASHINI' from 'BHASHINI_API_KEY') to populate
+        # the machine-readable service identifier for RFC 7807 problem details payloads.
+        service_identifier = variable_name.split("_", maxsplit=1)[0].lower()
         raise ServiceConfigurationError(
             f"Required production environment variable '{variable_name}' "
-            f"({display_name}) is missing or empty."
+            f"({display_name}) is missing or empty.",
+            service_name=service_identifier,
         )
 
     return stripped_value
