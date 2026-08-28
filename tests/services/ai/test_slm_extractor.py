@@ -2,6 +2,11 @@ import httpx
 import pytest
 
 from src.data_models.common import ApplicationIntent, DomainEntityKey
+from src.errors.service_errors import (
+    ServiceAuthenticationError,
+    ServiceConfigurationError,
+    ServiceUnavailableError,
+)
 from src.services.ai import SlmExtractor
 from src.services.ai.ai_mock_fixtures import MOCK_SLM_RULES
 
@@ -155,3 +160,57 @@ async def test_slm_extractor_no_api_key_and_non_dict_response() -> None:
     )
     result = await extractor.extract_entities("sess_live_4", "PM KISAN status", "hi-IN")
     assert result is not None
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_production_requires_endpoint_and_key() -> None:
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        SlmExtractor(endpoint_url=None, api_key="valid_key", require_live=True)
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        SlmExtractor(endpoint_url="https://slm.sovereign.gov.in", api_key=None, require_live=True)
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_production_fail_closed_on_500() -> None:
+    def error_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="SLM GPU Cluster Timeout")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
+    extractor = SlmExtractor(
+        endpoint_url="https://slm.sovereign.gov.in",
+        api_key="valid_key",
+        http_client=client,
+        require_live=True,
+    )
+    with pytest.raises(ServiceUnavailableError, match="Live Sovereign SLM extraction failed"):
+        await extractor.extract_entities("sess_live_err", "Mujhe kist chahiye", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_production_fail_closed_on_auth_failure() -> None:
+    def auth_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, text="Forbidden")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
+    extractor = SlmExtractor(
+        endpoint_url="https://slm.sovereign.gov.in",
+        api_key="invalid_key",
+        http_client=client,
+        require_live=True,
+    )
+    with pytest.raises(ServiceAuthenticationError, match="SLM extraction authentication failed"):
+        await extractor.extract_entities("sess_live_auth", "Mujhe kist chahiye", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_slm_extractor_from_env_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("SLM_API_ENDPOINT", "https://slm.sovereign.gov.in")
+    monkeypatch.setenv("SLM_API_KEY", "prod_slm_token")
+
+    extractor = SlmExtractor.from_env()
+    assert extractor._require_live is True
+    assert extractor._endpoint_url == "https://slm.sovereign.gov.in"
+    assert extractor._api_key == "prod_slm_token"
+    assert extractor._http_client is not None

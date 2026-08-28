@@ -1,6 +1,11 @@
 import httpx
 import pytest
 
+from src.errors.service_errors import (
+    ServiceAuthenticationError,
+    ServiceConfigurationError,
+    ServiceUnavailableError,
+)
 from src.services.ai import BhashiniService
 
 
@@ -161,3 +166,57 @@ async def test_bhashini_service_no_api_key_and_non_dict_response() -> None:
     )
     transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
     assert len(transcript) > 0
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_production_requires_endpoint_and_key() -> None:
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        BhashiniService(endpoint_url=None, api_key="valid_key", require_live=True)
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        BhashiniService(endpoint_url="https://api.bhashini.gov.in", api_key=None, require_live=True)
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_production_fail_closed_on_500() -> None:
+    def error_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="Bhashini Cluster Outage")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
+    service = BhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="valid_key",
+        http_client=client,
+        require_live=True,
+    )
+    with pytest.raises(ServiceUnavailableError, match="Live Bhashini ASR transcription failed"):
+        await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_production_fail_closed_on_auth_failure() -> None:
+    def auth_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, text="Unauthorized")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
+    service = BhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="invalid_key",
+        http_client=client,
+        require_live=True,
+    )
+    with pytest.raises(ServiceAuthenticationError, match="Bhashini authentication failed"):
+        await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
+
+
+@pytest.mark.asyncio
+async def test_bhashini_service_from_env_production(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("BHASHINI_API_ENDPOINT", "https://api.bhashini.gov.in")
+    monkeypatch.setenv("BHASHINI_API_KEY", "prod_bhashini_token")
+
+    service = BhashiniService.from_env()
+    assert service._require_live is True
+    assert service._endpoint_url == "https://api.bhashini.gov.in"
+    assert service._api_key == "prod_bhashini_token"
+    assert service._http_client is not None
