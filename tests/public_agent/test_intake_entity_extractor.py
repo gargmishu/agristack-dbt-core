@@ -13,7 +13,7 @@ from src.data_models.common import (
 )
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.public_agent.intake_entity_extractor import IntakeEntityExtractor
-from src.services.ai import BhashiniService, SlmExtractor
+from src.services.ai import MockBhashiniService, MockSlmExtractor
 
 MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
@@ -62,7 +62,7 @@ async def test_intake_entity_extractor_audio_transcription() -> None:
 
 @pytest.mark.asyncio
 async def test_intake_entity_extractor_audio_failure_fallback() -> None:
-    mock_bhashini = BhashiniService()
+    mock_bhashini = MockBhashiniService()
     mock_bhashini.transcribe_audio = AsyncMock(side_effect=RuntimeError("ASR Timeout"))  # type: ignore[method-assign]
 
     extractor = IntakeEntityExtractor(bhashini_service=mock_bhashini)
@@ -85,7 +85,7 @@ async def test_intake_entity_extractor_audio_failure_fallback() -> None:
 
 @pytest.mark.asyncio
 async def test_intake_entity_extractor_slm_none_fallback() -> None:
-    mock_slm = SlmExtractor()
+    mock_slm = MockSlmExtractor()
     mock_slm.extract_entities = AsyncMock(return_value=None)  # type: ignore[method-assign]
 
     extractor = IntakeEntityExtractor(slm_extractor=mock_slm)

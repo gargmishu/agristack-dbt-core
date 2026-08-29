@@ -6,12 +6,16 @@ from src.errors.service_errors import (
     ServiceConfigurationError,
     ServiceUnavailableError,
 )
-from src.services.ai import BhashiniService
+from src.services.ai import (
+    LiveBhashiniService,
+    MockBhashiniService,
+    create_bhashini_service,
+)
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_transcribe() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_transcribe() -> None:
+    service = MockBhashiniService()
     transcription = await service.transcribe_audio(
         "https://sip-gateway.telecom.in/audio/sample.wav", "hi-IN"
     )
@@ -20,8 +24,8 @@ async def test_bhashini_service_transcribe() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_transcribe_empty_stream() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_transcribe_empty_stream() -> None:
+    service = MockBhashiniService()
     transcription = await service.transcribe_audio(
         "https://sip-gateway.telecom.in/audio/empty_recording.wav", "hi-IN"
     )
@@ -29,8 +33,8 @@ async def test_bhashini_service_transcribe_empty_stream() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_transcribe_error_stream() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_transcribe_error_stream() -> None:
+    service = MockBhashiniService()
     with pytest.raises(ValueError, match="ASR audio stream"):
         await service.transcribe_audio(
             "https://sip-gateway.telecom.in/audio/invalid_stream.wav", "hi-IN"
@@ -38,16 +42,16 @@ async def test_bhashini_service_transcribe_error_stream() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_translate() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_translate() -> None:
+    service = MockBhashiniService()
     translation = await service.translate_text("Mera khet kharab ho gaya hai", "hi-IN", "en-IN")
     assert isinstance(translation, str)
     assert len(translation) > 0
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_translate_fallback_and_other_locales() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_translate_fallback_and_other_locales() -> None:
+    service = MockBhashiniService()
     fallback = await service.translate_text("Anjaan vakya bina keyword ke", "hi-IN", "en-IN")
     assert "PM KISAN installment" in fallback
 
@@ -56,37 +60,37 @@ async def test_bhashini_service_translate_fallback_and_other_locales() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_translate_same_locale() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_translate_same_locale() -> None:
+    service = MockBhashiniService()
     text = "Already English text"
     translation = await service.translate_text(text, "en-IN", "en-IN")
     assert translation == text
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_translate_empty_text() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_translate_empty_text() -> None:
+    service = MockBhashiniService()
     translation = await service.translate_text("   ", "hi-IN", "en-IN")
     assert translation == ""
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_synthesize() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_synthesize() -> None:
+    service = MockBhashiniService()
     audio_url = await service.synthesize_speech("Aapka aavedan swikar kar liya gaya hai", "hi-IN")
     assert isinstance(audio_url, str)
     assert audio_url.startswith("https://")
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_synthesize_empty_text_raises() -> None:
-    service = BhashiniService()
+async def test_mock_bhashini_service_synthesize_empty_text_raises() -> None:
+    service = MockBhashiniService()
     with pytest.raises(ValueError, match="Cannot synthesize empty response text"):
         await service.synthesize_speech("   ", "hi-IN")
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_live_endpoints_success() -> None:
+async def test_live_bhashini_service_endpoints_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         url_str = str(request.url)
         assert request.headers.get("Authorization") == "Bearer test_secret_key"
@@ -101,7 +105,7 @@ async def test_bhashini_service_live_endpoints_success() -> None:
         return httpx.Response(404)
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    service = BhashiniService(
+    service = LiveBhashiniService(
         endpoint_url="https://api.bhashini.gov.in",
         api_key="test_secret_key",
         http_client=client,
@@ -118,105 +122,83 @@ async def test_bhashini_service_live_endpoints_success() -> None:
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_live_endpoints_error_fallback() -> None:
-    def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="Internal Server Error")
-
-    client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
-    service = BhashiniService(
+async def test_live_bhashini_service_empty_text_short_circuits() -> None:
+    client = httpx.AsyncClient()
+    service = LiveBhashiniService(
         endpoint_url="https://api.bhashini.gov.in",
         api_key="test_secret_key",
         http_client=client,
     )
-
-    # Falls back to mock
-    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
-    assert len(transcript) > 0
-
-    translation = await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
-    assert len(translation) > 0
-
-    tts_url = await service.synthesize_speech("Aapka aavedan swikar hua", "hi-IN")
-    assert tts_url.startswith("https://")
+    assert await service.translate_text("   ", "hi-IN", "en-IN") == ""
+    with pytest.raises(ValueError, match="Cannot synthesize empty response text"):
+        await service.synthesize_speech("   ", "hi-IN")
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_ephemeral_client_success() -> None:
-    # Test path when http_client is None but endpoint_url is configured with an invalid/mock server
-    service = BhashiniService(
-        endpoint_url="http://invalid.unreachable.endpoint.local:9999",
-        api_key="test_secret_key",
-    )
-    # Falls back smoothly when network fails
-    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
-    assert len(transcript) > 0
-
-
-@pytest.mark.asyncio
-async def test_bhashini_service_no_api_key_and_non_dict_response() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        assert "Authorization" not in request.headers
-        return httpx.Response(200, json=["unexpected_list_not_dict"])
-
-    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    service = BhashiniService(
-        endpoint_url="https://api.bhashini.gov.in",
-        api_key=None,
-        http_client=client,
-    )
-    transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
-    assert len(transcript) > 0
-
-
-@pytest.mark.asyncio
-async def test_bhashini_service_production_requires_endpoint_and_key() -> None:
+async def test_live_bhashini_service_constructor_validation() -> None:
+    client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
-        BhashiniService(endpoint_url=None, api_key="valid_key", require_live=True)
+        LiveBhashiniService(endpoint_url="", api_key="valid_key", http_client=client)
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
-        BhashiniService(endpoint_url="https://api.bhashini.gov.in", api_key=None, require_live=True)
+        LiveBhashiniService(
+            endpoint_url="https://api.bhashini.gov.in", api_key="", http_client=client
+        )
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_production_fail_closed_on_500() -> None:
+async def test_live_bhashini_service_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500, text="Bhashini Cluster Outage")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
-    service = BhashiniService(
+    service = LiveBhashiniService(
         endpoint_url="https://api.bhashini.gov.in",
         api_key="valid_key",
         http_client=client,
-        require_live=True,
     )
     with pytest.raises(ServiceUnavailableError, match="Live Bhashini ASR transcription failed"):
         await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
 
+    with pytest.raises(ServiceUnavailableError, match="Live Bhashini NMT failed"):
+        await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
+
+    with pytest.raises(ServiceUnavailableError, match="Live Bhashini TTS synthesis failed"):
+        await service.synthesize_speech("Aapka aavedan swikar hua", "hi-IN")
+
 
 @pytest.mark.asyncio
-async def test_bhashini_service_production_fail_closed_on_auth_failure() -> None:
+async def test_live_bhashini_service_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, text="Unauthorized")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
-    service = BhashiniService(
+    service = LiveBhashiniService(
         endpoint_url="https://api.bhashini.gov.in",
         api_key="invalid_key",
         http_client=client,
-        require_live=True,
     )
     with pytest.raises(ServiceAuthenticationError, match="Bhashini authentication failed"):
         await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
 
 
 @pytest.mark.asyncio
-async def test_bhashini_service_from_env_production(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.setenv("BHASHINI_API_ENDPOINT", "https://api.bhashini.gov.in")
-    monkeypatch.setenv("BHASHINI_API_KEY", "prod_bhashini_token")
+async def test_create_bhashini_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Non-production without credentials returns MockBhashiniService
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("BHASHINI_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("BHASHINI_API_KEY", raising=False)
 
-    service = BhashiniService.from_env()
-    assert service._require_live is True
-    assert service._endpoint_url == "https://api.bhashini.gov.in"
-    assert service._api_key == "prod_bhashini_token"
-    assert service._http_client is not None
+    service = create_bhashini_service()
+    assert isinstance(service, MockBhashiniService)
+
+    # Production without credentials raises ServiceConfigurationError
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    with pytest.raises(ServiceConfigurationError, match="BHASHINI_API_ENDPOINT"):
+        create_bhashini_service()
+
+    # Production with credentials returns LiveBhashiniService
+    monkeypatch.setenv("BHASHINI_API_ENDPOINT", "https://api.bhashini.gov.in")
+    monkeypatch.setenv("BHASHINI_API_KEY", "prod_token")
+    live_service = create_bhashini_service()
+    assert isinstance(live_service, LiveBhashiniService)

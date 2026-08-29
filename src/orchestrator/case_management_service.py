@@ -23,7 +23,7 @@ from src.data_models.caseworker import (
     CitizenClarificationPayload,
 )
 from src.data_models.common import ApplicationStatus, GovernanceAction
-from src.services.dpi import SocialRegistryService
+from src.services.dpi import SocialRegistryService, create_social_registry_service
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ class CaseManagementService:
         Args:
             social_service: Social protection platform service connector.
         """
-        self._social_service = social_service or SocialRegistryService()
+        self._social_service = social_service or create_social_registry_service()
         self._staged_cases: dict[str, CaseworkerCaseReviewPayload] = {}
         self._case_records: dict[str, CaseworkerCaseReviewPayload] = {}
         self._case_statuses: dict[str, ApplicationStatus] = {}

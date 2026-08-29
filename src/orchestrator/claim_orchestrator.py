@@ -34,7 +34,7 @@ from src.data_models.governance import (
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.case_management_service import CaseManagementService
 from src.orchestrator.claim_adjudicator import ClaimAdjudicator
-from src.services.dpi import PaymentRailService
+from src.services.dpi import PaymentRailService, create_payment_rail_service
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ class ClaimOrchestrator:
         """Initializes the claim orchestrator with required governance and DPI dependencies."""
         self._claim_adjudicator = claim_adjudicator or ClaimAdjudicator()
         self._case_service = case_management_service or CaseManagementService()
-        self._payment_rail = payment_rail_service or PaymentRailService()
+        self._payment_rail = payment_rail_service or create_payment_rail_service()
 
     # -------------------------------------------------------------------------
     # Primary Public Workflow Entrypoint

@@ -29,6 +29,8 @@ from src.data_models.governance import (
 from src.services.dpi import (
     AgriRegistryService,
     IdentityVerificationService,
+    create_agri_registry_service,
+    create_identity_verification_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,11 +63,11 @@ class ClaimAdjudicator:
         """Initializes the claim adjudicator with required sovereign registry services.
 
         Args:
-            identity_service: Identity verification client (defaults to standard mock).
-            agri_service: Cadastral land registry client (defaults to standard mock).
+            identity_service: Identity verification client (defaults to standard factory).
+            agri_service: Cadastral land registry client (defaults to standard factory).
         """
-        self._identity_service = identity_service or IdentityVerificationService()
-        self._agri_service = agri_service or AgriRegistryService()
+        self._identity_service = identity_service or create_identity_verification_service()
+        self._agri_service = agri_service or create_agri_registry_service()
 
     async def evaluate_claim(
         self,

@@ -19,7 +19,12 @@ from src.data_models.common import (
 )
 from src.data_models.governance import ExtractedEntityPayload
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
-from src.services.ai import BhashiniService, SlmExtractor
+from src.services.ai import (
+    BhashiniService,
+    SlmExtractor,
+    create_bhashini_service,
+    create_slm_extractor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +50,8 @@ class IntakeEntityExtractor:
             bhashini_service: Optional Bhashini ASR/NMT client (defaults to standard client).
             slm_extractor: Optional sovereign SLM extraction client (defaults to SlmExtractor).
         """
-        self._bhashini = bhashini_service or BhashiniService()
-        self._slm_extractor = slm_extractor or SlmExtractor()
+        self._bhashini = bhashini_service or create_bhashini_service()
+        self._slm_extractor = slm_extractor or create_slm_extractor()
 
     # -------------------------------------------------------------------------
     # Primary Public Workflow Entrypoint

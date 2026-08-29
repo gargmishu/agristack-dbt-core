@@ -31,7 +31,7 @@ from src.data_models.notification import (
     OutboundNotificationPayload,
     TransmissionAck,
 )
-from src.services.ai.bhashini_service import BhashiniService
+from src.services.ai.bhashini_service import BhashiniService, create_bhashini_service
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class MultichannelNotificationService:
             ussd_connector: Optional signaling connector instance.
             sms_connector: Optional carrier SMS connector instance.
         """
-        self._bhashini_service = bhashini_service or BhashiniService()
+        self._bhashini_service = bhashini_service or create_bhashini_service()
         self._whatsapp_connector = whatsapp_connector or WhatsAppConnector()
         self._ivr_connector = ivr_connector or IvrConnector()
         self._ussd_connector = ussd_connector or UssdConnector()

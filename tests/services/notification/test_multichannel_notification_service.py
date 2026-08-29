@@ -26,7 +26,7 @@ from src.data_models.notification import (
     NotificationRequestPayload,
     TransmissionAck,
 )
-from src.services.ai.bhashini_service import BhashiniService
+from src.services.ai.bhashini_service import MockBhashiniService
 from src.services.notification import MultichannelNotificationService
 
 
@@ -294,7 +294,7 @@ async def test_env_and_custom_injection_dispatch(
     custom_ussd = UssdConnector(interface_id="MANUAL_USSD")
     custom_sms = SmsConnector(interface_id="MANUAL_SMS")
     custom_service = MultichannelNotificationService(
-        bhashini_service=BhashiniService(),
+        bhashini_service=MockBhashiniService(),
         whatsapp_connector=custom_whatsapp,
         ivr_connector=custom_ivr,
         ussd_connector=custom_ussd,
