@@ -4,6 +4,7 @@ import pytest
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
+    ServicePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai import (
@@ -35,7 +36,7 @@ async def test_mock_bhashini_service_transcribe_empty_stream() -> None:
 @pytest.mark.asyncio
 async def test_mock_bhashini_service_transcribe_error_stream() -> None:
     service = MockBhashiniService()
-    with pytest.raises(ValueError, match="ASR audio stream"):
+    with pytest.raises(ServicePayloadError, match="ASR audio stream formatting or download error"):
         await service.transcribe_audio(
             "https://sip-gateway.telecom.in/audio/invalid_stream.wav", "hi-IN"
         )
@@ -157,13 +158,13 @@ async def test_live_bhashini_service_fail_closed_on_500() -> None:
         api_key="valid_key",
         http_client=client,
     )
-    with pytest.raises(ServiceUnavailableError, match="Live Bhashini ASR transcription failed"):
+    with pytest.raises(ServiceUnavailableError, match="status=500"):
         await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
 
-    with pytest.raises(ServiceUnavailableError, match="Live Bhashini NMT failed"):
+    with pytest.raises(ServiceUnavailableError, match="status=500"):
         await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
 
-    with pytest.raises(ServiceUnavailableError, match="Live Bhashini TTS synthesis failed"):
+    with pytest.raises(ServiceUnavailableError, match="status=500"):
         await service.synthesize_speech("Aapka aavedan swikar hua", "hi-IN")
 
 
@@ -180,6 +181,21 @@ async def test_live_bhashini_service_fail_closed_on_auth_failure() -> None:
     )
     with pytest.raises(ServiceAuthenticationError, match="Bhashini authentication failed"):
         await service.translate_text("Mera khet kharab ho gaya", "hi-IN", "en-IN")
+
+
+@pytest.mark.asyncio
+async def test_live_bhashini_service_malformed_payload_error() -> None:
+    def bad_request_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(422, text="Unsupported audio encoding: expected 8kHz/16kHz PCM WAV")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
+    service = LiveBhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServicePayloadError, match="Unsupported audio encoding"):
+        await service.transcribe_audio("https://carrier.in/corrupted.wav", "hi-IN")
 
 
 @pytest.mark.asyncio

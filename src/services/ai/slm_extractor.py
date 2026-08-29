@@ -1,16 +1,10 @@
-"""Foundational AI Block: Small Language Model (SLM) Structured Entity Extractor.
+"""Layer 3 AI Perception: Sovereign Small Language Model (SLM) Entity Extractor.
 
-Abstracts sovereign, in-memory structured entity extraction pipeline for Layer 3/4
-processing. Extracts domain parameters (district, taluka, village, crop_name, survey_number)
-and computes AI extraction confidence scores.
+Parses unstructured vernacular text into structured domain entities and intent contracts.
 
-Why local sovereign SLM models?
-Sovereign data governance requires processing citizen intent within local memory perimeters
-without transmitting un-tokenized queries to remote third-party APIs.
-
-In production environments, enforces live HTTPS communication via LiveSlmExtractor with strict
-fail-fast configuration and fail-closed error handling (no mock fallback). In non-production,
-MockSlmExtractor provides deterministic mock simulation for offline testing.
+In production environments, LiveSlmExtractor enforces live HTTPS communication with
+strict fail-fast configuration and fail-closed error handling (no mock fallback).
+In non-production, MockSlmExtractor provides deterministic simulation for offline testing.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.5)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
@@ -32,6 +26,7 @@ from src.data_models.governance import ExtractedEntityPayload
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
+    ServicePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
@@ -45,17 +40,16 @@ from src.services.http_client_pool import get_shared_http_client
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_SLM_TIMEOUT_SECONDS: Final[float] = 2.0
+_DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
 _HTTP_STATUS_OK: Final[int] = 200
+_HTTP_STATUS_BAD_REQUEST: Final[int] = 400
 _HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
 _HTTP_STATUS_FORBIDDEN: Final[int] = 403
+_HTTP_STATUS_UNPROCESSABLE_ENTITY: Final[int] = 422
 
 
 class SlmExtractor(Protocol):
-    """Protocol contract for structured domain entity extraction from natural language text.
-
-    Converts natural language input strings into typed domain parameter dictionaries.
-    """
+    """Protocol interface for sovereign SLM intent and entity extraction."""
 
     async def extract_entities(
         self, session_id: str, unprocessed_content: str, language_locale: str
@@ -65,10 +59,11 @@ class SlmExtractor(Protocol):
 
 
 class LiveSlmExtractor:
-    """Production live client executing HTTPS calls to sovereign SLM extraction endpoints.
+    """Production live client executing HTTPS calls to sovereign SLM inference endpoints.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
-    ServiceUnavailableError on network errors, timeouts, or remote model outages.
+    ServiceUnavailableError on network errors, timeouts, or remote outages, and raises
+    ServicePayloadError on malformed prompt inputs or unprocessable payloads (400/422).
     """
 
     def __init__(
@@ -76,18 +71,18 @@ class LiveSlmExtractor:
         endpoint_url: str,
         api_key: str,
         http_client: httpx.AsyncClient,
-        timeout_seconds: float = _DEFAULT_SLM_TIMEOUT_SECONDS,
+        timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live SLM extractor with mandatory credentials and transport."""
         if not endpoint_url or not endpoint_url.strip():
             raise ServiceConfigurationError(
                 "Live Sovereign SLM endpoint URL is required.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         if not api_key or not api_key.strip():
             raise ServiceConfigurationError(
                 "Live Sovereign SLM API key is required.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         self._endpoint_url = endpoint_url.rstrip("/")
         self._api_key = api_key.strip()
@@ -105,12 +100,12 @@ class LiveSlmExtractor:
         if not endpoint:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM endpoint URL is required in production mode.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         if not api_key:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM API key is required in production mode.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         return cls(
             endpoint_url=endpoint,
@@ -137,6 +132,7 @@ class LiveSlmExtractor:
             or None if input is empty or invalid.
 
         Raises:
+            ServicePayloadError: If SLM rejects prompt payload as unprocessable (400/422).
             ServiceUnavailableError: If live SLM service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live SLM service returns 401/403.
         """
@@ -147,25 +143,6 @@ class LiveSlmExtractor:
         if not unprocessed_content.strip() or "error" in unprocessed_content.lower():
             return None
 
-        live_result = await self._call_live_extract(
-            session_id, unprocessed_content, language_locale
-        )
-        if live_result is not None:
-            return live_result
-
-        raise ServiceUnavailableError(
-            f"Live Sovereign SLM extraction failed for session '{session_id}'.",
-            service_name="slm",
-        )
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Live HTTP Handlers)
-    # -------------------------------------------------------------------------
-
-    async def _call_live_extract(
-        self, session_id: str, unprocessed_content: str, language_locale: str
-    ) -> ExtractedEntityPayload | None:
-        """Dispatches live SLM extraction HTTP request."""
         target_url = f"{self._endpoint_url}/v1/extract"
         payload = {
             "session_id": session_id,
@@ -185,35 +162,49 @@ class LiveSlmExtractor:
                 data = response.json()
                 if isinstance(data, dict):
                     return ExtractedEntityPayload.model_validate(data)
-            elif response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"SLM extraction authentication failed with status={response.status_code}",
-                    service_name="slm",
+                raise ServiceUnavailableError(
+                    f"Live SLM extraction returned non-dictionary JSON from {target_url}.",
+                    service_name="sovereign_slm",
                     status_code=response.status_code,
                 )
-            logger.warning(
-                "Live SLM extraction returned status=%d for session=%s",
-                response.status_code,
-                session_id,
+            if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
+                raise ServiceAuthenticationError(
+                    f"SLM extraction authentication failed with status={response.status_code}",
+                    service_name="sovereign_slm",
+                    status_code=response.status_code,
+                )
+            if response.status_code in (
+                _HTTP_STATUS_BAD_REQUEST,
+                _HTTP_STATUS_UNPROCESSABLE_ENTITY,
+            ):
+                raise ServicePayloadError(
+                    f"SLM rejected extraction payload with "
+                    f"status={response.status_code}: {response.text}",
+                    service_name="sovereign_slm",
+                    status_code=response.status_code,
+                )
+            raise ServiceUnavailableError(
+                f"Live SLM extraction failed with status={response.status_code}: {response.text}",
+                service_name="sovereign_slm",
+                status_code=response.status_code,
             )
-        except (ServiceAuthenticationError, ServiceUnavailableError):
+        except (ServiceAuthenticationError, ServicePayloadError, ServiceUnavailableError):
             raise
         except Exception as error:
             logger.warning("Live SLM extraction call failed for session=%s: %s", session_id, error)
             raise ServiceUnavailableError(
                 f"Live SLM extraction failed for session '{session_id}': {error}",
-                service_name="slm",
+                service_name="sovereign_slm",
             ) from error
-        return None
 
 
 class MockSlmExtractor:
-    """Deterministic local simulation of SLM entity extraction for offline testing."""
+    """Deterministic local simulation of sovereign SLM extraction for offline testing."""
 
     async def extract_entities(
         self, session_id: str, unprocessed_content: str, language_locale: str
     ) -> ExtractedEntityPayload | None:
-        """Extracts domain entities using deterministic local heuristic rules."""
+        """Simulates intent classification and entity parsing with deterministic mock rules."""
         if not unprocessed_content.strip() or "error" in unprocessed_content.lower():
             return None
 
@@ -236,8 +227,8 @@ class MockSlmExtractor:
 
         return ExtractedEntityPayload(
             application_intent=rule.intent,
-            ai_confidence_score=rule.confidence_score,
-            domain_entities=rule.entities,
+            ai_confidence_score=0.0 if is_adversarial else rule.confidence_score,
+            domain_entities={} if is_adversarial else rule.entities,
             is_adversarial_attempt=is_adversarial,
             is_structured_menu_bypass=False,
         )
@@ -247,7 +238,7 @@ def create_slm_extractor(
     endpoint_url: str | None = None,
     api_key: str | None = None,
     http_client: httpx.AsyncClient | None = None,
-    timeout_seconds: float = _DEFAULT_SLM_TIMEOUT_SECONDS,
+    timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     require_live: bool | None = None,
 ) -> SlmExtractor:
     """Factory creating appropriate SLM extractor implementation based on environment.
@@ -263,12 +254,12 @@ def create_slm_extractor(
         if not resolved_endpoint:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM endpoint URL is required in production mode.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         if not resolved_key:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM API key is required in production mode.",
-                service_name="slm",
+                service_name="sovereign_slm",
             )
         return LiveSlmExtractor(
             endpoint_url=resolved_endpoint,

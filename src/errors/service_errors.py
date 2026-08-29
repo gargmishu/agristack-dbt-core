@@ -119,3 +119,21 @@ class ServiceAuthenticationError(ServiceIntegrationError):
             status_code=status_code,
             is_retryable=False,
         )
+
+
+class ServicePayloadError(ServiceIntegrationError, ValueError):
+    """Raised when an external service rejects a payload as malformed (HTTP 400/415/422)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        service_name: str | None = None,
+        status_code: int = 400,
+    ) -> None:
+        super().__init__(
+            message,
+            service_name=service_name,
+            status_code=status_code,
+            is_retryable=False,
+        )

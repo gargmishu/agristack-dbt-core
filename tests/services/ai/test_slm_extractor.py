@@ -5,6 +5,7 @@ from src.data_models.common import ApplicationIntent, DomainEntityKey
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
+    ServicePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai import (
@@ -139,7 +140,7 @@ async def test_live_slm_extractor_fail_closed_on_500() -> None:
         api_key="valid_key",
         http_client=client,
     )
-    with pytest.raises(ServiceUnavailableError, match="Live Sovereign SLM extraction failed"):
+    with pytest.raises(ServiceUnavailableError, match="status=500"):
         await extractor.extract_entities("sess_live_err", "Mujhe kist chahiye", "hi-IN")
 
 
@@ -156,6 +157,21 @@ async def test_live_slm_extractor_fail_closed_on_auth_failure() -> None:
     )
     with pytest.raises(ServiceAuthenticationError, match="SLM extraction authentication failed"):
         await extractor.extract_entities("sess_live_auth", "Mujhe kist chahiye", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_live_slm_extractor_malformed_payload_error() -> None:
+    def bad_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(422, text="Unprocessable extraction schema")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(bad_handler))
+    extractor = LiveSlmExtractor(
+        endpoint_url="https://slm.sovereign.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServicePayloadError, match="Unprocessable extraction schema"):
+        await extractor.extract_entities("sess_live_bad", "Invalid content", "hi-IN")
 
 
 @pytest.mark.asyncio

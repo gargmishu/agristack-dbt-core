@@ -1,16 +1,16 @@
-"""Sovereign AI Perception: Bhashini Indic Speech & Translation Service.
+"""Layer 3 AI Perception: Sovereign Bhashini Speech & Translation Service.
 
-Performs Automatic Speech Recognition (ASR), Neural Machine Translation (NMT), and
-Text-to-Speech (TTS) synthesis across scheduled Indian languages.
+Provides automated Automatic Speech Recognition (ASR), Neural Machine Translation (NMT),
+and Text-to-Speech (TTS) synthesis across 22 scheduled Indian languages.
 
 Why integrate Bhashini for agricultural citizen intake?
 Agrarian communities across India communicate across dozens of languages and hundreds of
 local dialects. Layer 3 perception uses Bhashini to normalize spoken/textual vernacular input
 into structured domain contracts while maintaining Zero-PII boundaries.
 
-In production environments, enforces live HTTPS communication via LiveBhashiniService with strict
-fail-fast configuration and fail-closed error handling (no mock fallback). In non-production,
-MockBhashiniService provides deterministic mock simulation for offline testing.
+In production environments, LiveBhashiniService enforces live HTTPS communication with
+strict fail-fast configuration and fail-closed error handling (no mock fallback).
+In non-production, MockBhashiniService provides deterministic simulation for offline testing.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
@@ -32,6 +32,7 @@ from src.config.service_settings import (
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
+    ServicePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
@@ -48,8 +49,11 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
 _HTTP_STATUS_OK: Final[int] = 200
+_HTTP_STATUS_BAD_REQUEST: Final[int] = 400
 _HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
 _HTTP_STATUS_FORBIDDEN: Final[int] = 403
+_HTTP_STATUS_UNSUPPORTED_MEDIA: Final[int] = 415
+_HTTP_STATUS_UNPROCESSABLE_ENTITY: Final[int] = 422
 
 
 class BhashiniService(Protocol):
@@ -59,25 +63,26 @@ class BhashiniService(Protocol):
     """
 
     async def transcribe_audio(self, audio_url: str, language_locale: str) -> str:
-        """Transcribes raw voice stream into text in the specified language locale."""
+        """Transcribes raw voice stream into text."""
         ...
 
     async def translate_text(
         self, text: str, source_locale: str, target_locale: str = "en-IN"
     ) -> str:
-        """Translates text content from source regional locale to target processing locale."""
+        """Translates text content into standard English or vernacular locale."""
         ...
 
     async def synthesize_speech(self, text: str, language_locale: str) -> str:
-        """Synthesizes response text into spoken audio stream URL for voice/audio channels."""
+        """Synthesizes response text into spoken audio stream URL."""
         ...
 
 
 class LiveBhashiniService:
-    """Production live client executing HTTPS calls to sovereign Bhashini API gateways.
+    """Production live client executing HTTPS calls to sovereign Bhashini gateways.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
-    ServiceUnavailableError on network errors, timeouts, or remote outages.
+    ServiceUnavailableError on network errors, timeouts, or remote 5xx outages, and raises
+    ServicePayloadError on malformed audio streams or unprocessable payloads (400/415/422).
     """
 
     def __init__(
@@ -87,7 +92,7 @@ class LiveBhashiniService:
         http_client: httpx.AsyncClient,
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> None:
-        """Initializes live Bhashini service client with mandatory credentials and transport."""
+        """Initializes live Bhashini client with mandatory credentials and transport."""
         if not endpoint_url or not endpoint_url.strip():
             raise ServiceConfigurationError(
                 "Live Bhashini API endpoint URL is required.",
@@ -142,16 +147,21 @@ class LiveBhashiniService:
             Transcribed text string in original spoken language.
 
         Raises:
+            ServicePayloadError: If audio file is malformed, unreadable, or rejected (400/415/422).
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
         url_hash = hashlib.sha256(audio_url.encode("utf-8")).hexdigest()[:16]
         logger.info("Live transcribing audio for url_hash=%s locale=%s", url_hash, language_locale)
-        live_result = await self._call_live_asr(audio_url, language_locale)
-        if live_result is not None:
-            return live_result
+
+        target_url = f"{self._endpoint_url}/v1/asr/transcribe"
+        payload = {"audio_url": audio_url, "language_locale": language_locale}
+        response_data = await self._post_json(target_url, payload)
+        transcript = response_data.get("transcript")
+        if isinstance(transcript, str):
+            return transcript
         raise ServiceUnavailableError(
-            f"Live Bhashini ASR transcription failed for audio URL hash '{url_hash}'.",
+            f"Live Bhashini ASR response from {target_url} missing 'transcript' field.",
             service_name="bhashini",
         )
 
@@ -169,6 +179,7 @@ class LiveBhashiniService:
             Translated text string.
 
         Raises:
+            ServicePayloadError: If translation payload is rejected as invalid (400/422).
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
@@ -176,11 +187,18 @@ class LiveBhashiniService:
         if not text.strip():
             return ""
 
-        live_result = await self._call_live_nmt(text, source_locale, target_locale)
-        if live_result is not None:
-            return live_result
+        target_url = f"{self._endpoint_url}/v1/nmt/translate"
+        payload = {
+            "text": text,
+            "source_locale": source_locale,
+            "target_locale": target_locale,
+        }
+        response_data = await self._post_json(target_url, payload)
+        translated_text = response_data.get("translated_text")
+        if isinstance(translated_text, str):
+            return translated_text
         raise ServiceUnavailableError(
-            f"Live Bhashini NMT failed from {source_locale} to {target_locale}.",
+            f"Live Bhashini NMT response from {target_url} missing 'translated_text' field.",
             service_name="bhashini",
         )
 
@@ -195,9 +213,10 @@ class LiveBhashiniService:
             URL pointer to generated audio recording.
 
         Raises:
+            ValueError: If response text is empty.
+            ServicePayloadError: If synthesis payload is rejected as invalid (400/422).
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
-            ValueError: If response text is empty.
         """
         logger.info(
             "Live synthesizing speech for locale=%s text_len=%d", language_locale, len(text)
@@ -205,51 +224,23 @@ class LiveBhashiniService:
         if not text.strip():
             raise ValueError("Cannot synthesize empty response text into speech.")
 
-        live_result = await self._call_live_tts(text, language_locale)
-        if live_result is not None:
-            return live_result
+        target_url = f"{self._endpoint_url}/v1/tts/synthesize"
+        payload = {"text": text, "language_locale": language_locale}
+        response_data = await self._post_json(target_url, payload)
+        audio_url = response_data.get("audio_url")
+        if isinstance(audio_url, str):
+            return audio_url
         raise ServiceUnavailableError(
-            f"Live Bhashini TTS synthesis failed for locale '{language_locale}'.",
+            f"Live Bhashini TTS response from {target_url} missing 'audio_url' field.",
             service_name="bhashini",
         )
 
     # -------------------------------------------------------------------------
-    # Private Helpers (Live HTTP Handlers)
+    # Private Helpers (Shared HTTP Transport)
     # -------------------------------------------------------------------------
 
-    async def _call_live_asr(self, audio_url: str, language_locale: str) -> str | None:
-        """Dispatches live ASR transcription HTTP request."""
-        target_url = f"{self._endpoint_url}/v1/asr/transcribe"
-        payload = {"audio_url": audio_url, "language_locale": language_locale}
-        response_data = await self._post_json(target_url, payload)
-        if response_data and isinstance(response_data.get("transcript"), str):
-            return str(response_data["transcript"])
-        return None
-
-    async def _call_live_nmt(self, text: str, source_locale: str, target_locale: str) -> str | None:
-        """Dispatches live NMT translation HTTP request."""
-        target_url = f"{self._endpoint_url}/v1/nmt/translate"
-        payload = {
-            "text": text,
-            "source_locale": source_locale,
-            "target_locale": target_locale,
-        }
-        response_data = await self._post_json(target_url, payload)
-        if response_data and isinstance(response_data.get("translated_text"), str):
-            return str(response_data["translated_text"])
-        return None
-
-    async def _call_live_tts(self, text: str, language_locale: str) -> str | None:
-        """Dispatches live TTS synthesis HTTP request."""
-        target_url = f"{self._endpoint_url}/v1/tts/synthesize"
-        payload = {"text": text, "language_locale": language_locale}
-        response_data = await self._post_json(target_url, payload)
-        if response_data and isinstance(response_data.get("audio_url"), str):
-            return str(response_data["audio_url"])
-        return None
-
-    async def _post_json(self, url: str, json_data: dict[str, Any]) -> dict[str, Any] | None:
-        """Executes resilient async POST request with timeout and authentication."""
+    async def _post_json(self, url: str, json_data: dict[str, Any]) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -263,14 +254,35 @@ class LiveBhashiniService:
                 result = response.json()
                 if isinstance(result, dict):
                     return result
-            elif response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
+                raise ServiceUnavailableError(
+                    f"Live Bhashini API at {url} returned non-dictionary JSON payload.",
+                    service_name="bhashini",
+                    status_code=response.status_code,
+                )
+            if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
                 raise ServiceAuthenticationError(
                     f"Bhashini authentication failed with status={response.status_code}",
                     service_name="bhashini",
                     status_code=response.status_code,
                 )
-            logger.warning("Live service call to %s returned status=%d", url, response.status_code)
-        except (ServiceAuthenticationError, ServiceUnavailableError):
+            if response.status_code in (
+                _HTTP_STATUS_BAD_REQUEST,
+                _HTTP_STATUS_UNSUPPORTED_MEDIA,
+                _HTTP_STATUS_UNPROCESSABLE_ENTITY,
+            ):
+                raise ServicePayloadError(
+                    f"Live Bhashini rejected audio/text payload with "
+                    f"status={response.status_code}: {response.text}",
+                    service_name="bhashini",
+                    status_code=response.status_code,
+                )
+            raise ServiceUnavailableError(
+                f"Live Bhashini service call to {url} failed with "
+                f"status={response.status_code}: {response.text}",
+                service_name="bhashini",
+                status_code=response.status_code,
+            )
+        except (ServiceAuthenticationError, ServicePayloadError, ServiceUnavailableError):
             raise
         except Exception as error:
             logger.warning("Live service call to %s failed: %s", url, error)
@@ -278,19 +290,21 @@ class LiveBhashiniService:
                 f"Live Bhashini API call to {url} failed: {error}",
                 service_name="bhashini",
             ) from error
-        return None
 
 
 class MockBhashiniService:
     """Deterministic local simulation of Bhashini perception for offline testing."""
 
     async def transcribe_audio(self, audio_url: str, language_locale: str) -> str:
-        """Simulates speech transcription with deterministic fixture responses."""
+        """Simulates speech transcription with deterministic keywords."""
         url_lower = audio_url.lower()
         if MOCK_STREAM_EMPTY_KEYWORD in url_lower:
             return ""
         if any(err in url_lower for err in MOCK_STREAM_ERROR_KEYWORDS):
-            raise ValueError("ASR audio stream formatting or download error.")
+            raise ServicePayloadError(
+                "ASR audio stream formatting or download error.",
+                service_name="bhashini",
+            )
         return MOCK_ASR_TRANSCRIPTIONS.get(language_locale, MOCK_ASR_TRANSCRIPTIONS["default"])
 
     async def translate_text(
