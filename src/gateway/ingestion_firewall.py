@@ -9,6 +9,7 @@ See: decisions/step0.3_zero_trust_tokenization.md
 """
 
 import logging
+from typing import Self
 
 from src.config import get_rate_limit_capacity, get_rate_per_minute
 from src.data_models.common import LanguageLocale
@@ -63,7 +64,7 @@ class IngestionFirewall:
         self._canonicalizer = PayloadCanonicalizer(tokenizer=tokenizer)
 
     @classmethod
-    def from_env(cls) -> "IngestionFirewall":
+    def from_env(cls) -> Self:
         """Builds a firewall with an environment-configured tokenizer.
 
         Environment resolution happens here; all instance members are initialized by

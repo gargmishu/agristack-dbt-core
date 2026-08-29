@@ -19,7 +19,7 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
 import logging
-from typing import Final, Protocol
+from typing import Final, Protocol, Self
 
 import httpx
 
@@ -98,7 +98,7 @@ class LiveSlmExtractor:
     def from_env(
         cls,
         http_client: httpx.AsyncClient | None = None,
-    ) -> "LiveSlmExtractor":
+    ) -> Self:
         """Factory constructor building live instance from validated environment settings."""
         endpoint = get_slm_endpoint()
         api_key = get_slm_api_key()

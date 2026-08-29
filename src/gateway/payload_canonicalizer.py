@@ -6,6 +6,8 @@ zero-PII PublicAgentStandardizedIntakePayload contracts ready for Layer 3 Intake
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.2)
 """
 
+from typing import Self
+
 from src.data_models.common import (
     ChannelType,
     LanguageLocale,
@@ -49,7 +51,7 @@ class PayloadCanonicalizer:
         self._tokenizer = tokenizer
 
     @classmethod
-    def from_env(cls) -> "PayloadCanonicalizer":
+    def from_env(cls) -> Self:
         """Factory method to instantiate canonicalizer using environment configured tokenizer."""
         return cls(tokenizer=ZeroTrustIdentityTokenizer.from_env())
 

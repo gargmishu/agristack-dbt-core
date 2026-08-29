@@ -20,7 +20,7 @@ See: decisions/step3.6_speech_and_translation_evaluation.md
 
 import hashlib
 import logging
-from typing import Any, Final, Protocol
+from typing import Any, Final, Protocol, Self
 
 import httpx
 
@@ -107,7 +107,7 @@ class LiveBhashiniService:
     def from_env(
         cls,
         http_client: httpx.AsyncClient | None = None,
-    ) -> "LiveBhashiniService":
+    ) -> Self:
         """Factory constructor building live instance from validated environment settings."""
         endpoint = get_bhashini_endpoint()
         api_key = get_bhashini_api_key()

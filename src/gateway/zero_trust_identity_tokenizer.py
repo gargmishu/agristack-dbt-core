@@ -9,6 +9,7 @@ See: decisions/step0.3_zero_trust_tokenization.md
 
 import hmac
 from hashlib import sha256
+from typing import Self
 
 from src.config import get_pepper_secret
 
@@ -36,7 +37,7 @@ class ZeroTrustIdentityTokenizer:
         self._pepper_key = pepper_key.encode("utf-8")
 
     @classmethod
-    def from_env(cls) -> "ZeroTrustIdentityTokenizer":
+    def from_env(cls) -> Self:
         """Factory method to instantiate tokenizer using environment variable configuration."""
         return cls(pepper_key=get_pepper_secret())
 
