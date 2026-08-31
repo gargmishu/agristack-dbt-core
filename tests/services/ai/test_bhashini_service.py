@@ -4,7 +4,8 @@ import pytest
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServicePayloadError,
+    ServiceRequestPayloadError,
+    ServiceResponsePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai import (
@@ -36,7 +37,9 @@ async def test_mock_bhashini_service_transcribe_empty_stream() -> None:
 @pytest.mark.asyncio
 async def test_mock_bhashini_service_transcribe_error_stream() -> None:
     service = MockBhashiniService()
-    with pytest.raises(ServicePayloadError, match="ASR audio stream formatting or download error"):
+    with pytest.raises(
+        ServiceRequestPayloadError, match="ASR audio stream formatting or download error"
+    ):
         await service.transcribe_audio(
             "https://sip-gateway.telecom.in/audio/invalid_stream.wav", "hi-IN"
         )
@@ -194,8 +197,23 @@ async def test_live_bhashini_service_malformed_payload_error() -> None:
         api_key="valid_key",
         http_client=client,
     )
-    with pytest.raises(ServicePayloadError, match="Unsupported audio encoding"):
+    with pytest.raises(ServiceRequestPayloadError, match="Unsupported audio encoding"):
         await service.transcribe_audio("https://carrier.in/corrupted.wav", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_live_bhashini_service_response_payload_contract_violation() -> None:
+    def missing_field_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"unexpected_status": "ok"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(missing_field_handler))
+    service = LiveBhashiniService(
+        endpoint_url="https://api.bhashini.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="missing 'transcript' field"):
+        await service.transcribe_audio("https://carrier.in/valid.wav", "hi-IN")
 
 
 @pytest.mark.asyncio

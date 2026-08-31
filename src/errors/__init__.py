@@ -4,7 +4,8 @@ from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
     ServiceIntegrationError,
-    ServicePayloadError,
+    ServiceRequestPayloadError,
+    ServiceResponsePayloadError,
     ServiceUnavailableError,
 )
 from src.errors.validation_exception_handler import validation_exception_handler
@@ -13,7 +14,8 @@ __all__ = [
     "ServiceAuthenticationError",
     "ServiceConfigurationError",
     "ServiceIntegrationError",
-    "ServicePayloadError",
+    "ServiceRequestPayloadError",
+    "ServiceResponsePayloadError",
     "ServiceUnavailableError",
     "validation_exception_handler",
 ]

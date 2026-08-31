@@ -32,7 +32,8 @@ from src.config.service_settings import (
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServicePayloadError,
+    ServiceRequestPayloadError,
+    ServiceResponsePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
@@ -81,8 +82,9 @@ class LiveBhashiniService:
     """Production live client executing HTTPS calls to sovereign Bhashini gateways.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
-    ServiceUnavailableError on network errors, timeouts, or remote 5xx outages, and raises
-    ServicePayloadError on malformed audio streams or unprocessable payloads (400/415/422).
+    ServiceUnavailableError on network errors, timeouts, or remote 5xx outages, raises
+    ServiceRequestPayloadError on malformed audio streams or unprocessable payloads (400/415/422),
+    and raises ServiceResponsePayloadError on schema contract violations (502).
     """
 
     def __init__(
@@ -147,7 +149,8 @@ class LiveBhashiniService:
             Transcribed text string in original spoken language.
 
         Raises:
-            ServicePayloadError: If audio file is malformed, unreadable, or rejected (400/415/422).
+            ServiceRequestPayloadError: If audio file is malformed or rejected (400/415/422).
+            ServiceResponsePayloadError: If response from Bhashini violates schema contract.
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
@@ -160,7 +163,7 @@ class LiveBhashiniService:
         transcript = response_data.get("transcript")
         if isinstance(transcript, str):
             return transcript
-        raise ServiceUnavailableError(
+        raise ServiceResponsePayloadError(
             f"Live Bhashini ASR response from {target_url} missing 'transcript' field.",
             service_name="bhashini",
         )
@@ -179,7 +182,8 @@ class LiveBhashiniService:
             Translated text string.
 
         Raises:
-            ServicePayloadError: If translation payload is rejected as invalid (400/422).
+            ServiceRequestPayloadError: If translation payload is rejected as invalid (400/422).
+            ServiceResponsePayloadError: If response from Bhashini violates schema contract.
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
@@ -197,7 +201,7 @@ class LiveBhashiniService:
         translated_text = response_data.get("translated_text")
         if isinstance(translated_text, str):
             return translated_text
-        raise ServiceUnavailableError(
+        raise ServiceResponsePayloadError(
             f"Live Bhashini NMT response from {target_url} missing 'translated_text' field.",
             service_name="bhashini",
         )
@@ -214,7 +218,8 @@ class LiveBhashiniService:
 
         Raises:
             ValueError: If response text is empty.
-            ServicePayloadError: If synthesis payload is rejected as invalid (400/422).
+            ServiceRequestPayloadError: If synthesis payload is rejected as invalid (400/422).
+            ServiceResponsePayloadError: If response from Bhashini violates schema contract.
             ServiceUnavailableError: If live Bhashini service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
@@ -230,7 +235,7 @@ class LiveBhashiniService:
         audio_url = response_data.get("audio_url")
         if isinstance(audio_url, str):
             return audio_url
-        raise ServiceUnavailableError(
+        raise ServiceResponsePayloadError(
             f"Live Bhashini TTS response from {target_url} missing 'audio_url' field.",
             service_name="bhashini",
         )
@@ -251,13 +256,18 @@ class LiveBhashiniService:
                 url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
-                result = response.json()
-                if isinstance(result, dict):
-                    return result
-                raise ServiceUnavailableError(
+                try:
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
+                except Exception as err:
+                    raise ServiceResponsePayloadError(
+                        f"Live Bhashini API at {url} returned malformed JSON: {err}",
+                        service_name="bhashini",
+                    ) from err
+                raise ServiceResponsePayloadError(
                     f"Live Bhashini API at {url} returned non-dictionary JSON payload.",
                     service_name="bhashini",
-                    status_code=response.status_code,
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
                 raise ServiceAuthenticationError(
@@ -270,7 +280,7 @@ class LiveBhashiniService:
                 _HTTP_STATUS_UNSUPPORTED_MEDIA,
                 _HTTP_STATUS_UNPROCESSABLE_ENTITY,
             ):
-                raise ServicePayloadError(
+                raise ServiceRequestPayloadError(
                     f"Live Bhashini rejected audio/text payload with "
                     f"status={response.status_code}: {response.text}",
                     service_name="bhashini",
@@ -282,7 +292,12 @@ class LiveBhashiniService:
                 service_name="bhashini",
                 status_code=response.status_code,
             )
-        except (ServiceAuthenticationError, ServicePayloadError, ServiceUnavailableError):
+        except (
+            ServiceAuthenticationError,
+            ServiceRequestPayloadError,
+            ServiceResponsePayloadError,
+            ServiceUnavailableError,
+        ):
             raise
         except Exception as error:
             logger.warning("Live service call to %s failed: %s", url, error)
@@ -301,7 +316,7 @@ class MockBhashiniService:
         if MOCK_STREAM_EMPTY_KEYWORD in url_lower:
             return ""
         if any(err in url_lower for err in MOCK_STREAM_ERROR_KEYWORDS):
-            raise ServicePayloadError(
+            raise ServiceRequestPayloadError(
                 "ASR audio stream formatting or download error.",
                 service_name="bhashini",
             )

@@ -5,7 +5,8 @@ from src.data_models.common import ApplicationIntent, DomainEntityKey
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServicePayloadError,
+    ServiceRequestPayloadError,
+    ServiceResponsePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai import (
@@ -170,8 +171,23 @@ async def test_live_slm_extractor_malformed_payload_error() -> None:
         api_key="valid_key",
         http_client=client,
     )
-    with pytest.raises(ServicePayloadError, match="Unprocessable extraction schema"):
+    with pytest.raises(ServiceRequestPayloadError, match="Unprocessable extraction schema"):
         await extractor.extract_entities("sess_live_bad", "Invalid content", "hi-IN")
+
+
+@pytest.mark.asyncio
+async def test_live_slm_extractor_response_payload_contract_violation() -> None:
+    def invalid_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="not-a-json-object")
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_json_handler))
+    extractor = LiveSlmExtractor(
+        endpoint_url="https://slm.sovereign.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="violated schema"):
+        await extractor.extract_entities("sess_live_corrupt", "Valid content", "hi-IN")
 
 
 @pytest.mark.asyncio

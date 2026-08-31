@@ -121,8 +121,8 @@ class ServiceAuthenticationError(ServiceIntegrationError):
         )
 
 
-class ServicePayloadError(ServiceIntegrationError, ValueError):
-    """Raised when an external service rejects a payload as malformed (HTTP 400/415/422)."""
+class ServiceRequestPayloadError(ServiceIntegrationError, ValueError):
+    """Raised when external service rejects request payload as malformed (HTTP 400/415/422)."""
 
     def __init__(
         self,
@@ -136,4 +136,22 @@ class ServicePayloadError(ServiceIntegrationError, ValueError):
             service_name=service_name,
             status_code=status_code,
             is_retryable=False,
+        )
+
+
+class ServiceResponsePayloadError(ServiceIntegrationError):
+    """Raised when external service returns response violating the schema contract (HTTP 502)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        service_name: str | None = None,
+        status_code: int = 502,
+    ) -> None:
+        super().__init__(
+            message,
+            service_name=service_name,
+            status_code=status_code,
+            is_retryable=True,
         )

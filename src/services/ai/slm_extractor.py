@@ -26,7 +26,8 @@ from src.data_models.governance import ExtractedEntityPayload
 from src.errors.service_errors import (
     ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServicePayloadError,
+    ServiceRequestPayloadError,
+    ServiceResponsePayloadError,
     ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
@@ -62,8 +63,9 @@ class LiveSlmExtractor:
     """Production live client executing HTTPS calls to sovereign SLM inference endpoints.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
-    ServiceUnavailableError on network errors, timeouts, or remote outages, and raises
-    ServicePayloadError on malformed prompt inputs or unprocessable payloads (400/422).
+    ServiceUnavailableError on network errors, timeouts, or remote outages, raises
+    ServiceRequestPayloadError on malformed prompt inputs or unprocessable payloads (400/422),
+    and raises ServiceResponsePayloadError on schema contract violations (502).
     """
 
     def __init__(
@@ -132,7 +134,8 @@ class LiveSlmExtractor:
             or None if input is empty or invalid.
 
         Raises:
-            ServicePayloadError: If SLM rejects prompt payload as unprocessable (400/422).
+            ServiceRequestPayloadError: If SLM rejects prompt payload as unprocessable (400/422).
+            ServiceResponsePayloadError: If SLM returns invalid response schema.
             ServiceUnavailableError: If live SLM service fails, times out, or returns 5xx.
             ServiceAuthenticationError: If live SLM service returns 401/403.
         """
@@ -159,13 +162,18 @@ class LiveSlmExtractor:
                 target_url, json=payload, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
-                data = response.json()
-                if isinstance(data, dict):
-                    return ExtractedEntityPayload.model_validate(data)
-                raise ServiceUnavailableError(
+                try:
+                    data = response.json()
+                    if isinstance(data, dict):
+                        return ExtractedEntityPayload.model_validate(data)
+                except Exception as err:
+                    raise ServiceResponsePayloadError(
+                        f"Live SLM extraction response from {target_url} violated schema: {err}",
+                        service_name="sovereign_slm",
+                    ) from err
+                raise ServiceResponsePayloadError(
                     f"Live SLM extraction returned non-dictionary JSON from {target_url}.",
                     service_name="sovereign_slm",
-                    status_code=response.status_code,
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
                 raise ServiceAuthenticationError(
@@ -177,7 +185,7 @@ class LiveSlmExtractor:
                 _HTTP_STATUS_BAD_REQUEST,
                 _HTTP_STATUS_UNPROCESSABLE_ENTITY,
             ):
-                raise ServicePayloadError(
+                raise ServiceRequestPayloadError(
                     f"SLM rejected extraction payload with "
                     f"status={response.status_code}: {response.text}",
                     service_name="sovereign_slm",
@@ -188,7 +196,12 @@ class LiveSlmExtractor:
                 service_name="sovereign_slm",
                 status_code=response.status_code,
             )
-        except (ServiceAuthenticationError, ServicePayloadError, ServiceUnavailableError):
+        except (
+            ServiceAuthenticationError,
+            ServiceRequestPayloadError,
+            ServiceResponsePayloadError,
+            ServiceUnavailableError,
+        ):
             raise
         except Exception as error:
             logger.warning("Live SLM extraction call failed for session=%s: %s", session_id, error)
