@@ -29,7 +29,6 @@ from src.services.dpi import (
     create_social_registry_service,
 )
 from src.services.http_client_pool import (
-    HttpClientPool,
     close_shared_http_client,
     get_shared_http_client,
 )
@@ -37,7 +36,6 @@ from src.services.http_client_pool import (
 __all__ = [
     "AgriRegistryService",
     "BhashiniService",
-    "HttpClientPool",
     "IdentityVerificationService",
     "LiveAgriRegistryService",
     "LiveBhashiniService",
