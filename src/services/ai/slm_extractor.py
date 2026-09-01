@@ -13,7 +13,7 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
 import logging
-from typing import Final, Protocol, Self
+from typing import Any, Final, Protocol, Self
 
 import httpx
 
@@ -156,6 +156,24 @@ class LiveSlmExtractor:
             "unprocessed_content": unprocessed_content,
             "language_locale": language_locale,
         }
+
+        response_data = await self._post_json(target_url, payload, session_id=session_id)
+        try:
+            return ExtractedEntityPayload.model_validate(response_data)
+        except Exception as err:
+            raise ServiceResponsePayloadError(
+                f"Live SLM extraction response from {target_url} violated schema: {err}",
+                service_name="sovereign_slm",
+            ) from err
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Shared HTTP Transport)
+    # -------------------------------------------------------------------------
+
+    async def _post_json(
+        self, url: str, json_data: dict[str, Any], session_id: str
+    ) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -163,20 +181,20 @@ class LiveSlmExtractor:
 
         try:
             response = await self._http_client.post(
-                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
                 try:
-                    data = response.json()
-                    if isinstance(data, dict):
-                        return ExtractedEntityPayload.model_validate(data)
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live SLM extraction response from {target_url} violated schema: {err}",
+                        f"Live SLM extraction response from {url} violated schema: {err}",
                         service_name="sovereign_slm",
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live SLM extraction returned non-dictionary JSON from {target_url}.",
+                    f"Live SLM extraction returned non-dictionary JSON from {url}.",
                     service_name="sovereign_slm",
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):

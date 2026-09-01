@@ -191,6 +191,22 @@ async def test_live_slm_extractor_response_payload_contract_violation() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_slm_extractor_non_dict_json_response() -> None:
+    def list_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=["unexpected", "array"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
+    extractor = LiveSlmExtractor(
+        endpoint_url="https://slm.sovereign.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
+        await extractor.extract_entities("sess_live_list", "Valid content", "hi-IN")
+
+
+
+@pytest.mark.asyncio
 async def test_create_slm_extractor_factory(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("SLM_API_ENDPOINT", raising=False)
