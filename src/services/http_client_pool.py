@@ -20,37 +20,25 @@ _DEFAULT_KEEPALIVE_EXPIRY_SECONDS: Final[float] = 30.0
 
 
 class HttpClientPool:
-    """Manages process-wide persistent HTTP connection pool singleton."""
+    """Namespace holder for the process-wide persistent HTTP connection pool singleton."""
 
     _instance: httpx.AsyncClient | None = None
-
-    @classmethod
-    def get_client(cls) -> httpx.AsyncClient:
-        """Returns the process-wide shared persistent HTTP client singleton."""
-        if cls._instance is None or cls._instance.is_closed:
-            limits = httpx.Limits(
-                max_connections=_DEFAULT_MAX_CONNECTIONS,
-                max_keepalive_connections=_DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
-                keepalive_expiry=_DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
-            )
-            cls._instance = httpx.AsyncClient(limits=limits)
-        return cls._instance
-
-    @classmethod
-    async def close_client(cls) -> None:
-        """Closes the persistent HTTP client pool and releases network sockets."""
-        if cls._instance is not None and not cls._instance.is_closed:
-            await cls._instance.aclose()
-            cls._instance = None
 
 
 def get_shared_http_client() -> httpx.AsyncClient:
     """Returns the process-wide shared persistent HTTP client singleton.
 
     Returns:
-        Persistent httpx.AsyncClient instance.
+        Persistent httpx.AsyncClient instance with configured connection pooling.
     """
-    return HttpClientPool.get_client()
+    if HttpClientPool._instance is None or HttpClientPool._instance.is_closed:
+        limits = httpx.Limits(
+            max_connections=_DEFAULT_MAX_CONNECTIONS,
+            max_keepalive_connections=_DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
+            keepalive_expiry=_DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
+        )
+        HttpClientPool._instance = httpx.AsyncClient(limits=limits)
+    return HttpClientPool._instance
 
 
 async def close_shared_http_client() -> None:
@@ -58,4 +46,6 @@ async def close_shared_http_client() -> None:
 
     Intended for graceful application shutdown hooks and test teardown fixtures.
     """
-    await HttpClientPool.close_client()
+    if HttpClientPool._instance is not None and not HttpClientPool._instance.is_closed:
+        await HttpClientPool._instance.aclose()
+        HttpClientPool._instance = None
