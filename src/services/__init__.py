@@ -1,20 +1,65 @@
-"""External Service Abstractions package for Foundational AI Blocks and DPI Registries."""
+"""External sovereign AI and authoritative DPI service abstractions."""
 
-from src.services.ai import BhashiniService, SlmExtractor
+from src.services.ai import (
+    BhashiniService,
+    LiveBhashiniService,
+    LiveSlmExtractor,
+    MockBhashiniService,
+    MockSlmExtractor,
+    SlmExtractor,
+    create_bhashini_service,
+    create_slm_extractor,
+)
 from src.services.dpi import (
     AgriRegistryService,
     IdentityVerificationService,
+    LiveAgriRegistryService,
+    LiveIdentityVerificationService,
+    LivePaymentRailService,
+    LiveSocialRegistryService,
+    MockAgriRegistryService,
+    MockIdentityVerificationService,
+    MockPaymentRailService,
+    MockSocialRegistryService,
     PaymentRailService,
     SocialRegistryService,
+    create_agri_registry_service,
+    create_identity_verification_service,
+    create_payment_rail_service,
+    create_social_registry_service,
 )
-from src.services.notification import MultichannelNotificationService
+from src.services.http_client_pool import (
+    HttpClientPool,
+    close_shared_http_client,
+    get_shared_http_client,
+)
 
 __all__ = [
     "AgriRegistryService",
     "BhashiniService",
+    "HttpClientPool",
     "IdentityVerificationService",
-    "MultichannelNotificationService",
+    "LiveAgriRegistryService",
+    "LiveBhashiniService",
+    "LiveIdentityVerificationService",
+    "LivePaymentRailService",
+    "LiveSlmExtractor",
+    "LiveSocialRegistryService",
+    "MockAgriRegistryService",
+    "MockBhashiniService",
+    "MockIdentityVerificationService",
+    "MockPaymentRailService",
+    "MockSlmExtractor",
+    "MockSocialRegistryService",
     "PaymentRailService",
     "SlmExtractor",
     "SocialRegistryService",
+    "close_shared_http_client",
+    "create_agri_registry_service",
+    "create_bhashini_service",
+    "create_identity_verification_service",
+    "create_payment_rail_service",
+    "create_slm_extractor",
+    "create_social_registry_service",
+    "get_shared_http_client",
 ]
