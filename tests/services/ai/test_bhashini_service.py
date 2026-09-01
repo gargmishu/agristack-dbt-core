@@ -236,3 +236,28 @@ async def test_create_bhashini_service_factory(monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("BHASHINI_API_KEY", "prod_token")
     live_service = create_bhashini_service()
     assert isinstance(live_service, LiveBhashiniService)
+
+
+@pytest.mark.asyncio
+async def test_live_bhashini_service_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("BHASHINI_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("BHASHINI_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LiveBhashiniService.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LiveBhashiniService.from_env(endpoint_url="https://api.bhashini.gov.in")
+
+    # From explicit parameters
+    service = LiveBhashiniService.from_env(
+        endpoint_url="https://api.bhashini.gov.in", api_key="test_key"
+    )
+    assert isinstance(service, LiveBhashiniService)
+
+    # From environment variables
+    monkeypatch.setenv("BHASHINI_API_ENDPOINT", "https://api.bhashini.gov.in")
+    monkeypatch.setenv("BHASHINI_API_KEY", "prod_key")
+    env_service = LiveBhashiniService.from_env()
+    assert isinstance(env_service, LiveBhashiniService)
+

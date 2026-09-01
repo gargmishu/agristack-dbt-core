@@ -94,25 +94,29 @@ class LiveSlmExtractor:
     @classmethod
     def from_env(
         cls,
+        endpoint_url: str | None = None,
+        api_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
+        timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> Self:
-        """Factory constructor building live instance from validated environment settings."""
-        endpoint = get_slm_endpoint()
-        api_key = get_slm_api_key()
-        if not endpoint:
+        """Factory constructor building live instance from environment settings or overrides."""
+        slm_endpoint = endpoint_url or get_slm_endpoint()
+        slm_api_key = api_key or get_slm_api_key()
+        if not slm_endpoint:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM endpoint URL is required in production mode.",
                 service_name="sovereign_slm",
             )
-        if not api_key:
+        if not slm_api_key:
             raise ServiceConfigurationError(
                 "Live Sovereign SLM API key is required in production mode.",
                 service_name="sovereign_slm",
             )
         return cls(
-            endpoint_url=endpoint,
-            api_key=api_key,
+            endpoint_url=slm_endpoint,
+            api_key=slm_api_key,
             http_client=http_client or get_shared_http_client(),
+            timeout_seconds=timeout_seconds,
         )
 
     # -------------------------------------------------------------------------
@@ -262,22 +266,10 @@ def create_slm_extractor(
     """
     must_be_live = is_production() if require_live is None else require_live
     if must_be_live:
-        resolved_endpoint = endpoint_url or get_slm_endpoint()
-        resolved_key = api_key or get_slm_api_key()
-        if not resolved_endpoint:
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM endpoint URL is required in production mode.",
-                service_name="sovereign_slm",
-            )
-        if not resolved_key:
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM API key is required in production mode.",
-                service_name="sovereign_slm",
-            )
-        return LiveSlmExtractor(
-            endpoint_url=resolved_endpoint,
-            api_key=resolved_key,
-            http_client=http_client or get_shared_http_client(),
+        return LiveSlmExtractor.from_env(
+            endpoint_url=endpoint_url,
+            api_key=api_key,
+            http_client=http_client,
             timeout_seconds=timeout_seconds,
         )
 

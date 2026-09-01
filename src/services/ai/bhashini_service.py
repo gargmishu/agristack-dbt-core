@@ -113,25 +113,29 @@ class LiveBhashiniService:
     @classmethod
     def from_env(
         cls,
+        endpoint_url: str | None = None,
+        api_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
+        timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> Self:
-        """Factory constructor building live instance from validated environment settings."""
-        endpoint = get_bhashini_endpoint()
-        api_key = get_bhashini_api_key()
-        if not endpoint:
+        """Factory constructor building live instance from environment settings or overrides."""
+        bhashini_endpoint = endpoint_url or get_bhashini_endpoint()
+        bhashini_api_key = api_key or get_bhashini_api_key()
+        if not bhashini_endpoint:
             raise ServiceConfigurationError(
                 "Live Bhashini API endpoint URL is required in production mode.",
                 service_name="bhashini",
             )
-        if not api_key:
+        if not bhashini_api_key:
             raise ServiceConfigurationError(
                 "Live Bhashini API key is required in production mode.",
                 service_name="bhashini",
             )
         return cls(
-            endpoint_url=endpoint,
-            api_key=api_key,
+            endpoint_url=bhashini_endpoint,
+            api_key=bhashini_api_key,
             http_client=http_client or get_shared_http_client(),
+            timeout_seconds=timeout_seconds,
         )
 
     # -------------------------------------------------------------------------
@@ -360,22 +364,10 @@ def create_bhashini_service(
     """
     must_be_live = is_production() if require_live is None else require_live
     if must_be_live:
-        resolved_endpoint = endpoint_url or get_bhashini_endpoint()
-        resolved_key = api_key or get_bhashini_api_key()
-        if not resolved_endpoint:
-            raise ServiceConfigurationError(
-                "Live Bhashini API endpoint URL is required in production mode.",
-                service_name="bhashini",
-            )
-        if not resolved_key:
-            raise ServiceConfigurationError(
-                "Live Bhashini API key is required in production mode.",
-                service_name="bhashini",
-            )
-        return LiveBhashiniService(
-            endpoint_url=resolved_endpoint,
-            api_key=resolved_key,
-            http_client=http_client or get_shared_http_client(),
+        return LiveBhashiniService.from_env(
+            endpoint_url=endpoint_url,
+            api_key=api_key,
+            http_client=http_client,
             timeout_seconds=timeout_seconds,
         )
 

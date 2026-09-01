@@ -207,3 +207,28 @@ async def test_create_slm_extractor_factory(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("SLM_API_KEY", "prod_token")
     live_extractor = create_slm_extractor()
     assert isinstance(live_extractor, LiveSlmExtractor)
+
+
+@pytest.mark.asyncio
+async def test_live_slm_extractor_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SLM_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("SLM_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LiveSlmExtractor.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LiveSlmExtractor.from_env(endpoint_url="https://slm.gov.in")
+
+    # From explicit parameters
+    extractor = LiveSlmExtractor.from_env(
+        endpoint_url="https://slm.gov.in", api_key="test_key"
+    )
+    assert isinstance(extractor, LiveSlmExtractor)
+
+    # From environment variables
+    monkeypatch.setenv("SLM_API_ENDPOINT", "https://slm.gov.in")
+    monkeypatch.setenv("SLM_API_KEY", "prod_key")
+    env_extractor = LiveSlmExtractor.from_env()
+    assert isinstance(env_extractor, LiveSlmExtractor)
+
