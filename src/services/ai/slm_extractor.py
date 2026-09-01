@@ -260,9 +260,16 @@ def create_slm_extractor(
 ) -> SlmExtractor:
     """Factory creating appropriate SLM extractor implementation based on environment.
 
-    In production mode (or when require_live=True), constructs LiveSlmExtractor with
-    validated credentials, failing fast if credentials are missing.
-    In development/testing environments without live credentials, constructs MockSlmExtractor.
+    Resolution follows a 3-tier precedence model:
+    1.  Mandatory Production: If require_live=True (or ENVIRONMENT='production' is set),
+       constructs LiveSlmExtractor via environment settings, failing fast if credentials
+       are missing.
+    2. Explicit Parameters: If endpoint_url and api_key are provided directly as arguments,
+       constructs LiveSlmExtractor targeting those coordinates (useful for local WireMock,
+       stub proxies, or partial sandbox integration without enforcing production invariants).
+    3. Offline Simulation: If require_live is False and explicit credentials are not passed
+       (even if present in environment variables), returns MockSlmExtractor to guarantee
+       offline test isolation for local development and CI pipelines.
     """
     must_be_live = is_production() if require_live is None else require_live
     if must_be_live:
