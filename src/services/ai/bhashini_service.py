@@ -22,7 +22,7 @@ import hashlib
 import logging
 from typing import Any, Final, Protocol, Self
 
-import httpx
+from httpx import AsyncClient
 
 from src.config.service_settings import (
     get_bhashini_api_key,
@@ -91,7 +91,7 @@ class LiveBhashiniService:
         self,
         endpoint_url: str,
         api_key: str,
-        http_client: httpx.AsyncClient,
+        http_client: AsyncClient,
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live Bhashini client with mandatory credentials and transport."""
@@ -115,7 +115,7 @@ class LiveBhashiniService:
         cls,
         endpoint_url: str | None = None,
         api_key: str | None = None,
-        http_client: httpx.AsyncClient | None = None,
+        http_client: AsyncClient | None = None,
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
@@ -352,7 +352,7 @@ class MockBhashiniService:
 def create_bhashini_service(
     endpoint_url: str | None = None,
     api_key: str | None = None,
-    http_client: httpx.AsyncClient | None = None,
+    http_client: AsyncClient | None = None,
     timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     require_live: bool | None = None,
 ) -> BhashiniService:

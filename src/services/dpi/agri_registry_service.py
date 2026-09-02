@@ -17,7 +17,7 @@ See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 import logging
 from typing import Any, Final, Protocol, Self
 
-import httpx
+from httpx import AsyncClient
 
 from src.config.service_settings import (
     get_agristack_api_key,
@@ -71,7 +71,7 @@ class LiveAgriRegistryService:
         self,
         endpoint_url: str,
         api_key: str,
-        http_client: httpx.AsyncClient,
+        http_client: AsyncClient,
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live AgriStack registry client with mandatory credentials and transport."""
@@ -95,7 +95,7 @@ class LiveAgriRegistryService:
         cls,
         endpoint_url: str | None = None,
         api_key: str | None = None,
-        http_client: httpx.AsyncClient | None = None,
+        http_client: AsyncClient | None = None,
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
@@ -237,7 +237,7 @@ class MockAgriRegistryService:
 def create_agri_registry_service(
     endpoint_url: str | None = None,
     api_key: str | None = None,
-    http_client: httpx.AsyncClient | None = None,
+    http_client: AsyncClient | None = None,
     timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     require_live: bool | None = None,
 ) -> AgriRegistryService:

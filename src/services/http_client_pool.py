@@ -17,7 +17,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Final
 
-import httpx
+from httpx import AsyncClient, Limits
 
 logger = logging.getLogger(__name__)
 
@@ -29,22 +29,22 @@ _DEFAULT_KEEPALIVE_EXPIRY_SECONDS: Final[float] = 30.0
 class HttpClientPool:
     """Namespace holder for the process-wide persistent HTTP connection pool singleton."""
 
-    _instance: httpx.AsyncClient | None = None
+    _instance: AsyncClient | None = None
 
 
-def get_shared_http_client() -> httpx.AsyncClient:
+def get_shared_http_client() -> AsyncClient:
     """Returns the process-wide shared persistent HTTP client singleton.
 
     Returns:
-        Persistent httpx.AsyncClient instance with configured connection pooling.
+        Persistent AsyncClient instance with configured connection pooling.
     """
     if HttpClientPool._instance is None or HttpClientPool._instance.is_closed:
-        limits = httpx.Limits(
+        limits = Limits(
             max_connections=_DEFAULT_MAX_CONNECTIONS,
             max_keepalive_connections=_DEFAULT_MAX_KEEPALIVE_CONNECTIONS,
             keepalive_expiry=_DEFAULT_KEEPALIVE_EXPIRY_SECONDS,
         )
-        HttpClientPool._instance = httpx.AsyncClient(limits=limits)
+        HttpClientPool._instance = AsyncClient(limits=limits)
     return HttpClientPool._instance
 
 
@@ -61,11 +61,11 @@ async def close_shared_http_client() -> None:
 
 
 @asynccontextmanager
-async def http_client_lifespan() -> AsyncIterator[httpx.AsyncClient]:
+async def http_client_lifespan() -> AsyncIterator[AsyncClient]:
     """Async context manager managing the lifecycle of the shared HTTP client pool.
 
     Yields:
-        The shared persistent httpx.AsyncClient instance.
+        The shared persistent AsyncClient instance.
 
     Guarantees that underlying TCP sockets and keep-alive connections are
     gracefully closed upon context exit. Can be used directly or integrated
