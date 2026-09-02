@@ -176,6 +176,24 @@ class LiveSocialRegistryService:
             "tokenized_citizen_id": tokenized_citizen_id,
             "scheme_id": scheme_id,
         }
+
+        data = await self._post_json(target_url, payload, scheme_id=scheme_id)
+        if "is_eligible" in data:
+            return bool(data["is_eligible"])
+
+        raise ServiceResponsePayloadError(
+            f"Live OpenSPP registry returned invalid schema from {target_url}.",
+            service_name="openspp",
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Shared HTTP Transport)
+    # -------------------------------------------------------------------------
+
+    async def _post_json(
+        self, url: str, json_data: dict[str, Any], scheme_id: str
+    ) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -183,20 +201,20 @@ class LiveSocialRegistryService:
 
         try:
             response = await self._http_client.post(
-                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
                 try:
-                    data = response.json()
-                    if isinstance(data, dict) and "is_eligible" in data:
-                        return bool(data["is_eligible"])
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live OpenSPP registry response from {target_url} violated schema: {err}",
+                        f"Live OpenSPP registry response from {url} violated schema: {err}",
                         service_name="openspp",
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live OpenSPP registry returned invalid schema from {target_url}.",
+                    f"Live OpenSPP registry returned non-dictionary JSON from {url}.",
                     service_name="openspp",
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
@@ -216,7 +234,7 @@ class LiveSocialRegistryService:
                     status_code=response.status_code,
                 )
             raise ServiceUnavailableError(
-                f"Live OpenSPP call to {target_url} failed with "
+                f"Live OpenSPP call to {url} failed with "
                 f"status={response.status_code}: {response.text}",
                 service_name="openspp",
                 status_code=response.status_code,

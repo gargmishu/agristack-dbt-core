@@ -139,6 +139,24 @@ class LiveIdentityVerificationService:
 
         target_url = f"{self._endpoint_url}/v1/identity/verify"
         payload: dict[str, Any] = {"tokenized_citizen_id": tokenized_citizen_id}
+
+        data = await self._post_json(target_url, payload, token=tokenized_citizen_id)
+        if "is_verified" in data:
+            return bool(data["is_verified"])
+
+        raise ServiceResponsePayloadError(
+            f"Live MOSIP verification returned invalid schema from {target_url}.",
+            service_name="mosip",
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Shared HTTP Transport)
+    # -------------------------------------------------------------------------
+
+    async def _post_json(
+        self, url: str, json_data: dict[str, Any], token: str
+    ) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -146,21 +164,20 @@ class LiveIdentityVerificationService:
 
         try:
             response = await self._http_client.post(
-                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
                 try:
-                    data = response.json()
-                    if isinstance(data, dict) and "is_verified" in data:
-                        return bool(data["is_verified"])
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live MOSIP verification response from {target_url} "
-                        f"violated schema: {err}",
+                        f"Live MOSIP verification response from {url} violated schema: {err}",
                         service_name="mosip",
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live MOSIP verification returned invalid schema from {target_url}.",
+                    f"Live MOSIP verification returned non-dictionary JSON from {url}.",
                     service_name="mosip",
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
@@ -180,7 +197,7 @@ class LiveIdentityVerificationService:
                     status_code=response.status_code,
                 )
             raise ServiceUnavailableError(
-                f"Live MOSIP call to {target_url} failed with "
+                f"Live MOSIP call to {url} failed with "
                 f"status={response.status_code}: {response.text}",
                 service_name="mosip",
                 status_code=response.status_code,
@@ -194,10 +211,10 @@ class LiveIdentityVerificationService:
             raise
         except Exception as error:
             logger.warning(
-                "Live identity call failed for token=%s...: %s", tokenized_citizen_id[:16], error
+                "Live identity call failed for token=%s...: %s", token[:16], error
             )
             raise ServiceUnavailableError(
-                f"Live MOSIP call failed for token '{tokenized_citizen_id[:16]}': {error}",
+                f"Live MOSIP call failed for token '{token[:16]}': {error}",
                 service_name="mosip",
             ) from error
 

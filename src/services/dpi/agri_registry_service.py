@@ -149,6 +149,24 @@ class LiveAgriRegistryService:
             "tokenized_citizen_id": tokenized_citizen_id,
             "land_record_id": land_record_id,
         }
+
+        data = await self._post_json(target_url, payload, record_id=land_record_id)
+        if "is_entitled" in data:
+            return bool(data["is_entitled"])
+
+        raise ServiceResponsePayloadError(
+            f"Live AgriStack verification returned invalid schema from {target_url}.",
+            service_name="agristack",
+        )
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Shared HTTP Transport)
+    # -------------------------------------------------------------------------
+
+    async def _post_json(
+        self, url: str, json_data: dict[str, Any], record_id: str
+    ) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -156,21 +174,20 @@ class LiveAgriRegistryService:
 
         try:
             response = await self._http_client.post(
-                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
                 try:
-                    data = response.json()
-                    if isinstance(data, dict) and "is_entitled" in data:
-                        return bool(data["is_entitled"])
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live AgriStack verification response from {target_url} "
-                        f"violated schema: {err}",
+                        f"Live AgriStack verification response from {url} violated schema: {err}",
                         service_name="agristack",
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live AgriStack verification returned invalid schema from {target_url}.",
+                    f"Live AgriStack verification returned non-dictionary JSON from {url}.",
                     service_name="agristack",
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
@@ -190,7 +207,7 @@ class LiveAgriRegistryService:
                     status_code=response.status_code,
                 )
             raise ServiceUnavailableError(
-                f"Live AgriStack call to {target_url} failed with "
+                f"Live AgriStack call to {url} failed with "
                 f"status={response.status_code}: {response.text}",
                 service_name="agristack",
                 status_code=response.status_code,
@@ -203,9 +220,9 @@ class LiveAgriRegistryService:
         ):
             raise
         except Exception as error:
-            logger.warning("Live cadastral call failed for record=%s: %s", land_record_id, error)
+            logger.warning("Live cadastral call failed for record=%s: %s", record_id, error)
             raise ServiceUnavailableError(
-                f"Live AgriStack call failed for record '{land_record_id}': {error}",
+                f"Live AgriStack call failed for record '{record_id}': {error}",
                 service_name="agristack",
             ) from error
 

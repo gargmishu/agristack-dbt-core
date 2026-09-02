@@ -163,6 +163,22 @@ async def test_live_agri_registry_response_payload_contract_violation() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_agri_registry_non_dict_json_response() -> None:
+    def list_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=["unexpected", "array"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
+    service = LiveAgriRegistryService(
+        endpoint_url="https://agristack.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
+        await service.verify_land_record("a" * 64, "LAND-REC-1002")
+
+
+
+@pytest.mark.asyncio
 async def test_create_agri_registry_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("AGRISTACK_REGISTRY_API_ENDPOINT", raising=False)

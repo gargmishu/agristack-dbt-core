@@ -250,6 +250,32 @@ async def test_live_payment_rail_response_payload_contract_violation() -> None:
 
 
 @pytest.mark.asyncio
+async def test_live_payment_rail_non_dict_json_response() -> None:
+    def list_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=["unexpected", "array"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
+    service = LivePaymentRailService(
+        endpoint_url="https://npci.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    outcome = GovernanceOutcomePayload(
+        session_id="sess_12345678",
+        payload_id="ext_12345678",
+        ai_confidence_score=0.96,
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        governance_action=GovernanceAction.AUTO_APPROVE,
+        disbursement_txn_id="TXN-2026-987654",
+        disbursement_status=DisbursementStatus.PENDING,
+        evaluated_at=datetime.now(UTC),
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
+        await service.initiate_disbursement(outcome)
+
+
+
+@pytest.mark.asyncio
 async def test_create_payment_rail_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("NPCI_APBS_API_ENDPOINT", raising=False)

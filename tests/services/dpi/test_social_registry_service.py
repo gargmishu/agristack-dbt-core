@@ -171,6 +171,22 @@ async def test_live_social_registry_response_payload_contract_violation() -> Non
 
 
 @pytest.mark.asyncio
+async def test_live_social_registry_non_dict_json_response() -> None:
+    def list_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=["unexpected", "array"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
+    service = LiveSocialRegistryService(
+        endpoint_url="https://openspp.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
+        await service.query_beneficiary_eligibility("a" * 64, "PM-KISAN")
+
+
+
+@pytest.mark.asyncio
 async def test_create_social_registry_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("OPENSPP_API_ENDPOINT", raising=False)

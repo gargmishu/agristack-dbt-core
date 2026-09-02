@@ -131,6 +131,22 @@ async def test_live_identity_verification_response_payload_contract_violation() 
 
 
 @pytest.mark.asyncio
+async def test_live_identity_verification_non_dict_json_response() -> None:
+    def list_json_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=["unexpected", "array"])
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
+    service = LiveIdentityVerificationService(
+        endpoint_url="https://mosip.gov.in",
+        api_key="valid_key",
+        http_client=client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
+        await service.verify_identity_token("a" * 64)
+
+
+
+@pytest.mark.asyncio
 async def test_create_identity_verification_service_factory(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

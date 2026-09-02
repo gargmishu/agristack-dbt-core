@@ -167,6 +167,26 @@ class LivePaymentRailService:
             "disbursement_txn_id": outcome.disbursement_txn_id,
             "governance_action": outcome.governance_action.value,
         }
+
+        response_data = await self._post_json(
+            target_url, payload, txn_id=outcome.disbursement_txn_id
+        )
+        try:
+            return DisbursementCallbackPayload.model_validate(response_data)
+        except Exception as err:
+            raise ServiceResponsePayloadError(
+                f"Live payment rail response from {target_url} violated schema: {err}",
+                service_name="payment_rail",
+            ) from err
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Shared HTTP Transport)
+    # -------------------------------------------------------------------------
+
+    async def _post_json(
+        self, url: str, json_data: dict[str, Any], txn_id: str
+    ) -> dict[str, Any]:
+        """Executes resilient async POST request with timeout, authentication, and error typing."""
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",
@@ -174,20 +194,20 @@ class LivePaymentRailService:
 
         try:
             response = await self._http_client.post(
-                target_url, json=payload, headers=headers, timeout=self._timeout_seconds
+                url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
             if response.status_code == _HTTP_STATUS_OK:
                 try:
-                    data = response.json()
-                    if isinstance(data, dict):
-                        return DisbursementCallbackPayload.model_validate(data)
+                    result = response.json()
+                    if isinstance(result, dict):
+                        return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live payment rail response from {target_url} violated schema: {err}",
+                        f"Live payment rail response from {url} violated schema: {err}",
                         service_name="payment_rail",
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live payment rail returned non-dictionary JSON from {target_url}.",
+                    f"Live payment rail returned non-dictionary JSON from {url}.",
                     service_name="payment_rail",
                 )
             if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
@@ -207,7 +227,7 @@ class LivePaymentRailService:
                     status_code=response.status_code,
                 )
             raise ServiceUnavailableError(
-                f"Live payment rail call to {target_url} failed with "
+                f"Live payment rail call to {url} failed with "
                 f"status={response.status_code}: {response.text}",
                 service_name="payment_rail",
                 status_code=response.status_code,
@@ -220,11 +240,9 @@ class LivePaymentRailService:
         ):
             raise
         except Exception as error:
-            logger.warning(
-                "Live payment call failed for txn=%s: %s", outcome.disbursement_txn_id, error
-            )
+            logger.warning("Live payment call failed for txn=%s: %s", txn_id, error)
             raise ServiceUnavailableError(
-                f"Live payment rail failed for txn '{outcome.disbursement_txn_id}': {error}",
+                f"Live payment rail failed for txn '{txn_id}': {error}",
                 service_name="payment_rail",
             ) from error
 
