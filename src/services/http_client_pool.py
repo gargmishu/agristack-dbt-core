@@ -10,9 +10,16 @@ httpx.AsyncClient with explicit connection pool limits and keep-alive recycling.
 See: decisions/step3.6_live_service_integration.md (Section 2: Production Invariant 3)
 """
 
+import asyncio
+import atexit
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Final
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_MAX_CONNECTIONS: Final[int] = 100
 _DEFAULT_MAX_KEEPALIVE_CONNECTIONS: Final[int] = 20
@@ -46,6 +53,53 @@ async def close_shared_http_client() -> None:
 
     Intended for graceful application shutdown hooks and test teardown fixtures.
     """
-    if HttpClientPool._instance is not None and not HttpClientPool._instance.is_closed:
-        await HttpClientPool._instance.aclose()
+    if HttpClientPool._instance is not None:
+        client = HttpClientPool._instance
         HttpClientPool._instance = None
+        if not client.is_closed:
+            await client.aclose()
+
+
+@asynccontextmanager
+async def http_client_lifespan() -> AsyncIterator[httpx.AsyncClient]:
+    """Async context manager managing the lifecycle of the shared HTTP client pool.
+
+    Yields:
+        The shared persistent httpx.AsyncClient instance.
+
+    Guarantees that underlying TCP sockets and keep-alive connections are
+    gracefully closed upon context exit. Can be used directly or integrated
+    into ASGI framework lifespan hooks (e.g., FastAPI, Starlette).
+    """
+    client = get_shared_http_client()
+    try:
+        yield client
+    finally:
+        await close_shared_http_client()
+
+
+def _sync_close_client() -> None:
+    """Best-effort process exit cleanup for unclosed HTTP client instances."""
+    if HttpClientPool._instance is not None:
+        client = HttpClientPool._instance
+        HttpClientPool._instance = None
+        if not client.is_closed:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                try:
+                    loop = asyncio.get_event_loop_policy().get_event_loop()
+                except Exception:
+                    loop = None
+
+            if loop is not None and not loop.is_closed():
+                try:
+                    if loop.is_running():
+                        loop.create_task(client.aclose())
+                    else:
+                        loop.run_until_complete(client.aclose())
+                except Exception as err:
+                    logger.debug("Process exit socket cleanup encountered error: %s", err)
+
+
+atexit.register(_sync_close_client)

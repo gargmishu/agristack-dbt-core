@@ -6,6 +6,8 @@ from collections.abc import Generator
 
 import pytest
 
+from src.services.http_client_pool import HttpClientPool, close_shared_http_client
+
 
 @pytest.fixture(autouse=True, scope="session")
 def setup_test_environment() -> None:
@@ -21,3 +23,15 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(autouse=True)
+def auto_cleanup_shared_http_client(
+    event_loop: asyncio.AbstractEventLoop,
+) -> Generator[None, None, None]:
+    """Automatically cleans up the shared HTTP client pool after each test."""
+    yield
+    if HttpClientPool._instance is not None:
+        event_loop.run_until_complete(close_shared_http_client())
+
+

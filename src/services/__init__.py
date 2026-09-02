@@ -31,6 +31,7 @@ from src.services.dpi import (
 from src.services.http_client_pool import (
     close_shared_http_client,
     get_shared_http_client,
+    http_client_lifespan,
 )
 
 __all__ = [
@@ -60,4 +61,5 @@ __all__ = [
     "create_slm_extractor",
     "create_social_registry_service",
     "get_shared_http_client",
+    "http_client_lifespan",
 ]
