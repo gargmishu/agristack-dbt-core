@@ -121,11 +121,10 @@ src/
 * **Strict Encapsulation**: Third-party APIs, sovereign foundational AI blocks, and government registry clients reside strictly in `src/services/ai/` and `src/services/dpi/`.
 * **No Leaking into Core Domain**: Layer 4 orchestrators and state machines interact with registries exclusively through service client interfaces.
 * **Service Adapter Transport Decoupling (`src/services/http_transport.py`)**:
-  * All live service adapters (`src/services/ai/`, `src/services/dpi/`) must strictly decouple domain workflow logic from low-level network transport.
-  * Public service methods must only handle domain-level concerns: validating domain input arguments, constructing the target endpoint URL, and validating domain response schemas against data contracts.
-  * Low-level network transport (HTTP connection pooling, Bearer authorization, timeouts, HTTP status-code triage, and domain exception mapping) is standardized in `ServiceHttpTransport` (`src/services/http_transport.py`). Live service adapters initialize `self._transport = ServiceHttpTransport(http_client, api_key, ServiceTransportConfig(service_name=..., service_title=..., timeout_seconds=...))` and delegate JSON dispatches via `await self._transport.post_json(url, payload, context_label=...)`.
-  * **Incorrect**: Inlining `await client.post(...)`, headers, or duplicating private `_post_json` transport implementations across individual service adapter classes.
-  * **Correct**: Service adapter instantiates `ServiceHttpTransport` and delegates request dispatch to `await self._transport.post_json(...)`.
+  * Public service methods must only handle domain-level concerns: validating domain input arguments and validating domain response schemas against data contracts.
+  * Low-level network transport (HTTP connection pooling, Bearer authorization, timeouts, base URL normalization, HTTP status-code triage, and domain exception mapping) is standardized in `ServiceHttpTransport` (`src/services/http_transport.py`). Live service adapters initialize `self._transport = ServiceHttpTransport(http_client, api_key, ServiceTransportConfig(service_name=..., service_title=..., timeout_seconds=...), base_url=endpoint_url)` and delegate JSON dispatches via `await self._transport.post_json(PATH_CONSTANT, payload, context_label=...)` using module-level static endpoint path constants (e.g. `_DISBURSE_PATH = "/v1/payments/disburse"`).
+  * **Incorrect**: Inlining `await client.post(...)`, headers, ad-hoc `f"{self._endpoint_url}/..."` string formatting, or duplicating private `_post_json` transport implementations across individual service adapter classes.
+  * **Correct**: Service adapter instantiates `ServiceHttpTransport(..., base_url=...)` and delegates request dispatch to `await self._transport.post_json(_PATH_CONSTANT, ...)`.
 
 ### 3.2 Categorized Domain Schema Namespacing (`src/data_models/`)
 * Subpackages within `data_models/` mirror functional lifecycle stages (`raw_ingress`, `public_agent`, `governance`, `caseworker`, `delivery`, `disbursement`).
