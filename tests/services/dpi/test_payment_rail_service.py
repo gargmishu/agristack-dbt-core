@@ -278,6 +278,29 @@ async def test_live_payment_rail_non_dict_json_response() -> None:
         await service.initiate_disbursement(outcome)
 
 
+@pytest.mark.asyncio
+async def test_live_payment_rail_service_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NPCI_APBS_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("NPCI_APBS_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LivePaymentRailService.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LivePaymentRailService.from_env(endpoint_url="https://pfms.gov.in")
+
+    # From explicit parameters
+    service = LivePaymentRailService.from_env(
+        endpoint_url="https://pfms.gov.in", api_key="valid_key"
+    )
+    assert isinstance(service, LivePaymentRailService)
+
+    # From environment variables
+    monkeypatch.setenv("NPCI_APBS_API_ENDPOINT", "https://pfms.gov.in")
+    monkeypatch.setenv("NPCI_APBS_API_KEY", "valid_key")
+    service_env = LivePaymentRailService.from_env()
+    assert isinstance(service_env, LivePaymentRailService)
+
 
 @pytest.mark.asyncio
 async def test_create_payment_rail_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:

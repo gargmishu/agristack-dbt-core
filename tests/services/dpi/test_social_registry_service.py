@@ -191,6 +191,31 @@ async def test_live_social_registry_non_dict_json_response() -> None:
         await service.query_beneficiary_eligibility("a" * 64, "PM-KISAN")
 
 
+@pytest.mark.asyncio
+async def test_live_social_registry_service_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OPENSPP_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("OPENSPP_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LiveSocialRegistryService.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LiveSocialRegistryService.from_env(endpoint_url="https://openspp.gov.in")
+
+    # From explicit parameters
+    service = LiveSocialRegistryService.from_env(
+        endpoint_url="https://openspp.gov.in", api_key="valid_key"
+    )
+    assert isinstance(service, LiveSocialRegistryService)
+
+    # From environment variables
+    monkeypatch.setenv("OPENSPP_API_ENDPOINT", "https://openspp.gov.in")
+    monkeypatch.setenv("OPENSPP_API_KEY", "valid_key")
+    service_env = LiveSocialRegistryService.from_env()
+    assert isinstance(service_env, LiveSocialRegistryService)
+
 
 @pytest.mark.asyncio
 async def test_create_social_registry_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:

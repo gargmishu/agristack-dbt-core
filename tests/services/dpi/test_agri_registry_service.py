@@ -183,6 +183,29 @@ async def test_live_agri_registry_non_dict_json_response() -> None:
         await service.verify_land_record("a" * 64, "LAND-REC-1002")
 
 
+@pytest.mark.asyncio
+async def test_live_agri_registry_service_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGRISTACK_REGISTRY_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("AGRISTACK_REGISTRY_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LiveAgriRegistryService.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LiveAgriRegistryService.from_env(endpoint_url="https://agristack.gov.in")
+
+    # From explicit parameters
+    service = LiveAgriRegistryService.from_env(
+        endpoint_url="https://agristack.gov.in", api_key="valid_key"
+    )
+    assert isinstance(service, LiveAgriRegistryService)
+
+    # From environment variables
+    monkeypatch.setenv("AGRISTACK_REGISTRY_API_ENDPOINT", "https://agristack.gov.in")
+    monkeypatch.setenv("AGRISTACK_REGISTRY_API_KEY", "valid_key")
+    service_env = LiveAgriRegistryService.from_env()
+    assert isinstance(service_env, LiveAgriRegistryService)
+
 
 @pytest.mark.asyncio
 async def test_create_agri_registry_service_factory(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -151,6 +151,31 @@ async def test_live_identity_verification_non_dict_json_response() -> None:
         await service.verify_identity_token("a" * 64)
 
 
+@pytest.mark.asyncio
+async def test_live_identity_verification_service_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("MOSIP_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("MOSIP_API_KEY", raising=False)
+
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        LiveIdentityVerificationService.from_env()
+
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        LiveIdentityVerificationService.from_env(endpoint_url="https://mosip.gov.in")
+
+    # From explicit parameters
+    service = LiveIdentityVerificationService.from_env(
+        endpoint_url="https://mosip.gov.in", api_key="valid_key"
+    )
+    assert isinstance(service, LiveIdentityVerificationService)
+
+    # From environment variables
+    monkeypatch.setenv("MOSIP_API_ENDPOINT", "https://mosip.gov.in")
+    monkeypatch.setenv("MOSIP_API_KEY", "valid_key")
+    service_env = LiveIdentityVerificationService.from_env()
+    assert isinstance(service_env, LiveIdentityVerificationService)
+
 
 @pytest.mark.asyncio
 async def test_create_identity_verification_service_factory(
