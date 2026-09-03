@@ -184,3 +184,15 @@ async def test_service_http_transport_invalid_json() -> None:
             url="https://api.example.com/verify",
             payload={"id": "123"},
         )
+
+
+def test_service_transport_config_attributes() -> None:
+    expected_timeout = 3.0
+    config = ServiceTransportConfig(
+        service_name="agristack",
+        service_title="AgriStack",
+        timeout_seconds=expected_timeout,
+    )
+    assert config.service_name == "agristack"
+    assert config.service_title == "AgriStack"
+    assert config.timeout_seconds == expected_timeout

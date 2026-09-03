@@ -123,39 +123,19 @@ def _sync_close_client() -> None:
 atexit.register(_sync_close_client)
 
 
-_KNOWN_SERVICE_TITLES: Final[dict[str, str]] = {
-    "agristack": "AgriStack",
-    "mosip": "MOSIP",
-    "openspp": "OpenSPP",
-    "payment_rail": "Payment rail",
-    "sovereign_slm": "SLM extraction",
-    "bhashini": "Bhashini",
-}
-
-
 @dataclass(frozen=True, slots=True)
 class ServiceTransportConfig:
     """Configuration descriptor for service HTTP transport client.
 
     Attributes:
         service_name: Internal identifier for RFC 7807 problem details (e.g. 'agristack').
+        service_title: Human-readable service name for error logs and diagnostics.
         timeout_seconds: Network read/connect timeout in seconds.
-        service_title: Optional human-readable service title. If omitted, automatically
-            resolved from known service registry or derived via title-casing.
     """
 
     service_name: str
+    service_title: str
     timeout_seconds: float
-    service_title: str | None = None
-
-    @property
-    def title(self) -> str:
-        """Returns the human-readable display title for diagnostics and error logging."""
-        if self.service_title:
-            return self.service_title
-        return _KNOWN_SERVICE_TITLES.get(
-            self.service_name, self.service_name.replace("_", " ").title()
-        )
 
 
 class ServiceHttpTransport:
@@ -209,19 +189,19 @@ class ServiceHttpTransport:
                         return result
                 except Exception as err:
                     raise ServiceResponsePayloadError(
-                        f"Live {self._config.title} response from {url} "
+                        f"Live {self._config.service_title} response from {url} "
                         f"violated schema: {err}",
                         service_name=self._config.service_name,
                     ) from err
                 raise ServiceResponsePayloadError(
-                    f"Live {self._config.title} response from {url} "
+                    f"Live {self._config.service_title} response from {url} "
                     "returned non-dictionary JSON.",
                     service_name=self._config.service_name,
                 )
 
             if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise ServiceAuthenticationError(
-                    f"{self._config.title} authentication failed "
+                    f"{self._config.service_title} authentication failed "
                     f"with status={response.status_code}",
                     service_name=self._config.service_name,
                     status_code=response.status_code,
@@ -229,14 +209,14 @@ class ServiceHttpTransport:
 
             if response.status_code in _CLIENT_ERROR_STATUSES:
                 raise ServiceRequestPayloadError(
-                    f"{self._config.title} rejected payload with "
+                    f"{self._config.service_title} rejected payload with "
                     f"status={response.status_code}: {response.text}",
                     service_name=self._config.service_name,
                     status_code=response.status_code,
                 )
 
             raise ServiceUnavailableError(
-                f"Live {self._config.title} call to {url} failed with "
+                f"Live {self._config.service_title} call to {url} failed with "
                 f"status={response.status_code}: {response.text}",
                 service_name=self._config.service_name,
                 status_code=response.status_code,
@@ -257,6 +237,6 @@ class ServiceHttpTransport:
                 error,
             )
             raise ServiceUnavailableError(
-                f"Live {self._config.title} call failed for '{context_label}': {error}",
+                f"Live {self._config.service_title} call failed for '{context_label}': {error}",
                 service_name=self._config.service_name,
             ) from error
