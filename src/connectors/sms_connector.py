@@ -87,7 +87,7 @@ class SmsConnector:
         """
         carrier_reference_id = f"sms-dr-{uuid4().hex[:12]}"
         logger.info(
-            "Transmitting outbound SMS for session=%s, interface=%s, carrier_ref=%s",
+            "Transmitting outbound SMS for session=%s, interface=%s, carrier_reference_id=%s",
             payload.session_id,
             self._interface_id,
             carrier_reference_id,

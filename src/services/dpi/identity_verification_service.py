@@ -37,6 +37,13 @@ from src.services.http_transport import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "IdentityVerificationService",
+    "LiveIdentityVerificationService",
+    "MockIdentityVerificationService",
+    "create_identity_verification_service",
+]
+
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _HMAC_TOKEN_HEX_LENGTH: Final[int] = 64
 _IDENTITY_VERIFY_PATH: Final[str] = "/v1/identity/verify"

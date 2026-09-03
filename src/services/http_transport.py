@@ -35,6 +35,15 @@ from src.errors.service_errors import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "ServiceHttpTransport",
+    "ServiceTransportConfig",
+    "close_shared_http_client",
+    "get_shared_http_client",
+    "http_client_lifespan",
+    "is_shared_http_client_initialized",
+]
+
 _DEFAULT_MAX_CONNECTIONS: Final[int] = 100
 _DEFAULT_MAX_KEEPALIVE_CONNECTIONS: Final[int] = 20
 _DEFAULT_KEEPALIVE_EXPIRY_SECONDS: Final[float] = 30.0
@@ -117,8 +126,8 @@ def _sync_close_client() -> None:
                     loop.create_task(client.aclose())
                 else:
                     loop.run_until_complete(client.aclose())
-            except Exception as err:
-                logger.debug("Failed to gracefully close HTTP client at process exit: %s", err)
+            except Exception as error:
+                logger.debug("Failed to gracefully close HTTP client at process exit: %s", error)
 
 
 atexit.register(_sync_close_client)
@@ -253,12 +262,12 @@ class ServiceHttpTransport:
                     result = response.json()
                     if isinstance(result, dict):
                         return result
-                except Exception as err:
+                except Exception as error:
                     raise ServiceResponsePayloadError(
                         f"Live {self._config.service_title} response from {url} "
-                        f"violated schema: {err}",
+                        f"violated schema: {error}",
                         service_name=self._config.service_name,
-                    ) from err
+                    ) from error
                 raise ServiceResponsePayloadError(
                     f"Live {self._config.service_title} response from {url} "
                     "returned non-dictionary JSON.",

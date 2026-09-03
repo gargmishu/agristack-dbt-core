@@ -14,51 +14,51 @@ from src.data_models.notification import NotificationRequestPayload
 
 
 def test_notification_request_valid() -> None:
-    req = NotificationRequestPayload(
+    request = NotificationRequestPayload(
         session_id="sess_12345678",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.AUTO_APPROVE,
         language_locale=LanguageLocale.ENGLISH,
         disbursement_txn_id="TXN-2026-981245",
     )
-    assert req.session_id == "sess_12345678"
-    assert req.channel_type == ChannelType.WHATSAPP
-    assert req.governance_action == GovernanceAction.AUTO_APPROVE
-    assert req.language_locale == LanguageLocale.ENGLISH
-    assert req.disbursement_txn_id == "TXN-2026-981245"
-    assert req.escalation_case_id is None
+    assert request.session_id == "sess_12345678"
+    assert request.channel_type == ChannelType.WHATSAPP
+    assert request.governance_action == GovernanceAction.AUTO_APPROVE
+    assert request.language_locale == LanguageLocale.ENGLISH
+    assert request.disbursement_txn_id == "TXN-2026-981245"
+    assert request.escalation_case_id is None
 
 
 def test_notification_request_manual_review() -> None:
-    req = NotificationRequestPayload(
+    request = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.IVR_VOICE,
         governance_action=GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
         language_locale=LanguageLocale.HINDI,
         escalation_case_id="SPP-CASE-2026-100200",
     )
-    assert req.escalation_case_id == "SPP-CASE-2026-100200"
-    assert req.language_locale == LanguageLocale.HINDI
+    assert request.escalation_case_id == "SPP-CASE-2026-100200"
+    assert request.language_locale == LanguageLocale.HINDI
 
 
 def test_notification_request_auto_reject_valid() -> None:
-    req = NotificationRequestPayload(
+    request = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.SMS,
         governance_action=GovernanceAction.AUTO_REJECT,
         rejection_reason=RejectionReasonCode.IDENTITY_NOT_VERIFIED,
     )
-    assert req.rejection_reason == RejectionReasonCode.IDENTITY_NOT_VERIFIED
+    assert request.rejection_reason == RejectionReasonCode.IDENTITY_NOT_VERIFIED
 
 
 def test_notification_request_reprompt_valid() -> None:
-    req = NotificationRequestPayload(
+    request = NotificationRequestPayload(
         session_id="sess_87654321",
         channel_type=ChannelType.WHATSAPP,
         governance_action=GovernanceAction.REQUEST_MORE_INFO,
         missing_entity=DomainEntityKey.CROP_NAME,
     )
-    assert req.missing_entity == DomainEntityKey.CROP_NAME
+    assert request.missing_entity == DomainEntityKey.CROP_NAME
 
 
 def test_notification_request_invalid_session_id() -> None:

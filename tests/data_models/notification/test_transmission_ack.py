@@ -52,7 +52,7 @@ def test_transmission_ack_invalid_short_interface() -> None:
         )
 
 
-def test_transmission_ack_invalid_short_carrier_ref() -> None:
+def test_transmission_ack_invalid_short_carrier_reference_id() -> None:
     # min_length is 4
     with pytest.raises(ValidationError):
         TransmissionAck(

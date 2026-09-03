@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import httpx
 import pytest
 
@@ -79,7 +81,10 @@ async def test_live_agri_registry_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer agristack_key"
         assert str(request.url) == "https://agristack.gov.in/v1/land/cadastral/verify"
-        return httpx.Response(200, json={"is_entitled": True, "land_record_id": "LAND-REC-999"})
+        return httpx.Response(
+            HTTPStatus.OK,
+            json={"is_entitled": True, "land_record_id": "LAND-REC-999"},
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveAgriRegistryService(
@@ -111,7 +116,7 @@ async def test_live_agri_registry_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_agri_registry_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="Internal Registry Outage")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="Internal Registry Outage")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     service = LiveAgriRegistryService(
@@ -126,7 +131,7 @@ async def test_live_agri_registry_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_agri_registry_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, text="Unauthorized")
+        return httpx.Response(HTTPStatus.UNAUTHORIZED, text="Unauthorized")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     service = LiveAgriRegistryService(
@@ -141,7 +146,7 @@ async def test_live_agri_registry_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_agri_registry_malformed_payload_error() -> None:
     def bad_request_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, text="Invalid land record identifier format")
+        return httpx.Response(HTTPStatus.BAD_REQUEST, text="Invalid land record identifier format")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
     service = LiveAgriRegistryService(
@@ -156,7 +161,7 @@ async def test_live_agri_registry_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_agri_registry_response_payload_contract_violation() -> None:
     def invalid_schema_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"status": "ok"})  # missing 'is_entitled'
+        return httpx.Response(HTTPStatus.OK, json={"status": "ok"})  # missing 'is_entitled'
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_schema_handler))
     service = LiveAgriRegistryService(
@@ -171,7 +176,7 @@ async def test_live_agri_registry_response_payload_contract_violation() -> None:
 @pytest.mark.asyncio
 async def test_live_agri_registry_non_dict_json_response() -> None:
     def list_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=["unexpected", "array"])
+        return httpx.Response(HTTPStatus.OK, json=["unexpected", "array"])
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
     service = LiveAgriRegistryService(

@@ -6,7 +6,17 @@ and Sovereign AI adapter integrations.
 See: decisions/step3.6_live_service_integration.md
 """
 
+from http import HTTPStatus
 from typing import Any, Final
+
+__all__ = [
+    "ServiceAuthenticationError",
+    "ServiceConfigurationError",
+    "ServiceIntegrationError",
+    "ServiceRequestPayloadError",
+    "ServiceResponsePayloadError",
+    "ServiceUnavailableError",
+]
 
 _DEFAULT_ERROR_TYPE_URI_PREFIX: Final[str] = "https://api.agristack.gov.in/errors"
 
@@ -23,7 +33,7 @@ class ServiceIntegrationError(Exception):
         message: str,
         *,
         service_name: str | None = None,
-        status_code: int = 502,
+        status_code: int = HTTPStatus.BAD_GATEWAY,
         is_retryable: bool = False,
     ) -> None:
         super().__init__(message)
@@ -80,7 +90,7 @@ class ServiceConfigurationError(ServiceIntegrationError, ValueError):
         super().__init__(
             message,
             service_name=service_name,
-            status_code=500,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             is_retryable=False,
         )
 
@@ -93,7 +103,7 @@ class ServiceUnavailableError(ServiceIntegrationError):
         message: str,
         *,
         service_name: str | None = None,
-        status_code: int = 503,
+        status_code: int = HTTPStatus.SERVICE_UNAVAILABLE,
     ) -> None:
         super().__init__(
             message,
@@ -111,7 +121,7 @@ class ServiceAuthenticationError(ServiceIntegrationError):
         message: str,
         *,
         service_name: str | None = None,
-        status_code: int = 502,
+        status_code: int = HTTPStatus.BAD_GATEWAY,
     ) -> None:
         super().__init__(
             message,
@@ -129,7 +139,7 @@ class ServiceRequestPayloadError(ServiceIntegrationError, ValueError):
         message: str,
         *,
         service_name: str | None = None,
-        status_code: int = 400,
+        status_code: int = HTTPStatus.BAD_REQUEST,
     ) -> None:
         super().__init__(
             message,
@@ -147,7 +157,7 @@ class ServiceResponsePayloadError(ServiceIntegrationError):
         message: str,
         *,
         service_name: str | None = None,
-        status_code: int = 502,
+        status_code: int = HTTPStatus.BAD_GATEWAY,
     ) -> None:
         super().__init__(
             message,

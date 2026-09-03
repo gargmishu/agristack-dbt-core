@@ -87,7 +87,8 @@ class IvrConnector:
         """
         carrier_reference_id = f"sip-call-{uuid4().hex[:12]}"
         logger.info(
-            "Transmitting outbound IVR voice audio for session=%s, interface=%s, carrier_ref=%s",
+            "Transmitting outbound IVR voice audio for session=%s, "
+            "interface=%s, carrier_reference_id=%s",
             payload.session_id,
             self._interface_id,
             carrier_reference_id,

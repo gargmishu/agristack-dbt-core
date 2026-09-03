@@ -91,7 +91,8 @@ class WhatsAppConnector:
         """
         carrier_reference_id = f"wamid.{uuid4().hex[:16]}"
         logger.info(
-            "Transmitting outbound WhatsApp message for session=%s, interface=%s, carrier_ref=%s",
+            "Transmitting outbound WhatsApp message for session=%s, "
+            "interface=%s, carrier_reference_id=%s",
             payload.session_id,
             self._interface_id,
             carrier_reference_id,

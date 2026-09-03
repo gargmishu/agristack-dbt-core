@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import httpx
 import pytest
 
@@ -47,7 +49,7 @@ async def test_live_identity_verification_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer mosip_token"
         assert str(request.url) == "https://mosip.gov.in/v1/identity/verify"
-        return httpx.Response(200, json={"is_verified": True})
+        return httpx.Response(HTTPStatus.OK, json={"is_verified": True})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveIdentityVerificationService(
@@ -79,7 +81,7 @@ async def test_live_identity_verification_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_identity_verification_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="MOSIP Outage")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="MOSIP Outage")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     service = LiveIdentityVerificationService(
@@ -94,7 +96,7 @@ async def test_live_identity_verification_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_identity_verification_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, text="Forbidden")
+        return httpx.Response(HTTPStatus.FORBIDDEN, text="Forbidden")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     service = LiveIdentityVerificationService(
@@ -109,7 +111,10 @@ async def test_live_identity_verification_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_identity_verification_malformed_payload_error() -> None:
     def bad_request_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(400, text="Invalid HMAC token length: expected 64 hex characters")
+        return httpx.Response(
+            HTTPStatus.BAD_REQUEST,
+            text="Invalid HMAC token length: expected 64 hex characters",
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
     service = LiveIdentityVerificationService(
@@ -124,7 +129,7 @@ async def test_live_identity_verification_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_identity_verification_response_payload_contract_violation() -> None:
     def invalid_schema_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"status": "ok"})  # missing 'is_verified'
+        return httpx.Response(HTTPStatus.OK, json={"status": "ok"})  # missing 'is_verified'
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_schema_handler))
     service = LiveIdentityVerificationService(
@@ -139,7 +144,7 @@ async def test_live_identity_verification_response_payload_contract_violation() 
 @pytest.mark.asyncio
 async def test_live_identity_verification_non_dict_json_response() -> None:
     def list_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=["unexpected", "array"])
+        return httpx.Response(HTTPStatus.OK, json=["unexpected", "array"])
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
     service = LiveIdentityVerificationService(

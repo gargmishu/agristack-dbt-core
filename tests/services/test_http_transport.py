@@ -1,5 +1,7 @@
 """Unit tests for the persistent shared HTTP client connection pool and transport."""
 
+from http import HTTPStatus
+
 import httpx
 import pytest
 
@@ -57,7 +59,7 @@ async def test_service_http_transport_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer secret_token"
         assert request.headers.get("Content-Type") == "application/json"
-        return httpx.Response(200, json={"status": "verified"})
+        return httpx.Response(HTTPStatus.OK, json={"status": "verified"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -83,7 +85,7 @@ async def test_service_http_transport_relative_path_resolution() -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         recorded_urls.append(str(request.url))
-        return httpx.Response(200, json={"status": "ok"})
+        return httpx.Response(HTTPStatus.OK, json={"status": "ok"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -200,7 +202,7 @@ def test_service_http_transport_invalid_base_url_scheme() -> None:
 @pytest.mark.asyncio
 async def test_service_http_transport_auth_failure() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, text="Unauthorized")
+        return httpx.Response(HTTPStatus.UNAUTHORIZED, text="Unauthorized")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -223,7 +225,7 @@ async def test_service_http_transport_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_service_http_transport_client_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(422, text="Invalid payload syntax")
+        return httpx.Response(HTTPStatus.UNPROCESSABLE_ENTITY, text="Invalid payload syntax")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -246,7 +248,7 @@ async def test_service_http_transport_client_error() -> None:
 @pytest.mark.asyncio
 async def test_service_http_transport_server_error() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="Internal Gateway Error")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="Internal Gateway Error")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -293,7 +295,7 @@ async def test_service_http_transport_network_error() -> None:
 @pytest.mark.asyncio
 async def test_service_http_transport_invalid_json() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, text="not-valid-json")
+        return httpx.Response(HTTPStatus.OK, text="not-valid-json")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     transport = ServiceHttpTransport(
@@ -350,7 +352,7 @@ def test_service_transport_config_validation() -> None:
 
 @pytest.mark.asyncio
 async def test_service_http_transport_created_and_accepted_statuses() -> None:
-    for code in (201, 202):
+    for code in (HTTPStatus.CREATED, HTTPStatus.ACCEPTED):
 
         def handler(request: httpx.Request, status_code: int = code) -> httpx.Response:
             return httpx.Response(status_code, json={"status": "accepted_or_created"})

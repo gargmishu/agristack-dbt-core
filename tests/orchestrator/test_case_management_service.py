@@ -90,8 +90,8 @@ async def test_case_management_process_officer_review_unsupported_action(
         reviewed_at=datetime.now(UTC),
     )
     object.__setattr__(review, "governance_action", GovernanceAction.AUTO_APPROVE)
-    res = await service.process_officer_review(review)
-    assert res is False
+    review_result = await service.process_officer_review(review)
+    assert review_result is False
 
 
 @pytest.mark.asyncio

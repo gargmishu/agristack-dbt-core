@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import httpx
 import pytest
 
@@ -100,14 +102,19 @@ async def test_live_bhashini_service_endpoints_success() -> None:
         assert request.headers.get("Authorization") == "Bearer test_secret_key"
         assert url_str.startswith("https://api.bhashini.gov.in/v1/")
         if "/v1/asr/transcribe" in url_str:
-            return httpx.Response(200, json={"transcript": "Live transcribed Hindi speech"})
+            return httpx.Response(
+                HTTPStatus.OK, json={"transcript": "Live transcribed Hindi speech"}
+            )
         if "/v1/nmt/translate" in url_str:
-            return httpx.Response(200, json={"translated_text": "Live translated English text"})
+            return httpx.Response(
+                HTTPStatus.OK, json={"translated_text": "Live translated English text"}
+            )
         if "/v1/tts/synthesize" in url_str:
             return httpx.Response(
-                200, json={"audio_url": "https://cdn.bhashini.gov.in/live_audio.wav"}
+                HTTPStatus.OK,
+                json={"audio_url": "https://cdn.bhashini.gov.in/live_audio.wav"},
             )
-        return httpx.Response(404)
+        return httpx.Response(HTTPStatus.NOT_FOUND)
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveBhashiniService(
@@ -159,7 +166,7 @@ async def test_live_bhashini_service_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_bhashini_service_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="Bhashini Cluster Outage")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="Bhashini Cluster Outage")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     service = LiveBhashiniService(
@@ -180,7 +187,7 @@ async def test_live_bhashini_service_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_bhashini_service_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, text="Unauthorized")
+        return httpx.Response(HTTPStatus.UNAUTHORIZED, text="Unauthorized")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     service = LiveBhashiniService(
@@ -195,7 +202,10 @@ async def test_live_bhashini_service_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_bhashini_service_malformed_payload_error() -> None:
     def bad_request_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(422, text="Unsupported audio encoding: expected 8kHz/16kHz PCM WAV")
+        return httpx.Response(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            text="Unsupported audio encoding: expected 8kHz/16kHz PCM WAV",
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
     service = LiveBhashiniService(
@@ -210,7 +220,7 @@ async def test_live_bhashini_service_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_bhashini_service_response_payload_contract_violation() -> None:
     def missing_field_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"unexpected_status": "ok"})
+        return httpx.Response(HTTPStatus.OK, json={"unexpected_status": "ok"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(missing_field_handler))
     service = LiveBhashiniService(
@@ -266,4 +276,3 @@ async def test_live_bhashini_service_from_env(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("BHASHINI_API_KEY", "prod_key")
     env_service = LiveBhashiniService.from_env()
     assert isinstance(env_service, LiveBhashiniService)
-

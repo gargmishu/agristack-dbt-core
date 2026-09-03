@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import httpx
 import pytest
@@ -75,7 +76,9 @@ async def test_live_social_registry_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer openspp_key"
         assert str(request.url) == "https://openspp.gov.in/v1/social/eligibility"
-        return httpx.Response(200, json={"is_eligible": True, "scheme_id": "PM_KISAN"})
+        return httpx.Response(
+            HTTPStatus.OK, json={"is_eligible": True, "scheme_id": "PM_KISAN"}
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveSocialRegistryService(
@@ -119,7 +122,7 @@ async def test_live_social_registry_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_social_registry_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="OpenSPP Outage")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="OpenSPP Outage")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     service = LiveSocialRegistryService(
@@ -134,7 +137,7 @@ async def test_live_social_registry_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_social_registry_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, text="Forbidden")
+        return httpx.Response(HTTPStatus.FORBIDDEN, text="Forbidden")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     service = LiveSocialRegistryService(
@@ -149,7 +152,10 @@ async def test_live_social_registry_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_social_registry_malformed_payload_error() -> None:
     def bad_request_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(422, text="Unprocessable social scheme identifier")
+        return httpx.Response(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            text="Unprocessable social scheme identifier",
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
     service = LiveSocialRegistryService(
@@ -164,7 +170,7 @@ async def test_live_social_registry_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_social_registry_response_payload_contract_violation() -> None:
     def invalid_schema_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"status": "ok"})  # missing 'is_eligible'
+        return httpx.Response(HTTPStatus.OK, json={"status": "ok"})  # missing 'is_eligible'
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_schema_handler))
     service = LiveSocialRegistryService(
@@ -179,7 +185,7 @@ async def test_live_social_registry_response_payload_contract_violation() -> Non
 @pytest.mark.asyncio
 async def test_live_social_registry_non_dict_json_response() -> None:
     def list_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=["unexpected", "array"])
+        return httpx.Response(HTTPStatus.OK, json=["unexpected", "array"])
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
     service = LiveSocialRegistryService(

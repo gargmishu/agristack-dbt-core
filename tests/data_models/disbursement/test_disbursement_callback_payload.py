@@ -32,7 +32,7 @@ def test_disbursement_callback_failed() -> None:
     assert payload.failure_reason_code == DisbursementFailureCode.INVALID_IFSC
 
 
-def test_disbursement_callback_missing_bank_ref_fails() -> None:
+def test_disbursement_callback_missing_bank_reference_id_fails() -> None:
     with pytest.raises(ValidationError, match="Field required"):
         DisbursementCallbackPayload(  # type: ignore[call-arg]
             disbursement_txn_id="TXN-2026-987654",

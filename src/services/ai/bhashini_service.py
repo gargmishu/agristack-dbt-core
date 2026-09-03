@@ -49,6 +49,13 @@ from src.services.http_transport import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "BhashiniService",
+    "LiveBhashiniService",
+    "MockBhashiniService",
+    "create_bhashini_service",
+]
+
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
 _ASR_TRANSCRIBE_PATH: Final[str] = "/v1/asr/transcribe"
 _NMT_TRANSLATE_PATH: Final[str] = "/v1/nmt/translate"
@@ -247,7 +254,7 @@ class MockBhashiniService:
         url_lower = audio_url.lower()
         if MOCK_STREAM_EMPTY_KEYWORD in url_lower:
             return ""
-        if any(err in url_lower for err in MOCK_STREAM_ERROR_KEYWORDS):
+        if any(error_keyword in url_lower for error_keyword in MOCK_STREAM_ERROR_KEYWORDS):
             raise ServiceRequestPayloadError(
                 "ASR audio stream formatting or download error.",
                 service_name="bhashini",

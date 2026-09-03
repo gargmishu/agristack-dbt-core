@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import httpx
 import pytest
@@ -86,7 +87,7 @@ async def test_live_payment_rail_endpoint_success() -> None:
         assert request.headers.get("Authorization") == "Bearer pfms_token"
         assert str(request.url) == "https://pfms.gov.in/v1/payments/disburse"
         return httpx.Response(
-            200,
+            HTTPStatus.OK,
             json={
                 "disbursement_txn_id": "TXN-2026-987654",
                 "bank_reference_id": "NPCI-LIVE-UTR-123456",
@@ -156,7 +157,7 @@ async def test_live_payment_rail_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_payment_rail_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="Banking Gateway Timeout")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="Banking Gateway Timeout")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     service = LivePaymentRailService(
@@ -181,7 +182,7 @@ async def test_live_payment_rail_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_payment_rail_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(401, text="Unauthorized")
+        return httpx.Response(HTTPStatus.UNAUTHORIZED, text="Unauthorized")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     service = LivePaymentRailService(
@@ -206,7 +207,10 @@ async def test_live_payment_rail_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_payment_rail_malformed_payload_error() -> None:
     def bad_request_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(422, text="Invalid disbursement transaction payload schema")
+        return httpx.Response(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            text="Invalid disbursement transaction payload schema",
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_request_handler))
     service = LivePaymentRailService(
@@ -231,7 +235,7 @@ async def test_live_payment_rail_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_payment_rail_response_payload_contract_violation() -> None:
     def invalid_schema_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"unexpected": 123})
+        return httpx.Response(HTTPStatus.OK, json={"unexpected": 123})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_schema_handler))
     service = LivePaymentRailService(
@@ -256,7 +260,7 @@ async def test_live_payment_rail_response_payload_contract_violation() -> None:
 @pytest.mark.asyncio
 async def test_live_payment_rail_non_dict_json_response() -> None:
     def list_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=["unexpected", "array"])
+        return httpx.Response(HTTPStatus.OK, json=["unexpected", "array"])
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
     service = LivePaymentRailService(

@@ -40,6 +40,13 @@ from src.services.http_transport import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "AgriRegistryService",
+    "LiveAgriRegistryService",
+    "MockAgriRegistryService",
+    "create_agri_registry_service",
+]
+
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _LAND_VERIFY_PATH: Final[str] = "/v1/land/cadastral/verify"
 

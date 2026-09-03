@@ -96,11 +96,11 @@ class IntakeEntityExtractor:
                     audio_url=intake.unprocessed_input_content,
                     language_locale=intake.language_locale,
                 )
-            except Exception as err:
+            except Exception as error:
                 logger.warning(
                     "Audio transcription failed for session=%s: %s; using fallback",
                     intake.session_id,
-                    err,
+                    error,
                 )
                 return self._create_fallback_extracted_payload()
 

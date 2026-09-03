@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from http import HTTPStatus
 
 import pytest
 from fastapi import Request
@@ -19,8 +20,8 @@ async def test_validation_exception_handler_rfc7807_format() -> None:
             payload_type="invalid_type",  # type: ignore[arg-type]
             received_at=datetime.now(UTC),
         )
-    except ValidationError as err:
-        validation_error = err
+    except ValidationError as error:
+        validation_error = error
 
     # Create dummy FastAPI Request
     scope = {"type": "http", "method": "POST", "path": "/api/v1/ingress/whatsapp"}
@@ -28,7 +29,7 @@ async def test_validation_exception_handler_rfc7807_format() -> None:
 
     # Execute handler
     response = await validation_exception_handler(request, validation_error)
-    assert response.status_code == 422  # noqa: PLR2004
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
     # Verify RFC 7807 payload fields
     body = bytes(response.body).decode("utf-8")

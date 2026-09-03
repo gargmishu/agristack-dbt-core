@@ -40,6 +40,13 @@ from src.services.http_transport import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "LiveSocialRegistryService",
+    "MockSocialRegistryService",
+    "SocialRegistryService",
+    "create_social_registry_service",
+]
+
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _SOCIAL_ELIGIBILITY_PATH: Final[str] = "/v1/social/eligibility"
 

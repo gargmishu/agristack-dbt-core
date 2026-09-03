@@ -39,6 +39,13 @@ from src.services.http_transport import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "LiveSlmExtractor",
+    "MockSlmExtractor",
+    "SlmExtractor",
+    "create_slm_extractor",
+]
+
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
 _ENTITY_EXTRACT_PATH: Final[str] = "/v1/extract"
 
@@ -141,12 +148,12 @@ class LiveSlmExtractor:
         )
         try:
             return ExtractedEntityPayload.model_validate(response_data)
-        except Exception as err:
+        except Exception as error:
             target_url = self._transport.resolve_url(_ENTITY_EXTRACT_PATH)
             raise ServiceResponsePayloadError(
-                f"Live SLM extraction response from {target_url} violated schema: {err}",
+                f"Live SLM extraction response from {target_url} violated schema: {error}",
                 service_name="sovereign_slm",
-            ) from err
+            ) from error
 
 
 class MockSlmExtractor:

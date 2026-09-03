@@ -122,11 +122,11 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
                 # Validates that the audio content string is a syntactically valid HTTP/HTTPS URL
                 # (e.g. signed S3/GCS URL pointing to the Bhashini/IVR acoustic stream).
                 _HTTP_URL_ADAPTER.validate_python(content)
-            except Exception as err:
+            except Exception as error:
                 raise ValueError(
                     "AUDIO free_text unprocessed_input_content must be a valid signed HTTP/HTTPS "
-                    f"URL: {err}"
-                ) from err
+                    f"URL: {error}"
+                ) from error
         elif self.payload_type.is_text and self.structure_level == StructureLevel.DTMF_SELECTION:
             if len(content) > _MAX_DTMF_LENGTH or not _DTMF_REGEX.match(content):
                 raise ValueError(

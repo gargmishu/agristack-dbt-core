@@ -34,8 +34,8 @@ def test_ingestion_firewall_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGRISTACK_PEPPER_SECRET", TEST_PEPPER)
     monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "60")
     monkeypatch.setenv("RATE_LIMIT_CAPACITY", "10")
-    fw = IngestionFirewall.from_env()
-    assert isinstance(fw, IngestionFirewall)
+    firewall_instance = IngestionFirewall.from_env()
+    assert isinstance(firewall_instance, IngestionFirewall)
 
 
 def test_ingestion_firewall_processes_valid_whatsapp_payload(firewall: IngestionFirewall) -> None:
@@ -208,5 +208,5 @@ def test_ingestion_firewall_private_helpers_direct_invocation(
     assert len(standardized.tokenized_citizen_id) == EXPECTED_SHA256_HEX_LENGTH
 
     # 3. Test process_ingress pipeline directly
-    std_payload = firewall.process_ingress(raw_payload)
-    assert std_payload.session_id == "session-wa-split-test"
+    standardized_payload = firewall.process_ingress(raw_payload)
+    assert standardized_payload.session_id == "session-wa-split-test"

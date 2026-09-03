@@ -1,3 +1,5 @@
+from http import HTTPStatus
+
 import httpx
 import pytest
 
@@ -97,7 +99,7 @@ async def test_live_slm_extractor_endpoint_success() -> None:
         assert request.headers.get("Authorization") == "Bearer slm_secret_token"
         assert str(request.url) == "https://slm.sovereign.gov.in/v1/extract"
         return httpx.Response(
-            200,
+            HTTPStatus.OK,
             json={
                 "application_intent": "apply_subsidy",
                 "ai_confidence_score": _LIVE_CONFIDENCE_SCORE,
@@ -137,7 +139,7 @@ async def test_live_slm_extractor_constructor_validation() -> None:
 @pytest.mark.asyncio
 async def test_live_slm_extractor_fail_closed_on_500() -> None:
     def error_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, text="SLM GPU Cluster Timeout")
+        return httpx.Response(HTTPStatus.INTERNAL_SERVER_ERROR, text="SLM GPU Cluster Timeout")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(error_handler))
     extractor = LiveSlmExtractor(
@@ -152,7 +154,7 @@ async def test_live_slm_extractor_fail_closed_on_500() -> None:
 @pytest.mark.asyncio
 async def test_live_slm_extractor_fail_closed_on_auth_failure() -> None:
     def auth_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, text="Forbidden")
+        return httpx.Response(HTTPStatus.FORBIDDEN, text="Forbidden")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(auth_handler))
     extractor = LiveSlmExtractor(
@@ -167,7 +169,10 @@ async def test_live_slm_extractor_fail_closed_on_auth_failure() -> None:
 @pytest.mark.asyncio
 async def test_live_slm_extractor_malformed_payload_error() -> None:
     def bad_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(422, text="Unprocessable extraction schema")
+        return httpx.Response(
+            HTTPStatus.UNPROCESSABLE_ENTITY,
+            text="Unprocessable extraction schema",
+        )
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(bad_handler))
     extractor = LiveSlmExtractor(
@@ -182,7 +187,7 @@ async def test_live_slm_extractor_malformed_payload_error() -> None:
 @pytest.mark.asyncio
 async def test_live_slm_extractor_response_payload_contract_violation() -> None:
     def invalid_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, text="not-a-json-object")
+        return httpx.Response(HTTPStatus.OK, text="not-a-json-object")
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(invalid_json_handler))
     extractor = LiveSlmExtractor(
@@ -197,7 +202,7 @@ async def test_live_slm_extractor_response_payload_contract_violation() -> None:
 @pytest.mark.asyncio
 async def test_live_slm_extractor_non_dict_json_response() -> None:
     def list_json_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=["unexpected", "array"])
+        return httpx.Response(HTTPStatus.OK, json=["unexpected", "array"])
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(list_json_handler))
     extractor = LiveSlmExtractor(
@@ -207,7 +212,6 @@ async def test_live_slm_extractor_non_dict_json_response() -> None:
     )
     with pytest.raises(ServiceResponsePayloadError, match="non-dictionary JSON"):
         await extractor.extract_entities("sess_live_list", "Valid content", "hi-IN")
-
 
 
 @pytest.mark.asyncio
@@ -251,4 +255,3 @@ async def test_live_slm_extractor_from_env(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("SLM_API_KEY", "prod_key")
     env_extractor = LiveSlmExtractor.from_env()
     assert isinstance(env_extractor, LiveSlmExtractor)
-

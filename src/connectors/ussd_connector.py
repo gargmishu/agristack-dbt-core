@@ -90,7 +90,7 @@ class UssdConnector:
         """
         carrier_reference_id = f"ussd-sig-{uuid4().hex[:12]}"
         logger.info(
-            "Pushing outbound USSD string for session=%s, interface=%s, carrier_ref=%s",
+            "Pushing outbound USSD string for session=%s, interface=%s, carrier_reference_id=%s",
             payload.session_id,
             self._interface_id,
             carrier_reference_id,
