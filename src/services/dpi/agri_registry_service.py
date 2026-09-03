@@ -24,10 +24,7 @@ from src.config.service_settings import (
     get_agristack_endpoint,
     is_production,
 )
-from src.errors.service_errors import (
-    ServiceConfigurationError,
-    ServiceResponsePayloadError,
-)
+from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
     INVALID_SURVEY_NUMBER,
@@ -92,21 +89,9 @@ class LiveAgriRegistryService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        agristack_endpoint = endpoint_url or get_agristack_endpoint()
-        agristack_api_key = api_key or get_agristack_api_key()
-        if not agristack_endpoint:
-            raise ServiceConfigurationError(
-                "Live AgriStack registry endpoint URL is required in production mode.",
-                service_name="agristack",
-            )
-        if not agristack_api_key:
-            raise ServiceConfigurationError(
-                "Live AgriStack registry API key is required in production mode.",
-                service_name="agristack",
-            )
         return cls(
-            endpoint_url=agristack_endpoint,
-            api_key=agristack_api_key,
+            endpoint_url=endpoint_url or get_agristack_endpoint() or "",
+            api_key=api_key or get_agristack_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )

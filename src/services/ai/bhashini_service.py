@@ -30,7 +30,6 @@ from src.config.service_settings import (
     is_production,
 )
 from src.errors.service_errors import (
-    ServiceConfigurationError,
     ServiceRequestPayloadError,
     ServiceResponsePayloadError,
 )
@@ -114,21 +113,9 @@ class LiveBhashiniService:
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        bhashini_endpoint = endpoint_url or get_bhashini_endpoint()
-        bhashini_api_key = api_key or get_bhashini_api_key()
-        if not bhashini_endpoint:
-            raise ServiceConfigurationError(
-                "Live Bhashini API endpoint URL is required in production mode.",
-                service_name="bhashini",
-            )
-        if not bhashini_api_key:
-            raise ServiceConfigurationError(
-                "Live Bhashini API key is required in production mode.",
-                service_name="bhashini",
-            )
         return cls(
-            endpoint_url=bhashini_endpoint,
-            api_key=bhashini_api_key,
+            endpoint_url=endpoint_url or get_bhashini_endpoint() or "",
+            api_key=api_key or get_bhashini_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )

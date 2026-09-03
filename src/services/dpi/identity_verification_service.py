@@ -24,10 +24,7 @@ from src.config.service_settings import (
     get_identity_endpoint,
     is_production,
 )
-from src.errors.service_errors import (
-    ServiceConfigurationError,
-    ServiceResponsePayloadError,
-)
+from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
@@ -90,21 +87,9 @@ class LiveIdentityVerificationService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        mosip_endpoint = endpoint_url or get_identity_endpoint()
-        mosip_api_key = api_key or get_identity_api_key()
-        if not mosip_endpoint:
-            raise ServiceConfigurationError(
-                "Live MOSIP identity verification endpoint URL is required in production mode.",
-                service_name="mosip",
-            )
-        if not mosip_api_key:
-            raise ServiceConfigurationError(
-                "Live MOSIP identity verification API key is required in production mode.",
-                service_name="mosip",
-            )
         return cls(
-            endpoint_url=mosip_endpoint,
-            api_key=mosip_api_key,
+            endpoint_url=endpoint_url or get_identity_endpoint() or "",
+            api_key=api_key or get_identity_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )

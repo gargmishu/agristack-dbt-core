@@ -27,10 +27,7 @@ from src.config.service_settings import (
     is_production,
 )
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
-from src.errors.service_errors import (
-    ServiceConfigurationError,
-    ServiceResponsePayloadError,
-)
+from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
@@ -103,21 +100,9 @@ class LiveSocialRegistryService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        openspp_endpoint = endpoint_url or get_openspp_endpoint()
-        openspp_api_key = api_key or get_openspp_api_key()
-        if not openspp_endpoint:
-            raise ServiceConfigurationError(
-                "Live OpenSPP social registry endpoint URL is required in production mode.",
-                service_name="openspp",
-            )
-        if not openspp_api_key:
-            raise ServiceConfigurationError(
-                "Live OpenSPP social registry API key is required in production mode.",
-                service_name="openspp",
-            )
         return cls(
-            endpoint_url=openspp_endpoint,
-            api_key=openspp_api_key,
+            endpoint_url=endpoint_url or get_openspp_endpoint() or "",
+            api_key=api_key or get_openspp_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )

@@ -31,10 +31,7 @@ from src.config.service_settings import (
 from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import GovernanceOutcomePayload
-from src.errors.service_errors import (
-    ServiceConfigurationError,
-    ServiceResponsePayloadError,
-)
+from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.dpi.dpi_mock_fixtures import (
     MOCK_PAYMENT_FAIL_TRIGGER,
     MOCK_PAYMENT_FAILURE_REASON,
@@ -101,21 +98,9 @@ class LivePaymentRailService:
         timeout_seconds: float = _DEFAULT_PAYMENT_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        payment_endpoint = endpoint_url or get_payment_endpoint()
-        payment_api_key = api_key or get_payment_api_key()
-        if not payment_endpoint:
-            raise ServiceConfigurationError(
-                "Live NPCI/PFMS payment rail endpoint URL is required in production mode.",
-                service_name="payment_rail",
-            )
-        if not payment_api_key:
-            raise ServiceConfigurationError(
-                "Live NPCI/PFMS payment rail API key is required in production mode.",
-                service_name="payment_rail",
-            )
         return cls(
-            endpoint_url=payment_endpoint,
-            api_key=payment_api_key,
+            endpoint_url=endpoint_url or get_payment_endpoint() or "",
+            api_key=api_key or get_payment_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )

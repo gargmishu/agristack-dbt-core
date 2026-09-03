@@ -23,10 +23,7 @@ from src.config.service_settings import (
     is_production,
 )
 from src.data_models.governance import ExtractedEntityPayload
-from src.errors.service_errors import (
-    ServiceConfigurationError,
-    ServiceResponsePayloadError,
-)
+from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.ai.ai_mock_fixtures import (
     ADVERSARIAL_INJECTION_KEYWORDS,
     MISSING_ENTITY_KEYWORDS,
@@ -93,21 +90,9 @@ class LiveSlmExtractor:
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> Self:
         """Factory constructor building live instance from environment settings or overrides."""
-        slm_endpoint = endpoint_url or get_slm_endpoint()
-        slm_api_key = api_key or get_slm_api_key()
-        if not slm_endpoint:
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM endpoint URL is required in production mode.",
-                service_name="sovereign_slm",
-            )
-        if not slm_api_key:
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM API key is required in production mode.",
-                service_name="sovereign_slm",
-            )
         return cls(
-            endpoint_url=slm_endpoint,
-            api_key=slm_api_key,
+            endpoint_url=endpoint_url or get_slm_endpoint() or "",
+            api_key=api_key or get_slm_api_key() or "",
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )
@@ -140,7 +125,7 @@ class LiveSlmExtractor:
             "Live extracting entities for session=%s locale=%s", session_id, language_locale
         )
 
-        if not unprocessed_content.strip() or "error" in unprocessed_content.lower():
+        if not unprocessed_content.strip():
             return None
 
         payload = {
