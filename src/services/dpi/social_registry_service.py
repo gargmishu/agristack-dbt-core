@@ -44,7 +44,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
-_ELIGIBILITY_PATH: Final[str] = "/v1/social/eligibility"
+_SOCIAL_ELIGIBILITY_PATH: Final[str] = "/v1/social/eligibility"
 
 
 class SocialRegistryService(Protocol):
@@ -180,15 +180,16 @@ class LiveSocialRegistryService:
         }
 
         data = await self._transport.post_json(
-            path_or_url=_ELIGIBILITY_PATH,
+            _SOCIAL_ELIGIBILITY_PATH,
             payload=payload,
             context_label=scheme_id,
         )
         if "is_eligible" in data:
             return bool(data["is_eligible"])
 
+        target_url = self._transport.resolve_url(_SOCIAL_ELIGIBILITY_PATH)
         raise ServiceResponsePayloadError(
-            f"Live OpenSPP registry returned invalid schema from {_ELIGIBILITY_PATH}.",
+            f"Live OpenSPP registry returned invalid schema from {target_url}.",
             service_name="openspp",
         )
 

@@ -143,15 +143,16 @@ class LiveIdentityVerificationService:
         payload: dict[str, Any] = {"tokenized_citizen_id": tokenized_citizen_id}
 
         data = await self._transport.post_json(
-            path_or_url=_IDENTITY_VERIFY_PATH,
+            _IDENTITY_VERIFY_PATH,
             payload=payload,
             context_label=tokenized_citizen_id[:16],
         )
         if "is_verified" in data:
             return bool(data["is_verified"])
 
+        target_url = self._transport.resolve_url(_IDENTITY_VERIFY_PATH)
         raise ServiceResponsePayloadError(
-            f"Live MOSIP verification returned invalid schema from {_IDENTITY_VERIFY_PATH}.",
+            f"Live MOSIP verification returned invalid schema from {target_url}.",
             service_name="mosip",
         )
 

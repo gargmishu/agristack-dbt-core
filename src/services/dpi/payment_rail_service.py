@@ -48,7 +48,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PAYMENT_TIMEOUT_SECONDS: Final[float] = 5.0
-_DISBURSE_PATH: Final[str] = "/v1/payments/disburse"
+_PAYMENT_DISBURSE_PATH: Final[str] = "/v1/payments/disburse"
 
 
 class PaymentRailService(Protocol):
@@ -171,15 +171,16 @@ class LivePaymentRailService:
         }
 
         response_data = await self._transport.post_json(
-            path_or_url=_DISBURSE_PATH,
+            _PAYMENT_DISBURSE_PATH,
             payload=payload,
             context_label=outcome.disbursement_txn_id,
         )
         try:
             return DisbursementCallbackPayload.model_validate(response_data)
         except Exception as err:
+            target_url = self._transport.resolve_url(_PAYMENT_DISBURSE_PATH)
             raise ServiceResponsePayloadError(
-                f"Live payment rail response from {_DISBURSE_PATH} violated schema: {err}",
+                f"Live payment rail response from {target_url} violated schema: {err}",
                 service_name="payment_rail",
             ) from err
 

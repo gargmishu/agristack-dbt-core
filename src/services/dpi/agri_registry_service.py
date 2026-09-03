@@ -153,15 +153,16 @@ class LiveAgriRegistryService:
         }
 
         data = await self._transport.post_json(
-            path_or_url=_LAND_VERIFY_PATH,
+            _LAND_VERIFY_PATH,
             payload=payload,
             context_label=land_record_id,
         )
         if "is_entitled" in data:
             return bool(data["is_entitled"])
 
+        target_url = self._transport.resolve_url(_LAND_VERIFY_PATH)
         raise ServiceResponsePayloadError(
-            f"Live AgriStack verification returned invalid schema from {_LAND_VERIFY_PATH}.",
+            f"Live AgriStack verification returned invalid schema from {target_url}.",
             service_name="agristack",
         )
 

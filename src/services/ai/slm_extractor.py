@@ -43,7 +43,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
-_EXTRACT_PATH: Final[str] = "/v1/extract"
+_ENTITY_EXTRACT_PATH: Final[str] = "/v1/extract"
 
 
 class SlmExtractor(Protocol):
@@ -160,15 +160,16 @@ class LiveSlmExtractor:
         }
 
         response_data = await self._transport.post_json(
-            path_or_url=_EXTRACT_PATH,
+            _ENTITY_EXTRACT_PATH,
             payload=payload,
             context_label=f"session_id={session_id}",
         )
         try:
             return ExtractedEntityPayload.model_validate(response_data)
         except Exception as err:
+            target_url = self._transport.resolve_url(_ENTITY_EXTRACT_PATH)
             raise ServiceResponsePayloadError(
-                f"Live SLM extraction response from {_EXTRACT_PATH} violated schema: {err}",
+                f"Live SLM extraction response from {target_url} violated schema: {err}",
                 service_name="sovereign_slm",
             ) from err
 
