@@ -43,6 +43,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
+_EXTRACT_PATH: Final[str] = "/v1/extract"
 
 
 class SlmExtractor(Protocol):
@@ -82,18 +83,15 @@ class LiveSlmExtractor:
                 "Live Sovereign SLM API key is required.",
                 service_name="sovereign_slm",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="sovereign_slm",
                 service_title="SLM extraction",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -155,7 +153,6 @@ class LiveSlmExtractor:
         if not unprocessed_content.strip() or "error" in unprocessed_content.lower():
             return None
 
-        target_url = f"{self._endpoint_url}/v1/extract"
         payload = {
             "session_id": session_id,
             "unprocessed_content": unprocessed_content,
@@ -163,7 +160,7 @@ class LiveSlmExtractor:
         }
 
         response_data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_EXTRACT_PATH,
             payload=payload,
             context_label=f"session_id={session_id}",
         )
@@ -171,7 +168,7 @@ class LiveSlmExtractor:
             return ExtractedEntityPayload.model_validate(response_data)
         except Exception as err:
             raise ServiceResponsePayloadError(
-                f"Live SLM extraction response from {target_url} violated schema: {err}",
+                f"Live SLM extraction response from {_EXTRACT_PATH} violated schema: {err}",
                 service_name="sovereign_slm",
             ) from err
 

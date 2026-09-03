@@ -27,6 +27,7 @@ from httpx import AsyncClient, Limits
 
 from src.errors.service_errors import (
     ServiceAuthenticationError,
+    ServiceConfigurationError,
     ServiceRequestPayloadError,
     ServiceResponsePayloadError,
     ServiceUnavailableError,
@@ -146,21 +147,39 @@ class ServiceHttpTransport:
         http_client: AsyncClient,
         api_key: str,
         config: ServiceTransportConfig,
+        base_url: str = "",
     ) -> None:
         self._http_client = http_client
         self._api_key = api_key
         self._config = config
+        self._base_url = base_url.rstrip("/")
+
+    @property
+    def base_url(self) -> str:
+        """Returns the configured base endpoint URL."""
+        return self._base_url
+
+    def resolve_url(self, path_or_url: str) -> str:
+        """Resolves target endpoint URL from a relative path or absolute URL."""
+        if path_or_url.startswith(("http://", "https://")):
+            return path_or_url
+        if not self._base_url:
+            raise ServiceConfigurationError(
+                f"Cannot resolve relative path '{path_or_url}' without a configured base_url.",
+                service_name=self._config.service_name,
+            )
+        return f"{self._base_url}/{path_or_url.lstrip('/')}"
 
     async def post_json(
         self,
-        url: str,
+        path_or_url: str,
         payload: dict[str, Any],
         context_label: str = "",
     ) -> dict[str, Any]:
         """Executes resilient async POST request with timeout, authentication, and error typing.
 
         Args:
-            url: Fully qualified HTTP target endpoint URL.
+            path_or_url: Relative endpoint path (appended to base_url) or fully qualified URL.
             payload: JSON-serializable request dictionary.
             context_label: Contextual identifier for diagnostics logging (e.g. record ID or token).
 
@@ -172,7 +191,9 @@ class ServiceHttpTransport:
             ServiceRequestPayloadError: If the service returns 400, 415, or 422 client error.
             ServiceResponsePayloadError: If the upstream response is not a valid JSON dictionary.
             ServiceUnavailableError: If the service fails, times out, or returns a 5xx error.
+            ServiceConfigurationError: If a relative path is passed without a configured base_url.
         """
+        url = self.resolve_url(path_or_url)
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self._api_key}",

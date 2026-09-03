@@ -48,6 +48,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_PAYMENT_TIMEOUT_SECONDS: Final[float] = 5.0
+_DISBURSE_PATH: Final[str] = "/v1/payments/disburse"
 
 
 class PaymentRailService(Protocol):
@@ -90,18 +91,15 @@ class LivePaymentRailService:
                 "Live NPCI/PFMS payment rail API key is required.",
                 service_name="payment_rail",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="payment_rail",
                 service_title="Payment rail",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -166,7 +164,6 @@ class LivePaymentRailService:
             outcome.disbursement_txn_id,
         )
 
-        target_url = f"{self._endpoint_url}/v1/payments/disburse"
         payload: dict[str, Any] = {
             "session_id": outcome.session_id,
             "disbursement_txn_id": outcome.disbursement_txn_id,
@@ -174,7 +171,7 @@ class LivePaymentRailService:
         }
 
         response_data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_DISBURSE_PATH,
             payload=payload,
             context_label=outcome.disbursement_txn_id,
         )
@@ -182,7 +179,7 @@ class LivePaymentRailService:
             return DisbursementCallbackPayload.model_validate(response_data)
         except Exception as err:
             raise ServiceResponsePayloadError(
-                f"Live payment rail response from {target_url} violated schema: {err}",
+                f"Live payment rail response from {_DISBURSE_PATH} violated schema: {err}",
                 service_name="payment_rail",
             ) from err
 

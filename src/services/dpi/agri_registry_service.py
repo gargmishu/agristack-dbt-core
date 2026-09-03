@@ -44,6 +44,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
+_LAND_VERIFY_PATH: Final[str] = "/v1/land/cadastral/verify"
 
 
 class AgriRegistryService(Protocol):
@@ -81,18 +82,15 @@ class LiveAgriRegistryService:
                 "Live AgriStack registry API key is required.",
                 service_name="agristack",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="agristack",
                 service_title="AgriStack",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -149,14 +147,13 @@ class LiveAgriRegistryService:
             tokenized_citizen_id[:16],
         )
 
-        target_url = f"{self._endpoint_url}/v1/land/cadastral/verify"
         payload: dict[str, Any] = {
             "tokenized_citizen_id": tokenized_citizen_id,
             "land_record_id": land_record_id,
         }
 
         data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_LAND_VERIFY_PATH,
             payload=payload,
             context_label=land_record_id,
         )
@@ -164,7 +161,7 @@ class LiveAgriRegistryService:
             return bool(data["is_entitled"])
 
         raise ServiceResponsePayloadError(
-            f"Live AgriStack verification returned invalid schema from {target_url}.",
+            f"Live AgriStack verification returned invalid schema from {_LAND_VERIFY_PATH}.",
             service_name="agristack",
         )
 

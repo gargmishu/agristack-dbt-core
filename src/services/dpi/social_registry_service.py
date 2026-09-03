@@ -44,6 +44,7 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
+_ELIGIBILITY_PATH: Final[str] = "/v1/social/eligibility"
 
 
 class SocialRegistryService(Protocol):
@@ -92,18 +93,15 @@ class LiveSocialRegistryService:
                 "Live OpenSPP social registry API key is required.",
                 service_name="openspp",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="openspp",
                 service_title="OpenSPP",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -176,14 +174,13 @@ class LiveSocialRegistryService:
             tokenized_citizen_id[:16],
         )
 
-        target_url = f"{self._endpoint_url}/v1/social/eligibility"
         payload: dict[str, Any] = {
             "tokenized_citizen_id": tokenized_citizen_id,
             "scheme_id": scheme_id,
         }
 
         data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_ELIGIBILITY_PATH,
             payload=payload,
             context_label=scheme_id,
         )
@@ -191,7 +188,7 @@ class LiveSocialRegistryService:
             return bool(data["is_eligible"])
 
         raise ServiceResponsePayloadError(
-            f"Live OpenSPP registry returned invalid schema from {target_url}.",
+            f"Live OpenSPP registry returned invalid schema from {_ELIGIBILITY_PATH}.",
             service_name="openspp",
         )
 

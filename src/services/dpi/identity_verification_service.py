@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _HMAC_TOKEN_HEX_LENGTH: Final[int] = 64
+_IDENTITY_VERIFY_PATH: Final[str] = "/v1/identity/verify"
 
 
 class IdentityVerificationService(Protocol):
@@ -79,18 +80,15 @@ class LiveIdentityVerificationService:
                 "Live MOSIP identity verification API key is required.",
                 service_name="mosip",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="mosip",
                 service_title="MOSIP",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -142,11 +140,10 @@ class LiveIdentityVerificationService:
         """
         logger.info("Live verifying identity token=%s...", tokenized_citizen_id[:16])
 
-        target_url = f"{self._endpoint_url}/v1/identity/verify"
         payload: dict[str, Any] = {"tokenized_citizen_id": tokenized_citizen_id}
 
         data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_IDENTITY_VERIFY_PATH,
             payload=payload,
             context_label=tokenized_citizen_id[:16],
         )
@@ -154,7 +151,7 @@ class LiveIdentityVerificationService:
             return bool(data["is_verified"])
 
         raise ServiceResponsePayloadError(
-            f"Live MOSIP verification returned invalid schema from {target_url}.",
+            f"Live MOSIP verification returned invalid schema from {_IDENTITY_VERIFY_PATH}.",
             service_name="mosip",
         )
 

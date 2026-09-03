@@ -5,6 +5,7 @@ import pytest
 
 from src.errors.service_errors import (
     ServiceAuthenticationError,
+    ServiceConfigurationError,
     ServiceRequestPayloadError,
     ServiceResponsePayloadError,
     ServiceUnavailableError,
@@ -69,10 +70,73 @@ async def test_service_http_transport_success() -> None:
         ),
     )
     result = await transport.post_json(
-        url="https://api.example.com/verify",
+        path_or_url="https://api.example.com/verify",
         payload={"id": "123"},
     )
     assert result == {"status": "verified"}
+
+
+@pytest.mark.asyncio
+async def test_service_http_transport_relative_path_resolution() -> None:
+    recorded_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        recorded_urls.append(str(request.url))
+        return httpx.Response(200, json={"status": "ok"})
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    transport = ServiceHttpTransport(
+        http_client=client,
+        api_key="secret_token",
+        config=ServiceTransportConfig(
+            service_name="test_svc",
+            service_title="Test Service",
+            timeout_seconds=2.0,
+        ),
+        base_url="https://api.example.com/base/",
+    )
+    assert transport.base_url == "https://api.example.com/base"
+
+    # Leading slash in relative path
+    await transport.post_json(
+        path_or_url="/v1/action",
+        payload={"foo": "bar"},
+    )
+    assert recorded_urls[-1] == "https://api.example.com/base/v1/action"
+
+    # No leading slash in relative path
+    await transport.post_json(
+        path_or_url="v1/action",
+        payload={"foo": "bar"},
+    )
+    assert recorded_urls[-1] == "https://api.example.com/base/v1/action"
+
+    # Full absolute URL ignores base_url
+    await transport.post_json(
+        path_or_url="https://override.example.com/v2/action",
+        payload={"foo": "bar"},
+    )
+    assert recorded_urls[-1] == "https://override.example.com/v2/action"
+
+
+@pytest.mark.asyncio
+async def test_service_http_transport_missing_base_url_error() -> None:
+    client = httpx.AsyncClient()
+    transport = ServiceHttpTransport(
+        http_client=client,
+        api_key="secret_token",
+        config=ServiceTransportConfig(
+            service_name="test_svc",
+            service_title="Test Service",
+            timeout_seconds=2.0,
+        ),
+        base_url="",
+    )
+    with pytest.raises(ServiceConfigurationError, match="without a configured base_url"):
+        await transport.post_json(
+            path_or_url="/v1/action",
+            payload={"foo": "bar"},
+        )
 
 
 @pytest.mark.asyncio
@@ -92,7 +156,7 @@ async def test_service_http_transport_auth_failure() -> None:
     )
     with pytest.raises(ServiceAuthenticationError, match="Test Service authentication failed"):
         await transport.post_json(
-            url="https://api.example.com/verify",
+            path_or_url="https://api.example.com/verify",
             payload={"id": "123"},
         )
 
@@ -114,7 +178,7 @@ async def test_service_http_transport_client_error() -> None:
     )
     with pytest.raises(ServiceRequestPayloadError, match="Invalid payload syntax"):
         await transport.post_json(
-            url="https://api.example.com/verify",
+            path_or_url="https://api.example.com/verify",
             payload={"id": "123"},
         )
 
@@ -136,7 +200,7 @@ async def test_service_http_transport_server_error() -> None:
     )
     with pytest.raises(ServiceUnavailableError, match="status=500"):
         await transport.post_json(
-            url="https://api.example.com/verify",
+            path_or_url="https://api.example.com/verify",
             payload={"id": "123"},
         )
 
@@ -158,7 +222,7 @@ async def test_service_http_transport_network_error() -> None:
     )
     with pytest.raises(ServiceUnavailableError, match="Connection refused"):
         await transport.post_json(
-            url="https://api.example.com/verify",
+            path_or_url="https://api.example.com/verify",
             payload={"id": "123"},
             context_label="test_context",
         )
@@ -181,7 +245,7 @@ async def test_service_http_transport_invalid_json() -> None:
     )
     with pytest.raises(ServiceResponsePayloadError, match="violated schema"):
         await transport.post_json(
-            url="https://api.example.com/verify",
+            path_or_url="https://api.example.com/verify",
             payload={"id": "123"},
         )
 

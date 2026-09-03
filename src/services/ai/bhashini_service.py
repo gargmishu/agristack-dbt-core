@@ -51,6 +51,9 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
+_ASR_PATH: Final[str] = "/v1/asr/transcribe"
+_NMT_PATH: Final[str] = "/v1/nmt/translate"
+_TTS_PATH: Final[str] = "/v1/tts/synthesize"
 
 
 class BhashiniService(Protocol):
@@ -101,18 +104,15 @@ class LiveBhashiniService:
                 "Live Bhashini API key is required.",
                 service_name="bhashini",
             )
-        self._endpoint_url = endpoint_url.rstrip("/")
-        self._api_key = api_key.strip()
-        self._http_client = http_client
-        self._timeout_seconds = timeout_seconds
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=self._api_key,
+            api_key=api_key.strip(),
             config=ServiceTransportConfig(
                 service_name="bhashini",
                 service_title="Bhashini",
                 timeout_seconds=timeout_seconds,
             ),
+            base_url=endpoint_url,
         )
 
     @classmethod
@@ -166,10 +166,9 @@ class LiveBhashiniService:
         url_hash = hashlib.sha256(audio_url.encode("utf-8")).hexdigest()[:16]
         logger.info("Live transcribing audio for url_hash=%s locale=%s", url_hash, language_locale)
 
-        target_url = f"{self._endpoint_url}/v1/asr/transcribe"
         payload = {"audio_url": audio_url, "language_locale": language_locale}
         response_data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_ASR_PATH,
             payload=payload,
             context_label=f"audio_hash={url_hash}",
         )
@@ -177,7 +176,7 @@ class LiveBhashiniService:
         if isinstance(transcript, str):
             return transcript
         raise ServiceResponsePayloadError(
-            f"Live Bhashini ASR response from {target_url} missing 'transcript' field.",
+            f"Live Bhashini ASR response from {_ASR_PATH} missing 'transcript' field.",
             service_name="bhashini",
         )
 
@@ -204,14 +203,13 @@ class LiveBhashiniService:
         if not text.strip():
             return ""
 
-        target_url = f"{self._endpoint_url}/v1/nmt/translate"
         payload = {
             "text": text,
             "source_locale": source_locale,
             "target_locale": target_locale,
         }
         response_data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_NMT_PATH,
             payload=payload,
             context_label=f"{source_locale}->{target_locale}",
         )
@@ -219,7 +217,7 @@ class LiveBhashiniService:
         if isinstance(translated_text, str):
             return translated_text
         raise ServiceResponsePayloadError(
-            f"Live Bhashini NMT response from {target_url} missing 'translated_text' field.",
+            f"Live Bhashini NMT response from {_NMT_PATH} missing 'translated_text' field.",
             service_name="bhashini",
         )
 
@@ -246,10 +244,9 @@ class LiveBhashiniService:
         if not text.strip():
             raise ValueError("Cannot synthesize empty response text into speech.")
 
-        target_url = f"{self._endpoint_url}/v1/tts/synthesize"
         payload = {"text": text, "language_locale": language_locale}
         response_data = await self._transport.post_json(
-            url=target_url,
+            path_or_url=_TTS_PATH,
             payload=payload,
             context_label=f"locale={language_locale}",
         )
@@ -257,7 +254,7 @@ class LiveBhashiniService:
         if isinstance(audio_url, str):
             return audio_url
         raise ServiceResponsePayloadError(
-            f"Live Bhashini TTS response from {target_url} missing 'audio_url' field.",
+            f"Live Bhashini TTS response from {_TTS_PATH} missing 'audio_url' field.",
             service_name="bhashini",
         )
 
