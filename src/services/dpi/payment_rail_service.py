@@ -81,19 +81,9 @@ class LivePaymentRailService:
         timeout_seconds: float = _DEFAULT_PAYMENT_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live payment rail client with mandatory credentials and transport."""
-        if not endpoint_url or not endpoint_url.strip():
-            raise ServiceConfigurationError(
-                "Live NPCI/PFMS payment rail endpoint URL is required.",
-                service_name="payment_rail",
-            )
-        if not api_key or not api_key.strip():
-            raise ServiceConfigurationError(
-                "Live NPCI/PFMS payment rail API key is required.",
-                service_name="payment_rail",
-            )
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=api_key.strip(),
+            api_key=api_key,
             config=ServiceTransportConfig(
                 service_name="payment_rail",
                 service_title="Payment rail",

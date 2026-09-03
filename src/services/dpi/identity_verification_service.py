@@ -70,19 +70,9 @@ class LiveIdentityVerificationService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live identity client with mandatory credentials and transport."""
-        if not endpoint_url or not endpoint_url.strip():
-            raise ServiceConfigurationError(
-                "Live MOSIP identity verification endpoint URL is required.",
-                service_name="mosip",
-            )
-        if not api_key or not api_key.strip():
-            raise ServiceConfigurationError(
-                "Live MOSIP identity verification API key is required.",
-                service_name="mosip",
-            )
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=api_key.strip(),
+            api_key=api_key,
             config=ServiceTransportConfig(
                 service_name="mosip",
                 service_title="MOSIP",

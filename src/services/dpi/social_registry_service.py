@@ -83,19 +83,9 @@ class LiveSocialRegistryService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live OpenSPP registry client with mandatory credentials and transport."""
-        if not endpoint_url or not endpoint_url.strip():
-            raise ServiceConfigurationError(
-                "Live OpenSPP social registry endpoint URL is required.",
-                service_name="openspp",
-            )
-        if not api_key or not api_key.strip():
-            raise ServiceConfigurationError(
-                "Live OpenSPP social registry API key is required.",
-                service_name="openspp",
-            )
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=api_key.strip(),
+            api_key=api_key,
             config=ServiceTransportConfig(
                 service_name="openspp",
                 service_title="OpenSPP",

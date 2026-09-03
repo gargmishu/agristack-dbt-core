@@ -68,6 +68,7 @@ async def test_service_http_transport_success() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     result = await transport.post_json(
         path="https://api.example.com/verify",
@@ -119,8 +120,37 @@ async def test_service_http_transport_relative_path_resolution() -> None:
     assert recorded_urls[-1] == "https://override.example.com/v2/action"
 
 
-@pytest.mark.asyncio
-async def test_service_http_transport_missing_base_url_error() -> None:
+def test_service_http_transport_missing_base_url_error() -> None:
+    client = httpx.AsyncClient()
+    with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
+        ServiceHttpTransport(
+            http_client=client,
+            api_key="secret_token",
+            config=ServiceTransportConfig(
+                service_name="test_svc",
+                service_title="Test Service",
+                timeout_seconds=2.0,
+            ),
+            base_url="",
+        )
+
+
+def test_service_http_transport_missing_api_key_error() -> None:
+    client = httpx.AsyncClient()
+    with pytest.raises(ServiceConfigurationError, match="API key is required"):
+        ServiceHttpTransport(
+            http_client=client,
+            api_key="",
+            config=ServiceTransportConfig(
+                service_name="test_svc",
+                service_title="Test Service",
+                timeout_seconds=2.0,
+            ),
+            base_url="https://api.test.gov.in",
+        )
+
+
+def test_service_http_transport_empty_path_error() -> None:
     client = httpx.AsyncClient()
     transport = ServiceHttpTransport(
         http_client=client,
@@ -130,13 +160,26 @@ async def test_service_http_transport_missing_base_url_error() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
-        base_url="",
+        base_url="https://api.test.gov.in",
     )
-    with pytest.raises(ServiceConfigurationError, match="without a configured base_url"):
-        await transport.post_json(
-            path="/v1/action",
-            payload={"foo": "bar"},
-        )
+    with pytest.raises(ServiceConfigurationError, match="path for Test Service cannot be empty"):
+        transport.resolve_url("   ")
+
+
+def test_service_http_transport_invalid_path_scheme_error() -> None:
+    client = httpx.AsyncClient()
+    transport = ServiceHttpTransport(
+        http_client=client,
+        api_key="secret_token",
+        config=ServiceTransportConfig(
+            service_name="test_svc",
+            service_title="Test Service",
+            timeout_seconds=2.0,
+        ),
+        base_url="https://api.test.gov.in",
+    )
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        transport.resolve_url("ftp://malicious.endpoint.gov.in/action")
 
 
 def test_service_http_transport_invalid_base_url_scheme() -> None:
@@ -168,6 +211,7 @@ async def test_service_http_transport_auth_failure() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     with pytest.raises(ServiceAuthenticationError, match="Test Service authentication failed"):
         await transport.post_json(
@@ -190,6 +234,7 @@ async def test_service_http_transport_client_error() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     with pytest.raises(ServiceRequestPayloadError, match="Invalid payload syntax"):
         await transport.post_json(
@@ -212,6 +257,7 @@ async def test_service_http_transport_server_error() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     with pytest.raises(ServiceUnavailableError, match="status=500"):
         await transport.post_json(
@@ -234,6 +280,7 @@ async def test_service_http_transport_network_error() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     with pytest.raises(ServiceUnavailableError, match="Connection refused"):
         await transport.post_json(
@@ -257,6 +304,7 @@ async def test_service_http_transport_invalid_json() -> None:
             service_title="Test Service",
             timeout_seconds=2.0,
         ),
+        base_url="https://api.example.com",
     )
     with pytest.raises(ServiceResponsePayloadError, match="violated schema"):
         await transport.post_json(
@@ -275,3 +323,48 @@ def test_service_transport_config_attributes() -> None:
     assert config.service_name == "agristack"
     assert config.service_title == "AgriStack"
     assert config.timeout_seconds == expected_timeout
+
+
+def test_service_transport_config_validation() -> None:
+    with pytest.raises(ServiceConfigurationError, match="Service name identifier is required"):
+        ServiceTransportConfig(
+            service_name="",
+            service_title="AgriStack",
+            timeout_seconds=3.0,
+        )
+
+    with pytest.raises(ServiceConfigurationError, match="Service title is required"):
+        ServiceTransportConfig(
+            service_name="agristack",
+            service_title="   ",
+            timeout_seconds=3.0,
+        )
+
+    with pytest.raises(ServiceConfigurationError, match="must be positive"):
+        ServiceTransportConfig(
+            service_name="agristack",
+            service_title="AgriStack",
+            timeout_seconds=0.0,
+        )
+
+
+@pytest.mark.asyncio
+async def test_service_http_transport_created_and_accepted_statuses() -> None:
+    for code in (201, 202):
+
+        def handler(request: httpx.Request, status_code: int = code) -> httpx.Response:
+            return httpx.Response(status_code, json={"status": "accepted_or_created"})
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        transport = ServiceHttpTransport(
+            http_client=client,
+            api_key="secret_token",
+            config=ServiceTransportConfig(
+                service_name="test_svc",
+                service_title="Test Service",
+                timeout_seconds=2.0,
+            ),
+            base_url="https://api.test.gov.in",
+        )
+        result = await transport.post_json(path="/v1/action", payload={"key": "val"})
+        assert result == {"status": "accepted_or_created"}

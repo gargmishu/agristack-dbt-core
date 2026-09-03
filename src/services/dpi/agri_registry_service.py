@@ -72,19 +72,9 @@ class LiveAgriRegistryService:
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live AgriStack registry client with mandatory credentials and transport."""
-        if not endpoint_url or not endpoint_url.strip():
-            raise ServiceConfigurationError(
-                "Live AgriStack registry endpoint URL is required.",
-                service_name="agristack",
-            )
-        if not api_key or not api_key.strip():
-            raise ServiceConfigurationError(
-                "Live AgriStack registry API key is required.",
-                service_name="agristack",
-            )
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=api_key.strip(),
+            api_key=api_key,
             config=ServiceTransportConfig(
                 service_name="agristack",
                 service_title="AgriStack",

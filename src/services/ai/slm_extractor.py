@@ -73,19 +73,9 @@ class LiveSlmExtractor:
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live SLM extractor with mandatory credentials and transport."""
-        if not endpoint_url or not endpoint_url.strip():
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM endpoint URL is required.",
-                service_name="sovereign_slm",
-            )
-        if not api_key or not api_key.strip():
-            raise ServiceConfigurationError(
-                "Live Sovereign SLM API key is required.",
-                service_name="sovereign_slm",
-            )
         self._transport = ServiceHttpTransport(
             http_client=http_client,
-            api_key=api_key.strip(),
+            api_key=api_key,
             config=ServiceTransportConfig(
                 service_name="sovereign_slm",
                 service_title="SLM extraction",

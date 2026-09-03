@@ -138,6 +138,23 @@ class ServiceTransportConfig:
     service_title: str
     timeout_seconds: float
 
+    def __post_init__(self) -> None:
+        if not self.service_name or not self.service_name.strip():
+            raise ServiceConfigurationError(
+                "Service name identifier is required.",
+                service_name="transport",
+            )
+        if not self.service_title or not self.service_title.strip():
+            raise ServiceConfigurationError(
+                "Service title is required.",
+                service_name=self.service_name,
+            )
+        if self.timeout_seconds <= 0.0:
+            raise ServiceConfigurationError(
+                f"Timeout for {self.service_title} must be positive, got {self.timeout_seconds}s.",
+                service_name=self.service_name,
+            )
+
 
 class ServiceHttpTransport:
     """Encapsulates authenticated HTTP transport and resilient JSON dispatch for a service."""
@@ -147,22 +164,29 @@ class ServiceHttpTransport:
         http_client: AsyncClient,
         api_key: str,
         config: ServiceTransportConfig,
-        base_url: str = "",
+        base_url: str,
     ) -> None:
-        if base_url:
-            clean_url = base_url.strip().rstrip("/")
-            if not clean_url.startswith(("http://", "https://")):
-                raise ServiceConfigurationError(
-                    f"Live {config.service_title} endpoint URL '{clean_url}' "
-                    "must start with 'http://' or 'https://'.",
-                    service_name=config.service_name,
-                )
-            self._base_url = clean_url
-        else:
-            self._base_url = ""
+        if not base_url or not base_url.strip():
+            raise ServiceConfigurationError(
+                f"Live {config.service_title} endpoint URL is required.",
+                service_name=config.service_name,
+            )
+        clean_url = base_url.strip().rstrip("/")
+        if not clean_url.startswith(("http://", "https://")):
+            raise ServiceConfigurationError(
+                f"Live {config.service_title} endpoint URL '{clean_url}' "
+                "must start with 'http://' or 'https://'.",
+                service_name=config.service_name,
+            )
+        if not api_key or not api_key.strip():
+            raise ServiceConfigurationError(
+                f"Live {config.service_title} API key is required.",
+                service_name=config.service_name,
+            )
         self._http_client = http_client
-        self._api_key = api_key
+        self._api_key = api_key.strip()
         self._config = config
+        self._base_url = clean_url
 
     @property
     def base_url(self) -> str:
@@ -171,14 +195,21 @@ class ServiceHttpTransport:
 
     def resolve_url(self, path: str) -> str:
         """Resolves target endpoint URL from a relative path or absolute URL."""
-        if path.startswith(("http://", "https://")):
-            return path
-        if not self._base_url:
+        clean_path = path.strip()
+        if not clean_path:
             raise ServiceConfigurationError(
-                f"Cannot resolve relative path '{path}' without a configured base_url.",
+                f"Endpoint path for {self._config.service_title} cannot be empty.",
                 service_name=self._config.service_name,
             )
-        return f"{self._base_url}/{path.lstrip('/')}"
+        if clean_path.startswith(("http://", "https://")):
+            return clean_path
+        if "://" in clean_path:
+            raise ServiceConfigurationError(
+                f"Live {self._config.service_title} endpoint path '{clean_path}' "
+                "must start with 'http://' or 'https://'.",
+                service_name=self._config.service_name,
+            )
+        return f"{self._base_url}/{clean_path.lstrip('/')}"
 
     async def post_json(
         self,
@@ -201,7 +232,7 @@ class ServiceHttpTransport:
             ServiceRequestPayloadError: If the service returns 400, 415, or 422 client error.
             ServiceResponsePayloadError: If the upstream response is not a valid JSON dictionary.
             ServiceUnavailableError: If the service fails, times out, or returns a 5xx error.
-            ServiceConfigurationError: If a relative path is passed without a configured base_url.
+            ServiceConfigurationError: If path or transport configuration is invalid.
         """
         url = self.resolve_url(path)
         headers = {
@@ -213,7 +244,11 @@ class ServiceHttpTransport:
             response = await self._http_client.post(
                 url, json=payload, headers=headers, timeout=self._config.timeout_seconds
             )
-            if response.status_code == HTTPStatus.OK:
+            if response.status_code in (
+                HTTPStatus.OK,
+                HTTPStatus.CREATED,
+                HTTPStatus.ACCEPTED,
+            ):
                 try:
                     result = response.json()
                     if isinstance(result, dict):
@@ -255,6 +290,7 @@ class ServiceHttpTransport:
 
         except (
             ServiceAuthenticationError,
+            ServiceConfigurationError,
             ServiceRequestPayloadError,
             ServiceResponsePayloadError,
             ServiceUnavailableError,
