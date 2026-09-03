@@ -36,6 +36,20 @@ This skill outlines language-level clean coding rules, naming conventions, objec
 ### 1.4 Constants and Private Module Variables
 * **Internal Constants**: Private constants and implementation details must use uppercase `SNAKE_CASE` prefixed with a leading underscore (e.g., `_SIGNATURE_PREFIX`, `_BEARER_PREFIX`, `_MAX_RETRY_COUNT`).
 * **Public Constants**: Exported configuration defaults, public policy mappings, and test fixtures may remain unprefixed `UPPER_SNAKE_CASE` when intentionally part of the public module surface.
+* **Standard Library Primitives Over Custom Constants**: Never define custom constants or magic integers for domains already standardized in the Python standard library.
+  * Specifically, always use `from http import HTTPStatus` (an `IntEnum`) for HTTP status codes rather than declaring module-level `_HTTP_STATUS_* = 200` or raw integer literals.
+  * **Incorrect**:
+    ```python
+    _HTTP_STATUS_OK: Final[int] = 200
+    _HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
+    if response.status_code == _HTTP_STATUS_OK: ...
+    ```
+  * **Correct**:
+    ```python
+    from http import HTTPStatus
+    if response.status_code == HTTPStatus.OK: ...
+    if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN): ...
+    ```
 
 ### 1.5 Module-to-Class Naming Symmetry
 * For operational components (gateways, connectors, routers, validators, and services), Python filenames in `snake_case` must strictly match their primary class name in `PascalCase`:
@@ -100,6 +114,10 @@ class ComponentService:
         """Internal private helper handling dispatching logic."""
         ...
 ```
+
+### 2.3 Cross-Module Structural Symmetry
+* **Tier-Wide Architectural Consistency**: Components belonging to the same architectural tier (e.g., all live service adapters in `src/services/ai/` and `src/services/dpi/`, or all channel edge connectors in `src/connectors/`) must adhere to identical internal layouts, private helper patterns, and error-handling abstractions.
+* **No Single-Method Complacency**: If an abstraction pattern (such as an extracted `_post_json` helper for HTTP transport) is established for one component in an architectural tier, all peer components in that tier must use the same pattern. Never inline repetitive transport or serialization mechanics just because a class currently has only one public endpoint.
 
 ---
 

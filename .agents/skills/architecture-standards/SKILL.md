@@ -120,6 +120,12 @@ src/
 ### 3.1 External Dependencies Isolation (`src/services/`)
 * **Strict Encapsulation**: Third-party APIs, sovereign foundational AI blocks, and government registry clients reside strictly in `src/services/ai/` and `src/services/dpi/`.
 * **No Leaking into Core Domain**: Layer 4 orchestrators and state machines interact with registries exclusively through service client interfaces.
+* **Service Adapter Transport Decoupling**:
+  * All live service adapters (`src/services/ai/`, `src/services/dpi/`) must strictly decouple domain workflow logic from low-level network transport.
+  * Public service methods must only handle domain-level concerns: validating domain input arguments, constructing the target endpoint URL, and validating domain response schemas against data contracts.
+  * Low-level network transport (HTTP headers, auth tokens, timeout enforcement, HTTP status-code branching, and raw JSON serialization/deserialization) must ALWAYS be encapsulated in private helper methods (`_post_json`, `_get_json`), placed at the bottom of the adapter class, regardless of whether the service has one endpoint or multiple.
+  * **Incorrect**: Inlining `await client.post(...)`, headers, and status code checks directly inside public domain methods like `verify_land_record(...)`.
+  * **Correct**: Public method delegates payload and endpoint to `await self._post_json(target_url, payload, ...)` and validates the resulting dictionary against domain models.
 
 ### 3.2 Categorized Domain Schema Namespacing (`src/data_models/`)
 * Subpackages within `data_models/` mirror functional lifecycle stages (`raw_ingress`, `public_agent`, `governance`, `caseworker`, `delivery`, `disbursement`).
