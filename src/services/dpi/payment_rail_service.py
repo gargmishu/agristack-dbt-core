@@ -19,7 +19,6 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 
 import logging
 from datetime import UTC, datetime
-from http import HTTPStatus
 from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
@@ -33,17 +32,18 @@ from src.data_models.common import DisbursementStatus
 from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.governance import GovernanceOutcomePayload
 from src.errors.service_errors import (
-    ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServiceRequestPayloadError,
     ServiceResponsePayloadError,
-    ServiceUnavailableError,
 )
 from src.services.dpi.dpi_mock_fixtures import (
     MOCK_PAYMENT_FAIL_TRIGGER,
     MOCK_PAYMENT_FAILURE_REASON,
 )
-from src.services.http_client_pool import get_shared_http_client
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
+    get_shared_http_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,15 @@ class LivePaymentRailService:
         self._api_key = api_key.strip()
         self._http_client = http_client
         self._timeout_seconds = timeout_seconds
+        self._transport = ServiceHttpTransport(
+            http_client=http_client,
+            api_key=self._api_key,
+            config=ServiceTransportConfig(
+                service_name="payment_rail",
+                service_title="Payment rail",
+                timeout_seconds=timeout_seconds,
+            ),
+        )
 
     @classmethod
     def from_env(
@@ -164,8 +173,10 @@ class LivePaymentRailService:
             "governance_action": outcome.governance_action.value,
         }
 
-        response_data = await self._post_json(
-            target_url, payload, txn_id=outcome.disbursement_txn_id
+        response_data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=outcome.disbursement_txn_id,
         )
         try:
             return DisbursementCallbackPayload.model_validate(response_data)
@@ -174,73 +185,6 @@ class LivePaymentRailService:
                 f"Live payment rail response from {target_url} violated schema: {err}",
                 service_name="payment_rail",
             ) from err
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Shared HTTP Transport)
-    # -------------------------------------------------------------------------
-
-    async def _post_json(
-        self, url: str, json_data: dict[str, Any], txn_id: str
-    ) -> dict[str, Any]:
-        """Executes resilient async POST request with timeout, authentication, and error typing."""
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
-        }
-
-        try:
-            response = await self._http_client.post(
-                url, json=json_data, headers=headers, timeout=self._timeout_seconds
-            )
-            if response.status_code == HTTPStatus.OK:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict):
-                        return result
-                except Exception as err:
-                    raise ServiceResponsePayloadError(
-                        f"Live payment rail response from {url} violated schema: {err}",
-                        service_name="payment_rail",
-                    ) from err
-                raise ServiceResponsePayloadError(
-                    f"Live payment rail returned non-dictionary JSON from {url}.",
-                    service_name="payment_rail",
-                )
-            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"Payment rail authentication failed with status={response.status_code}",
-                    service_name="payment_rail",
-                    status_code=response.status_code,
-                )
-            if response.status_code in (
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            ):
-                raise ServiceRequestPayloadError(
-                    f"Payment rail rejected disbursement payload with "
-                    f"status={response.status_code}: {response.text}",
-                    service_name="payment_rail",
-                    status_code=response.status_code,
-                )
-            raise ServiceUnavailableError(
-                f"Live payment rail call to {url} failed with "
-                f"status={response.status_code}: {response.text}",
-                service_name="payment_rail",
-                status_code=response.status_code,
-            )
-        except (
-            ServiceAuthenticationError,
-            ServiceRequestPayloadError,
-            ServiceResponsePayloadError,
-            ServiceUnavailableError,
-        ):
-            raise
-        except Exception as error:
-            logger.warning("Live payment call failed for txn=%s: %s", txn_id, error)
-            raise ServiceUnavailableError(
-                f"Live payment rail failed for txn '{txn_id}': {error}",
-                service_name="payment_rail",
-            ) from error
 
 
 class MockPaymentRailService:

@@ -20,8 +20,7 @@ See: decisions/step3.6_speech_and_translation_evaluation.md
 
 import hashlib
 import logging
-from http import HTTPStatus
-from typing import Any, Final, Protocol, Self
+from typing import Final, Protocol, Self
 
 from httpx import AsyncClient
 
@@ -31,11 +30,9 @@ from src.config.service_settings import (
     is_production,
 )
 from src.errors.service_errors import (
-    ServiceAuthenticationError,
     ServiceConfigurationError,
     ServiceRequestPayloadError,
     ServiceResponsePayloadError,
-    ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
     DEFAULT_NMT_FALLBACK_KEY,
@@ -45,7 +42,11 @@ from src.services.ai.ai_mock_fixtures import (
     MOCK_STREAM_ERROR_KEYWORDS,
     MOCK_TTS_URL_TEMPLATE,
 )
-from src.services.http_client_pool import get_shared_http_client
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
+    get_shared_http_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,15 @@ class LiveBhashiniService:
         self._api_key = api_key.strip()
         self._http_client = http_client
         self._timeout_seconds = timeout_seconds
+        self._transport = ServiceHttpTransport(
+            http_client=http_client,
+            api_key=self._api_key,
+            config=ServiceTransportConfig(
+                service_name="bhashini",
+                service_title="Bhashini",
+                timeout_seconds=timeout_seconds,
+            ),
+        )
 
     @classmethod
     def from_env(
@@ -158,7 +168,11 @@ class LiveBhashiniService:
 
         target_url = f"{self._endpoint_url}/v1/asr/transcribe"
         payload = {"audio_url": audio_url, "language_locale": language_locale}
-        response_data = await self._post_json(target_url, payload)
+        response_data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=f"audio_hash={url_hash}",
+        )
         transcript = response_data.get("transcript")
         if isinstance(transcript, str):
             return transcript
@@ -196,7 +210,11 @@ class LiveBhashiniService:
             "source_locale": source_locale,
             "target_locale": target_locale,
         }
-        response_data = await self._post_json(target_url, payload)
+        response_data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=f"{source_locale}->{target_locale}",
+        )
         translated_text = response_data.get("translated_text")
         if isinstance(translated_text, str):
             return translated_text
@@ -230,7 +248,11 @@ class LiveBhashiniService:
 
         target_url = f"{self._endpoint_url}/v1/tts/synthesize"
         payload = {"text": text, "language_locale": language_locale}
-        response_data = await self._post_json(target_url, payload)
+        response_data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=f"locale={language_locale}",
+        )
         audio_url = response_data.get("audio_url")
         if isinstance(audio_url, str):
             return audio_url
@@ -238,72 +260,6 @@ class LiveBhashiniService:
             f"Live Bhashini TTS response from {target_url} missing 'audio_url' field.",
             service_name="bhashini",
         )
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Shared HTTP Transport)
-    # -------------------------------------------------------------------------
-
-    async def _post_json(self, url: str, json_data: dict[str, Any]) -> dict[str, Any]:
-        """Executes resilient async POST request with timeout, authentication, and error typing."""
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
-        }
-
-        try:
-            response = await self._http_client.post(
-                url, json=json_data, headers=headers, timeout=self._timeout_seconds
-            )
-            if response.status_code == HTTPStatus.OK:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict):
-                        return result
-                except Exception as err:
-                    raise ServiceResponsePayloadError(
-                        f"Live Bhashini API at {url} returned malformed JSON: {err}",
-                        service_name="bhashini",
-                    ) from err
-                raise ServiceResponsePayloadError(
-                    f"Live Bhashini API at {url} returned non-dictionary JSON payload.",
-                    service_name="bhashini",
-                )
-            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"Bhashini authentication failed with status={response.status_code}",
-                    service_name="bhashini",
-                    status_code=response.status_code,
-                )
-            if response.status_code in (
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.UNSUPPORTED_MEDIA_TYPE,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            ):
-                raise ServiceRequestPayloadError(
-                    f"Live Bhashini rejected audio/text payload with "
-                    f"status={response.status_code}: {response.text}",
-                    service_name="bhashini",
-                    status_code=response.status_code,
-                )
-            raise ServiceUnavailableError(
-                f"Live Bhashini service call to {url} failed with "
-                f"status={response.status_code}: {response.text}",
-                service_name="bhashini",
-                status_code=response.status_code,
-            )
-        except (
-            ServiceAuthenticationError,
-            ServiceRequestPayloadError,
-            ServiceResponsePayloadError,
-            ServiceUnavailableError,
-        ):
-            raise
-        except Exception as error:
-            logger.warning("Live service call to %s failed: %s", url, error)
-            raise ServiceUnavailableError(
-                f"Live Bhashini API call to {url} failed: {error}",
-                service_name="bhashini",
-            ) from error
 
 
 class MockBhashiniService:

@@ -128,7 +128,7 @@ async def test_live_agri_registry_fail_closed_on_auth_failure() -> None:
         api_key="invalid_key",
         http_client=client,
     )
-    with pytest.raises(ServiceAuthenticationError, match="AgriStack verification failed"):
+    with pytest.raises(ServiceAuthenticationError, match="AgriStack authentication failed"):
         await service.verify_land_record("a" * 64, "LAND-REC-1002")
 
 

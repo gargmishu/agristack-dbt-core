@@ -17,7 +17,6 @@ See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 
 import logging
-from http import HTTPStatus
 from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
@@ -29,17 +28,18 @@ from src.config.service_settings import (
 )
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.errors.service_errors import (
-    ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServiceRequestPayloadError,
     ServiceResponsePayloadError,
-    ServiceUnavailableError,
 )
 from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
-from src.services.http_client_pool import get_shared_http_client
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
+    get_shared_http_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,15 @@ class LiveSocialRegistryService:
         self._api_key = api_key.strip()
         self._http_client = http_client
         self._timeout_seconds = timeout_seconds
+        self._transport = ServiceHttpTransport(
+            http_client=http_client,
+            api_key=self._api_key,
+            config=ServiceTransportConfig(
+                service_name="openspp",
+                service_title="OpenSPP",
+                timeout_seconds=timeout_seconds,
+            ),
+        )
 
     @classmethod
     def from_env(
@@ -173,7 +182,11 @@ class LiveSocialRegistryService:
             "scheme_id": scheme_id,
         }
 
-        data = await self._post_json(target_url, payload, scheme_id=scheme_id)
+        data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=scheme_id,
+        )
         if "is_eligible" in data:
             return bool(data["is_eligible"])
 
@@ -181,73 +194,6 @@ class LiveSocialRegistryService:
             f"Live OpenSPP registry returned invalid schema from {target_url}.",
             service_name="openspp",
         )
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Shared HTTP Transport)
-    # -------------------------------------------------------------------------
-
-    async def _post_json(
-        self, url: str, json_data: dict[str, Any], scheme_id: str
-    ) -> dict[str, Any]:
-        """Executes resilient async POST request with timeout, authentication, and error typing."""
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
-        }
-
-        try:
-            response = await self._http_client.post(
-                url, json=json_data, headers=headers, timeout=self._timeout_seconds
-            )
-            if response.status_code == HTTPStatus.OK:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict):
-                        return result
-                except Exception as err:
-                    raise ServiceResponsePayloadError(
-                        f"Live OpenSPP registry response from {url} violated schema: {err}",
-                        service_name="openspp",
-                    ) from err
-                raise ServiceResponsePayloadError(
-                    f"Live OpenSPP registry returned non-dictionary JSON from {url}.",
-                    service_name="openspp",
-                )
-            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"OpenSPP authentication failed with status={response.status_code}",
-                    service_name="openspp",
-                    status_code=response.status_code,
-                )
-            if response.status_code in (
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            ):
-                raise ServiceRequestPayloadError(
-                    f"OpenSPP rejected eligibility query with "
-                    f"status={response.status_code}: {response.text}",
-                    service_name="openspp",
-                    status_code=response.status_code,
-                )
-            raise ServiceUnavailableError(
-                f"Live OpenSPP call to {url} failed with "
-                f"status={response.status_code}: {response.text}",
-                service_name="openspp",
-                status_code=response.status_code,
-            )
-        except (
-            ServiceAuthenticationError,
-            ServiceRequestPayloadError,
-            ServiceResponsePayloadError,
-            ServiceUnavailableError,
-        ):
-            raise
-        except Exception as error:
-            logger.warning("Live social registry call failed for scheme=%s: %s", scheme_id, error)
-            raise ServiceUnavailableError(
-                f"Live OpenSPP registry call failed for scheme '{scheme_id}': {error}",
-                service_name="openspp",
-            ) from error
 
 
 class MockSocialRegistryService:

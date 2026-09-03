@@ -15,7 +15,6 @@ See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 
 import logging
-from http import HTTPStatus
 from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
@@ -26,11 +25,8 @@ from src.config.service_settings import (
     is_production,
 )
 from src.errors.service_errors import (
-    ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServiceRequestPayloadError,
     ServiceResponsePayloadError,
-    ServiceUnavailableError,
 )
 from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
@@ -39,7 +35,11 @@ from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
-from src.services.http_client_pool import get_shared_http_client
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
+    get_shared_http_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +85,15 @@ class LiveAgriRegistryService:
         self._api_key = api_key.strip()
         self._http_client = http_client
         self._timeout_seconds = timeout_seconds
+        self._transport = ServiceHttpTransport(
+            http_client=http_client,
+            api_key=self._api_key,
+            config=ServiceTransportConfig(
+                service_name="agristack",
+                service_title="AgriStack",
+                timeout_seconds=timeout_seconds,
+            ),
+        )
 
     @classmethod
     def from_env(
@@ -146,7 +155,11 @@ class LiveAgriRegistryService:
             "land_record_id": land_record_id,
         }
 
-        data = await self._post_json(target_url, payload, record_id=land_record_id)
+        data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=land_record_id,
+        )
         if "is_entitled" in data:
             return bool(data["is_entitled"])
 
@@ -154,73 +167,6 @@ class LiveAgriRegistryService:
             f"Live AgriStack verification returned invalid schema from {target_url}.",
             service_name="agristack",
         )
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Shared HTTP Transport)
-    # -------------------------------------------------------------------------
-
-    async def _post_json(
-        self, url: str, json_data: dict[str, Any], record_id: str
-    ) -> dict[str, Any]:
-        """Executes resilient async POST request with timeout, authentication, and error typing."""
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
-        }
-
-        try:
-            response = await self._http_client.post(
-                url, json=json_data, headers=headers, timeout=self._timeout_seconds
-            )
-            if response.status_code == HTTPStatus.OK:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict):
-                        return result
-                except Exception as err:
-                    raise ServiceResponsePayloadError(
-                        f"Live AgriStack verification response from {url} violated schema: {err}",
-                        service_name="agristack",
-                    ) from err
-                raise ServiceResponsePayloadError(
-                    f"Live AgriStack verification returned non-dictionary JSON from {url}.",
-                    service_name="agristack",
-                )
-            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"AgriStack verification failed with status={response.status_code}",
-                    service_name="agristack",
-                    status_code=response.status_code,
-                )
-            if response.status_code in (
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            ):
-                raise ServiceRequestPayloadError(
-                    f"AgriStack rejected land record query with "
-                    f"status={response.status_code}: {response.text}",
-                    service_name="agristack",
-                    status_code=response.status_code,
-                )
-            raise ServiceUnavailableError(
-                f"Live AgriStack call to {url} failed with "
-                f"status={response.status_code}: {response.text}",
-                service_name="agristack",
-                status_code=response.status_code,
-            )
-        except (
-            ServiceAuthenticationError,
-            ServiceRequestPayloadError,
-            ServiceResponsePayloadError,
-            ServiceUnavailableError,
-        ):
-            raise
-        except Exception as error:
-            logger.warning("Live cadastral call failed for record=%s: %s", record_id, error)
-            raise ServiceUnavailableError(
-                f"Live AgriStack call failed for record '{record_id}': {error}",
-                service_name="agristack",
-            ) from error
 
 
 class MockAgriRegistryService:

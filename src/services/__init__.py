@@ -28,10 +28,13 @@ from src.services.dpi import (
     create_payment_rail_service,
     create_social_registry_service,
 )
-from src.services.http_client_pool import (
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
     close_shared_http_client,
     get_shared_http_client,
     http_client_lifespan,
+    is_shared_http_client_initialized,
 )
 
 __all__ = [
@@ -51,6 +54,8 @@ __all__ = [
     "MockSlmExtractor",
     "MockSocialRegistryService",
     "PaymentRailService",
+    "ServiceHttpTransport",
+    "ServiceTransportConfig",
     "SlmExtractor",
     "SocialRegistryService",
     "close_shared_http_client",
@@ -62,4 +67,5 @@ __all__ = [
     "create_social_registry_service",
     "get_shared_http_client",
     "http_client_lifespan",
+    "is_shared_http_client_initialized",
 ]

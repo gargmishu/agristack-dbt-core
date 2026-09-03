@@ -96,7 +96,7 @@ async def test_live_identity_verification_fail_closed_on_auth_failure() -> None:
         api_key="invalid_key",
         http_client=client,
     )
-    with pytest.raises(ServiceAuthenticationError, match="MOSIP verification failed"):
+    with pytest.raises(ServiceAuthenticationError, match="MOSIP authentication failed"):
         await service.verify_identity_token("a" * 64)
 
 

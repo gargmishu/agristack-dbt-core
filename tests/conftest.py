@@ -6,7 +6,10 @@ from collections.abc import Generator
 
 import pytest
 
-from src.services.http_client_pool import HttpClientPool, close_shared_http_client
+from src.services.http_transport import (
+    close_shared_http_client,
+    is_shared_http_client_initialized,
+)
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -31,7 +34,7 @@ def auto_cleanup_shared_http_client(
 ) -> Generator[None, None, None]:
     """Automatically cleans up the shared HTTP client pool after each test."""
     yield
-    if HttpClientPool._instance is not None:
+    if is_shared_http_client_initialized():
         event_loop.run_until_complete(close_shared_http_client())
 
 

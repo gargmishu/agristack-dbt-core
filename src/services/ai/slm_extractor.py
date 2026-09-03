@@ -13,8 +13,7 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
 import logging
-from http import HTTPStatus
-from typing import Any, Final, Protocol, Self
+from typing import Final, Protocol, Self
 
 from httpx import AsyncClient
 
@@ -25,11 +24,8 @@ from src.config.service_settings import (
 )
 from src.data_models.governance import ExtractedEntityPayload
 from src.errors.service_errors import (
-    ServiceAuthenticationError,
     ServiceConfigurationError,
-    ServiceRequestPayloadError,
     ServiceResponsePayloadError,
-    ServiceUnavailableError,
 )
 from src.services.ai.ai_mock_fixtures import (
     ADVERSARIAL_INJECTION_KEYWORDS,
@@ -38,7 +34,11 @@ from src.services.ai.ai_mock_fixtures import (
     STATUS_CHECK_KEYWORDS,
     SUBSIDY_CLAIM_KEYWORDS,
 )
-from src.services.http_client_pool import get_shared_http_client
+from src.services.http_transport import (
+    ServiceHttpTransport,
+    ServiceTransportConfig,
+    get_shared_http_client,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,15 @@ class LiveSlmExtractor:
         self._api_key = api_key.strip()
         self._http_client = http_client
         self._timeout_seconds = timeout_seconds
+        self._transport = ServiceHttpTransport(
+            http_client=http_client,
+            api_key=self._api_key,
+            config=ServiceTransportConfig(
+                service_name="sovereign_slm",
+                service_title="SLM extraction",
+                timeout_seconds=timeout_seconds,
+            ),
+        )
 
     @classmethod
     def from_env(
@@ -153,7 +162,11 @@ class LiveSlmExtractor:
             "language_locale": language_locale,
         }
 
-        response_data = await self._post_json(target_url, payload, session_id=session_id)
+        response_data = await self._transport.post_json(
+            url=target_url,
+            payload=payload,
+            context_label=f"session_id={session_id}",
+        )
         try:
             return ExtractedEntityPayload.model_validate(response_data)
         except Exception as err:
@@ -161,72 +174,6 @@ class LiveSlmExtractor:
                 f"Live SLM extraction response from {target_url} violated schema: {err}",
                 service_name="sovereign_slm",
             ) from err
-
-    # -------------------------------------------------------------------------
-    # Private Helpers (Shared HTTP Transport)
-    # -------------------------------------------------------------------------
-
-    async def _post_json(
-        self, url: str, json_data: dict[str, Any], session_id: str
-    ) -> dict[str, Any]:
-        """Executes resilient async POST request with timeout, authentication, and error typing."""
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
-        }
-
-        try:
-            response = await self._http_client.post(
-                url, json=json_data, headers=headers, timeout=self._timeout_seconds
-            )
-            if response.status_code == HTTPStatus.OK:
-                try:
-                    result = response.json()
-                    if isinstance(result, dict):
-                        return result
-                except Exception as err:
-                    raise ServiceResponsePayloadError(
-                        f"Live SLM extraction response from {url} violated schema: {err}",
-                        service_name="sovereign_slm",
-                    ) from err
-                raise ServiceResponsePayloadError(
-                    f"Live SLM extraction returned non-dictionary JSON from {url}.",
-                    service_name="sovereign_slm",
-                )
-            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
-                raise ServiceAuthenticationError(
-                    f"SLM extraction authentication failed with status={response.status_code}",
-                    service_name="sovereign_slm",
-                    status_code=response.status_code,
-                )
-            if response.status_code in (
-                HTTPStatus.BAD_REQUEST,
-                HTTPStatus.UNPROCESSABLE_ENTITY,
-            ):
-                raise ServiceRequestPayloadError(
-                    f"SLM rejected extraction payload with "
-                    f"status={response.status_code}: {response.text}",
-                    service_name="sovereign_slm",
-                    status_code=response.status_code,
-                )
-            raise ServiceUnavailableError(
-                f"Live SLM extraction failed with status={response.status_code}: {response.text}",
-                service_name="sovereign_slm",
-                status_code=response.status_code,
-            )
-        except (
-            ServiceAuthenticationError,
-            ServiceRequestPayloadError,
-            ServiceResponsePayloadError,
-            ServiceUnavailableError,
-        ):
-            raise
-        except Exception as error:
-            logger.warning("Live SLM extraction call failed for session=%s: %s", session_id, error)
-            raise ServiceUnavailableError(
-                f"Live SLM extraction failed for session '{session_id}': {error}",
-                service_name="sovereign_slm",
-            ) from error
 
 
 class MockSlmExtractor:
