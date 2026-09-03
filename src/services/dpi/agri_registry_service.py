@@ -15,6 +15,7 @@ See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 
 import logging
+from http import HTTPStatus
 from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
@@ -43,11 +44,6 @@ from src.services.http_client_pool import get_shared_http_client
 logger = logging.getLogger(__name__)
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
-_HTTP_STATUS_OK: Final[int] = 200
-_HTTP_STATUS_BAD_REQUEST: Final[int] = 400
-_HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
-_HTTP_STATUS_FORBIDDEN: Final[int] = 403
-_HTTP_STATUS_UNPROCESSABLE_ENTITY: Final[int] = 422
 
 
 class AgriRegistryService(Protocol):
@@ -176,7 +172,7 @@ class LiveAgriRegistryService:
             response = await self._http_client.post(
                 url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
-            if response.status_code == _HTTP_STATUS_OK:
+            if response.status_code == HTTPStatus.OK:
                 try:
                     result = response.json()
                     if isinstance(result, dict):
@@ -190,15 +186,15 @@ class LiveAgriRegistryService:
                     f"Live AgriStack verification returned non-dictionary JSON from {url}.",
                     service_name="agristack",
                 )
-            if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
+            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise ServiceAuthenticationError(
                     f"AgriStack verification failed with status={response.status_code}",
                     service_name="agristack",
                     status_code=response.status_code,
                 )
             if response.status_code in (
-                _HTTP_STATUS_BAD_REQUEST,
-                _HTTP_STATUS_UNPROCESSABLE_ENTITY,
+                HTTPStatus.BAD_REQUEST,
+                HTTPStatus.UNPROCESSABLE_ENTITY,
             ):
                 raise ServiceRequestPayloadError(
                     f"AgriStack rejected land record query with "

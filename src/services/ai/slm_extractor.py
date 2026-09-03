@@ -13,6 +13,7 @@ See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 
 import logging
+from http import HTTPStatus
 from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
@@ -42,11 +43,6 @@ from src.services.http_client_pool import get_shared_http_client
 logger = logging.getLogger(__name__)
 
 _DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
-_HTTP_STATUS_OK: Final[int] = 200
-_HTTP_STATUS_BAD_REQUEST: Final[int] = 400
-_HTTP_STATUS_UNAUTHORIZED: Final[int] = 401
-_HTTP_STATUS_FORBIDDEN: Final[int] = 403
-_HTTP_STATUS_UNPROCESSABLE_ENTITY: Final[int] = 422
 
 
 class SlmExtractor(Protocol):
@@ -183,7 +179,7 @@ class LiveSlmExtractor:
             response = await self._http_client.post(
                 url, json=json_data, headers=headers, timeout=self._timeout_seconds
             )
-            if response.status_code == _HTTP_STATUS_OK:
+            if response.status_code == HTTPStatus.OK:
                 try:
                     result = response.json()
                     if isinstance(result, dict):
@@ -197,15 +193,15 @@ class LiveSlmExtractor:
                     f"Live SLM extraction returned non-dictionary JSON from {url}.",
                     service_name="sovereign_slm",
                 )
-            if response.status_code in (_HTTP_STATUS_UNAUTHORIZED, _HTTP_STATUS_FORBIDDEN):
+            if response.status_code in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 raise ServiceAuthenticationError(
                     f"SLM extraction authentication failed with status={response.status_code}",
                     service_name="sovereign_slm",
                     status_code=response.status_code,
                 )
             if response.status_code in (
-                _HTTP_STATUS_BAD_REQUEST,
-                _HTTP_STATUS_UNPROCESSABLE_ENTITY,
+                HTTPStatus.BAD_REQUEST,
+                HTTPStatus.UNPROCESSABLE_ENTITY,
             ):
                 raise ServiceRequestPayloadError(
                     f"SLM rejected extraction payload with "
