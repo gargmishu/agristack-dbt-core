@@ -74,6 +74,7 @@ async def test_mock_social_registry_query_beneficiary_eligibility() -> None:
 async def test_live_social_registry_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer openspp_key"
+        assert str(request.url) == "https://openspp.gov.in/v1/social/eligibility"
         return httpx.Response(200, json={"is_eligible": True, "scheme_id": "PM_KISAN"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -103,6 +104,11 @@ async def test_live_social_registry_constructor_validation() -> None:
     client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
         LiveSocialRegistryService(endpoint_url="", api_key="valid_key", http_client=client)
+
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        LiveSocialRegistryService(
+            endpoint_url="openspp.gov.in", api_key="valid_key", http_client=client
+        )
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
         LiveSocialRegistryService(

@@ -95,6 +95,7 @@ async def test_mock_slm_extractor_fallback_rule() -> None:
 async def test_live_slm_extractor_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer slm_secret_token"
+        assert str(request.url) == "https://slm.sovereign.gov.in/v1/extract"
         return httpx.Response(
             200,
             json={
@@ -125,6 +126,9 @@ async def test_live_slm_extractor_constructor_validation() -> None:
     client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
         LiveSlmExtractor(endpoint_url="", api_key="valid_key", http_client=client)
+
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        LiveSlmExtractor(endpoint_url="slm.gov.in", api_key="valid_key", http_client=client)
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
         LiveSlmExtractor(endpoint_url="https://slm.gov.in", api_key="", http_client=client)

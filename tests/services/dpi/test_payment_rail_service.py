@@ -84,6 +84,7 @@ async def test_mock_payment_rail_skips_when_txn_id_is_none() -> None:
 async def test_live_payment_rail_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer pfms_token"
+        assert str(request.url) == "https://pfms.gov.in/v1/payments/disburse"
         return httpx.Response(
             200,
             json={
@@ -144,6 +145,9 @@ async def test_live_payment_rail_constructor_validation() -> None:
     client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
         LivePaymentRailService(endpoint_url="", api_key="valid_key", http_client=client)
+
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        LivePaymentRailService(endpoint_url="pfms.gov.in", api_key="valid_key", http_client=client)
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
         LivePaymentRailService(endpoint_url="https://pfms.gov.in", api_key="", http_client=client)

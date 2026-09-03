@@ -46,6 +46,7 @@ async def test_mock_identity_verification_reject_unverified_prefix() -> None:
 async def test_live_identity_verification_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer mosip_token"
+        assert str(request.url) == "https://mosip.gov.in/v1/identity/verify"
         return httpx.Response(200, json={"is_verified": True})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -63,6 +64,11 @@ async def test_live_identity_verification_constructor_validation() -> None:
     client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
         LiveIdentityVerificationService(endpoint_url="", api_key="valid_key", http_client=client)
+
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        LiveIdentityVerificationService(
+            endpoint_url="mosip.gov.in", api_key="valid_key", http_client=client
+        )
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
         LiveIdentityVerificationService(

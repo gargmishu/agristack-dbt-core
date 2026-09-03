@@ -98,6 +98,7 @@ async def test_live_bhashini_service_endpoints_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         url_str = str(request.url)
         assert request.headers.get("Authorization") == "Bearer test_secret_key"
+        assert url_str.startswith("https://api.bhashini.gov.in/v1/")
         if "/v1/asr/transcribe" in url_str:
             return httpx.Response(200, json={"transcript": "Live transcribed Hindi speech"})
         if "/v1/nmt/translate" in url_str:
@@ -143,6 +144,11 @@ async def test_live_bhashini_service_constructor_validation() -> None:
     client = httpx.AsyncClient()
     with pytest.raises(ServiceConfigurationError, match="endpoint URL is required"):
         LiveBhashiniService(endpoint_url="", api_key="valid_key", http_client=client)
+
+    with pytest.raises(ServiceConfigurationError, match="must start with 'http://' or 'https://'"):
+        LiveBhashiniService(
+            endpoint_url="api.bhashini.gov.in", api_key="valid_key", http_client=client
+        )
 
     with pytest.raises(ServiceConfigurationError, match="API key is required"):
         LiveBhashiniService(
