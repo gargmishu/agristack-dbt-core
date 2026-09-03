@@ -115,9 +115,10 @@ class ComponentService:
         ...
 ```
 
-### 2.3 Cross-Module Structural Symmetry
-* **Tier-Wide Architectural Consistency**: Components belonging to the same architectural tier (e.g., all live service adapters in `src/services/ai/` and `src/services/dpi/`, or all channel edge connectors in `src/connectors/`) must adhere to identical internal layouts, private helper patterns, and error-handling abstractions.
-* **No Single-Method Complacency**: If an abstraction pattern (such as an extracted `_post_json` helper for HTTP transport) is established for one component in an architectural tier, all peer components in that tier must use the same pattern. Never inline repetitive transport or serialization mechanics just because a class currently has only one public endpoint.
+### 2.3 Cross-Module Structural Symmetry & Shared Infrastructure
+* **Tier-Wide Architectural Consistency**: Components belonging to the same architectural tier (e.g., all live service adapters in `src/services/ai/` and `src/services/dpi/`, or all channel edge connectors in `src/connectors/`) must adhere to identical internal layouts, protocol contracts, and error-handling abstractions.
+* **Rule of Two for Cross-Cutting Infrastructure**: If identical low-level mechanics (e.g., HTTP transport dispatch, status-code triage, token injection, payload serialization, or retry policies) appear across 2 or more classes in an architectural tier, **NEVER duplicate private helper methods (`_post_json`, `_dispatch_http`) across those classes**. Extract a dedicated shared collaborator/transport component (e.g. `ServiceHttpTransport` in `src/services/http_transport.py`) and compose it.
+* **No Workaround Knobs in Common Abstractions**: When centralizing common logic into a shared component, resolve legacy semantic inconsistencies at the source (e.g., standardizing error messages across tests, consolidating redundant fields like `service_name`/`service_title`). Never pollute a shared abstraction with parameters or configuration flags purely to appease historical test wording or avoid modifying test assertions.
 
 ---
 
