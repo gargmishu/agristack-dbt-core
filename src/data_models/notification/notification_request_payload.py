@@ -14,6 +14,8 @@ from src.data_models.common import (
     StrictBaseModel,
 )
 
+__all__ = ["NotificationRequestPayload"]
+
 
 class NotificationRequestPayload(StrictBaseModel):
     """Data model representing a request to generate and dispatch an outbound notification.

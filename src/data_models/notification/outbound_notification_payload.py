@@ -15,6 +15,11 @@ from src.data_models.common import (
 # GSM 7-bit SS7/SIGTRAN maximum plain text character ceiling for USSD menus
 MAX_USSD_CHARACTERS = 160
 
+__all__ = [
+    "MAX_USSD_CHARACTERS",
+    "OutboundNotificationPayload",
+]
+
 
 class OutboundNotificationPayload(StrictBaseModel):
     """Data model representing a channel-adapted outbound notification message.

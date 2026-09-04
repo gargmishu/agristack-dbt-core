@@ -12,6 +12,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["TransmissionAck"]
+
 
 class TransmissionAck(StrictBaseModel):
     """Data model representing an authoritative carrier transmission wire receipt.

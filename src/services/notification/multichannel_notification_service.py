@@ -35,6 +35,8 @@ from src.services.ai.bhashini_service import BhashiniService, create_bhashini_se
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["MultichannelNotificationService"]
+
 _HINDI_ENTITY_LABELS: Final[dict[DomainEntityKey, str]] = {
     DomainEntityKey.DISTRICT: "zila",
     DomainEntityKey.TALUKA: "taluka ya tehsil",

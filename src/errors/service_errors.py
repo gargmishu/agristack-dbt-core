@@ -63,10 +63,10 @@ class ServiceIntegrationError(Exception):
         """Derives kebab-case slug from class name."""
         name = self.__class__.__name__
         slug = ""
-        for i, char in enumerate(name):
-            if char.isupper() and i > 0:
+        for index, character in enumerate(name):
+            if character.isupper() and index > 0:
                 slug += "-"
-            slug += char.lower()
+            slug += character.lower()
         return slug
 
     def _error_title(self) -> str:

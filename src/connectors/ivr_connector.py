@@ -18,6 +18,8 @@ from src.data_models.raw_ingress import IvrIngressPayload
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["IvrConnector"]
+
 
 class IvrConnector:
     """Telephony edge connector interfacing with SIP and Private Branch Exchange (PBX) gateways.

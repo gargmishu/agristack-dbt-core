@@ -21,6 +21,8 @@ from src.data_models.raw_ingress import UssdIngressPayload
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["UssdConnector"]
+
 
 class UssdConnector:
     """Cellular signaling edge connector interfacing with SS7/SIGTRAN USSD gateways.

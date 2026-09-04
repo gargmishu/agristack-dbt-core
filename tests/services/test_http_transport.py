@@ -1,5 +1,6 @@
 """Unit tests for the persistent shared HTTP client connection pool and transport."""
 
+import asyncio
 from http import HTTPStatus
 
 import httpx
@@ -15,6 +16,7 @@ from src.errors.service_errors import (
 from src.services.http_transport import (
     ServiceHttpTransport,
     ServiceTransportConfig,
+    _sync_close_client,
     close_shared_http_client,
     get_shared_http_client,
     http_client_lifespan,
@@ -354,7 +356,7 @@ def test_service_transport_config_validation() -> None:
 async def test_service_http_transport_created_and_accepted_statuses() -> None:
     for code in (HTTPStatus.CREATED, HTTPStatus.ACCEPTED):
 
-        def handler(request: httpx.Request, status_code: int = code) -> httpx.Response:
+        def handler(request: httpx.Request, status_code: HTTPStatus = code) -> httpx.Response:
             return httpx.Response(status_code, json={"status": "accepted_or_created"})
 
         client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
@@ -370,3 +372,26 @@ async def test_service_http_transport_created_and_accepted_statuses() -> None:
         )
         result = await transport.post_json(path="/v1/action", payload={"key": "val"})
         assert result == {"status": "accepted_or_created"}
+
+
+@pytest.mark.asyncio
+async def test_sync_close_client_with_running_loop() -> None:
+    client = get_shared_http_client()
+    assert is_shared_http_client_initialized()
+    _sync_close_client()
+    assert not is_shared_http_client_initialized()
+    await asyncio.sleep(0.01)
+    assert client.is_closed
+
+
+def test_sync_close_client_without_running_loop() -> None:
+    client = get_shared_http_client()
+    assert is_shared_http_client_initialized()
+    _sync_close_client()
+    assert not is_shared_http_client_initialized()
+    assert client.is_closed
+
+
+def test_sync_close_client_noop_when_uninitialized() -> None:
+    _sync_close_client()
+    assert not is_shared_http_client_initialized()

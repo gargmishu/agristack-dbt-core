@@ -19,6 +19,8 @@ from src.data_models.raw_ingress import WhatsAppIngressPayload
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["WhatsAppConnector"]
+
 
 class WhatsAppConnector:
     """Messaging edge connector interfacing with Meta WhatsApp Cloud API and BSP webhooks.

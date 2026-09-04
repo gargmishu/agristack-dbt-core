@@ -18,6 +18,8 @@ from src.data_models.raw_ingress import SmsIngressPayload
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["SmsConnector"]
+
 
 class SmsConnector:
     """Telecommunication edge connector interfacing with SMS gateways and webhook endpoints.

@@ -121,11 +121,15 @@ def _sync_close_client() -> None:
         _pool_state.client = None
         if not client.is_closed:
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop is not None and loop.is_running():
                     loop.create_task(client.aclose())
                 else:
-                    loop.run_until_complete(client.aclose())
+                    asyncio.run(client.aclose())
             except Exception as error:
                 logger.debug("Failed to gracefully close HTTP client at process exit: %s", error)
 
