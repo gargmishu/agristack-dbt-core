@@ -69,4 +69,3 @@ The Confirmation Delivery engine receives final governance determination outcome
 
 1. **Zero-PII Outbound Invariant:** Outbound receipts reference only the `session_id`, `disbursement_txn_id`, or `escalation_case_id`. Unhashed citizen names, Aadhaar numbers, and bank account numbers are strictly omitted from confirmation strings.
 2. **Idempotent Dispatch:** Dispatches are keyed by `session_id` to ensure at-most-once outbound messaging per state transition.
-

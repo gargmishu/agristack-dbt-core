@@ -31,7 +31,7 @@ sequenceDiagram
 
     %% Step 3: Layer 3 Public Agent Gateway & Entity Extraction
     L1->>L3: Submit Standardized Intake Contract
-    
+
     rect rgb(240, 248, 255)
     Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction
     alt Ingress Modality is Audio
@@ -123,13 +123,13 @@ The standardized intake contract enters Layer 3 for speech transcription and SLM
 ```mermaid
 flowchart TD
     H["Standardized Intake Contract"] --> I["Public Agent Gateway<br/>Intake Entity Extractor"]
-    
+
     I --> O{"Modality Dispatch"}
     O -- "Audio Voice Stream" --> P["Bhashini Speech-to-Text ASR<br/>+ Machine Translation NMT"]
     P --> Q["Sovereign SLM Entity Extractor"]
     O -- "Structured Text Keypress" --> R["Direct Deterministic Entity Mapping<br/>Confidence = 1.0, Bypass GPU SLM"]
     O -- "Free-Text Message" --> Q
-    
+
     Q --> S["Extracted Domain Entity Contract<br/>(Intent, Entities, Confidence Score)"]
     R --> S
 ```
@@ -143,14 +143,14 @@ Gate 2 evaluates domain intent, checks for required fields, and coordinates mult
 ```mermaid
 flowchart TD
     S["Extracted Entity Contract"] --> T["Layer 4 Orchestrator<br/>Gate 2: Intake Completeness & Intent Validation"]
-    
+
     T --> U{"Is Structured Bypass or Adversarial?"}
     U -- "Yes" --> V["Bypass Gate 2 Completeness Check"]
     U -- "No" --> W{"Application Intent == APPLY_SUBSIDY?"}
-    
+
     W -- "No (Status Check / Grievance)" --> X["Route to Read-Only Inquiry Flow"]
     W -- "Yes" --> Y["Scan Mandatory Domain Entities:<br/>1. District<br/>2. Crop Name<br/>3. Survey Number"]
-    
+
     Y --> Z{"Missing Mandatory Entities?"}
     Z -- "No (All Present)" --> AA["Proceed to Gate 3 Policy Adjudication"]
     Z -- "Yes" --> AB{"Attempt Count < 3?"}
@@ -167,17 +167,17 @@ Gate 3 cross-matches the claim against sovereign DPI registries and evaluates th
 ```mermaid
 flowchart TD
     AA["Claim Evaluation Contract"] --> AE["Claim Adjudication Engine<br/>Gate 3: Policy Decision Matrix"]
-    
+
     AE --> AF["Identity Verification Service<br/>Verify Token in Sovereign Registry"]
     AE --> AG["AgriStack Registry Service<br/>Cross-Match Cadastral Land & Crop"]
     AE --> AH["Anti-Double-Dipping Ledger<br/>Validate (Citizen Token, Season)"]
-    
+
     AF & AG & AH --> AI{"Decision Matrix Evaluation"}
-    
+
     AI -- "Score >= 0.85 & Eligible & Unique" --> AJ["Verdict: AUTO_APPROVE<br/>Status: APPROVED<br/>Financial State: PENDING<br/>DisbursementTxnId: TXN-YYYY-XXXXXX"]
-    
+
     AI -- "Score < 0.85 OR Flagged Adversarial OR Missing Entities" --> AK["Verdict: ROUTE_FOR_MANUAL_REVIEW<br/>Status: UNDER_REVIEW<br/>Financial State: Bypassed<br/>EscalationCaseId: SPP-CASE-YYYY-XXXXXX"]
-    
+
     AI -- "Ineligible Land Record OR Duplicate Claim Detected" --> AL["Verdict: AUTO_REJECT<br/>Status: REJECTED<br/>Financial State: Bypassed<br/>RejectionReason: Non-empty Reason Code"]
 ```
 
@@ -191,17 +191,17 @@ Once the decision is made, financial clearing or caseworker queues are updated, 
 flowchart TD
     AJ --> AM["Payment Rail Service<br/>Initiate Treasury Wire Transfer"]
     AM --> AN["Disbursement Callback Receipt<br/>(Disbursement Status = SUCCESS)"]
-    
+
     AK --> AO["Case Management Service<br/>Stage Incident Review Ticket"]
     AO --> AP["District Caseworker Dashboard<br/>(Staged SPP-CASE Ticket)"]
-    
+
     AN & AP & AL --> AQ["Adaptive Multi-Channel Notification Engine<br/>Compose Outbound Notification"]
-    
+
     AQ --> AR{"Originating Ingress Channel"}
     AR -- "WhatsApp" --> AS["Render Rich Markdown Card<br/>(Txn ID / Case ID + Emojis)"]
     AR -- "IVR Voice" --> AT["Synthesize Spoken Vernacular Audio<br/>(Bhashini TTS Audio URL)"]
     AR -- "USSD / SMS" --> AU["Format GSM Plain Text String<br/>(Strictly <= 160 Characters)"]
-    
+
     AS & AT & AU --> AV["Edge Connector Egress Dispatch<br/>(WhatsApp / IVR / USSD / SMS)"]
     AV --> AW["Transmission Acknowledgment Receipt<br/>Delivered to Citizen"]
 ```
@@ -217,4 +217,3 @@ flowchart TD
 | **Layer 3 Perception & Extraction** | *Extracted Domain Entity Contract* | Application intent, domain entities map, AI confidence score, security threat flag. | Layer 4 Claim Governance Engine |
 | **Layer 4 Adjudication** | *Claim Evaluation Contract $\rightarrow$ Governance Determination Outcome* | Governance action (`AUTO_APPROVE` / `ROUTE_FOR_MANUAL_REVIEW` / `AUTO_REJECT`), transaction ID, escalation case ID. | Sovereign Payment Rails / Caseworker Management Service |
 | **Delivery Egress** | *Outbound Notification Request $\rightarrow$ Channel Notification Payload $\rightarrow$ Transmission Acknowledgment* | Adapted message string ($\le 160$ chars for USSD/SMS, Markdown card for WhatsApp, TTS URL for IVR), carrier message reference ID. | Originating Carrier Gateway $\rightarrow$ Citizen Device |
-

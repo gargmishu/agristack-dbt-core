@@ -11,7 +11,7 @@ This skill defines the principles, formatting rules, and style standards for wri
 
 ## 1. Core Philosophy: Conceptual & Domain-Driven Documentation
 
-Markdown documents exist to convey **system architecture, domain invariants, business workflows, protocol boundaries, and governance rules**. 
+Markdown documents exist to convey **system architecture, domain invariants, business workflows, protocol boundaries, and governance rules**.
 
 Implementation details change rapidly during refactoring. Documentation that is tightly coupled to concrete class names, method signatures, and file paths quickly becomes stale, misleading, and brittle.
 
