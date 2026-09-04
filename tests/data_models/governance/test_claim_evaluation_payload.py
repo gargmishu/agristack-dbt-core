@@ -1,3 +1,5 @@
+from typing import Final
+
 import pytest
 from pydantic import ValidationError
 
@@ -12,7 +14,7 @@ from src.data_models.governance.extracted_entity_payload import (
     ExtractedEntityPayload,
 )
 
-MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
+MOCK_CITIZEN_TOKEN: Final[str] = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
 
 def _create_sample_extracted_payload() -> ExtractedEntityPayload:

@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from typing import Final
 
 import httpx
 import pytest
@@ -18,8 +19,8 @@ from src.services.ai import (
 )
 from src.services.ai.ai_mock_fixtures import MOCK_SLM_RULES
 
-EXPECTED_MIN_CONFIDENCE = 0.90
-_LIVE_CONFIDENCE_SCORE = 0.98
+EXPECTED_MIN_CONFIDENCE: Final[float] = 0.90
+_LIVE_CONFIDENCE_SCORE: Final[float] = 0.98
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Final
 
 import pytest
 from pydantic import ValidationError
@@ -14,7 +15,7 @@ from src.data_models.common import (
 from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import WhatsAppIngressPayload
 
-EXPECTED_DURATION = 15
+EXPECTED_DURATION: Final[int] = 15
 
 
 @pytest.mark.asyncio

@@ -14,7 +14,7 @@ See: decisions/step3.1_foundational_mock_boundaries.md
 See: roadmap.md (Phase 3 Step 3.1)
 """
 
-from typing import NamedTuple
+from typing import Final, NamedTuple
 
 from src.data_models.common import DisbursementFailureCode
 
@@ -31,17 +31,19 @@ __all__ = [
     "UNVERIFIED_IDENTITY_TOKEN_ZERO",
 ]
 
-UNVERIFIED_IDENTITY_TOKEN_ZERO = "0" * 64
-UNVERIFIED_IDENTITY_PREFIX = "ffff0000"
+UNVERIFIED_IDENTITY_TOKEN_ZERO: Final[str] = "0" * 64
+UNVERIFIED_IDENTITY_PREFIX: Final[str] = "ffff0000"
 
-INVALID_LAND_RECORD_PREFIX = "INVALID"
-INVALID_SURVEY_NUMBER = "000/0"
+INVALID_LAND_RECORD_PREFIX: Final[str] = "INVALID"
+INVALID_SURVEY_NUMBER: Final[str] = "000/0"
 
-MOCK_CASE_REJECT_PREFIX = "REJECT"
-MOCK_FAIL_STAGE_NOTE = "fail_stage"
+MOCK_CASE_REJECT_PREFIX: Final[str] = "REJECT"
+MOCK_FAIL_STAGE_NOTE: Final[str] = "fail_stage"
 
-MOCK_PAYMENT_FAIL_TRIGGER = "FAIL"
-MOCK_PAYMENT_FAILURE_REASON = DisbursementFailureCode.ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING
+MOCK_PAYMENT_FAIL_TRIGGER: Final[str] = "FAIL"
+MOCK_PAYMENT_FAILURE_REASON: Final[DisbursementFailureCode] = (
+    DisbursementFailureCode.ERR_INSUFFICIENT_BANK_ACCOUNT_MAPPING
+)
 
 
 class MockCadastralParcel(NamedTuple):
@@ -70,7 +72,7 @@ class MockCadastralParcel(NamedTuple):
     is_entitled: bool
 
 
-MOCK_CADASTRAL_REGISTRY: dict[str, MockCadastralParcel] = {
+MOCK_CADASTRAL_REGISTRY: Final[dict[str, MockCadastralParcel]] = {
     "LAND-REC-1002": MockCadastralParcel(
         survey_number="124/2A",
         district="Pune",

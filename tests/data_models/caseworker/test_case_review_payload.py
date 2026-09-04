@@ -23,7 +23,7 @@ def test_case_review_payload_valid() -> None:
 
 
 def test_case_review_payload_empty_content_rejected() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerCaseReviewPayload(
             escalation_case_id="SPP-CASE-2026-981245",
             session_id="sess_12345678",
@@ -34,11 +34,11 @@ def test_case_review_payload_empty_content_rejected() -> None:
             escalation_reason=EscalationReasonCode.LOW_AI_CONFIDENCE,
             staged_at=datetime.now(UTC),
         )
-    assert "String should have at least 1 character" in str(exc.value)
+    assert "String should have at least 1 character" in str(exception_info.value)
 
 
 def test_case_review_payload_invalid_enum_reason_rejected() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerCaseReviewPayload(
             escalation_case_id="SPP-CASE-2026-981245",
             session_id="sess_12345678",
@@ -49,4 +49,4 @@ def test_case_review_payload_invalid_enum_reason_rejected() -> None:
             escalation_reason="INVALID_REASON",  # type: ignore[arg-type]
             staged_at=datetime.now(UTC),
         )
-    assert "Input should be 'LOW_AI_CONFIDENCE'" in str(exc.value)
+    assert "Input should be 'LOW_AI_CONFIDENCE'" in str(exception_info.value)

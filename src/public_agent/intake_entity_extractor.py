@@ -11,6 +11,7 @@ See: decisions/step3.3_layer4_orchestrator_brain.md
 """
 
 import logging
+from typing import Final
 
 from src.data_models.common import (
     ApplicationIntent,
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["IntakeEntityExtractor"]
 
-_FALLBACK_CONFIDENCE_SCORE = 0.40
+_FALLBACK_CONFIDENCE_SCORE: Final[float] = 0.40
 
 
 class IntakeEntityExtractor:

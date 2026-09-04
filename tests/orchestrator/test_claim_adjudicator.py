@@ -1,3 +1,5 @@
+from typing import Final
+
 import pytest
 
 from src.data_models.common import (
@@ -14,7 +16,7 @@ from src.data_models.governance import (
 from src.orchestrator.claim_adjudicator import ClaimAdjudicator
 from src.services.dpi.dpi_mock_fixtures import UNVERIFIED_IDENTITY_PREFIX
 
-MOCK_CITIZEN_TOKEN = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
+MOCK_CITIZEN_TOKEN: Final[str] = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
 
 @pytest.mark.asyncio

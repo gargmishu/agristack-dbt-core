@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Final
 
 import pytest
 from pydantic import HttpUrl, ValidationError
@@ -9,7 +10,7 @@ from src.data_models.common import ChannelType, GovernanceAction, NotificationDe
 from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
 from src.data_models.raw_ingress import IvrIngressPayload
 
-EXPECTED_DURATION = 45
+EXPECTED_DURATION: Final[int] = 45
 
 
 @pytest.mark.asyncio

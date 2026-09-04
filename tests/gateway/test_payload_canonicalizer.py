@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from typing import Final
 
 import pytest
 from pydantic import HttpUrl
@@ -17,7 +18,7 @@ from src.data_models.raw_ingress import (
 )
 from src.gateway import PayloadCanonicalizer
 
-EXPECTED_TOKEN_LEN = 64
+EXPECTED_TOKEN_LENGTH: Final[int] = 64
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +43,7 @@ def test_canonicalize_whatsapp_text() -> None:
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.FREE_TEXT
     assert intake.unprocessed_input_content == "Mujhe PM KISAN kist ki jankari chahiye"
-    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LEN
+    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LENGTH
 
 
 def test_canonicalize_whatsapp_audio() -> None:
@@ -116,7 +117,7 @@ def test_canonicalize_sms() -> None:
     assert intake.payload_type == PayloadType.TEXT
     assert intake.structure_level == StructureLevel.FREE_TEXT
     assert intake.unprocessed_input_content == "Mujhe PM KISAN kist ki jankari chahiye"
-    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LEN
+    assert len(intake.tokenized_citizen_id) == EXPECTED_TOKEN_LENGTH
 
 
 def test_canonicalize_redacts_embedded_pii_in_text() -> None:

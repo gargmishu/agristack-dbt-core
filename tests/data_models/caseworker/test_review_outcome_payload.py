@@ -34,7 +34,7 @@ def test_caseworker_review_outcome_valid_request_more_info() -> None:
 
 
 def test_caseworker_review_outcome_invalid_type() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
@@ -43,11 +43,13 @@ def test_caseworker_review_outcome_invalid_type() -> None:
             approved_amount=5000.0,  # noqa: PLR2004
             reviewed_at=datetime.now(UTC),
         )
-    assert "must be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO" in str(exc.value)
+    assert "must be MANUAL_APPROVE, MANUAL_REJECT, or REQUEST_MORE_INFO" in str(
+        exception_info.value
+    )
 
 
 def test_caseworker_review_outcome_empty_review_notes() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
@@ -56,7 +58,7 @@ def test_caseworker_review_outcome_empty_review_notes() -> None:
             approved_amount=5000.0,  # noqa: PLR2004
             reviewed_at=datetime.now(UTC),
         )
-    assert "String should have at least 5 characters" in str(exc.value)
+    assert "String should have at least 5 characters" in str(exception_info.value)
 
 
 def test_caseworker_review_outcome_valid_reject() -> None:
@@ -96,7 +98,7 @@ def test_caseworker_review_outcome_approve_missing_amount() -> None:
 
 
 def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
@@ -106,7 +108,7 @@ def test_caseworker_review_outcome_approve_with_rejection_reason_fails() -> None
             rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
             reviewed_at=datetime.now(UTC),
         )
-    assert "rejection_reason must be None for MANUAL_APPROVE" in str(exc.value)
+    assert "rejection_reason must be None for MANUAL_APPROVE" in str(exception_info.value)
 
 
 def test_caseworker_review_outcome_reject_missing_rejection_reason() -> None:
@@ -122,7 +124,7 @@ def test_caseworker_review_outcome_reject_missing_rejection_reason() -> None:
 
 
 def test_caseworker_review_outcome_reject_with_approved_amount_fails() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
@@ -132,11 +134,11 @@ def test_caseworker_review_outcome_reject_with_approved_amount_fails() -> None:
             rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
             reviewed_at=datetime.now(UTC),
         )
-    assert "approved_amount must be None for MANUAL_REJECT" in str(exc.value)
+    assert "approved_amount must be None for MANUAL_REJECT" in str(exception_info.value)
 
 
 def test_caseworker_review_outcome_request_info_with_terminal_fields_fails() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CaseworkerReviewOutcomePayload(
             escalation_case_id="SPP-CASE-2026-981245",
             reviewer_id="OFFICER-991",
@@ -145,7 +147,7 @@ def test_caseworker_review_outcome_request_info_with_terminal_fields_fails() -> 
             approved_amount=1000.0,  # noqa: PLR2004
             reviewed_at=datetime.now(UTC),
         )
-    assert "approved_amount must be None for REQUEST_MORE_INFO" in str(exc.value)
+    assert "approved_amount must be None for REQUEST_MORE_INFO" in str(exception_info.value)
 
     with pytest.raises(
         ValidationError,

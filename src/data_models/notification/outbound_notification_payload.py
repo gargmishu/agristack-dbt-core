@@ -1,5 +1,7 @@
 """Outbound multichannel notification delivery payload schema (Step 12)."""
 
+from typing import Final
+
 from pydantic import Field, HttpUrl, model_validator
 
 from src.data_models.common import (
@@ -13,7 +15,7 @@ from src.data_models.common import (
 )
 
 # GSM 7-bit SS7/SIGTRAN maximum plain text character ceiling for USSD menus
-MAX_USSD_CHARACTERS = 160
+MAX_USSD_CHARACTERS: Final[int] = 160
 
 __all__ = [
     "MAX_USSD_CHARACTERS",

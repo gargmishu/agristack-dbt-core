@@ -19,12 +19,12 @@ def test_citizen_clarification_payload_valid() -> None:
 
 
 def test_citizen_clarification_payload_too_short_rejected() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         CitizenClarificationPayload(
             text="no",
             received_at=datetime.now(UTC),
         )
-    assert "String should have at least 3 characters" in str(exc.value)
+    assert "String should have at least 3 characters" in str(exception_info.value)
 
 
 def test_citizen_clarification_payload_whitespace_stripped() -> None:

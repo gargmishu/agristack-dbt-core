@@ -1,6 +1,7 @@
 """Standardized domain enumeration types for inter-layer payload validation."""
 
 from enum import StrEnum
+from typing import Final
 
 __all__ = [
     "APPROVE_GOVERNANCE_ACTIONS",
@@ -227,7 +228,7 @@ class GovernanceAction(StrEnum):
         return self in REJECT_GOVERNANCE_ACTIONS
 
 
-APPROVE_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+APPROVE_GOVERNANCE_ACTIONS: Final[frozenset[GovernanceAction]] = frozenset(
     {
         GovernanceAction.AUTO_APPROVE,
         GovernanceAction.AUTOMATED_PAYOUT,
@@ -235,14 +236,14 @@ APPROVE_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
     }
 )
 
-REVIEW_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+REVIEW_GOVERNANCE_ACTIONS: Final[frozenset[GovernanceAction]] = frozenset(
     {
         GovernanceAction.ROUTE_FOR_MANUAL_REVIEW,
         GovernanceAction.HUMAN_REVIEW,
     }
 )
 
-REJECT_GOVERNANCE_ACTIONS: frozenset[GovernanceAction] = frozenset(
+REJECT_GOVERNANCE_ACTIONS: Final[frozenset[GovernanceAction]] = frozenset(
     {
         GovernanceAction.AUTO_REJECT,
         GovernanceAction.MANUAL_REJECT,

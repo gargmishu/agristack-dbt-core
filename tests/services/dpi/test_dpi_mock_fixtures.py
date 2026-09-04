@@ -1,3 +1,5 @@
+from typing import Final
+
 from src.services.dpi.dpi_mock_fixtures import (
     INVALID_LAND_RECORD_PREFIX,
     INVALID_SURVEY_NUMBER,
@@ -10,12 +12,12 @@ from src.services.dpi.dpi_mock_fixtures import (
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
 
-EXPECTED_TOKEN_LEN = 64
-EXPECTED_REGISTRY_SIZE = 3
+EXPECTED_TOKEN_LENGTH: Final[int] = 64
+EXPECTED_REGISTRY_SIZE: Final[int] = 3
 
 
 def test_dpi_mock_fixtures_integrity() -> None:
-    assert len(UNVERIFIED_IDENTITY_TOKEN_ZERO) == EXPECTED_TOKEN_LEN
+    assert len(UNVERIFIED_IDENTITY_TOKEN_ZERO) == EXPECTED_TOKEN_LENGTH
     assert UNVERIFIED_IDENTITY_PREFIX == "ffff0000"
     assert INVALID_LAND_RECORD_PREFIX == "INVALID"
     assert INVALID_SURVEY_NUMBER == "000/0"

@@ -13,7 +13,7 @@ See: decisions/step3.1_foundational_mock_boundaries.md (Section 2)
 See: roadmap.md (Phase 3 Step 3.1)
 """
 
-from typing import NamedTuple
+from typing import Final, NamedTuple
 
 from src.data_models.common import ApplicationIntent, DomainEntities, DomainEntityKey
 
@@ -32,33 +32,35 @@ __all__ = [
     "SUBSIDY_CLAIM_KEYWORDS",
 ]
 
-MOCK_ASR_TRANSCRIPTIONS: dict[str, str] = {
+MOCK_ASR_TRANSCRIPTIONS: Final[dict[str, str]] = {
     "hi-IN": "Mujhe PM KISAN ki kist nahi mili hai, mera village Hadoli hai.",
     "en-IN": "I have not received my PM KISAN installment, my village is Hadoli.",
     "default": "I have not received my PM KISAN installment, my village is Hadoli.",
 }
 
-MOCK_NMT_TRANSLATIONS: dict[str, str] = {
+MOCK_NMT_TRANSLATIONS: Final[dict[str, str]] = {
     "kharab": "My crop in Karnal district has suffered weather damage.",
     "kist": "I have not received my PM KISAN installment of 2000 rupees.",
 }
-DEFAULT_NMT_FALLBACK_KEY = "kist"
+DEFAULT_NMT_FALLBACK_KEY: Final[str] = "kist"
 
-MOCK_STREAM_EMPTY_KEYWORD = "empty"
-MOCK_STREAM_ERROR_KEYWORDS: tuple[str, ...] = ("error", "invalid")
+MOCK_STREAM_EMPTY_KEYWORD: Final[str] = "empty"
+MOCK_STREAM_ERROR_KEYWORDS: Final[tuple[str, ...]] = ("error", "invalid")
 
-MOCK_TTS_URL_TEMPLATE = "https://bhashini-gateway.ai/synth/2026_{locale}_response_824921.wav"
+MOCK_TTS_URL_TEMPLATE: Final[str] = (
+    "https://bhashini-gateway.ai/synth/2026_{locale}_response_824921.wav"
+)
 
-ADVERSARIAL_INJECTION_KEYWORDS: tuple[str, ...] = (
+ADVERSARIAL_INJECTION_KEYWORDS: Final[tuple[str, ...]] = (
     "ignore previous",
     "override",
     "system prompt",
     "drop",
 )
 
-SUBSIDY_CLAIM_KEYWORDS: tuple[str, ...] = ("kist", "subsidy", "pm kisan")
-STATUS_CHECK_KEYWORDS: tuple[str, ...] = ("status", "jankari")
-MISSING_ENTITY_KEYWORDS: tuple[str, ...] = ("missing", "incomplete")
+SUBSIDY_CLAIM_KEYWORDS: Final[tuple[str, ...]] = ("kist", "subsidy", "pm kisan")
+STATUS_CHECK_KEYWORDS: Final[tuple[str, ...]] = ("status", "jankari")
+MISSING_ENTITY_KEYWORDS: Final[tuple[str, ...]] = ("missing", "incomplete")
 
 
 class MockExtractionRule(NamedTuple):
@@ -80,7 +82,7 @@ class MockExtractionRule(NamedTuple):
     confidence_score: float
 
 
-MOCK_SLM_RULES: dict[str, MockExtractionRule] = {
+MOCK_SLM_RULES: Final[dict[str, MockExtractionRule]] = {
     "subsidy_claim": MockExtractionRule(
         intent=ApplicationIntent.APPLY_SUBSIDY,
         entities={

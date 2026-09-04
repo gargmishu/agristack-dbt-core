@@ -46,7 +46,7 @@ def test_sms_ingress_empty_whitespace_text_body() -> None:
 
 def test_sms_ingress_future_timestamp_clock_skew() -> None:
     future_dt = datetime.now(UTC) + timedelta(seconds=10)
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         SmsIngressPayload(
             session_id="sms_sess_998877",
             originating_phone_number="+919876543210",
@@ -54,4 +54,4 @@ def test_sms_ingress_future_timestamp_clock_skew() -> None:
             text_body="STATUS",
             received_at=future_dt,
         )
-    assert "clock-skew violation" in str(exc.value)
+    assert "clock-skew violation" in str(exception_info.value)

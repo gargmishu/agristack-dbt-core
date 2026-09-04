@@ -63,7 +63,7 @@ def test_outbound_payload_valid_ussd() -> None:
 
 
 def test_outbound_payload_empty_message_rejected() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         OutboundNotificationPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.WHATSAPP,
@@ -71,11 +71,11 @@ def test_outbound_payload_empty_message_rejected() -> None:
             formatted_message="   ",
             delivered_at=datetime.now(UTC),
         )
-    assert "String should have at least 1 character" in str(exc.value)
+    assert "String should have at least 1 character" in str(exception_info.value)
 
 
 def test_outbound_payload_ussd_length_exceeded_rejected() -> None:
-    with pytest.raises(ValidationError) as exc:
+    with pytest.raises(ValidationError) as exception_info:
         OutboundNotificationPayload(
             session_id="sess_12345678",
             channel_type=ChannelType.USSD,
@@ -83,4 +83,4 @@ def test_outbound_payload_ussd_length_exceeded_rejected() -> None:
             formatted_message="A" * (MAX_USSD_CHARACTERS + 1),
             delivered_at=datetime.now(UTC),
         )
-    assert f"exceeds maximum {MAX_USSD_CHARACTERS} character limit" in str(exc.value)
+    assert f"exceeds maximum {MAX_USSD_CHARACTERS} character limit" in str(exception_info.value)

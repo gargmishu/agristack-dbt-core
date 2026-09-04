@@ -5,6 +5,8 @@ See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 """
 
+from typing import Final
+
 from pydantic import Field
 
 from src.data_models.common import (
@@ -16,7 +18,7 @@ from src.data_models.common import (
 )
 from src.data_models.governance.extracted_entity_payload import ExtractedEntityPayload
 
-_DEFAULT_ACTIVE_SEASON: str = "KHARIF-2026"
+_DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
 
 __all__ = ["ClaimEvaluationPayload"]
 

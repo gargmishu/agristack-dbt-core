@@ -19,7 +19,7 @@ from src.gateway.ingestion_firewall import IngestionFirewall
 from src.gateway.rate_limiter import RateLimiter
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
-TEST_PEPPER = "test_cryptographic_pepper_secret_key_12345"
+TEST_PEPPER: Final[str] = "test_cryptographic_pepper_secret_key_12345"
 EXPECTED_SHA256_HEX_LENGTH: Final[int] = 64
 
 
