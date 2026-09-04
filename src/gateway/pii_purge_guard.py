@@ -159,9 +159,8 @@ class PiiPurgeGuard:
         Returns:
             Sanitized text with phone numbers replaced by [REDACTED].
         """
-        result = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
-        result = _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, result)
-        return result
+        sanitized_text = _E164_PHONE_PATTERN.sub(_REDACTION_MARKER, text)
+        return _INDIAN_PHONE_PATTERN.sub(_REDACTION_MARKER, sanitized_text)
 
     @classmethod
     def _redact_aadhaar_numbers(cls, text: str) -> str:

@@ -73,8 +73,7 @@ class ServiceIntegrationError(Exception):
         """Derives human-readable title for problem details."""
         doc = self.__doc__
         if doc:
-            first_line = doc.strip().split("\n")[0].rstrip(".")
-            return first_line
+            return doc.strip().split("\n")[0].rstrip(".")
         return "Service Integration Error"
 
 

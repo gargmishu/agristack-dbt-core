@@ -57,9 +57,8 @@ class ZeroTrustIdentityTokenizer:
         if not clean_id:
             raise ValueError("raw_identifier cannot be empty or whitespace-only")
 
-        token = hmac.new(
+        return hmac.new(
             self._pepper_key,
             clean_id.encode("utf-8"),
             sha256,
         ).hexdigest()
-        return token
