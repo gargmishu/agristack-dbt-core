@@ -6,12 +6,15 @@ See: decisions/step2.0_canonical_domain_schemas.md (Section 5)
 """
 
 import logging
+from http import HTTPStatus
 
-from fastapi import Request, status
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["validation_exception_handler"]
 
 
 async def validation_exception_handler(
@@ -32,19 +35,19 @@ async def validation_exception_handler(
         for error_detail in validation_error.errors()
     ]
 
-    req_path = incoming_request.scope.get("path", "<unknown>")
+    request_path = incoming_request.scope.get("path", "<unknown>")
     logger.warning(
         "Request validation failed for path=%s: %d invalid parameters",
-        req_path,
+        request_path,
         len(invalid_params),
     )
 
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
         content={
             "type": "https://api.agristack.gov.in/errors/invalid-payload",
             "title": "Invalid Payload Structure",
-            "status": 422,
+            "status": HTTPStatus.UNPROCESSABLE_ENTITY,
             "detail": "The submitted payload violated inter-layer schema validation constraints.",
             "invalid_params": invalid_params,
         },

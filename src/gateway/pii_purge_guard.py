@@ -16,6 +16,8 @@ from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["PiiPurgeGuard"]
+
 _SHA256_HEX_TOKEN_LENGTH: Final[int] = 64
 _REDACTION_MARKER: Final[str] = "[REDACTED]"
 

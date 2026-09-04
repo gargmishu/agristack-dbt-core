@@ -123,8 +123,7 @@ class MultichannelNotificationService:
         """Prepares channel-adapted OutboundNotificationPayload with synthesized audio if voice.
 
         Args:
-            request: Validated NotificationRequestPayload specifying channel, action, and
-            fields.
+            request: Validated NotificationRequestPayload specifying channel, action, and fields.
 
         Returns:
             Validated OutboundNotificationPayload ready for channel transmission.
@@ -173,12 +172,11 @@ class MultichannelNotificationService:
         """
         if payload.channel_type == ChannelType.WHATSAPP:
             return await self._whatsapp_connector.send_outbound_notification(payload)
-        elif payload.channel_type == ChannelType.IVR_VOICE:
+        if payload.channel_type == ChannelType.IVR_VOICE:
             return await self._ivr_connector.send_outbound_notification(payload)
-        elif payload.channel_type == ChannelType.USSD:
+        if payload.channel_type == ChannelType.USSD:
             return await self._ussd_connector.send_outbound_notification(payload)
-        else:  # SMS
-            return await self._sms_connector.send_outbound_notification(payload)
+        return await self._sms_connector.send_outbound_notification(payload)
 
     def _format_rich_card(self, request: NotificationRequestPayload) -> str:
         """Formats rich WhatsApp markdown card message.

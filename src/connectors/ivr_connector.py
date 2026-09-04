@@ -29,10 +29,8 @@ class IvrConnector:
 
     Core Capabilities:
     - Ingress Validation (`process_call_session`): Validates incoming telephony session
-      mappings
-      into `IvrIngressPayload` instances, enforcing phone number format, signed audio URL,
-      and
-      duration bounds.
+      mappings into `IvrIngressPayload` instances, enforcing phone number format, signed
+      audio URL, and duration bounds.
     - Egress Dispatch (`send_outbound_notification`): Dispatches audio playback instructions
       (`OutboundNotificationPayload`) to the configured telephony interface and returns an
       authoritative `TransmissionAck` receipt with a generated SIP call reference ID.

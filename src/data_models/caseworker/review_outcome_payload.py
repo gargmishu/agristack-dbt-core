@@ -10,6 +10,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["CaseworkerReviewOutcomePayload"]
+
 
 class CaseworkerReviewOutcomePayload(StrictBaseModel):
     """Data model representing an adjudication decision submitted by a human caseworker.

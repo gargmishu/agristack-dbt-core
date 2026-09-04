@@ -9,6 +9,8 @@ from pydantic import Field
 
 from src.data_models.common import StrictBaseModel, UtcTimestamp
 
+__all__ = ["CitizenClarificationPayload"]
+
 
 class CitizenClarificationPayload(StrictBaseModel):
     """Data model representing a citizen clarification appended to an open case review ticket.

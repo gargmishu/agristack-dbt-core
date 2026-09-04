@@ -245,9 +245,7 @@ async def test_live_slm_extractor_from_env(monkeypatch: pytest.MonkeyPatch) -> N
         LiveSlmExtractor.from_env(endpoint_url="https://slm.gov.in")
 
     # From explicit parameters
-    extractor = LiveSlmExtractor.from_env(
-        endpoint_url="https://slm.gov.in", api_key="test_key"
-    )
+    extractor = LiveSlmExtractor.from_env(endpoint_url="https://slm.gov.in", api_key="test_key")
     assert isinstance(extractor, LiveSlmExtractor)
 
     # From environment variables

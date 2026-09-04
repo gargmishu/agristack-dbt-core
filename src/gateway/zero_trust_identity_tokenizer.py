@@ -13,6 +13,8 @@ from typing import Self
 
 from src.config import get_pepper_secret
 
+__all__ = ["ZeroTrustIdentityTokenizer"]
+
 
 class ZeroTrustIdentityTokenizer:
     """In-memory SHA-256 HMAC identity tokenizer enforcing Zero-PII compliance.

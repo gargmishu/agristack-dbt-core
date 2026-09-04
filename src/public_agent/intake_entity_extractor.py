@@ -28,6 +28,8 @@ from src.services.ai import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["IntakeEntityExtractor"]
+
 _FALLBACK_CONFIDENCE_SCORE = 0.40
 
 

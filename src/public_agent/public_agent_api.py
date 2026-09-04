@@ -46,6 +46,11 @@ from src.services.notification.multichannel_notification_service import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "PublicAgentApi",
+    "PublicAgentIntakeResult",
+]
+
 
 @dataclass(frozen=True)
 class PublicAgentIntakeResult:

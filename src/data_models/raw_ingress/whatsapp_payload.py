@@ -12,6 +12,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["WhatsAppIngressPayload"]
+
 
 class WhatsAppIngressPayload(StrictBaseModel):
     """Data model representing a WhatsApp messaging ingress payload.

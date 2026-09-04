@@ -10,6 +10,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["IvrIngressPayload"]
+
 
 class IvrIngressPayload(StrictBaseModel):
     """Data model representing an IVR voice call ingress payload.

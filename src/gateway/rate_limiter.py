@@ -9,6 +9,8 @@ See: decisions/step0.0_master_project_and_business_requirements.md
 
 import time
 
+__all__ = ["RateLimiter"]
+
 
 class RateLimiter:
     """In-memory token bucket rate limiter tracking requests per caller identifier.

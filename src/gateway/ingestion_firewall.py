@@ -29,13 +29,14 @@ from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["IngestionFirewall"]
+
 
 class IngestionFirewall:
     """Perimeter security facade coordinating rate limiting, tokenization, and canonicalization.
 
     Combines rate limiting, identity tokenization, PII redaction, prompt injection
-    inspection,
-    and payload normalization into a single ingress validation pipeline.
+    inspection, and payload normalization into a single ingress validation pipeline.
 
     Pipeline Operations:
     1. Rate Limiting: Enforces request quotas per caller identity.

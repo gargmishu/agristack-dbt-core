@@ -2,21 +2,20 @@
 
 from pydantic import BaseModel, ConfigDict
 
+__all__ = ["StrictBaseModel"]
+
 
 class StrictBaseModel(BaseModel):
     """Foundational immutable base model for all AgriStack domain contracts and payloads.
 
     Enforces strict typing, immutability, extra-field rejection, and whitespace sanitization
-    across all inter-layer communication boundaries (Layer 1 -> Layer 2 -> Layer 3 -> Layer
-    4).
+    across all inter-layer communication boundaries (Layer 1 -> Layer 2 -> Layer 3 -> Layer 4).
 
     Core Configuration & Security Guarantees:
     - `extra="forbid"`: Rejects payload pollution, prototype tampering, and unexpected
-      injected
-      keys.
+      injected keys.
     - `frozen=True`: Guarantees thread-safe immutability across async processing pipelines.
-    - `validate_assignment=True`: Ensures runtime validation rules are executed if models
-      are
+    - `validate_assignment=True`: Ensures runtime validation rules are executed if models are
       unfrozen.
     - `str_strip_whitespace=True`: Automatically strips leading and trailing whitespace from
       string fields.

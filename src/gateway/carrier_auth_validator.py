@@ -12,6 +12,8 @@ import secrets
 from hashlib import sha256
 from typing import Final
 
+__all__ = ["CarrierAuthValidator"]
+
 
 class CarrierAuthValidator:
     """Security validator enforcing cryptographic signature & token verification for webhooks.
@@ -24,8 +26,7 @@ class CarrierAuthValidator:
 
     Security Guarantees:
     - Constant-Time Comparison: Employs `secrets.compare_digest` across all signature and
-      token checks
-      to prevent timing side-channel attack vectors.
+      token checks to prevent timing side-channel attack vectors.
     - Fail-Closed: Missing headers, invalid formatting, or mismatched digests fail closed.
 
     See: decisions/step3.2_security_and_ingestion_firewalls.md (Section 2)

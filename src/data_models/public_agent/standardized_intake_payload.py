@@ -25,6 +25,8 @@ _DTMF_REGEX: Final[re.Pattern[str]] = re.compile(r"^\d+(\*\d+)*$")
 # Used to validate that AUDIO payload pointers (signed S3/GCS URLs) are valid HTTP/HTTPS URLs.
 _HTTP_URL_ADAPTER: Final[TypeAdapter[HttpUrl]] = TypeAdapter(HttpUrl)
 
+__all__ = ["PublicAgentStandardizedIntakePayload"]
+
 
 class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     """Normalized, zero-PII public agent intake payload data model.

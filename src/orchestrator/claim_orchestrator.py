@@ -38,6 +38,11 @@ from src.services.dpi import PaymentRailService, create_payment_rail_service
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "ClaimOrchestrator",
+    "OrchestrationExecutionResult",
+]
+
 # Mandatory domain entities required for seasonal crop subsidy claim processing
 _MANDATORY_SUBSIDY_ENTITIES: Final[tuple[DomainEntityKey, ...]] = (
     DomainEntityKey.DISTRICT,

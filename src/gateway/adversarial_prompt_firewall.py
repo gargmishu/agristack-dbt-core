@@ -15,6 +15,8 @@ from src.data_models.common import ThreatCategory
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["AdversarialPromptFirewall"]
+
 # Pre-compiled high-performance security regex patterns
 _PROMPT_INJECTION_PATTERNS: Final[list[tuple[ThreatCategory, re.Pattern[str]]]] = [
     (

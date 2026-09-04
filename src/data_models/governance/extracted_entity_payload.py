@@ -17,6 +17,8 @@ from src.data_models.common import (
     StrictBaseModel,
 )
 
+__all__ = ["ExtractedEntityPayload"]
+
 
 class ExtractedEntityPayload(StrictBaseModel):
     """Data model representing structured entities extracted from citizen interactions.

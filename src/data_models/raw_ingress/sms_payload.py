@@ -10,6 +10,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["SmsIngressPayload"]
+
 
 class SmsIngressPayload(StrictBaseModel):
     """Data model representing an SMS message ingress payload.

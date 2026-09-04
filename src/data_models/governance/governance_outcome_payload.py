@@ -22,6 +22,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["GovernanceOutcomePayload"]
+
 
 class GovernanceOutcomePayload(StrictBaseModel):
     """Data model representing an authoritative governance adjudication verdict.

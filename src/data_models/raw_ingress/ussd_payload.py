@@ -9,6 +9,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["UssdIngressPayload"]
+
 
 class UssdIngressPayload(StrictBaseModel):
     """Data model representing a USSD menu signaling ingress payload.

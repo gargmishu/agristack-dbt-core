@@ -36,5 +36,3 @@ def auto_cleanup_shared_http_client(
     yield
     if is_shared_http_client_initialized():
         event_loop.run_until_complete(close_shared_http_client())
-
-

@@ -33,10 +33,8 @@ class WhatsAppConnector:
     - Ingress Validation (`process_webhook`): Validates incoming webhook event mappings into
       `WhatsAppIngressPayload` instances, enforcing modality exclusivity between text bodies
       and audio URLs.
-    - Egress Dispatch (`send_outbound_notification`): Dispatches formatted notification
-      cards
-      (`OutboundNotificationPayload`) to the WhatsApp API endpoint and returns an
-      authoritative
+    - Egress Dispatch (`send_outbound_notification`): Dispatches formatted notification cards
+      (`OutboundNotificationPayload`) to the WhatsApp API endpoint and returns an authoritative
       `TransmissionAck` receipt containing a message tracking ID (`wamid`).
 
     Attributes:
@@ -51,8 +49,7 @@ class WhatsAppConnector:
         """Initializes messaging connector with carrier interface identifier.
 
         Args:
-            interface_id: Optional carrier webhook interface identifier (defaults to env or
-            config).
+            interface_id: Optional carrier webhook interface identifier (defaults to env or config).
         """
         self._interface_id = interface_id or get_whatsapp_interface_id()
 

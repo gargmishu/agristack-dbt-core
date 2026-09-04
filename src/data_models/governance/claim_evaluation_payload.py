@@ -18,6 +18,8 @@ from src.data_models.governance.extracted_entity_payload import ExtractedEntityP
 
 _DEFAULT_ACTIVE_SEASON: str = "KHARIF-2026"
 
+__all__ = ["ClaimEvaluationPayload"]
+
 
 class ClaimEvaluationPayload(StrictBaseModel):
     """Data model representing the input context for governance claim eligibility evaluation.

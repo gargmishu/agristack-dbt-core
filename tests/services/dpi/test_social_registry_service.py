@@ -76,9 +76,7 @@ async def test_live_social_registry_endpoint_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer openspp_key"
         assert str(request.url) == "https://openspp.gov.in/v1/social/eligibility"
-        return httpx.Response(
-            HTTPStatus.OK, json={"is_eligible": True, "scheme_id": "PM_KISAN"}
-        )
+        return httpx.Response(HTTPStatus.OK, json={"is_eligible": True, "scheme_id": "PM_KISAN"})
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveSocialRegistryService(

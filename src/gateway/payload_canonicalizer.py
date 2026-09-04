@@ -24,6 +24,8 @@ from src.data_models.raw_ingress import (
 from src.gateway.pii_purge_guard import PiiPurgeGuard
 from src.gateway.zero_trust_identity_tokenizer import ZeroTrustIdentityTokenizer
 
+__all__ = ["PayloadCanonicalizer"]
+
 
 class PayloadCanonicalizer:
     """Canonicalizes raw carrier ingress payloads into standardized intake payloads.
@@ -88,12 +90,11 @@ class PayloadCanonicalizer:
 
         if isinstance(payload, WhatsAppIngressPayload):
             return self._canonicalize_whatsapp(payload, tokenized_id, language_locale)
-        elif isinstance(payload, IvrIngressPayload):
+        if isinstance(payload, IvrIngressPayload):
             return self._canonicalize_ivr(payload, tokenized_id, language_locale)
-        elif isinstance(payload, UssdIngressPayload):
+        if isinstance(payload, UssdIngressPayload):
             return self._canonicalize_ussd(payload, tokenized_id, language_locale)
-        else:  # SMS
-            return self._canonicalize_sms(payload, tokenized_id, language_locale)
+        return self._canonicalize_sms(payload, tokenized_id, language_locale)
 
     def _canonicalize_whatsapp(
         self,

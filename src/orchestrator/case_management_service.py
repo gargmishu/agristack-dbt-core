@@ -27,6 +27,8 @@ from src.services.dpi import SocialRegistryService, create_social_registry_servi
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["CaseManagementService"]
+
 
 class CaseManagementService:
     """Service governing caseworker review ticket queues and manual adjudication workflows.

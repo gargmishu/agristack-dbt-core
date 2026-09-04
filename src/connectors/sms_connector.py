@@ -28,13 +28,12 @@ class SmsConnector:
     messages.
 
     Core Capabilities:
-    - Ingress Validation (`process_inbound_sms`): Validates incoming webhook payload
-      mappings into
-      `SmsIngressPayload` instances, enforcing phone number format, message ID, and text
+    - Ingress Validation (`process_inbound_sms`): Validates incoming webhook payload mappings
+      into `SmsIngressPayload` instances, enforcing phone number format, message ID, and text
       body length constraints.
     - Egress Dispatch (`send_outbound_notification`): Dispatches text messages
-      (`OutboundNotificationPayload`)
-      to the configured SMS gateway and returns an authoritative `TransmissionAck` receipt.
+      (`OutboundNotificationPayload`) to the configured SMS gateway and returns an
+      authoritative `TransmissionAck` receipt.
 
     Attributes:
         interface_id: Configured identifier of the target SMS gateway interface.
@@ -48,8 +47,7 @@ class SmsConnector:
         """Initializes carrier SMS connector with gateway interface identifier.
 
         Args:
-            interface_id: Optional SMS carrier interface identifier (defaults to env or
-            config).
+            interface_id: Optional SMS carrier interface identifier (defaults to env or config).
         """
         self._interface_id = interface_id or get_sms_interface_id()
 

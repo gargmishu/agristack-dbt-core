@@ -10,6 +10,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["DisbursementCallbackPayload"]
+
 
 class DisbursementCallbackPayload(StrictBaseModel):
     """Data model representing an asynchronous payment rail clearing callback.

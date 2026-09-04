@@ -3,11 +3,8 @@
 See: decisions/step2.0_canonical_domain_schemas.md#ussd-menu-ingress-payload
 
 Processes incoming Unstructured Supplementary Service Data (USSD) Signaling System No. 7
-(SS7)
-/
-Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating shortcode patterns
-and
-concatenated user digit selections.
+(SS7) / Signaling Transport (SIGTRAN) carrier menu signaling payloads, validating
+shortcode patterns and concatenated user digit selections.
 """
 
 import logging
@@ -31,14 +28,12 @@ class UssdConnector:
     response strings.
 
     Core Capabilities:
-    - Ingress Validation (`process_ussd_session`): Validates incoming USSD signaling
-      mappings into
-      `UssdIngressPayload` instances, verifying shortcode patterns, session identifiers, and
-      user digit selections.
+    - Ingress Validation (`process_ussd_session`): Validates incoming USSD signaling mappings
+      into `UssdIngressPayload` instances, verifying shortcode patterns, session identifiers,
+      and user digit selections.
     - Egress Dispatch (`send_outbound_notification`): Dispatches plain-text response strings
       (`OutboundNotificationPayload` capped at 160 characters) to the carrier gateway and
-      returns
-      an authoritative `TransmissionAck` receipt.
+      returns an authoritative `TransmissionAck` receipt.
 
     Attributes:
         interface_id: Configured identifier of the target USSD gateway interface.

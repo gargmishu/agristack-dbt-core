@@ -16,6 +16,8 @@ from src.data_models.common import (
     UtcTimestamp,
 )
 
+__all__ = ["CaseworkerCaseReviewPayload"]
+
 
 class CaseworkerCaseReviewPayload(StrictBaseModel):
     """Data model representing a staged case review ticket for caseworker review.

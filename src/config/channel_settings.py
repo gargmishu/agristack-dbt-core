@@ -13,6 +13,22 @@ DEFAULT_USSD_INTERFACE: Final[str] = "USSD_GATEWAY_DEFAULT"
 DEFAULT_SMS_INTERFACE: Final[str] = "SMS_GATEWAY_DEFAULT"
 DEFAULT_HELPLINE_NUMBER: Final[str] = "1800-180-1551"
 
+__all__ = [
+    "DEFAULT_HELPLINE_NUMBER",
+    "DEFAULT_IVR_INTERFACE",
+    "DEFAULT_SMS_INTERFACE",
+    "DEFAULT_USSD_INTERFACE",
+    "DEFAULT_WHATSAPP_INTERFACE",
+    "get_helpline_number",
+    "get_ivr_interface_id",
+    "get_pepper_secret",
+    "get_rate_limit_capacity",
+    "get_rate_per_minute",
+    "get_sms_interface_id",
+    "get_ussd_interface_id",
+    "get_whatsapp_interface_id",
+]
+
 
 def get_whatsapp_interface_id() -> str:
     """Returns configured WhatsApp webhook interface ID from environment or default.

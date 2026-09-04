@@ -35,6 +35,8 @@ from src.services.dpi import (
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["ClaimAdjudicator"]
+
 _AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
 
 
