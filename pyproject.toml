@@ -34,7 +34,7 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "B", "UP", "S", "I", "SIM", "PL"]
+select = ["E", "W", "F", "B", "UP", "S", "I", "SIM", "PL", "RET", "N", "RUF022"]
 ignore = ["S101"] # Allow assert statements in test files
 
 [tool.ruff.lint.isort]
