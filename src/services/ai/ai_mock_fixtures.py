@@ -27,9 +27,9 @@ __all__ = [
     "MOCK_STREAM_EMPTY_KEYWORD",
     "MOCK_STREAM_ERROR_KEYWORDS",
     "MOCK_TTS_URL_TEMPLATE",
-    "MockExtractionRule",
     "STATUS_CHECK_KEYWORDS",
     "SUBSIDY_CLAIM_KEYWORDS",
+    "MockExtractionRule",
 ]
 
 MOCK_ASR_TRANSCRIPTIONS: Final[dict[str, str]] = {
