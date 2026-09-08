@@ -3,7 +3,7 @@
 ## 1. Context & Architectural Challenge
 
 ### 1.1 The Agrarian Intake Landscape
-The Citizen Welfare Orchestrator ingests claims and inquiries across diverse communication modalities, including automated voice telephony (Interactive Voice Response - IVR) and messaging platforms (WhatsApp voice notes). 
+The Citizen Welfare Orchestrator ingests claims and inquiries across diverse communication modalities, including automated voice telephony (Interactive Voice Response - IVR) and messaging platforms (WhatsApp voice notes).
 
 Serving India's agricultural community introduces distinct perception challenges:
 - **Linguistic Diversity:** Beneficiaries communicate across 22 Scheduled Indian languages and hundreds of regional dialects (e.g., Bhojpuri, Maithili, Awadhi, Bundeli, Haryanvi, Malwi).
@@ -37,13 +37,13 @@ Candidate technologies were evaluated against five core criteria:
 
 The following technological approaches were considered:
 
-- **Option 1: Bhashini API (National Language Translation Mission - MeitY)**  
+- **Option 1: Bhashini API (National Language Translation Mission - MeitY)**
   The Government of India's sovereign AI mission platform, developed in partnership with premier academic institutions (IIT Madras, AI4Bharat) and hosted on domestic National Informatics Centre (NIC) and sovereign cloud infrastructure.
-- **Option 2: Commercial Multi-Cloud Speech APIs (Google Cloud Speech / AWS Transcribe / Azure Speech)**  
+- **Option 2: Commercial Multi-Cloud Speech APIs (Google Cloud Speech / AWS Transcribe / Azure Speech)**
   Managed hyperscaler voice and translation services with global multi-language catalogs.
-- **Option 3: Proprietary Frontier AI Endpoints (OpenAI Whisper API / Groq Proxy)**  
+- **Option 3: Proprietary Frontier AI Endpoints (OpenAI Whisper API / Groq Proxy)**
   Hosted transformer-based speech recognition endpoints offered by commercial AI providers.
-- **Option 4: Self-Hosted Open-Source Models (Whisper Large-v3 / Meta MMS on Sovereign GPU Clusters)**  
+- **Option 4: Self-Hosted Open-Source Models (Whisper Large-v3 / Meta MMS on Sovereign GPU Clusters)**
   Deploying open-weights foundational speech models on self-managed, domestic GPU infrastructure.
 
 ---
@@ -105,9 +105,9 @@ The combination of strict DPDP Act compliance, purpose-trained telephony acousti
 
 ### 6.2 Architectural Invariants
 
-1. **Production Sovereign Boundary Invariant:**  
+1. **Production Sovereign Boundary Invariant:**
    In production environments, all live speech transcription, machine translation, and voice synthesis must route exclusively through the sovereign Bhashini gateway. Routing citizen audio streams to commercial foreign cloud providers is strictly prohibited.
-2. **Fail-Closed Resiliency Invariant:**  
+2. **Fail-Closed Resiliency Invariant:**
    If the Bhashini service experiences transient network unavailability or cluster outages, the system must fail closed—emitting structured service unavailable errors and routing affected claims to manual caseworker review rather than silently dropping queries or producing corrupted intake contracts.
-3. **Offline Mock Simulation Invariant (Development & Automated Testing):**  
+3. **Offline Mock Simulation Invariant (Development & Automated Testing):**
    To facilitate rapid, zero-dependency local development and automated CI/CD testing without network latency or external service coupling, the perception adapter provides deterministic local mock fixtures that simulate vernacular transcription, translation, and TTS generation.
