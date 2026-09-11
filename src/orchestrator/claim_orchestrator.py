@@ -35,6 +35,7 @@ from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
 from src.orchestrator.case_management_service import CaseManagementService
 from src.orchestrator.claim_adjudicator import ClaimAdjudicator
 from src.services.dpi import PaymentRailService, create_payment_rail_service
+from src.services.persistence import LedgerPersistenceService
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +108,13 @@ class ClaimOrchestrator:
         claim_adjudicator: ClaimAdjudicator | None = None,
         case_management_service: CaseManagementService | None = None,
         payment_rail_service: PaymentRailService | None = None,
+        ledger_persistence_service: LedgerPersistenceService | None = None,
     ) -> None:
         """Initializes the claim orchestrator with required governance and DPI dependencies."""
         self._claim_adjudicator = claim_adjudicator or ClaimAdjudicator()
         self._case_service = case_management_service or CaseManagementService()
         self._payment_rail = payment_rail_service or create_payment_rail_service()
+        self._persistence = ledger_persistence_service
 
     # -------------------------------------------------------------------------
     # Primary Public Workflow Entrypoint
@@ -146,12 +149,20 @@ class ClaimOrchestrator:
             extracted_entities, attempt_count=attempt_count
         )
         if missing_entities:
-            return self._build_reprompt_result(
+            reprompt_result = self._build_reprompt_result(
                 session_id=session_id,
                 payload_id=payload_id,
                 extracted_entities=extracted_entities,
                 missing_entities=missing_entities,
             )
+            self._persist_orchestration_turn(
+                intake=intake,
+                payload_id=payload_id,
+                extracted_entities=extracted_entities,
+                attempt_count=attempt_count,
+                orchestration_result=reprompt_result,
+            )
+            return reprompt_result
 
         # Gate 3: Deterministic Policy Adjudication Matrix
         governance_outcome = await self._adjudicate_claim(
@@ -179,13 +190,21 @@ class ClaimOrchestrator:
                 escalation_case_id=governance_outcome.escalation_case_id,
             )
 
-        return OrchestrationExecutionResult(
+        final_result = OrchestrationExecutionResult(
             governance_outcome=governance_outcome,
             extracted_entities=extracted_entities,
             requires_reprompt=False,
             disbursement_callback=disbursement_callback,
             caseworker_ticket_id=staged_case_id,
         )
+        self._persist_orchestration_turn(
+            intake=intake,
+            payload_id=payload_id,
+            extracted_entities=extracted_entities,
+            attempt_count=attempt_count,
+            orchestration_result=final_result,
+        )
+        return final_result
 
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
@@ -339,3 +358,80 @@ class ClaimOrchestrator:
         )
         await self._case_service.stage_incident_ticket(case_payload)
         return escalation_case_id
+
+    def _persist_orchestration_turn(
+        self,
+        intake: PublicAgentStandardizedIntakePayload,
+        payload_id: str,
+        extracted_entities: ExtractedEntityPayload,
+        attempt_count: int,
+        orchestration_result: OrchestrationExecutionResult,
+    ) -> None:
+        """Persists session telemetry, extraction attempt, and governance outcome to the ledger."""
+        if self._persistence is None:
+            return
+
+        district_value = extracted_entities.domain_entities.get(DomainEntityKey.DISTRICT)
+        crop_value = extracted_entities.domain_entities.get(DomainEntityKey.CROP_NAME)
+        is_reprompt = orchestration_result.requires_reprompt
+        session_status = "PENDING" if is_reprompt else "COMPLETED"
+        completed_timestamp = None if is_reprompt else datetime.now(UTC).isoformat()
+
+        self._persistence.record_session_telemetry(
+            session_id=str(intake.session_id),
+            tokenized_phone_hash=intake.tokenized_citizen_id,
+            ingress_channel=intake.channel_type.value.upper(),
+            session_status=session_status,
+            completed_at=completed_timestamp,
+        )
+
+        self._persistence.record_extraction_attempt(
+            payload_id=payload_id,
+            session_id=str(intake.session_id),
+            attempt_id=attempt_count,
+            raw_unstructured_text=intake.unprocessed_input_content,
+            extraction_confidence=float(extracted_entities.ai_confidence_score),
+            processing_state="STAGED" if is_reprompt else "COMMITTED",
+            extracted_district=str(district_value) if district_value else None,
+            extracted_crop_type=str(crop_value) if crop_value else None,
+        )
+
+        if not is_reprompt:
+            outcome = orchestration_result.governance_outcome
+            metadata_dictionary: dict[str, object] = {
+                "reviewer_id": "SYSTEM:GATE3_ADJUDICATOR",
+            }
+            if outcome.governance_action.is_approval:
+                application_status = "APPROVED"
+                metadata_dictionary["approval_amount"] = 15000.0
+                if outcome.disbursement_txn_id:
+                    metadata_dictionary["disbursement_txn_id"] = outcome.disbursement_txn_id
+            elif outcome.governance_action.is_rejection:
+                application_status = "REJECTED"
+                metadata_dictionary["rejection_reason"] = (
+                    outcome.rejection_reason.value
+                    if outcome.rejection_reason
+                    else "INELIGIBLE_CLAIM"
+                )
+            else:
+                application_status = "UNDER_REVIEW"
+                if outcome.escalation_case_id:
+                    metadata_dictionary["escalation_case_id"] = outcome.escalation_case_id
+
+            disbursement_state = (
+                orchestration_result.disbursement_callback.disbursement_status.value.upper()
+                if orchestration_result.disbursement_callback
+                else None
+            )
+            self._persistence.record_governance_decision(
+                claim_id=f"claim-{intake.session_id}",
+                session_id=str(intake.session_id),
+                payload_id=payload_id,
+                tokenized_identity_hash=intake.tokenized_citizen_id,
+                application_status=application_status,
+                claimant_eligibility_status=outcome.eligibility_status.value.upper(),
+                governance_action=outcome.governance_action.value.upper(),
+                evaluated_at=outcome.evaluated_at.isoformat(),
+                disbursement_status=disbursement_state,
+                governance_metadata=metadata_dictionary,
+            )

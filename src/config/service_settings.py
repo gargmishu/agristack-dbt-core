@@ -14,12 +14,14 @@ from src.errors.service_errors import ServiceConfigurationError
 
 _DEFAULT_ENVIRONMENT: Final[str] = "development"
 _PRODUCTION_ENVIRONMENT: Final[str] = "production"
+_DEFAULT_DATABASE_URL: Final[str] = "sqlite:///./agristack_pilot.db"
 
 __all__ = [
     "get_agristack_api_key",
     "get_agristack_endpoint",
     "get_bhashini_api_key",
     "get_bhashini_endpoint",
+    "get_database_url",
     "get_environment",
     "get_identity_api_key",
     "get_identity_endpoint",
@@ -159,6 +161,25 @@ def get_payment_api_key() -> str | None:
         ServiceConfigurationError: In production if 'NPCI_APBS_API_KEY' is missing or empty.
     """
     return _get_service_setting("NPCI_APBS_API_KEY", "NPCI APBS Payment Rail API Key")
+
+
+def get_database_url() -> str:
+    """Returns the configured relational database connection URL.
+
+    In production mode, requires 'DATABASE_URL' to be explicitly set.
+    In development/pilot mode, defaults to local SQLite ('sqlite:///./agristack_pilot.db')
+    when 'DATABASE_URL' is not specified.
+
+    Returns:
+        Database connection URI string (e.g., 'postgresql+psycopg://...' or 'sqlite:///...').
+
+    Raises:
+        ServiceConfigurationError: In production if 'DATABASE_URL' is missing or empty.
+    """
+    configured_url = _get_service_setting(
+        "DATABASE_URL", "Relational Database Connection URL", is_required_in_production=True
+    )
+    return configured_url or _DEFAULT_DATABASE_URL
 
 
 # -----------------------------------------------------------------------------
