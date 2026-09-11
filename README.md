@@ -80,6 +80,8 @@ agristack-dbt-core/
 │   ├── step0.0_master_project_and_business_requirements.md
 │   ├── step0.1_database_evaluation.md
 │   ├── step0.2_data_model_design.md
+│   ├── step0.3_hashing_algorithm_evaluation.md
+│   ├── step0.3_token_service_README.md
 │   ├── step0.3_zero_trust_tokenization.md
 │   ├── step0.4_database_schema_design.md
 │   ├── step1.1_tech_stack_evaluation.md
@@ -91,7 +93,14 @@ agristack-dbt-core/
 │   ├── step3.2_security_and_ingestion_firewalls.md
 │   ├── step3.3_layer4_orchestrator_brain.md
 │   ├── step3.4_layer3_intake_gateway_and_connectors.md
-│   └── step3.5_adaptive_multichannel_confirmation_delivery.md
+│   ├── step3.5_adaptive_multichannel_confirmation_delivery.md
+│   ├── step3.6_live_service_integration.md
+│   ├── step3.6_speech_and_translation_evaluation.md
+│   ├── step4.1_multichannel_ingress_and_modality_convergence.md
+│   ├── step4.2_security_firewall_and_zero_trust_pii_auditing.md
+│   ├── step4.3_three_gate_governance_and_conversational_loops.md
+│   ├── step4.4_outbound_confirmation_and_financial_callbacks.md
+│   └── step4.5_database_persistence_and_analytical_deduplication.md
 ├── design-specs/                    # Declarative system specs & workflow schemas
 │   ├── step0-env-readiness/
 │   ├── step1-journey-channels/
@@ -175,6 +184,12 @@ source .venv/bin/activate
 | [`step3.3`](decisions/step3.3_layer4_orchestrator_brain.md) | Orchestrator Brain | 3-Gate evaluation pipeline, decision routing, and caseworker staging. |
 | [`step3.4`](decisions/step3.4_layer3_intake_gateway_and_connectors.md) | Layer 3 Gateway & Connectors | Standardized event intake, structure evaluation, and carrier edge connectors. |
 | [`step3.5`](decisions/step3.5_adaptive_multichannel_confirmation_delivery.md) | Multichannel Delivery | Adaptive outbound dispatch engine for WhatsApp, IVR, USSD, and SMS. |
+| [`step3.6`](decisions/step3.6_live_service_integration.md) | Live Service Integration | Live sovereign AI and DPI service adapters with dual-mode runtime switching. |
+| [`step4.1`](decisions/step4.1_multichannel_ingress_and_modality_convergence.md) | Ingress Convergence | Multichannel ingress verification across audio and text modalities. |
+| [`step4.2`](decisions/step4.2_security_firewall_and_zero_trust_pii_auditing.md) | Security & Zero-Trust PII | Automated security firewall, HMAC tokenization, and Zero-PII verification. |
+| [`step4.3`](decisions/step4.3_three_gate_governance_and_conversational_loops.md) | Three-Gate & Loop Verification | Three-gate precedence, multi-turn conversational loops, and review escalation. |
+| [`step4.4`](decisions/step4.4_outbound_confirmation_and_financial_callbacks.md) | Outbound & Financial Callbacks | Native confirmation dispatch and asynchronous bank disbursement webhooks. |
+| [`step4.5`](decisions/step4.5_database_persistence_and_analytical_deduplication.md) | Persistence & Deduplication | Relational persistence, window-function deduplication, and audit history triggers. |
 
 ---
 
