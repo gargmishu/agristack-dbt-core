@@ -75,7 +75,12 @@
 
 ```
 agristack-dbt-core/
-├── .agents/skills/coding-standards/ # Coding standards and design guidelines
+├── .agents/skills/                  # Agentic coding, modeling, security & documentation standards
+│   ├── architecture-standards/
+│   ├── coding-standards/
+│   ├── documentation-standards/
+│   ├── domain-modeling/
+│   └── zero-trust-security/
 ├── decisions/                       # Architecture Decision Records (ADRs)
 │   ├── step0.0_master_project_and_business_requirements.md
 │   ├── step0.1_database_evaluation.md
@@ -172,6 +177,8 @@ source .venv/bin/activate
 | [`step0.0`](decisions/step0.0_master_project_and_business_requirements.md) | Business Requirements | Master business rules and straight-through processing requirements. |
 | [`step0.1`](decisions/step0.1_database_evaluation.md) | Database Evaluation | Relational DB evaluation against free-tier, JSONB, and DBT requirements. |
 | [`step0.2`](decisions/step0.2_data_model_design.md) | Data Model Design | Entity normalization, cardinality, and physical table naming standards. |
+| [`step0.3`](decisions/step0.3_hashing_algorithm_evaluation.md) | Hashing Evaluation | Cryptographic evaluation of SHA-256 HMAC vs. Argon2/Bcrypt for citizen tokens. |
+| [`step0.3`](decisions/step0.3_token_service_README.md) | Token Service Architecture | Zero-Trust identity tokenizer design, pepper management, and RAM-only contracts. |
 | [`step0.3`](decisions/step0.3_zero_trust_tokenization.md) | Zero-Trust Tokenization | RAM-only cryptographic tokenization and zero-retention logging. |
 | [`step0.4`](decisions/step0.4_database_schema_design.md) | Database Schema | Normalization, indexing strategies, audit triggers, and DBT analytical views. |
 | [`step1.1`](decisions/step1.1_tech_stack_evaluation.md) | Tech Stack Selection | Application framework, SLM engine, and runtime evaluation. |
@@ -185,6 +192,7 @@ source .venv/bin/activate
 | [`step3.4`](decisions/step3.4_layer3_intake_gateway_and_connectors.md) | Layer 3 Gateway & Connectors | Standardized event intake, structure evaluation, and carrier edge connectors. |
 | [`step3.5`](decisions/step3.5_adaptive_multichannel_confirmation_delivery.md) | Multichannel Delivery | Adaptive outbound dispatch engine for WhatsApp, IVR, USSD, and SMS. |
 | [`step3.6`](decisions/step3.6_live_service_integration.md) | Live Service Integration | Live sovereign AI and DPI service adapters with dual-mode runtime switching. |
+| [`step3.6`](decisions/step3.6_speech_and_translation_evaluation.md) | Speech & Translation Evaluation | Evaluation of Bhashini ASR/NMT/TTS pipelines and sovereign Indic language support. |
 | [`step4.1`](decisions/step4.1_multichannel_ingress_and_modality_convergence.md) | Ingress Convergence | Multichannel ingress verification across audio and text modalities. |
 | [`step4.2`](decisions/step4.2_security_firewall_and_zero_trust_pii_auditing.md) | Security & Zero-Trust PII | Automated security firewall, HMAC tokenization, and Zero-PII verification. |
 | [`step4.3`](decisions/step4.3_three_gate_governance_and_conversational_loops.md) | Three-Gate & Loop Verification | Three-gate precedence, multi-turn conversational loops, and review escalation. |
