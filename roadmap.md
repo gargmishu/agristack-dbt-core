@@ -30,7 +30,7 @@
   * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, agricultural land registries, social protection case staging, and payment rails).
 
   *Conceptual Subsystem Architecture:*
-  
+
   | System Layer | Subsystem / Package | Architectural Responsibility |
   | :--- | :--- | :--- |
   | **Layer 1** | *Channel Edge Connectors* | Ingress protocol adapters for WhatsApp, IVR Voice, USSD, and SMS. |

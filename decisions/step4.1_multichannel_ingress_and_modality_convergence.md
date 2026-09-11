@@ -133,16 +133,16 @@ Layer 3 encapsulates modality perception, shielding downstream governance engine
 ```mermaid
 flowchart LR
     SIC["Standardized Intake Contract"] --> Eval{"Structure Level & Modality"}
-    
+
     Eval -- "Structured Menu / DTMF" --> Bypass["Structured Fast-Path Bypass"]
     Bypass --> FastResult["Deterministic Domain Entities\n(Confidence = 1.0, Latency ~0ms)"]
-    
+
     Eval -- "Audio Stream (IVR / WhatsApp)" --> ASR["Speech-to-Text Worker\n(Acoustic Transcription)"]
     ASR --> Transcript["Regional Text Transcript"]
     Transcript --> SLM["Sovereign SLM Entity Extractor"]
-    
+
     Eval -- "Free Text (SMS / WhatsApp)" --> SLM
-    
+
     SLM --> ExtractedResult["Extracted Domain Entity Contract\n(Parsed District, Crop, Survey)"]
     FastResult --> Conv["Convergence into Layer 4 Governance"]
     ExtractedResult --> Conv
