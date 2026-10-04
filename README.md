@@ -12,6 +12,7 @@
 ## 🏛️ Architectural Overview (4-Layer System)
 
 > 📘 **Deep Dive:** For detailed Mermaid sequence and step-by-step pipeline diagrams from channel ingress to final decision, see the [End-to-End Architecture & Code Flow Guide](docs/end_to_end_code_flow.md).
+> 🏛️ **Government Pilot Proposal:** For the 60-day single-district pilot blueprint, KPI matrix, and RFP procurement clauses, see the [Sovereign DPI Pilot Proposal](docs/government_pilot_proposal.md).
 
 ```
 [ Citizen Channels: WhatsApp | IVR Voice | USSD | SMS ]
@@ -115,14 +116,18 @@ agristack-dbt-core/
 │   ├── step4-dpi-workflow/
 │   ├── step5-public-agent/
 │   └── step6-metrics/
+├── docs/                            # End-to-end architecture flows & pilot blueprints
+│   ├── end_to_end_code_flow.md
+│   └── government_pilot_proposal.md
 ├── src/                             # Core Python application modules
 │   ├── connectors/                  # Layer 1 Channel Edge Connectors
 │   ├── gateway/                     # Layer 2 Gateway & Perimeter Security
 │   ├── public_agent/                # Layer 3 Public Agent Intake Gateway
 │   ├── orchestrator/                # Layer 4 Orchestrator Brain & Governance
-│   ├── services/                    # Foundational AI, Notification & DPI Services
+│   ├── services/                    # Foundational AI, Notification, Persistence & DPI Services
 │   │   ├── ai/                      # Bhashini ASR/NMT/TTS & SLM Entity Extractor
 │   │   ├── notification/            # Adaptive 4-Channel Notification Dispatch Service
+│   │   ├── persistence/             # Relational Ledger & Audit Persistence Service
 │   │   └── dpi/                     # Identity, Cadastral, OpenSPP & Payment Rails
 │   ├── data_models/                 # Canonical domain contracts
 │   │   ├── common/                  # Base models, Enums, Constrained Types
