@@ -66,7 +66,7 @@ The system accommodates the vast diversity of rural Indian telecommunications in
 ### 2.2 IVR Telephony Voice Channel
 * **Transport Rail:** SIP Trunk / SS7 Telephony Gateways.
 * **Ingress Contract:** *IVR Voice Ingress Contract*.
-* **Modality Support:** Dedicated audio streams representing full-duplex citizen voice calls.
+* **Modality Support:** Dedicated voice call recordings captured from interactive telephony sessions.
 * **Acoustic Bounds:** Enforces signed recording references and bounds call duration between 1 second and 600 seconds, defending downstream transcription resources from denial-of-service starvation.
 
 ### 2.3 USSD Cellular Menu Signaling Channel
