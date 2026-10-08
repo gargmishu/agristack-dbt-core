@@ -35,29 +35,27 @@ Candidate technologies were evaluated against five core criteria:
 
 ## 3. Candidate Options Evaluated
 
-The following technological approaches were considered:
+The following three mutually exclusive technological approaches were considered:
 
 - **Option 1: Bhashini API (National Language Translation Mission - MeitY)**
   The Government of India's sovereign AI mission platform, developed in partnership with premier academic institutions (IIT Madras, AI4Bharat) and hosted on domestic National Informatics Centre (NIC) and sovereign cloud infrastructure.
-- **Option 2: Commercial Multi-Cloud Speech APIs (Google Cloud Speech / AWS Transcribe / Azure Speech)**
-  Managed hyperscaler voice and translation services with global multi-language catalogs.
-- **Option 3: Proprietary Frontier AI Endpoints (OpenAI Whisper API / Groq Proxy)**
-  Hosted transformer-based speech recognition endpoints offered by commercial AI providers.
-- **Option 4: Self-Hosted Open-Source Models (Whisper Large-v3 / Meta MMS on Sovereign GPU Clusters)**
-  Deploying open-weights foundational speech models on self-managed, domestic GPU infrastructure.
+- **Option 2: Commercial Cloud & Proprietary AI Speech APIs (Google Cloud Speech / AWS Transcribe / Azure Speech / OpenAI Whisper API / Groq)**
+  Managed speech recognition, machine translation, and voice synthesis endpoints offered by commercial cloud hyperscalers and proprietary foundation-model providers.
+- **Option 3: Self-Hosted Open-Weights Models on Sovereign GPU Clusters (Whisper Large-v3 / Meta MMS / AI4Bharat IndicConformer)**
+  Deploying open-weights foundational speech and translation models on self-managed, domestic GPU infrastructure.
 
 ---
 
 ## 4. Comparative Evaluation Matrix
 
-| Architectural Dimension | Option 1: Bhashini API (Sovereign DPI) | Option 2: Commercial Hyperscalers (Google / AWS / Azure) | Option 3: Frontier Endpoints (OpenAI Whisper / Groq) | Option 4: Self-Hosted Open-Source (Whisper / MMS) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Data Sovereignty & DPDP Compliance** | **Optimal:** 100% domestic sovereign infrastructure. Fully compliant with public sector data sovereignty mandates. | **High Risk:** Data routing through multinational commercial cloud regions; enterprise data processing agreements required. | **Critical Risk:** Violates data localization; voice streams traverse overseas inference clusters. | **Optimal:** Full control over infrastructure and telemetry data retention. |
-| **8kHz Telephony Acoustic Robustness** | **Optimal:** Models explicitly fine-tuned on telephony datasets (ULCA project) across rural Indian calling conditions. | **Moderate:** Strong noise suppression, but optimized primarily for urban English/Hindi accents. | **Poor:** Trained predominantly on 16kHz internet audio; degrades significantly on compressed 8kHz GSM audio. | **Moderate:** Base models struggle on 8kHz without extensive domain fine-tuning. |
-| **Agrarian & Land Tenure Lexicon** | **Optimal:** High token recognition for land administration terms (*Khasra, Khatauni, Patta, Bigha, Kist*). | **Poor:** Frequently mistranscribes localized revenue and land-tenure terminology. | **Poor:** Severe hallucination on vernacular administrative terms. | **Poor:** Requires custom dataset collection and fine-tuning. |
-| **Tri-Modal Completeness (ASR+NMT+TTS)** | **Unified:** Single standardized API suite supporting all 22 Scheduled Indian languages across all three modalities. | **Fragmented:** Disjointed APIs with disparate pricing, language coverage gaps, and mismatched locale codes. | **Incomplete:** ASR available; separate models required for translation and speech synthesis. | **Complex:** Requires running and scaling three separate model architectures concurrently. |
-| **National Scale Economics** | **Optimal:** Zero per-minute API licensing costs for public digital infrastructure; public good model. | **Prohibitive:** Per-minute pricing scales linearly to millions of dollars annually at national farmer volume. | **Prohibitive:** Per-minute or per-token usage fees in foreign currency. | **High Capex:** Substantial capital expenditure and ongoing operational cost for GPU cluster management. |
-| **Vendor Independence** | **Open DPI Standard:** Aligned with national open digital ecosystem principles. | **Proprietary:** High vendor lock-in to proprietary cloud APIs. | **Proprietary:** Complete dependency on single commercial provider. | **Self-Managed:** High internal engineering burden for model updates and operations. |
+| Architectural Dimension | Option 1: Bhashini API (Sovereign DPI) | Option 2: Commercial Cloud & AI APIs (Google / AWS / Azure / OpenAI / Groq) | Option 3: Self-Hosted Open-Weights (Whisper / MMS / IndicConformer) |
+| :--- | :--- | :--- | :--- |
+| **Data Sovereignty & DPDP Compliance** | **Optimal:** 100% domestic sovereign infrastructure. Fully compliant with public sector data sovereignty mandates. | **High / Critical Risk:** Requires routing citizen audio through commercial third-party cloud regions or cross-border inference clusters; incompatible with strict sovereign DPI data residency. | **Optimal:** Full control over domestic infrastructure and telemetry data retention. |
+| **8kHz Telephony Acoustic Robustness** | **Optimal:** Models explicitly fine-tuned on telephony datasets (ULCA project) across rural Indian calling conditions. | **Poor to Moderate:** Hyperscaler suites target urban English/Hindi accents; frontier Whisper endpoints are trained predominantly on 16kHz wideband internet audio and degrade on compressed 8kHz GSM audio. | **Moderate:** Base open-weights models struggle on 8kHz rural telephony without extensive domain fine-tuning. |
+| **Agrarian & Land Tenure Lexicon** | **Optimal:** High token recognition for land administration terms (*Khasra, Khatauni, Patta, Bigha, Kist*). | **Poor:** Frequently mistranscribes or hallucinates on localized vernacular revenue and land-tenure terminology. | **Poor (Out-of-the-Box):** Requires custom dataset curation and domain fine-tuning unless paired with specialized Indic checkpoints. |
+| **Tri-Modal Completeness (ASR+NMT+TTS)** | **Unified:** Single standardized API suite supporting all 22 Scheduled Indian languages across all three modalities. | **Fragmented / Incomplete:** Hyperscalers split ASR, NMT, and TTS across disparate APIs and pricing tiers; frontier ASR endpoints (Whisper/Groq) lack integrated Indic NMT and regional TTS synthesis altogether. | **Complex:** Requires deploying, orchestrating, and scaling three separate model architectures concurrently. |
+| **National Scale Economics** | **Optimal:** Zero per-minute API licensing costs for public digital infrastructure; public good model. | **Prohibitive:** Per-minute or per-token commercial billing (often denominated in foreign currency) scales linearly to millions of dollars annually at national farmer volume. | **High Capex:** Substantial capital expenditure and ongoing operational cost for sovereign GPU cluster management. |
+| **Vendor Independence** | **Open DPI Standard:** Aligned with national open digital ecosystem principles. | **Proprietary Lock-In:** High coupling to proprietary commercial cloud SDKs, rate limits, and vendor pricing. | **Self-Managed:** Zero vendor lock-in, but high internal ML engineering burden for model maintenance and operations. |
 
 ---
 
@@ -72,24 +70,18 @@ The following technological approaches were considered:
 - **Weaknesses:**
   - Dependent on national DPI service availability; requires robust client-side retry policies and fail-closed circuit breaking.
 
-### 5.2 Option 2: Commercial Multi-Cloud Speech APIs
+### 5.2 Option 2: Commercial Cloud & Proprietary AI Speech APIs (Hyperscalers & Frontier Endpoints)
 - **Strengths:**
-  - High global availability SLAs and mature operational tooling.
+  - High global availability SLAs, mature enterprise tooling (hyperscalers), and low-latency hardware acceleration (e.g., LPU inference proxies).
 - **Weaknesses:**
-  - Recurring consumption-based pricing creates severe financial overhead when serving 140+ million rural citizens.
-  - Telephony performance outside standard urban Hindi and English drops substantially.
-  - Inconsistent support across all 22 official languages, especially for regional TTS synthesis.
+  - **Sovereignty & Compliance Risks:** Routing biometric citizen voice streams to foreign-hosted inference endpoints violates national DPI localization mandates, while even domestic hyperscaler regions require complex commercial data processing agreements.
+  - **Prohibitive Unit Economics:** Recurring consumption-based per-minute/per-token pricing creates severe financial overhead when serving 140+ million rural beneficiary households.
+  - **Acoustic & Lexicon Gaps:** Poor out-of-the-box accuracy on 8kHz rural telephony and localized cadastral vocabulary (*Khasra, Khatauni, Patta*).
+  - **Modality Fragmentation:** Frontier ASR endpoints lack integrated Indic NMT and regional voice TTS synthesis, while hyperscaler offerings suffer from inconsistent coverage across all 22 Scheduled Indian languages.
 
-### 5.3 Option 3: Frontier Endpoints (OpenAI Whisper / Groq)
+### 5.3 Option 3: Self-Hosted Open-Weights Models on Sovereign GPU Clusters
 - **Strengths:**
-  - Ultra-low latency inference via specialized hardware accelerators (e.g., Groq LPU).
-- **Weaknesses:**
-  - Incompatible with sovereign DPI security invariants; citizen voice streams cannot leave national borders.
-  - Lack of integrated Indic NMT and regional voice TTS synthesis.
-
-### 5.4 Option 4: Self-Hosted Open-Source Models
-- **Strengths:**
-  - Data remains completely within self-managed sovereign virtual private clouds.
+  - Data remains completely within self-managed sovereign virtual private clouds with full architectural control.
 - **Weaknesses:**
   - Massive capital expenditure required for provisioning and maintaining enterprise GPU clusters (NVIDIA A100/H100) capable of handling peak daytime IVR call concurrency.
   - Requires dedicated machine learning engineering staff to maintain acoustic models, fine-tuning pipelines, and multi-lingual voice synthesis engines.
