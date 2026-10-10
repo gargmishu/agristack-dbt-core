@@ -2,9 +2,8 @@
 
 **Framework Step:** Phase 0 · Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols
 **Related Documents:**
-- [roadmap.md](../roadmap.md)
-- [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
-- [step0.2_data_model_design.md](../step0.2_data_model_design.md)
+- [Domain Entity & Relational Data Model](./step0.2_data_model_design.md)
+- [Zero-Trust Purge & Tokenization Protocols](./step0.3_zero_trust_tokenization.md)
 
 ---
 
@@ -170,7 +169,7 @@ Externalized hashing where the HMAC key never enters the application environment
 
 ## 4. Selection Rationale
 
-We selected **Option A: HMAC-SHA256** using a strict cryptographic environment key as the tokenization algorithm.
+We selected **Option B: HMAC-SHA-256** using a high-entropy, explicitly configured secret key as the tokenization algorithm. Option A is plain SHA-256 with secret concatenation and is not the selected construction.
 
 **Why it wins:**
 1. **Deterministic Lookup:** It allows the Orchestrator to instantly recognize returning citizens across different channels with a direct database query (Blind Indexing), without ever persisting the cleartext ID.

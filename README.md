@@ -24,16 +24,16 @@
 └───────────────────────────────────────┬────────────────────────────────┘
                                         │
                                         ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ Layer 2: Perimeter Security Gateway                                    │
-│ • Carrier Transport Authenticator (Webhook HMAC / Bearer verification) │
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Layer 2: Perimeter Security Gateway                                     │
+│ • Carrier authentication (webhook signatures and bearer tokens)         │
 │ • Zero-Trust Identity Tokenizer (RAM-only SHA-256 HMAC pseudonymization)│
-│ • PII Purge Sentinel (In-memory Zero-PII sanitizer & assertion guard)  │
-│ • Adversarial Prompt Firewall (Injection & system override defense)    │
-│ • Rate Limiter (Token bucket quota guard)                              │
-│ • Payload Canonicalizer (Transforms raw ingress into canonical intake) │
-│ • Perimeter Security Gateway (Unified perimeter security facade)       │
-└───────────────────────────────────────┬────────────────────────────────┘
+│ • PII Purge Sentinel (In-memory Zero-PII sanitizer & assertion guard)   │
+│ • Adversarial Prompt Firewall (Injection & system override defense)     │
+│ • Rate Limiter (Token bucket quota guard)                               │
+│ • Payload Canonicalizer (Transforms raw ingress into canonical intake)  │
+│ • Perimeter Security Gateway (Unified perimeter security facade)        │
+└───────────────────────────────────────┬─────────────────────────────────┘
                                         │
                                         ▼ (Standardized Intake Contract)
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -65,11 +65,7 @@
 
 ## 🔒 Zero-Trust Security & PII Architecture
 
-1. **In-Memory RAM-Only Tokenization**: Cleartext citizen identifiers (MSISDN phone numbers, 12-digit Aadhaar IDs) are tokenized at the Layer 2 ingestion boundary using a cryptographically peppered SHA-256 HMAC function (*Zero-Trust Identity Tokenizer*). Raw PII is never persisted to disk or written to database ledgers.
-2. **Carrier Callback Authentication**: Depending on the carrier integration, the perimeter verifies a request-body HMAC signature or checks the supplied `Authorization: Bearer` token against an explicitly configured shared secret. Bearer-token matching uses a constant-time comparison and rejects missing or malformed credentials. This check confirms possession of the shared secret; it does not encrypt traffic, authenticate the request body, or prevent replay. Use TLS, and retain request-signature verification where the carrier supports it.
-3. **Zero-PII Purge Guard Sentinel**: The *PII Purge Sentinel* strictly scans every canonicalized contract before passing into Layer 3, asserting that only 64-character hexadecimal HMAC tokens (`tokenized_citizen_id`) exist.
-4. **Adversarial Prompt Injection Defense**: The *Adversarial Prompt Firewall* inspects text inputs for system overrides, role usurpation, delimiter hijacking, and database injection attempts. Flagged attempts immediately neutralize AI confidence scores to `0.0` and wipe extracted entities.
-5. **Strict Immutability & Extra Key Prohibition**: All domain models enforce strict immutability, extra key prohibition, whitespace stripping, and runtime type assignment validation.
+Layer 2 authenticates carrier requests, protects and sanitizes citizen identifiers in volatile memory, and screens untrusted content before emitting a zero-PII intake contract. Flagged adversarial content is neutralized by Layer 3 and routed deterministically by Layer 4. The complete security policy is in [Step 3.2](decisions/step3.2_security_and_ingestion_firewalls.md); [Step 4.2](decisions/step4.2_security_firewall_and_zero_trust_pii_auditing.md) records its end-to-end verification.
 
 ---
 
@@ -184,7 +180,7 @@ source .venv/bin/activate
 | [`step0.1`](decisions/step0.1_database_evaluation.md) | Database Evaluation | Relational DB evaluation against free-tier, JSONB, and DBT requirements. |
 | [`step0.2`](decisions/step0.2_data_model_design.md) | Data Model Design | Entity normalization, cardinality, and physical table naming standards. |
 | [`step0.3`](decisions/step0.3_hashing_algorithm_evaluation.md) | Hashing Evaluation | Cryptographic evaluation of SHA-256 HMAC vs. Argon2/Bcrypt for citizen tokens. |
-| [`step0.3`](decisions/step0.3_token_service_README.md) | Token Service Architecture | Zero-Trust identity tokenizer design, pepper management, and RAM-only contracts. |
+| [`step0.3`](decisions/step0.3_token_service_README.md) | Tokenization Operations | Layer 2 execution boundary, key management, rotation, and verification requirements. |
 | [`step0.3`](decisions/step0.3_zero_trust_tokenization.md) | Zero-Trust Tokenization | RAM-only cryptographic tokenization and zero-retention logging. |
 | [`step0.4`](decisions/step0.4_database_schema_design.md) | Database Schema | Normalization, indexing strategies, audit triggers, and DBT analytical views. |
 | [`step1.1`](decisions/step1.1_tech_stack_evaluation.md) | Tech Stack Selection | Application framework, SLM engine, and runtime evaluation. |
