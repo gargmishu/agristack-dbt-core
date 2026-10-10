@@ -66,6 +66,10 @@ The Layer 2 Perimeter Security Gateway unifies:
 * **Adversarial Prompt Firewall:** Regex-based injection, jailbreak, and tamper defense.
 * **Payload Canonicalizer:** Ingress protocol normalization into the canonical Standardized Intake Payload.
 
+### 4.1 Bearer Credential Verification
+
+For IVR SIP, USSD, or SMS integrations that use bearer authentication, each carrier callback must include its pre-shared token in the `Authorization` header using the Bearer scheme. The perimeter compares the supplied token with the explicitly configured shared secret using a constant-time comparison and rejects missing, malformed, or incorrect credentials. This confirms that the caller possesses the secret; it does not encrypt the connection, protect the request body from modification, or prevent a captured request from being replayed. Use TLS, and validate request signatures separately wherever the carrier supports them.
+
 ---
 
 ## 5. Verification & Testing Matrix

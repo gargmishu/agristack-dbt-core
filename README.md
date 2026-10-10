@@ -66,9 +66,10 @@
 ## 🔒 Zero-Trust Security & PII Architecture
 
 1. **In-Memory RAM-Only Tokenization**: Cleartext citizen identifiers (MSISDN phone numbers, 12-digit Aadhaar IDs) are tokenized at the Layer 2 ingestion boundary using a cryptographically peppered SHA-256 HMAC function (*Zero-Trust Identity Tokenizer*). Raw PII is never persisted to disk or written to database ledgers.
-2. **Zero-PII Purge Guard Sentinel**: The *PII Purge Sentinel* strictly scans every canonicalized contract before passing into Layer 3, asserting that only 64-character hexadecimal HMAC tokens (`tokenized_citizen_id`) exist.
-3. **Adversarial Prompt Injection Defense**: The *Adversarial Prompt Firewall* inspects text inputs for system overrides, role usurpation, delimiter hijacking, and database injection attempts. Flagged attempts immediately neutralize AI confidence scores to `0.0` and wipe extracted entities.
-4. **Strict Immutability & Extra Key Prohibition**: All domain models enforce strict immutability, extra key prohibition, whitespace stripping, and runtime type assignment validation.
+2. **Carrier Callback Authentication**: Depending on the carrier integration, the perimeter verifies a request-body HMAC signature or checks the supplied `Authorization: Bearer` token against an explicitly configured shared secret. Bearer-token matching uses a constant-time comparison and rejects missing or malformed credentials. This check confirms possession of the shared secret; it does not encrypt traffic, authenticate the request body, or prevent replay. Use TLS, and retain request-signature verification where the carrier supports it.
+3. **Zero-PII Purge Guard Sentinel**: The *PII Purge Sentinel* strictly scans every canonicalized contract before passing into Layer 3, asserting that only 64-character hexadecimal HMAC tokens (`tokenized_citizen_id`) exist.
+4. **Adversarial Prompt Injection Defense**: The *Adversarial Prompt Firewall* inspects text inputs for system overrides, role usurpation, delimiter hijacking, and database injection attempts. Flagged attempts immediately neutralize AI confidence scores to `0.0` and wipe extracted entities.
+5. **Strict Immutability & Extra Key Prohibition**: All domain models enforce strict immutability, extra key prohibition, whitespace stripping, and runtime type assignment validation.
 
 ---
 
