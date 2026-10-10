@@ -6,7 +6,6 @@
 - [roadmap.md](../roadmap.md)
 - [step1.2_runtime_strictness_linting.md](./step1.2_runtime_strictness_linting.md)
 - [step1.1_tech_stack_evaluation.md](./step1.1_tech_stack_evaluation.md)
-- [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 - [step0.4_database_schema_design.md](./step0.4_database_schema_design.md)
 - [step0.3_zero_trust_tokenization.md](./step0.3_zero_trust_tokenization.md)
 

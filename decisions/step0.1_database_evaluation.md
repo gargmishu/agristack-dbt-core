@@ -4,7 +4,6 @@
 **Target Environment:** Managed Cloud Database (100% Free Tier)
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
-- [flowchart.md](../design-specs/step3-guardrails/flowchart.md)
 
 ---
 
