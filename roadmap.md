@@ -53,9 +53,9 @@
   * **DPI Blocks:** Identity verification/tokenization, agricultural cadastral cross-matching, social benefit case staging, and automated payment clearing.
 * **Step 3.2: Security & Ingestion Firewalls:** Implement adversarial prompt injection filters and in-memory PII cleartext purge middlewares. Enforce rules that immediately set AI extraction confidence scores to `0.0` upon detecting adversarial override attempts.
 * **Step 3.3: Layer 4 Orchestrator Brain (The Three Evaluation Gates):** Implement the deterministic state machine governing workflow execution across three testable gates:
-  1. *Ingress & Structure Gate:* Audio vs. text routing; USSD structured menu bypass (hardcoding extraction confidence to `1.0`).
-  2. *Intake Validation Gate:* Evaluating extracted intents and missing entities, routing away non-claims, and triggering multi-attempt conversational correction loops when entities are missing.
-  3. *Deterministic Governance Routing Matrix:* Evaluating AI confidence scores and registry eligibility status to switch between Automated Payout ($>95\%$ + eligible), Human Caseworker Review ($60\text{--}94\%$ or fuzzy match), and Auto-Reject ($<60\%$ or ineligible).
+  1. *Ingress & Structure Gate (Gate 1 - Layer 3):* Audio vs. text routing; USSD structured menu bypass (hardcoding extraction confidence to `1.0`).
+  2. *Intake Validation Gate (Gate 2 - Layer 4):* Evaluating extracted intents and missing entities, routing away non-claims, and triggering multi-attempt conversational correction loops when entities are missing.
+  3. *Deterministic Governance Routing Matrix (Gate 3 - Layer 4):* Evaluating AI confidence scores and registry eligibility status to switch between Automated Payout (Score $\ge 0.85$ + eligible), Human Caseworker Review (Score $< 0.85$ or anomaly), and Auto-Reject (ineligible or duplicate claim).
 * **Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors:** Build the public intake API and implement channel-specific webhooks (WhatsApp, IVR voice, USSD) that normalize disparate carrier payloads into a unified, standardized JSON schema before submitting to Layer 3.
 * **Step 3.5: Adaptive Multichannel Confirmation Delivery:** Implement the outbound dispatch engine that formats final transaction receipts (e.g., payment clearing numbers or caseworker escalation IDs) and transmits them natively back via the citizen's originating channel.
 * **Step 3.6: Live Service Integration:** Swap out Phase 3.1 deterministic mocks for live endpoints and sovereign cloud/local model connections.
@@ -85,6 +85,6 @@ If we built "Outside-In" (Connectors => Gateway API => Brain => External Service
 * **Step 4.3: Three-Gate Governance & Conversational Loop Verification:** Execute end-to-end simulation suites verifying:
   * Ingress & Structure Gate (audio routing vs. USSD bypass).
   * Intake Validation Gate (missing entity detection and multi-attempt correction loops capped at 3 attempts).
-  * Deterministic Governance Routing Matrix (Automated Payout vs. Caseworker Review vs. Auto-Rejection).
+  * Deterministic Governance Routing Matrix (Automated Payout [$\ge 0.85$] vs. Caseworker Review [$< 0.85$] vs. Auto-Rejection).
 * **Step 4.4: Outbound Confirmation & Financial Callback Verification:** Validate native outbound receipt delivery back through the originating channel (WhatsApp, SMS, IVR TTS, USSD) and verify asynchronous payment clearing callbacks (NPCI APBS / PFMS Treasury).
 * **Step 4.5: Database Persistence & Analytical Deduplication:** Verify relational database persistence against `schema.sql` and test analytical deduplication queries (`QUALIFY ROW_NUMBER() OVER`) on multi-attempt conversational logs.
