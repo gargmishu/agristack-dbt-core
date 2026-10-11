@@ -7,12 +7,9 @@ This document defines the architectural specifications, state transitions, gatek
 The Orchestrator Brain coordinates the policy evaluation pipeline from structured domain entity contracts (*Extracted Domain Entity Contract*) through deterministic governance gates, concluding in either straight-through automated benefit clearing, manual caseworker escalation, or deterministic automated rejection.
 
 ```
-[ Layer 3: Public Agent Intake Gateway Surface ]
-  └─ GATE 1: INGRESS MODALITY & STRUCTURE GATE
-     - Structured Menu Fast-Path Bypass (Confidence = 1.0, Latency ~0ms)
-     - Speech ASR (Bhashini) & Sovereign SLM Domain Entity Extraction
-                       │
-                       ▼ (Extracted Domain Entity Contract)
+  [ Upstream Ingress: Layer 3 Intake Gateway (Gate 1 Contract) ]
+                               │
+                               ▼
  ┌─────────────────────────────────────────────────────────────┐
  │       GATE 2: INTAKE & INTENT VALIDATION GATE (LAYER 4)     │
  │  - Intent Classification (apply_subsidy vs status inquiry)  │
