@@ -1,137 +1,36 @@
-# Step 4.3: Three-Gate Governance & Conversational Loop Verification Architecture
+# Step 4.3: Three-Gate Governance & Conversational Loop Verification
 
-## 1. Executive Summary & Architectural Scope
+## 1. Scope
 
-This document specifies the end-to-end orchestration verification architecture for **Phase 4, Step 4.3: Three-Gate Governance & Conversational Loop Verification** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator (see foundational architectural decisions in [step3.3_layer4_orchestrator_brain.md](./step3.3_layer4_orchestrator_brain.md) and [step3.4_layer3_intake_gateway_and_connectors.md](./step3.4_layer3_intake_gateway_and_connectors.md)).
-
-The citizen welfare orchestration brain enforces a strict **Three-Gate Governance Architecture** that decouples modality perception (Gate 1 in Layer 3), conversational completeness validation (Gate 2 in Layer 4), and deterministic policy adjudication (Gate 3 in Layer 4). This three-stage separation ensures that unstructured regional voice calls and text messages are progressively refined into complete domain contracts before engaging sovereign DPI registries, while bounding conversational retries to prevent citizen frustration or infinite loops.
-
-```
-                ┌───────────────────────────────────────────────────────┐
-                │            STANDARDIZED INTAKE CONTRACT               │
-                │         (64-Char HMAC Token + Zero-PII Payload)       │
-                └───────────────────────────┬───────────────────────────┘
-                                            │
-                                            ▼
-  ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │                 GATE 1: INGRESS MODALITY & STRUCTURE GATE (LAYER 3)               │
-  │  - Fast-Path Structured Bypass (USSD / DTMF) ──> Confidence = 1.0, Latency ~0ms  │
-  │  - Acoustic Speech Transcription + Sovereign SLM Entity Extraction                │
-  └─────────────────────────────────────────┬─────────────────────────────────────────┘
-                                            │
-                                            ▼
-                      [ Extracted Domain Entity Contract ]
-                                            │
-                                            ▼
-  ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │         GATE 2: INTAKE COMPLETENESS & CONVERSATIONAL LOOP GATE (LAYER 4)          │
-  │  - Evaluates Mandatory Subsidy Entities (Claim District & Crop Variety)           │
-  │  - Attempts 1 & 2 (Missing Entities) ──> REQUEST_MORE_INFO (Localized Reprompt)   │
-  │  - Attempt 3 Exhaustion (Cap = 3)    ──> Advance to Gate 3 for Manual Escalation │
-  └─────────────────────────────────────────┬─────────────────────────────────────────┘
-                                            │
-                                            ▼
-  ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │        GATE 3: DETERMINISTIC POLICY ADJUDICATION MATRIX (LAYER 4)                 │
-  │  - Cross-Matches Sovereign DPI Registries (AgriStack Land + MOSIP Identity)       │
-  │  - Evaluates Anti-Double-Dipping Active Season Ledger                             │
-  │  ├─ [Branch A] AUTO_APPROVE             ──> Automated Payment Clearance Rails     │
-  │  ├─ [Branch B] ROUTE_FOR_MANUAL_REVIEW  ──> Caseworker Incident Staging Queue     │
-  │  └─ [Branch C] AUTO_REJECT              ──> Deterministic Rejection Notice        │
-  └───────────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 2. Gate 1: Ingress Modality & Structure Gate
-
-Gate 1 governs perception routing based on the structural determinism of the incoming citizen interaction:
-
-### 2.1 Fast-Path Structured Menu Bypass
-* **Trigger Condition:** Incoming payload exhibits a structured menu selection level (cellular USSD keypad signaling or telephony DTMF keypresses).
-* **Execution Behavior:** Bypasses acoustic transcription and language model inference entirely, mapping the keypad selection deterministically to canonical agricultural claim entities.
-* **Architectural Invariants:**
-  * Assigns a deterministic AI confidence score of `1.0`.
-  * Sets the structured menu bypass indicator to `True`.
-  * Eliminates approximately 800ms of GPU inference latency and completely prevents model hallucinations.
-
-### 2.2 Unstructured Speech & Free-Text Perception
-* **Trigger Condition:** Incoming payload is unstructured free text (WhatsApp chat, SMS) or voice audio (IVR telephony, WhatsApp voice note).
-* **Execution Behavior:**
-  * Audio streams are first transcribed into regional text via Speech-to-Text Workers (Bhashini ASR).
-  * Regional text transcripts and direct text messages are parsed by sovereign Small Language Models (SLM) to extract domain parameters (`district`, `crop_name`, `survey_number`) and classify citizen intent (`APPLY_SUBSIDY`, `CHECK_STATUS`, `SUBMIT_APPEAL`).
-
----
-
-## 3. Gate 2: Intake Completeness & Multi-Attempt Conversational Loop
-
-To qualify for automated benefit adjudication under seasonal agricultural subsidy schemes, a citizen claim must provide mandatory domain entities—specifically the **Claim District** and **Crop Variety**. Gate 2 manages missing entity detection and bounded multi-turn clarification loops:
+This phase verifies the three-gate behavior and its boundary contracts. The governance architecture is defined in [Step 3.3](./step3.3_layer4_orchestrator_brain.md), the intake boundaries are defined in [Step 3.4](./step3.4_layer3_intake_gateway_and_connectors.md), and the authoritative lifecycle and financial state rules are defined in [Step 2.2](./step2.2_governance_flows_and_state_transitions.md). This file contains verification scenarios only; it does not re-declare the canonical governance logic.
 
 ```mermaid
 flowchart TD
-    Extracted["Extracted Domain Entity Contract"] --> CheckBypass{"Adversarial or\nMenu Bypass?"}
-    CheckBypass -- Yes --> AdvanceGate3["Advance Directly to Gate 3"]
-    CheckBypass -- No --> CheckIntent{"Intent == APPLY_SUBSIDY?"}
-    CheckIntent -- No (Status/Appeal) --> AdvanceGate3
-    CheckIntent -- Yes --> CheckEntities{"Mandatory Entities Present?\n(District & Crop Name)"}
-    CheckEntities -- All Present --> AdvanceGate3
-    CheckEntities -- Missing Entities --> CheckAttempts{"Attempt Count < 3?"}
-    CheckAttempts -- "Yes (Attempt 1 or 2)" --> Reprompt["Emit REQUEST_MORE_INFO Outcome\n(requires_reprompt = True)\nDispatch Localized Vernacular Prompt"]
-    CheckAttempts -- "No (Attempt 3 Exhausted)" --> Exhausted["Terminate Conversational Loop\n(requires_reprompt = False)\nAdvance to Gate 3 for Manual Escalation"]
+    Input["Standardized Intake Contract"] --> G1["Gate 1: Layer 3 Modality & Structure"]
+    G1 --> Entities["Extracted Domain Entity Contract"]
+    Entities --> G2["Gate 2: Layer 4 Completeness & Intent"]
+    G2 --> G3["Gate 3: Layer 4 Deterministic Adjudication"]
+    G3 --> Outcome["Approve / Review / Reject"]
 ```
+
+## 2. Gate 1: Modality and Structure
+
+Verify that the structured USSD and DTMF paths produce the expected extracted-domain contract without engaging speech recognition or language-model extraction. The output must contain the canonical entity fields, modality metadata, and confidence values defined by the Layer 3 contract; for the deterministic path, confidence should be `1.0`.
+
+Verify that audio and free-text inputs produce the same contract shape and preserve the same downstream governance semantics, with modality and confidence metadata retained. A decoding or transcription failure must use the defined low-confidence handling rather than being mislabeled as an adversarial input.
+
+## 3. Gate 2: Completeness and Conversational Loop
+
+Verify that non-claim intents follow their designated non-adjudication route. For `APPLY_SUBSIDY` claims, the mandatory fields are the canonical `DISTRICT`, `CROP_NAME`, and `SURVEY_NUMBER` fields defined in the Layer 4 gate contract.
 
 ### 3.1 Three-Attempt Loop Cap Invariant
 Rural callers interacting over voice or messaging frequently omit required details on their initial turn (e.g., stating crop damage without specifying their district). Gate 2 enforces a strict **3-attempt conversational cap**:
-* **Attempts 1 and 2 (Interactive Clarification):** When mandatory entities are missing on turn 1 or turn 2, the orchestrator suspends adjudication, emits a `REQUEST_MORE_INFO` governance action (`requires_reprompt = True`), and dispatches a localized vernacular prompt specifying the exact missing fields.
+* **Attempts 1 and 2 (Interactive Clarification):** For missing required fields, verify that attempts one and two request only the missing information and do not proceed to automatic adjudication.  When mandatory entities are missing on turn 1 or turn 2, the orchestrator suspends adjudication, emits a `REQUEST_MORE_INFO` governance action (`requires_reprompt = True`), and dispatches a localized vernacular prompt specifying the exact missing fields.
 * **Multi-Turn Recovery:** If the citizen supplies the missing parameters on turn 2 or turn 3, the merged entity contract satisfies Gate 2 completeness and advances immediately to Gate 3 for straight-through adjudication.
-* **Attempt 3 Exhaustion (Loop Termination):** If mandatory parameters remain missing on attempt 3 (`attempt_count = 3`), Gate 2 terminates the conversational loop (`requires_reprompt = False`) and forwards the incomplete claim to Gate 3, which routes the case to a human caseworker (`ROUTE_FOR_MANUAL_REVIEW`). This prevents citizens from being trapped in infinite automated questioning loops.
+* **Attempt 3 Exhaustion (Loop Termination):** Stop re-prompting and route to `INFO_REQUESTED` / `UNDER_REVIEW` for human handling. If mandatory parameters remain missing on attempt 3 (`attempt_count = 3`), Gate 2 terminates the conversational loop (`requires_reprompt = False`) and forwards the incomplete claim to Gate 3, which routes the case to a human caseworker (`ROUTE_FOR_MANUAL_REVIEW`). This prevents citizens from being trapped in infinite automated questioning loops.
 
----
+## 4. Gate 3: Deterministic Adjudication
 
-## 4. Gate 3: Deterministic Policy Adjudication Matrix
-
-Once a claim passes Gate 2 (either complete or exhausted after 3 attempts), Gate 3 executes a deterministic policy decision matrix across sovereign Digital Public Infrastructure (DPI) registries:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Brain as Layer 4: Claim Orchestrator
-    participant Ledger as Anti-Double-Dipping Ledger
-    participant MOSIP as Sovereign Identity Registry
-    participant AgriStack as Cadastral Land Registry
-    participant Payment as Automated Payment Rails
-    participant CaseQueue as Caseworker Review Queue
-
-    Brain->>Ledger: Check Active Season Ledger (Citizen Token + Season)
-    alt Duplicate Claim Found in Active Season
-        Ledger-->>Brain: Duplicate Detected
-        Brain-->>Brain: Verdict: AUTO_REJECT (DUPLICATE_CLAIM_ACTIVE_SEASON)
-    else Unique Claim in Active Season
-        Brain->>MOSIP: Verify Tokenized Citizen Identity
-        alt Identity Not Verified
-            MOSIP-->>Brain: Verification Failed
-            Brain-->>Brain: Verdict: AUTO_REJECT (IDENTITY_NOT_VERIFIED)
-        else Identity Verified
-            Brain->>AgriStack: Cross-Match Cadastral Survey Number & Ownership
-            alt Land Record Mismatch
-                AgriStack-->>Brain: Survey Mismatch / Not Found
-                Brain-->>Brain: Verdict: AUTO_REJECT (LAND_RECORD_NOT_FOUND)
-            else Land Record Verified
-                alt AI Confidence >= 0.85
-                    Brain->>Payment: Initiate Automated Disbursement (TXN-2026-XXXXXX)
-                    Payment-->>Brain: Return Disbursement Callback (Status = PENDING)
-                    Brain-->>Brain: Verdict: AUTO_APPROVE (Eligibility = ELIGIBLE)
-                else AI Confidence < 0.85 or Incomplete Entities
-                    Brain->>CaseQueue: Stage Escalation Ticket (SPP-CASE-2026-XXXXXX)
-                    CaseQueue-->>Brain: Confirm Incident Staged
-                    Brain-->>Brain: Verdict: ROUTE_FOR_MANUAL_REVIEW (Eligibility = REQUIRES_REVIEW)
-                end
-            end
-        end
-    end
-```
-
-### 4.1 Tri-State Governance Routing Rules
 
 | Adjudication Outcome | Trigger Conditions | Downstream Execution & Side Effects | Eligibility Status |
 | :--- | :--- | :--- | :--- |
@@ -139,7 +38,6 @@ sequenceDiagram
 | **`ROUTE_FOR_MANUAL_REVIEW`** (Caseworker Escalation) | AI confidence $< 0.85$, incomplete entities after 3 attempts, or adversarial threat flag | Generates escalation ticket (`SPP-CASE-2026-*`), stages incident in social protection case queue, and dispatches review notification | `REQUIRES_REVIEW` |
 | **`AUTO_REJECT`** (Automated Rejection) | Duplicate active-season claim (`DUPLICATE_CLAIM_ACTIVE_SEASON`), unverified identity (`IDENTITY_NOT_VERIFIED`), or land mismatch (`LAND_RECORD_NOT_FOUND`) | Terminates claim processing, records explicit rejection reason code, and dispatches transparent rejection explanation | `INELIGIBLE` |
 
----
 
 ## 5. End-to-End Verification Matrix
 
