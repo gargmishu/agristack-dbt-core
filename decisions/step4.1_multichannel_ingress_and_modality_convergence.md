@@ -4,7 +4,7 @@
 
 This document defines the architectural specifications and verification model for **Phase 4, Step 4.1: Multichannel Ingress & Modality Convergence** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator.
 
-The primary objective of Step 4.1 is to validate the seamless convergence of heterogeneous telecommunication channels and input modalities into a unified, zero-PII canonical contract. Regardless of whether a farmer interacts via regional voice calls over telephony SIP trunks, multimedia messaging, feature-phone cellular USSD signaling, or transactional SMS, the system must enforce uniform perimeter security, eliminate cleartext personally identifiable information (PII) at the edge, and normalize data into the *Standardized Intake Contract* for downstream governance adjudication.
+The primary objective of Step 4.1 is to validate the seamless convergence of heterogeneous telecommunication channels and input modalities into a unified, zero-PII canonical contract (see architectural foundation in [step3.4_layer3_intake_gateway_and_connectors.md](./step3.4_layer3_intake_gateway_and_connectors.md)). Regardless of whether a farmer interacts via regional voice calls over telephony SIP trunks, multimedia messaging, feature-phone cellular USSD signaling, or transactional SMS, the system must enforce uniform perimeter security, eliminate cleartext personally identifiable information (PII) at the edge, and normalize data into the *Standardized Intake Contract* for downstream governance adjudication.
 
 ```
                    INCOMING TELECOM TRANSPORT RAILS
@@ -31,7 +31,7 @@ The primary objective of Step 4.1 is to validate the seamless convergence of het
   ┌───────────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 3: PUBLIC AGENT INTAKE GATEWAY SURFACE                  │
   │                                                                               │
-  │   [ Modality Evaluation & Perception Convergence ]                            │
+  │   [ Gate 1: Modality Evaluation & Perception Convergence ]                    │
   │   ├─ Structured Keypress Bypass (USSD / DTMF) ──> Zero-Latency Determinism    │
   │   ├─ Voice Audio Streams (IVR / WhatsApp)     ──> Speech ASR Transcription    │
   │   └─ Regional Free-Text (SMS / WhatsApp / ASR)──> Sovereign SLM Extraction    │
