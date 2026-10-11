@@ -86,13 +86,12 @@ All sequence diagrams, flowcharts, and architecture maps in `.md` files must fol
 
 ```mermaid
 flowchart TD
-    A["Raw Carrier Webhook"] --> B["Layer 2: Perimeter Security Gateway"]
-    B --> C["Standardized Intake Contract"]
-    C --> D["Layer 3: Public Agent Intake Evaluator"]
-    D --> E["Layer 4: Claim Orchestration Brain"]
-    E --> F["Gate 1: Modality & Entity Extraction"]
-    F --> G["Gate 2: Completeness Validation"]
-    G --> H["Gate 3: Policy Adjudication Matrix"]
+    A["Raw Carrier Webhook (Layer 1)"] --> B["Layer 2: Perimeter Security Gateway"]
+    B --> C["Standardized Intake Contract (Zero-PII)"]
+    C --> D["Layer 3: Public Agent Intake Gateway<br/>(Gate 1: Modality & Entity Extraction)"]
+    D --> E["Extracted Domain Entity Contract"]
+    E --> F["Layer 4: Claim Orchestrator Brain<br/>(Gate 2: Completeness Validation)"]
+    F --> G["Layer 4: Governance Adjudicator<br/>(Gate 3: Policy Adjudication Matrix)"]
 ```
 
 ### 3.2 Sequence Diagrams
