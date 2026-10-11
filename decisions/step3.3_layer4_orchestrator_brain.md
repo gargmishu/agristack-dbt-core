@@ -7,19 +7,22 @@ This document defines the architectural specifications, state transitions, gatek
 The Orchestrator Brain coordinates the policy evaluation pipeline from structured domain entity contracts (*Extracted Domain Entity Contract*) through deterministic governance gates, concluding in either straight-through automated benefit clearing, manual caseworker escalation, or deterministic automated rejection.
 
 ```
-[ Layer 3: Extracted Domain Entity Contract & Intake Context ]
+[ Layer 3: Public Agent Intake Gateway Surface ]
+  └─ GATE 1: INGRESS MODALITY & STRUCTURE GATE
+     - Structured Menu Fast-Path Bypass (Confidence = 1.0, Latency ~0ms)
+     - Speech ASR (Bhashini) & Sovereign SLM Domain Entity Extraction
                        │
-                       ▼
+                       ▼ (Extracted Domain Entity Contract)
  ┌─────────────────────────────────────────────────────────────┐
- │       GATE 2: INTAKE & INTENT VALIDATION GATE               │
+ │       GATE 2: INTAKE & INTENT VALIDATION GATE (LAYER 4)     │
  │  - Intent Classification (apply_subsidy vs status inquiry)  │
- │  - Mandatory Entity Completeness (District, Crop, Survey)   │
+ │  - Mandatory Entity Completeness (District, Crop Name)      │
  │  - Multi-Turn Conversational Re-Prompt Loop (Attempts <= 3) │
  └─────────────────────────────┬───────────────────────────────┘
                                │
                                ▼
  ┌─────────────────────────────────────────────────────────────┐
- │    GATE 3: DETERMINISTIC GOVERNANCE ROUTING MATRIX          │
+ │    GATE 3: DETERMINISTIC GOVERNANCE ROUTING MATRIX (LAYER 4)│
  │  - DPI Cross-Matching (AgriStack Cadastral + MOSIP Token)   │
  │  - Anti-Double-Dipping Season Ledger Validation             │
  │  - Tri-State Governance Routing:                            │
@@ -37,18 +40,18 @@ The Orchestrator Brain coordinates the policy evaluation pipeline from structure
 
 ---
 
-## 2. Perception Decoupling & Ingress Modality Handling (Layer 3)
+## 2. Gate 1: Ingress Modality & Structure Gate (Hosted in Layer 3)
 
-Modality handling (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, and SLM domain entity parsing) is encapsulated in Layer 3 (*Intake Entity Extractor*). Layer 4 operates exclusively on validated, structured domain entity contracts:
+The Three-Gate Governance Architecture begins at **Gate 1**, encapsulated in Layer 3 (*Intake Entity Extractor*). Gate 1 decouples modality perception (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, and SLM domain entity parsing) from Layer 4 governance. Layer 4 operates exclusively on validated, structured domain entity contracts emitted by Gate 1:
 
-### 2.1 Modality Dispatch in Layer 3
+### 2.1 Modality Dispatch in Layer 3 (Gate 1)
 * **Audio Ingress (IVR voice calls & WhatsApp voice notes):** Transmits the audio URL to the Speech-to-Text Service (Bhashini ASR) to generate the text transcript before SLM extraction.
 * **Structured USSD / Menu Ingress:** Executes deterministic keypress mapping (saving ~800ms GPU latency, confidence = 1.0).
 * **Free-Text Ingress (WhatsApp & SMS):** Dispatches directly to the sovereign SLM domain entity extraction pipeline.
 
 ---
 
-## 3. Gate 2: Intake & Intent Validation Gate
+## 3. Gate 2: Intake & Intent Validation Gate (Hosted in Layer 4)
 
 ### 3.1 Intent Classification & Routing
 * Evaluates the classified Application Intent:
@@ -61,7 +64,7 @@ Modality handling (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, 
 * For `APPLY_SUBSIDY` claims, the system asserts the presence of mandatory domain entities:
   * `DISTRICT`
   * `CROP_NAME`
-  * `SURVEY_NUMBER`
+*(Note: Land parcel survey numbers are optional during initial Gate 2 intake and are resolved during Gate 3 cadastral registry cross-matching).*
 * **Multi-Turn Conversational Re-Prompt Logic:**
   * If any mandatory domain entity is missing and conversational attempts $< 3$:
     * Transitions state to `INFO_REQUESTED`.

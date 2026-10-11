@@ -29,6 +29,7 @@ The ingress architecture decouples carrier transport protocols, perimeter securi
                                       ▼ (Standardized Intake Contract)
   ┌────────────────────────────────────────────────────────────────────────┐
   │             LAYER 3: PUBLIC AGENT INTAKE GATEWAY SURFACE               │
+  │                     [ GATE 1: MODALITY & STRUCTURE ]                   │
   │  - Public Agent API Surface (Perimeter Entrypoint & Workflow Facade)   │
   │  - Intake Entity Extractor (Modality Transcription & SLM Extraction)   │
   └───────────────────────────────────┬────────────────────────────────────┘
@@ -85,16 +86,16 @@ Before raw carrier data enters Layer 3, the Perimeter Security Gateway executes 
 
 ---
 
-## 4. Layer 3: Public Agent Intake Gateway Surface
+## 4. Layer 3: Public Agent Intake Gateway Surface (Gate 1)
 
-Layer 3 provides the public API facade and modal entity extraction:
+Layer 3 provides the public API facade and executes **Gate 1: Ingress Modality & Structure Gate** of the Three-Gate Governance Architecture:
 
 ### 4.1 Public Agent API
-* Acts as the public intake surface bridging Layer 2 perimeter security, Layer 3 entity extraction, Layer 4 governance, and outbound delivery.
+* Acts as the public intake surface bridging Layer 2 perimeter security, Layer 3 entity extraction (Gate 1), Layer 4 governance (Gates 2 & 3), and outbound delivery.
 * Executes the end-to-end processing pipeline from carrier ingress to citizen confirmation delivery.
 
-### 4.2 Intake Entity Extractor & Fast-Path Menu Bypass
-The Intake Entity Extractor converts standardized intake contracts into structured domain entity contracts:
+### 4.2 Gate 1: Intake Entity Extractor & Fast-Path Menu Bypass
+The Intake Entity Extractor operationalizes **Gate 1**, converting standardized intake contracts into structured domain entity contracts based on interaction determinism:
 
 | Structure Level / Modality | Ingress Type | Processing Path | Performance & Architectural Impact |
 | :--- | :--- | :--- | :--- |
@@ -110,6 +111,6 @@ The Intake Entity Extractor converts standardized intake contracts into structur
 | :--- | :--- | :--- |
 | **Layer 1 Edge Connectors** | *Carrier Connectors (WhatsApp, IVR, USSD, SMS)* | Carrier webhook reception, modality validation, and outbound dispatch. |
 | **Layer 2 Perimeter Security** | *Perimeter Security Gateway* | Carrier auth, rate-limiting, RAM-only tokenization, PII purge, threat inspection, and canonicalization. |
-| **Layer 3 Public Intake API** | *Public Agent Gateway & Intake Entity Extractor* | Public intake submission API, speech transcription, USSD menu bypass, and SLM domain entity extraction. |
-| **Layer 4 Governance Brain** | *Claim Governance Engine* | Mandatory completeness validation, multi-turn reprompting, deterministic policy adjudication, and disbursement staging. |
+| **Layer 3 Public Intake API** | *Public Agent Gateway & Intake Entity Extractor* | **Gate 1:** Public intake submission API, speech transcription, USSD menu fast-path bypass, and SLM domain entity extraction. |
+| **Layer 4 Governance Brain** | *Claim Governance Engine* | **Gates 2 & 3:** Mandatory completeness validation (`District`, `Crop Name`), multi-turn reprompting, deterministic policy adjudication, and disbursement staging. |
 | **Domain Contracts** | *Canonical Ingress, Intake & Entity Contracts* | Raw ingress, standardized zero-PII intake, and extracted entity payload schemas. |
