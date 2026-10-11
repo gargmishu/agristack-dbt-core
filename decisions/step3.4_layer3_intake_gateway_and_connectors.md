@@ -1,21 +1,16 @@
-# Step 3.4: Layer 3 Intake Gateway & Layer 1/2 Connectors Architecture
+# Step 3.4: Channel Connectors & Layer 3 Intake Architecture
 
-## 1. Executive Summary & Architectural Overview
+## 1. Scope and Layer Boundaries
 
-This document defines the architectural specifications, transport ingestion lifecycle, and public API gateway contracts for **Phase 3, Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors** of the AgriStack Zero-Trust DPI Orchestrator.
-
-The ingress architecture decouples carrier transport protocols, perimeter security validation, and public agent intake evaluation:
+This record defines the channel-adaptation responsibilities of Layer 1 and the modality-processing responsibilities of Layer 3. Layer 2 is a separate security boundary governed by the [security and ingestion firewall architecture](./step3.2_security_and_ingestion_firewalls.md).
 
 ```text
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 1: CHANNEL EDGE CONNECTORS                       │
-  │  - WhatsApp Connector (Meta Cloud API / BSP Webhooks)                  │
-  │  - IVR Voice Connector (SIP Trunk / Telephony Gateways)                │
-  │  - USSD Menu Connector (SS7 / SIGTRAN Menu Signaling)                  │
-  │  - SMS Gateway Connector (TRAI DLT Transactional SMS Webhooks)         │
+  │  - Validate carrier format and adapt transport                         │
   └───────────────────────────────────┬────────────────────────────────────┘
                                       │
-                                      ▼ (Raw Ingress Payloads: WhatsApp/IVR/USSD/SMS)
+                                      ▼ (Raw Ingress Payloads)
   ┌────────────────────────────────────────────────────────────────────────┐
   │                 LAYER 2: PERIMETER SECURITY & GATEWAY                  │
   │  - Carrier Transport Authenticator (HMAC-SHA256 Signatures & Tokens)   │
