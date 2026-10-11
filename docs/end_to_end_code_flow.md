@@ -33,7 +33,7 @@ sequenceDiagram
     L1->>L3: Submit Standardized Intake Contract
 
     rect rgb(240, 248, 255)
-    Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction
+    Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction (Gate 1)
     alt Ingress Modality is Audio
         L3->>AI: Transcribe Audio (Bhashini Speech-to-Text ASR)
         AI-->>L3: Vernacular Text Transcript
@@ -53,7 +53,7 @@ sequenceDiagram
     %% Gate 2: Mandatory Entity Completeness & Multi-Turn Reprompts
     rect rgb(255, 250, 240)
     Note over L4_Orch: GATE 2: Intent & Mandatory Entity Validation
-    alt Missing Mandatory Entities (District, Crop, Survey) AND Attempts < 3
+    alt Missing Mandatory Entities (District, Crop Name) AND Attempts < 3
         L4_Orch-->>Citizen: Trigger Conversational Re-Prompt (REQUEST_MORE_INFO)
     end
     end
@@ -149,7 +149,7 @@ flowchart TD
     U -- "No" --> W{"Application Intent == APPLY_SUBSIDY?"}
 
     W -- "No (Status Check / Grievance)" --> X["Route to Read-Only Inquiry Flow"]
-    W -- "Yes" --> Y["Scan Mandatory Domain Entities:<br/>1. District<br/>2. Crop Name<br/>3. Survey Number"]
+    W -- "Yes" --> Y["Scan Mandatory Domain Entities:<br/>1. District<br/>2. Crop Name<br/>(Survey Number is Cadastral Checked)"]
 
     Y --> Z{"Missing Mandatory Entities?"}
     Z -- "No (All Present)" --> AA["Proceed to Gate 3 Policy Adjudication"]
