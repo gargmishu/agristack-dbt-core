@@ -2,9 +2,9 @@
 
 ## 1. Executive Summary & Architectural Scope
 
-This document specifies the end-to-end orchestration verification architecture for **Phase 4, Step 4.3: Three-Gate Governance & Conversational Loop Verification** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator.
+This document specifies the end-to-end orchestration verification architecture for **Phase 4, Step 4.3: Three-Gate Governance & Conversational Loop Verification** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator (see foundational architectural decisions in [step3.3_layer4_orchestrator_brain.md](./step3.3_layer4_orchestrator_brain.md) and [step3.4_layer3_intake_gateway_and_connectors.md](./step3.4_layer3_intake_gateway_and_connectors.md)).
 
-The citizen welfare orchestration brain enforces a strict **Three-Gate Governance Architecture** that decouples modality perception (Gate 1), conversational completeness validation (Gate 2), and deterministic policy adjudication (Gate 3). This three-stage separation ensures that unstructured regional voice calls and text messages are progressively refined into complete domain contracts before engaging sovereign DPI registries, while bounding conversational retries to prevent citizen frustration or infinite loops.
+The citizen welfare orchestration brain enforces a strict **Three-Gate Governance Architecture** that decouples modality perception (Gate 1 in Layer 3), conversational completeness validation (Gate 2 in Layer 4), and deterministic policy adjudication (Gate 3 in Layer 4). This three-stage separation ensures that unstructured regional voice calls and text messages are progressively refined into complete domain contracts before engaging sovereign DPI registries, while bounding conversational retries to prevent citizen frustration or infinite loops.
 
 ```
                 ┌───────────────────────────────────────────────────────┐
@@ -14,7 +14,7 @@ The citizen welfare orchestration brain enforces a strict **Three-Gate Governanc
                                             │
                                             ▼
   ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │                 GATE 1: INGRESS MODALITY & STRUCTURE GATE                         │
+  │                 GATE 1: INGRESS MODALITY & STRUCTURE GATE (LAYER 3)               │
   │  - Fast-Path Structured Bypass (USSD / DTMF) ──> Confidence = 1.0, Latency ~0ms  │
   │  - Acoustic Speech Transcription + Sovereign SLM Entity Extraction                │
   └─────────────────────────────────────────┬─────────────────────────────────────────┘
@@ -24,7 +24,7 @@ The citizen welfare orchestration brain enforces a strict **Three-Gate Governanc
                                             │
                                             ▼
   ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │             GATE 2: INTAKE COMPLETENESS & CONVERSATIONAL LOOP GATE                │
+  │         GATE 2: INTAKE COMPLETENESS & CONVERSATIONAL LOOP GATE (LAYER 4)          │
   │  - Evaluates Mandatory Subsidy Entities (Claim District & Crop Variety)           │
   │  - Attempts 1 & 2 (Missing Entities) ──> REQUEST_MORE_INFO (Localized Reprompt)   │
   │  - Attempt 3 Exhaustion (Cap = 3)    ──> Advance to Gate 3 for Manual Escalation │
@@ -32,7 +32,7 @@ The citizen welfare orchestration brain enforces a strict **Three-Gate Governanc
                                             │
                                             ▼
   ┌───────────────────────────────────────────────────────────────────────────────────┐
-  │            GATE 3: DETERMINISTIC POLICY ADJUDICATION MATRIX                       │
+  │        GATE 3: DETERMINISTIC POLICY ADJUDICATION MATRIX (LAYER 4)                 │
   │  - Cross-Matches Sovereign DPI Registries (AgriStack Land + MOSIP Identity)       │
   │  - Evaluates Anti-Double-Dipping Active Season Ledger                             │
   │  ├─ [Branch A] AUTO_APPROVE             ──> Automated Payment Clearance Rails     │
