@@ -73,10 +73,10 @@ For IVR SIP, USSD, or SMS integrations using bearer authentication, the carrier 
 - `TLS` means Transport Layer Security. It encrypts traffic in transit and authenticates the server, so a bearer token is not exposed to network eavesdroppers while it travels from the carrier to the gateway.
 - If the bearer token is sent without `TLS`, an attacker on the network could steal and replay it. That is why the architecture requires transport security and separately validates the raw-body signature for integrity.
 - The server stores the expected shared secret in a secure secret store or environment variable. The client sends the presented token in the `Authorization: Bearer <token>` header.
+- `constant_time_equals(a, b)` means comparing two strings byte-by-byte without returning early when a mismatch is found. The function keeps comparing until the full length is checked, so the time taken does not vary much based on how many characters match. This makes it harder for someone to guess a secret by measuring how long the system takes to respond.
 - The server compares the supplied token to the stored secret using a constant-time comparison. This proves the caller knows the shared secret; it does not prove that the request body was unchanged.
 - The raw-body HMAC signature is checked separately before payload parsing. The server computes an HMAC over the exact request bytes, compares it against the incoming `X-Hub-Signature-256` header, and rejects any invalid or missing signature.
 - This is the difference between identity and integrity: bearer validation answers "who knows the secret?", while the signature answers "was the body modified or tampered with?".
-
 
 ```text
 expected_secret = secret_store.get("carrier_bearer_token")
