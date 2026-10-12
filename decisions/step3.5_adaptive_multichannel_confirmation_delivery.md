@@ -1,5 +1,7 @@
 # Step 3.5: Adaptive Multichannel Confirmation Delivery Architecture
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Delivery Principles
 
 This document defines the architectural specifications, message template bindings, channel formatting constraints, and outbound dispatch logic for **Phase 3, Step 3.5: Adaptive Multichannel Confirmation Delivery** in the Master DPI Architecture.

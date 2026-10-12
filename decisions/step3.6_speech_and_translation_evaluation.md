@@ -1,4 +1,6 @@
-# Architectural Decision Record: Speech Perception & Vernacular Translation Engine Evaluation
+# Step 3.6: Speech Perception & Vernacular Translation Engine Evaluation
+
+> Sequence authority: [roadmap.md](../roadmap.md).
 
 ## 1. Context & Architectural Challenge
 

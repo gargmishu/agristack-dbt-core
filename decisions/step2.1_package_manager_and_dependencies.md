@@ -1,5 +1,7 @@
 # Step 2.1: Package Manager & Dependencies Initialization
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary
 
 This document records the formal specification and execution details for **Step 2.1 of the Master Roadmap**. Step 2.1 initializes the project package management infrastructure (`pyproject.toml`), defines runtime and development dependencies (including database client drivers and ORM/migration frameworks), configures strict static analysis toolchains (Ruff, Mypy, Pytest), and establishes local database environment specifications.
@@ -47,7 +49,7 @@ To support Phase 0 ground-truth relational storage (`schema.sql`), local develop
 
 - **Engine:** PostgreSQL 15+
 - **Protocol:** `postgresql+asyncpg://`
-- **Capabilities:** Native JSONB index support, ACID transaction isolation, foreign key cascading, and SQL windowing functions (`QUALIFY ROW_NUMBER() OVER`).
+- **Capabilities:** Native JSONB index support, ACID transaction isolation, foreign key cascading, and SQL window functions such as `ROW_NUMBER() OVER (...)`, filtered in a CTE or subquery.
 
 ---
 
@@ -83,4 +85,4 @@ Virtual environment verification performed against Python 3.11/3.13 `.venv`:
 
 ## 6. Next Steps
 
-With Step 2.1 complete, execution transitions to **Step 2.2: Scaffold 4-Layer Architecture Structure**, implementing the Python package modules (`src/data_models/`, `src/errors/`, `src/connectors/`, `src/public_agent/`, `src/orchestrator/`, `src/services/`) and test suites in `tests/`.
+With the dependency environment established, the project is ready for architecture scaffolding and implementation.

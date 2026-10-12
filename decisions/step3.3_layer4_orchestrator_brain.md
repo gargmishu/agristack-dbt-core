@@ -1,5 +1,7 @@
 # Step 3.3: Layer 4 Orchestrator Brain & Governance Architecture
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Orchestration Principles
 
 This document defines the architectural specifications, state transitions, gatekeeping algorithms, and execution logic for **Phase 3, Step 3.3: Layer 4 Orchestrator Brain** within the AgriStack Zero-Trust DPI Orchestrator.
@@ -43,7 +45,7 @@ The Three-Gate Governance Architecture begins at **Gate 1**, encapsulated in Lay
 
 ### 2.1 Modality Dispatch in Layer 3 (Gate 1)
 * **Audio Ingress (IVR voice calls & WhatsApp voice notes):** Transmits the audio URL to the Speech-to-Text Service (Bhashini ASR) to generate the text transcript before SLM extraction.
-* **Structured USSD / Menu Ingress:** Executes deterministic keypress mapping (saving ~800ms GPU latency, confidence = 1.0).
+* **Structured USSD / Menu Ingress:** Executes deterministic keypress mapping without model inference; the contract uses a fixed confidence baseline of `1.0`, not a calibrated model score. Measure latency savings on target infrastructure.
 * **Free-Text Ingress (WhatsApp & SMS):** Dispatches directly to the sovereign SLM domain entity extraction pipeline.
 
 ---

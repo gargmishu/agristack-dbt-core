@@ -1,5 +1,7 @@
 # Step 4.1: Multichannel Ingress & Modality Convergence Verification
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Scope
 
 This record verifies that carrier-specific ingress converges on the Layer 3 intake boundary without weakening the established layer responsibilities. Connector and modality behavior is defined in [Step 3.4](./step3.4_layer3_intake_gateway_and_connectors.md); shared perimeter controls are defined in [Step 3.2](./step3.2_security_and_ingestion_firewalls.md).
@@ -60,7 +62,7 @@ The integration simulation must verify that:
 
 - Each channel-and-modality row in the convergence matrix follows the expected structure level and perception path.
 - Every path emits an exact 64-character hexadecimal SHA-256 HMAC token, with no cleartext citizen identifier crossing the Layer 2 boundary.
-- Free-text and transcribed claims at or above `0.85` become eligible for automated governance evaluation; this score does not bypass separate eligibility and uniqueness checks. USSD keypresses use deterministic mapping, bypass SLM inference, and carry confidence `1.00`.
+- Free-text and transcribed claims at or above `0.85` become eligible for automated governance evaluation; this score does not bypass separate eligibility and uniqueness checks. USSD keypresses use deterministic mapping, bypass SLM inference, and carry the contract's fixed confidence baseline `1.00`, not a calibrated model score.
 - Outbound delivery matches the target protocol in the matrix, including the 160-character GSM 7-bit USSD limit.
 - Modality failures follow the documented low-confidence or clarification recovery path rather than being treated as adversarial unless explicitly flagged.
 - Every supported channel reaches the shared standardized intake boundary; invalid carrier events fail at the perimeter or connector boundary, and no channel-specific path bypasses zero-PII assertions.

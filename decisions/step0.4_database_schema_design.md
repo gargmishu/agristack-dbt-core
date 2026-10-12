@@ -1,5 +1,7 @@
 # Schema Architecture Decisions Log
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 **Context:** This document outlines the architectural decisions, rationale, and considered alternatives for the schema design in the Agristack DBT Core project.
 
 ---
@@ -37,7 +39,7 @@ To eliminate redundancy and separate session telemetry from business outcomes, t
 | `payload_id` | `UUID` | Primary Key. |
 | `session_id` | `UUID` | Foreign Key referencing `session_telemetry_log` with `ON DELETE CASCADE`. |
 | `attempt_id` | `INTEGER` | Tracks retry sequence number (`CHECK (attempt_id > 0)`). |
-| `raw_unstructured_text` | `TEXT` | Original text input received from the user. |
+| `redacted_unstructured_text` | `TEXT` | PII-redacted text input retained for extraction audit and permitted analytics. |
 | `standardized_english_text` | `TEXT` | NMT-translated and standardized English text for processing. |
 | `extraction_confidence` | `DECIMAL(4, 3)` | Precision decimal constrained between `0.000` and `1.000`. |
 | `extracted_district` | `VARCHAR(100)` | Bounded string capturing NER model output for the district. |

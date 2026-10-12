@@ -1,5 +1,7 @@
 # Step 3.1: Foundational Mock Boundaries & Offline Simulation Infrastructure
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Architectural Motivation
 
 This document establishes the design architecture, data structures, and deterministic simulation rules for **Phase 3, Step 3.1: Foundational Mock Boundaries** within the AgriStack Zero-Trust DPI Orchestrator.
@@ -28,7 +30,7 @@ The AI Services provide zero-network, local RAM simulations for multi-lingual ci
   * Simulates distinct governance confidence scores across operational scenarios:
     * **High-Confidence Subsidy Claim:** Confidence score `0.96` (triggers automated payout candidate routing).
     * **Status Query:** Confidence score `0.92` (triggers read-only registry status checks).
-    * **Missing Entity Correction Loop:** Confidence score `0.65` with missing mandatory parameters (triggers multi-attempt conversational dialogue loops in Step 3.3).
+    * **Missing Entity Correction Loop:** Confidence score `0.65` with missing mandatory parameters (triggers bounded conversational dialogue loops).
   * **Security Zeroing Invariant Detection:** Scans text against adversarial injection keywords (e.g., `"ignore previous"`, `"override"`, `"system prompt"`). Flagged attempts set the security threat flag, allowing downstream security firewalls to instantly zero out AI confidence scores (`0.0`).
 
 ---
@@ -63,9 +65,9 @@ The DPI Services simulate cross-matching and clearing operations against nationa
 
 ---
 
-## 4. Verification & Step 3.2 Handoff Criteria
+## 4. Verification & Handoff Criteria
 
 The completion of Step 3.1 requires:
 1. All AI and DPI simulation test suites passing with zero external network dependencies.
 2. Complete static type checking and formatting compliance.
-3. Stable mock interfaces ready for immediate consumer integration by **Step 3.2 (Security & Ingestion Firewalls)** and **Step 3.3 (Layer 4 Orchestrator Brain)**.
+3. Stable mock interfaces are available for integration by security and orchestration consumers.

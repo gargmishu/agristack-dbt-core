@@ -3,6 +3,7 @@
 **Framework Step:** Phase 1 · Step 1.1: Choose Language, Runtime & AI Frameworks
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
+- The Phase 0 data and security requirements.
 
 ---
 
