@@ -4,10 +4,11 @@
 
 ## **Phase 0: The Ground Truth (Data & Security Architecture)**
 
-* **Step 0.1: Choose the Database Infrastructure:** Evaluate and select a database provider that natively supports ACID relational integrity, declarative foreign keys, JSONB storage, automated REST API generation, and standard SQL windowing functions required for downstream analytical deduplication. Ensure the chosen database can operate within a permanent free tier while supporting millions of users in production.
+* **Step 0.0: Establish Master Business Requirements:** Define the project scope, citizen and agency requirements, channel boundaries, governance principles, and zero-trust invariants that guide the subsequent architecture decisions.
+* **Step 0.1: Choose the Database Infrastructure:** Evaluate and select a database provider that supports ACID relational integrity, declarative foreign keys, JSONB storage, and standard SQL windowing functions required for downstream analytical deduplication. Select a free-tier option suitable for Phase 0–4 prototyping and document the production scale-up path.
 * **Step 0.2: Identify Entities, Tables & Table Names:** Derive the conceptual entities from approved business and persistence requirements. Apply database normalization (1-to-Many cardinality) to separate session lifecycle tracking from child extraction attempts and governance claims. Define the conceptual entity names and relationships before physical schema design.
 * **Step 0.3: Establish Zero-Trust Purge & Tokenization Protocols:** Analyze citizen data privacy mandates before schema creation. Identify where cleartext PII enters the ingress perimeter and define strict in-memory tokenization rules in volatile RAM and explicit memory purge protocols. Establish a non-negotiable rule that cleartext PII is strictly forbidden from touching persistent disk storage.
-* **Step 0.4: Design Table Schemas & Analytical Staging Rules:** Generate DDL script definitions (`schema.sql`) using the exact table names established in Step 0.2 and enforcing the zero-retention rules from Step 0.3 (physically omitting cleartext PII columns). Define SQL window partitioning queries (`QUALIFY ROW_NUMBER() OVER`) or `dbt-core` staging models to deduplicate multi-attempt user correction loops.
+* **Step 0.4: Design Table Schemas & Analytical Staging Rules:** Generate DDL script definitions (`schema.sql`) using the exact table names established in Step 0.2 and enforcing the zero-retention rules from Step 0.3 (physically omitting cleartext PII columns). Define SQL window-function queries (`ROW_NUMBER() OVER (...)` filtered through a CTE or subquery) or `dbt-core` staging models to deduplicate multi-attempt user correction loops.
 
 ## **Phase 1: The Stack & Tooling Definition (The Agent's Rulebook)**
 
@@ -43,6 +44,7 @@
   | **Contracts**| *Domain Data Contracts* | Immutable, validated Pydantic schemas enforcing Zero-Trust invariants across all layers. |
 
   *Rationale: This exact split maps directly to the layers in the flowchart and dependency taxonomy, guaranteeing Separation of Concerns so that a bug in a WhatsApp connector won't break core governance routing or identity tokenization.*
+* **Step 2.3: Define Governance Flows & State Transitions:** Specify the authoritative application and disbursement state machines, allowed transitions, adjudication outcomes, caseworker actions, and asynchronous payment callback invariants before implementing the Layer 4 governance workflow.
 
 ## **Phase 3: Module / Component-Wise Implementation**
 
@@ -53,9 +55,10 @@
   * **DPI Blocks:** Identity verification/tokenization, agricultural cadastral cross-matching, social benefit case staging, and automated payment clearing.
 * **Step 3.2: Security & Ingestion Firewalls:** Implement adversarial prompt injection filters and in-memory PII cleartext purge middlewares. Enforce rules that immediately set AI extraction confidence scores to `0.0` upon detecting adversarial override attempts.
 * **Step 3.3: Layer 4 Orchestrator Brain:** Implement the deterministic governance workflow over the extracted domain entity contract: intent and completeness validation with bounded clarification loops, followed by policy adjudication and approve/review/reject routing. The canonical confidence threshold and state transitions are owned by the governance decisions.
-* **Step 3.4: Layer 3 Intake Gateway & Layer 2 Connectors:** Build the public intake API and implement channel-specific (WhatsApp, IVR voice, USSD) ingress adapters hat produce the standardized intake contract and extracted domain entity contract consumed by Layer 4.
+* **Step 3.4: Layer 3 Intake Gateway & Channel Connectors:** Build the public intake API and implement channel-specific (WhatsApp, IVR voice, USSD, and SMS) ingress adapters that produce the standardized intake contract and extracted domain entity contract consumed by Layer 4.
 * **Step 3.5: Adaptive Multichannel Confirmation Delivery:** Implement the outbound dispatch engine that formats final transaction receipts (e.g., payment clearing numbers or caseworker escalation IDs) and transmits them natively back via the citizen's originating channel.
-* **Step 3.6: Live Service Integration:** Swap out Phase 3.1 deterministic mocks for live endpoints and sovereign cloud/local model connections.
+* **Step 3.6: Speech & Translation Evaluation:** Evaluate the sovereign speech recognition, translation, and speech synthesis pipeline against the supported channel, language, latency, and data-residency requirements.
+* **Step 3.7: Live Service Integration:** Swap out Phase 3.1 deterministic mocks for live endpoints and sovereign cloud/local model connections.
 
 ### **Why this specific sequence? (Inside-Out vs. Outside-In)**
 
@@ -66,7 +69,8 @@ If we built "Outside-In" (Connectors => Gateway API => Brain => External Service
 
 **The "Inside-Out" Strategy** solves this:
 
-* **Mocks First (3.1 & 3.2):** We need fake, predictable data and security firewalls to test with so we aren't wasting money or fighting network timeouts.
+* **Mocks First (3.1):** We need fake, predictable data for external dependencies so we aren't wasting money or fighting network timeouts.
+* **Security Boundaries (3.2):** We then implement the perimeter and zero-trust controls that govern all subsequent integration.
 * **The Brain Second (3.3):** We build the core logic using those mocks. Every time the Brain calls a function, that function *already exists*.
 * **The Front Door Third (3.4 & 3.5):** Only after the brain works perfectly do we connect it to the unpredictable outside world.
 
@@ -84,4 +88,4 @@ If we built "Outside-In" (Connectors => Gateway API => Brain => External Service
   * Intake Validation Gate (missing entity detection and multi-attempt correction loops capped at 3 attempts).
   * Deterministic Governance Routing Matrix (Automated Payout [$\ge 0.85$] vs. Caseworker Review [$< 0.85$] vs. Auto-Rejection).
 * **Step 4.4: Outbound Confirmation & Financial Callback Verification:** Validate native outbound receipt delivery back through the originating channel (WhatsApp, SMS, IVR TTS, USSD) and verify asynchronous payment clearing callbacks (NPCI APBS / PFMS Treasury).
-* **Step 4.5: Database Persistence & Analytical Deduplication:** Verify relational database persistence against `schema.sql` and test analytical deduplication queries (`QUALIFY ROW_NUMBER() OVER`) on multi-attempt conversational logs.
+* **Step 4.5: Database Persistence & Analytical Deduplication:** Verify relational database persistence against `schema.sql` and test analytical deduplication queries using `ROW_NUMBER() OVER (...)` filtered through a CTE or subquery on multi-attempt conversational logs.
