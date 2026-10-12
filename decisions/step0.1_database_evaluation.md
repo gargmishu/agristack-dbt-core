@@ -1,9 +1,11 @@
 # Cloud Database Evaluation & Selection Rationale
 
 **Framework Step:** Phase 0 · Step 0.1: Choose the Database Infrastructure
-**Target Environment:** Managed Cloud Database (100% Free Tier)
+**Target Environment:** Managed Cloud Database suitable for Phase 0–4 prototyping, with a production scale-up path
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
+- [step0.0_master_project_and_business_requirements.md](./step0.0_master_project_and_business_requirements.md)
+- The Phase 0 zero-trust requirements.
 
 ---
 
@@ -19,27 +21,27 @@ Identify, evaluate, and select a production‑grade, authoritative cloud databas
 > **Non‑Negotiable Operational Boundaries**
 > The selected database must satisfy all of the following requirements. Any candidate that violates one is disqualified.
 
-1. **Free Tier (Zero Cost):** All storage, compute, and ancillary services must remain within a 100 % permanent free tier throughout Phase 0‑4.
+1. **Prototype Cost:** Storage, compute, and required ancillary services should remain within the available free tier during Phase 0–4 prototyping. Production-scale costs and upgrade requirements must be documented rather than assumed to remain free.
 
-2. **No Clear‑Text PII on Disk:** The database must accept and durably persist only pre‑tokenized data. Cleartext personally‑identifiable information must never reach persistent storage (see [roadmap.md](../roadmap.md) Step 0.3).
+2. **No Clear‑Text PII on Disk:** The database must accept and durably persist only pre‑tokenized data. Cleartext personally‑identifiable information must never reach persistent storage and must be handled under the Phase 0 zero-trust requirements.
 
 3. **ACID Transactions:** Every write must be atomic, consistent, isolated, and durable. Partial or uncommitted writes are not acceptable for identity‑hash ingestion.
 
 4. **UUID Primary Keys:** All tables must use UUID‑based primary keys to prevent sequence enumeration and support distributed ingestion from multiple entry channels.
 
-5. **Relational Integrity:** The database must natively enforce declarative foreign keys to maintain 1‑to‑Many cardinality between session records and their child event logs (see [roadmap.md](../roadmap.md) Step 0.2).
+5. **Relational Integrity:** The database must natively enforce declarative foreign keys to maintain 1‑to‑Many cardinality between session records and their child event logs, as defined by the Phase 0 data model design.
 
-6. **SQL Analytical Compatibility:** Must support standard SQL window functions (e.g., `ROW_NUMBER() OVER`) and CTEs (Common Table Expressions — named temporary result sets defined with a `WITH` clause that let you chain multi‑step queries in a single readable SQL statement) required by analytical deduplication models (see [roadmap.md](../roadmap.md) Step 0.4). This capability is exercised by `dbt-core` transformation models.
+6. **SQL Analytical Compatibility:** Must support standard SQL window functions (e.g., `ROW_NUMBER() OVER`) and CTEs (Common Table Expressions — named temporary result sets defined with a `WITH` clause that let you chain multi‑step queries in a single readable SQL statement) required by analytical deduplication models. This capability is exercised by `dbt-core` transformation models.
 
 7. **Horizontal Scale:** Must handle concurrent multi‑channel ingestion (WhatsApp, IVR, USSD) and scale toward millions of users without architectural changes.
 
-8. **Row‑Level Security (RLS):** Must support fine‑grained access control at the row or column level so that only the tokenization service can read or write identity‑hash columns. For example: an analytics role querying `citizen_sessions` automatically receives `NULL` for the `token_hash` column — the DB enforces this via policy, so a misconfigured query or rogue service cannot accidentally expose tokens even if it has SELECT access to the table.
+8. **Database Access Controls:** Must support row-level security for record-level isolation and column privileges or restricted views for sensitive token columns. Row-level security alone does not mask a column or return `NULL` for selected fields. For example: an analytics role querying `citizen_sessions` automatically receives `NULL` for the `token_hash` column — the DB enforces this via policy, so a misconfigured query or rogue service cannot accidentally expose tokens even if it has SELECT access to the table.
 
 9. **Encryption‑at‑Rest:** All data stored on disk (token hashes, session metadata, WAL logs, backups) must be encrypted at the storage layer. This is distinct from PII tokenization — tokenization prevents cleartext PII from entering the DB, while encryption‑at‑rest protects whatever *is* stored (including tokens and metadata) from physical disk access or stolen backups. Even opaque tokens are sensitive: they can be cross‑referenced with external datasets for re‑identification, and unencrypted metadata (timestamps, channel, session duration) can reveal behaviour patterns. A clear key‑management model must be documented — the DB choice directly determines who holds the at‑rest encryption key (provider‑managed KMS vs. customer‑controlled KMS), which affects data‑sovereignty compliance.
 
-10. **Extension / Stored‑Procedure Support:** Must allow server‑side extensions or functions (e.g., `pgcrypto`) to validate token format at write time. This provides defense‑in‑depth: even if an application‑layer bug sends cleartext PII instead of a token, the DB rejects the write before it ever touches disk — the application layer alone cannot guarantee this because bugs, misconfigured middleware, or a compromised service could bypass it.
+10. **Extension / Stored‑Procedure Support:** Must allow server-side extensions or functions (e.g., `pgcrypto`) and `CHECK` constraints to enforce the expected format for token columns at write time. This is defense-in-depth for identity-token fields; it does not replace application-layer sanitization or prevent arbitrary free-text fields from containing PII.
 
-11. **Practical Integration Fit:** The database should be easy to connect to from common ingestion (such as webhook-driven gateways) and analytics tools (ex: ETL/ELT pipelines,  dbt-based transformation jobs). This is a preference rather than a disqualifier: a candidate that is slightly less convenient is still acceptable if it clearly satisfies the core data, security, and analytical requirements. For example, whether the system uses a direct SQL interface, a simple HTTP API, or a thinner application-layer service can be decided separately in the API/access-layer decision.
+11. **Practical Integration Fit:** The database should be easy to connect to from common ingestion (such as webhook-driven gateways) and analytics tools (e.g., ETL/ELT pipelines and dbt transformation jobs). This is a preference rather than a disqualifier: a candidate that is slightly less convenient is still acceptable if it clearly satisfies the core data, security, and analytical requirements. The precise API or application access pattern is a separate implementation decision.
 
 ---
 
@@ -52,7 +54,7 @@ The selection was judged from first principles against the requirements above ra
 3. **Operational simplicity:** Free-tier viability, predictable availability, and low operational overhead.
 4. **Integration ergonomics:** How easily connectors, gateways, and analytics jobs can talk to the database.
 
-Integration style matters, but it is a separate architectural concern from the database choice itself. A database that is easy to connect to is useful, especially for webhook-driven ingestion and analytics tooling, but the specific interface pattern should be decided in the companion access-layer decision rather than embedded as a primary reason for selecting the database.
+Integration style matters, but it is a separate architectural concern from the database choice itself. A database that is easy to connect to is useful, especially for webhook-driven ingestion and analytics tooling, but the specific interface pattern should be decided separately rather than embedded as a primary reason for selecting the database.
 
 ---
 
@@ -68,7 +70,6 @@ The evaluation considered the main database families relevant to this project:
 
 - PostgreSQL-based managed databases (Supabase, Neon)
 - Self-hosted PostgreSQL deployments
-- Managed PostgreSQL providers with a different operational model from Supabase/Neon
 - Distributed SQL databases (CockroachDB)
 - Document-oriented databases (MongoDB Atlas)
 
@@ -82,7 +83,7 @@ Supabase provides an open-source cloud suite backed by a managed PostgreSQL inst
 #### Why it fits
 - **PostgreSQL-native relational model:** Matches the hard requirements for UUIDs, foreign keys, SQL window functions, and SQL-based analytical workloads.
 - **Good ecosystem fit:** A mature PostgreSQL ecosystem makes it easier to connect gateways, automation tools, and analytics pipelines (for example, webhook-based ingestion, n8n automation, and dbt analytics jobs).
-- **Security controls:** RLS, auth, and server-side extensions are available out of the box (for example, row-level policies for token_hash access, JWT-based auth, and pgcrypto checks).
+- **Security controls:** RLS, authentication, and server-side extensions are available. Use RLS for row-level isolation and column privileges or restricted views for access to sensitive token columns.
 
 #### Free Tier Limits
 - 500 MB DB storage
@@ -173,7 +174,7 @@ CockroachDB is a cloud-native distributed SQL database using the PostgreSQL wire
 
 ---
 
-### Option 6: MongoDB Atlas (M0 Shared Cloud Cluster)
+### Option 5: MongoDB Atlas (M0 Shared Cloud Cluster)
 
 #### How it works
 MongoDB Atlas is the industry-standard managed NoSQL document database service.
@@ -198,15 +199,15 @@ MongoDB Atlas is the industry-standard managed NoSQL document database service.
 
 ## 6. Summary Comparison Matrix
 
-| Evaluation Criteria            | Supabase (PostgreSQL)   | Neon (Serverless PG)    | Self-Hosted PostgreSQL | Managed PG Alternative | CockroachDB Cloud          | MongoDB Atlas (NoSQL)  |
-| :----------------------------- | :---------------------- | :---------------------- | :--------------------- | :---------------------- | :------------------------- | :--------------------- |
-| **Free Tier Storage**          | 500 MB                  | 500 MB                  | Varies                 | Varies                 | **10 GB**                  | 512 MB                 |
-| **`dbt-core` Compatibility**   | ⭐⭐⭐⭐⭐ (Native)        | ⭐⭐⭐⭐⭐ (Native)        | ⭐⭐⭐⭐⭐ (Native)       | ⭐⭐⭐⭐⭐ (Native)       | ⭐⭐⭐⭐ (Compatible)         | ⭐ (Poor / Non-SQL)     |
-| **Window Functions & CTEs**    | Full Support            | Full Support            | Full Support           | Full Support           | Full Support               | Limited (Aggregations) |
-| **Relational Integrity (FKs)** | Declarative Enforcement | Declarative Enforcement | Declarative Enforcement | Declarative Enforcement | Declarative Enforcement    | Application-Level Only |
-| **Integration Flexibility**   | Strong                  | Strong                  | Strong                  | Strong                  | Strong                      | Moderate               |
-| **Idle Behavior**              | Pauses after 7 days     | Scales compute to 0     | Depends on hosting     | Depends on provider     | Always Active              | Always Active          |
-| **Final Verdict**              | 🏆 **Selected Primary**  | ⭐ **Strong Alternative** | ⚖️ **Operationally Heavy** | ⚖️ **Needs Validation** | 💡 **Best for Large Storage** | ❌ **Rejected**         |
+| Evaluation Criteria            | Supabase (PostgreSQL)   | Neon (Serverless PG)    | Self-Hosted PostgreSQL | CockroachDB Cloud          | MongoDB Atlas (NoSQL)  |
+| :----------------------------- | :---------------------- | :---------------------- | :--------------------- | :------------------------- | :--------------------- |
+| **Free Tier Storage**          | 500 MB                  | 500 MB                  | Varies                 | **10 GB**                  | 512 MB                 |
+| **`dbt-core` Compatibility**   | ⭐⭐⭐⭐⭐ (Native)        | ⭐⭐⭐⭐⭐ (Native)        | ⭐⭐⭐⭐⭐ (Native)       | ⭐⭐⭐⭐ (Compatible)         | ⭐ (Poor / Non-SQL)     |
+| **Window Functions & CTEs**    | Full Support            | Full Support            | Full Support           | Full Support               | Limited (Aggregations) |
+| **Relational Integrity (FKs)** | Declarative Enforcement | Declarative Enforcement | Declarative Enforcement | Declarative Enforcement  | Application-Level Only |
+| **Integration Flexibility**   | Strong                  | Strong                  | Strong                  | Strong                      | Moderate               |
+| **Idle Behavior**              | Pauses after 7 days     | Scales compute to 0     | Depends on hosting     | Always Active              | Always Active          |
+| **Final Verdict**              | 🏆 **Selected Primary**  | ⭐ **Strong Alternative** | ⚖️ **Operationally Heavy** | 💡 **Best for Large Storage** | ❌ **Rejected**         |
 
 ---
 
