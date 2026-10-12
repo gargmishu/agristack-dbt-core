@@ -4,10 +4,10 @@
 **Target Architecture:** FastAPI + Pydantic v2
 **Related Documents:**
 - [roadmap.md](../roadmap.md)
-- [step1.2_runtime_strictness_linting.md](./step1.2_runtime_strictness_linting.md)
 - [step1.1_tech_stack_evaluation.md](./step1.1_tech_stack_evaluation.md)
-- [step0.4_database_schema_design.md](./step0.4_database_schema_design.md)
+- [step1.2_runtime_strictness_linting.md](./step1.2_runtime_strictness_linting.md)
 - [step0.3_zero_trust_tokenization.md](./step0.3_zero_trust_tokenization.md)
+- [step0.4_database_schema_design.md](./step0.4_database_schema_design.md)
 
 ---
 
@@ -355,7 +355,7 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
     payload_type: PayloadType = Field(..., description="Normalized payload modality: audio, text, image, document")
     structure_level: StructureLevel = Field(..., description="Structure level: free_text, menu_selection, dtmf_selection")
     language_locale: LanguageLocale = Field(LanguageLocale.HINDI, description="Supported BCP 47 language code")
-    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="Signed audio recording URL (for AUDIO) or raw text / DTMF digit string (for TEXT)")
+    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="Signed & transient audio reference (AUDIO) or PII-redacted text / DTMF digit string (TEXT); audio references are never persisted")
     received_at: datetime = Field(..., description="UTC timestamp when Layer 2 normalized payload")
 ```
 
@@ -382,16 +382,16 @@ class PublicAgentStandardizedIntakePayload(StrictBaseModel):
 1. **Choice of `tokenized_citizen_id` over `tokenized_phone`:**
    - **Design Intent:** `tokenized_citizen_id` represents a **stable, pseudonymous citizen identity token** — not a "tokenized phone". The schema is intentionally agnostic to the underlying PII source. Layer 2 is the only layer that knows what PII source was fed into the HMAC.
    - **Current Derivation (Phone-Sourced Channels):** Computed as `HMAC-SHA256(secret_key, phone_number)` for WhatsApp, IVR, and USSD channels where citizen identity is rooted in MSISDN.
-   - **Aadhaar-Sourced Channels & Legal Constraint:** Raw Aadhaar numbers **must never** be directly HMAC'd. The **Aadhaar Act 2016 §29** prohibits storing or hashing raw Aadhaar numbers without UIDAI Authentication User Agency (AUA) registration. For Aadhaar-authenticated channels, Layer 2 must call UIDAI e-KYC/OTP API, obtain the **UIDAI Token UID** (an opaque, AUA-scoped pseudonym), and compute `HMAC-SHA256(secret_key, uidai_token_uid)`.
+   - **Aadhaar-Sourced Channels & Privacy Constraint:** Under this architecture, raw Aadhaar numbers **must never** be directly HMAC'd or persisted. Where Aadhaar-based verification is required, use an authorized UIDAI-issued pseudonymous identifier through the approved provider flow, then apply the system's tokenization policy as permitted by the applicable legal and program controls. Confirm the precise integration and legal basis with the responsible authority.
    - **Other Identity Sources (Voter ID, PAN):** May serve as HMAC input only where lawful purpose and explicit citizen consent exist under the DPDP Act.
 2. **Choice & Purpose of `structure_level`:**
    - **Pipeline Routing:** Bypasses SLM entity extraction for `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp buttons), routing directly to deterministic lookup tables while directing `FREE_TEXT` to the SLM/NLU extraction pipeline.
-   - **Confidence Baseline:** Automatically assigns `ai_confidence_score = 1.0` for deterministic selections (`DTMF_SELECTION` / `MENU_SELECTION`), whereas `FREE_TEXT` requires dynamic SLM scoring and prompt-injection checks.
+   - **Confidence Baseline:** Assigns the contract's fixed `ai_confidence_score = 1.0` to deterministic selections (`DTMF_SELECTION` / `MENU_SELECTION`); this is a deterministic routing baseline, not a calibrated model confidence. `FREE_TEXT` requires dynamic SLM scoring and prompt-injection checks.
 3. **Content Representation in `unprocessed_input_content`:**
-   - **For `PayloadType.TEXT` (WhatsApp text, USSD, SMS):** Stores the raw text string or concatenated DTMF menu digits (e.g., `"1*2*10"`).
-   - **For `PayloadType.AUDIO` (WhatsApp voice notes, IVR calls):** Stores the **signed audio recording URL** (`audio_recording_url` forwarded from Layer 1/2).
-     - *Generation & Ownership:* The signed URL is generated **automatically by the Layer 1/2 backend connector** using service account storage credentials when the audio arrives — the citizen/user does not perform any signing.
-     - *Security & Efficiency:* A "signed URL" is a cryptographically signed, time-limited HTTPS link (e.g., valid for 15 minutes) pointing to a private object storage file (S3/GCS/Supabase). This maintains zero-trust security (public storage access is disabled) while keeping JSON payloads lightweight (~150-byte URL string vs. 4.8 MB Base64 payload).
+   - **For `PayloadType.TEXT` (WhatsApp text, USSD, SMS):** Stores PII-redacted text or concatenated DTMF menu digits (e.g., `"1*2*10"`).
+   - **For `PayloadType.AUDIO` (WhatsApp voice notes, IVR calls):** Carries a short-lived, scoped reference to the audio for transient transcription only. Treat the reference as a bearer credential: do not log it or persist it in the durable application ledger. Retain only the PII-redacted transcript if policy permits retention.
+     - *Generation & Ownership:* The storage service creates the reference automatically when audio arrives; the citizen does not sign it.
+     - *Security & Efficiency:* The reference must expire quickly, grant access only to the specific object, and point to private storage. Raw audio and the reference are excluded from long-term records.
 
 ---
 
@@ -458,7 +458,7 @@ class ExtractedEntityPayload(StrictBaseModel):
     ```
 
 2. **Layer 3 Deterministic Lookup & SLM NLU Bypass:**
-   Because `structure_level == DTMF_SELECTION`, the system bypasses the SLM entity extraction pipeline (saving ~800ms of GPU inference latency and eliminating AI hallucination risk). The string `"1*2*101"` is mapped directly via a static lookup table into the canonical payload:
+   Because `structure_level == DTMF_SELECTION`, the system bypasses model-based entity extraction and maps the string `"1*2*101"` directly via a static lookup table into the canonical payload. Latency savings must be measured on target infrastructure:
 
    ```json
    {
@@ -474,7 +474,7 @@ class ExtractedEntityPayload(StrictBaseModel):
    ```
 
 3. **Validation & Pipeline Enforcement Trace:**
-   - **Deterministic Baseline Confidence:** Pydantic validation rule assigns `ai_confidence_score = 1.0` (100% confidence) because keypad/button inputs are zero-ambiguity deterministic selections.
+   - **Deterministic Baseline Confidence:** The contract assigns `ai_confidence_score = 1.0` to keypad/button inputs as a deterministic routing baseline; it is not a calibrated model-confidence estimate.
    - **Zero AI Latency & Zero Hallucination:** No SLM/NLU model call is executed; entity extraction risk is 0%.
    - **Downstream Governance Decision (Layer 4):** Layer 4 evaluates `ai_confidence_score = 1.0 >= 0.85` (auto-approval threshold gate), allowing instant automated query execution or disbursement verification.
 
@@ -552,7 +552,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     tokenized_citizen_id: HmacCitizenToken = Field(..., description="SHA-256 HMAC citizen identity token")
     application_intent: ApplicationIntent = Field(..., description="Target scheme intent")
     extracted_entities: Dict[DomainEntityKey, Union[str, float, int]] = Field(default_factory=dict, description="Extracted domain parameters")
-    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="Raw citizen text or signed audio URL")
+    unprocessed_input_content: str = Field(..., min_length=1, max_length=5000, description="PII-redacted citizen text or transient audio reference; audio references are not persisted")
     escalation_reason: EscalationReasonCode = Field(..., description="Structured reason enum for escalation")
     staged_at: UtcTimestamp = Field(..., description="UTC timestamp when staged into caseworker queue")
 ```
