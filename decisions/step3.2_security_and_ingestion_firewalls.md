@@ -1,5 +1,7 @@
 # Step 3.2: Security & Ingestion Firewalls Architecture
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Security Principles
 
 This document defines the security architecture, threat mitigation protocols, and in-memory firewall rules for Phase 3, Step 3.2: Security & Ingestion Firewalls within the AgriStack Zero-Trust DPI Orchestrator.
@@ -24,7 +26,7 @@ This document defines the security architecture, threat mitigation protocols, an
 ```
 
 ### Core Security Invariants:
-1. **The Identity Invariant (Zero Cleartext PII):** Raw citizen identifiers (MSISDN, Aadhaar numbers, unhashed names) must be tokenized into 64-character SHA-256 HMAC tokens exclusively in volatile RAM at the Layer 2 perimeter. Cleartext PII is strictly forbidden from escaping into Layer 3 payloads, persistent disk logs, or downstream microservices.
+1. **The Identity Invariant (Zero Cleartext PII):** Approved citizen identifiers (such as phone numbers and authorized UIDAI-issued pseudonymous identifiers) must be converted to 64-character HMAC-SHA-256 tokens in volatile RAM at the Layer 2 perimeter. Raw Aadhaar must not be directly hashed. Cleartext PII is strictly forbidden from escaping into Layer 3 payloads, persistent disk logs, or downstream microservices.
 2. **The Security Zeroing Invariant:** When an adversarial prompt injection, jailbreak attempt, or instruction override is detected in raw or translated citizen input, the system strictly marks the interaction as an adversarial attempt, forces AI confidence score to `0.0`, wipes extracted domain entities, and routes the claim directly to the human security review queue (`ROUTE_FOR_MANUAL_REVIEW`).
 3. **Fail-Fast Secrets Invariant:** All cryptographic pepper keys, carrier webhook secrets, and bearer tokens must be explicitly configured. Fallback defaults or hardcoded dummy secrets are strictly rejected at startup.
 4. **Transport Perimeter Gatekeeping:** Requests with missing/invalid HMAC webhook signatures (`X-Hub-Signature-256`), missing/invalid bearer tokens, or rates exceeding token bucket allowances are rejected safely at the perimeter without throwing unhandled exceptions prior to request processing.

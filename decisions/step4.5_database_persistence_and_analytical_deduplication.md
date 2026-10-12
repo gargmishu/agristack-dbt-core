@@ -1,5 +1,7 @@
 # Step 4.5: Database Persistence & Analytical Deduplication Architecture
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Data Governance Scope
 
 This document defines the relational persistence architecture, immutable audit triggers, and analytical deduplication specifications for **Phase 4, Step 4.5: Database Persistence & Analytical Deduplication** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator.
@@ -47,7 +49,7 @@ The relational persistence layer solves this through a three-tier data architect
 In strict compliance with sovereign data protection mandates, no table in the database stores cleartext citizen phone numbers, Aadhaar numbers, or unredacted personal identifiers:
 * All phone numbers are persisted exclusively as 64-character hexadecimal SHA-256 HMAC digests (`tokenized_phone_hash`).
 * All citizen identity references are persisted exclusively as 64-character hexadecimal SHA-256 HMAC digests (`tokenized_identity_hash`).
-* Free-text transcripts stored in `raw_unstructured_text` are pre-sanitized by the Layer 2 PII Purge Sentinel (`[REDACTED]`) prior to database insertion.
+* Free-text transcripts stored in `redacted_unstructured_text` are pre-sanitized by the Layer 2 PII Purge Sentinel (`[REDACTED]`) prior to database insertion.
 
 ### 2.2 Entity-Relationship Architecture
 
@@ -71,7 +73,7 @@ erDiagram
         uuid payload_id PK
         uuid session_id FK
         int attempt_id
-        text raw_unstructured_text
+        text redacted_unstructured_text
         decimal extraction_confidence
         varchar extracted_district
         varchar extracted_crop_type
@@ -120,7 +122,7 @@ To eliminate fan-out during analytical queries, the persistence layer supports t
 1. **State-Driven Deduplication (`staging_committed_extractions`):**
    * Filters `session_extraction_details` where `processing_state = 'COMMITTED'`.
    * Guarantees that intermediate `STAGED` or `SUPERSEDED` turns are excluded from downstream joins.
-2. **Window-Function Analytical Deduplication (`QUALIFY ROW_NUMBER() OVER`):**
+2. **Window-Function Analytical Deduplication (`ROW_NUMBER() OVER (...)`):**
    * Partitions extraction records by `session_id` ordered by `attempt_id DESC` (and `created_at DESC`).
    * Selects strictly rank `1` (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1`), ensuring that even if a session was abandoned mid-dialogue before reaching `COMMITTED`, analytical queries retrieve the latest conversational state without duplicate rows.
 

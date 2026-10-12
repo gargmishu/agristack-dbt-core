@@ -1,5 +1,7 @@
 # Step 4.2: Security Firewall & Zero-Trust PII Verification
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Scope
 
 This record verifies the security controls and their end-to-end effect across the architecture. The security policy is defined in [Step 3.2](./step3.2_security_and_ingestion_firewalls.md), and the channel convergence boundary is verified in [Step 4.1](./step4.1_multichannel_ingress_and_modality_convergence.md). Layer 3 and Layer 4 remain distinct: perception identifies and neutralizes unsafe input; governance applies the deterministic routing decision.
@@ -67,7 +69,7 @@ WhatsApp follows the signature-only path unless the deployment adds a separate B
 ### 4.1 RAM-Only Cryptographic Tokenization
 * **One-Way Pseudonymization:** The originating caller phone number is combined with a high-entropy environment pepper secret and hashed via SHA-256 HMAC in volatile memory.
 * **64-Character Digest Invariant:** The resulting citizen identifier is strictly a 64-character hexadecimal string.
-* **Zero Cleartext Persistence:** The original phone number is discarded immediately after tokenization and never crosses the Layer 2 boundary.
+* **Zero Cleartext Persistence:** The original phone number is discarded immediately after tokenization and never leaves the Layer 2 perimeter in cleartext.
 
 ### 4.2 Two-Tier PII Purge Sentinel
 The PII Purge Sentinel enforces both active sanitization and defensive verification:

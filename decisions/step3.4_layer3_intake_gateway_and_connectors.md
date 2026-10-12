@@ -1,5 +1,7 @@
 # Step 3.4: Channel Connectors & Layer 3 Intake Architecture
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Scope and Layer Boundaries
 
 This record defines the channel-adaptation responsibilities of Layer 1 and the modality-processing responsibilities of Layer 3. Layer 2 is a separate security boundary governed by the [security and ingestion firewall architecture](./step3.2_security_and_ingestion_firewalls.md).
@@ -94,7 +96,7 @@ The Intake Entity Extractor operationalizes **Gate 1**, converting standardized 
 
 | Structure Level / Modality | Ingress Type | Processing Path | Performance & Architectural Impact |
 | :--- | :--- | :--- | :--- |
-| **`MENU_SELECTION` / `DTMF_SELECTION`** | USSD (`*147#`), IVR Keypad (`1#`) | **Structured Bypass** (Deterministic Mapping) | **Saves ~800ms GPU inference latency** and completely eliminates AI hallucinations for deterministic menu choices (Confidence = 1.0). |
+| **`MENU_SELECTION` / `DTMF_SELECTION`** | USSD (`*147#`), IVR Keypad (`1#`) | **Structured Bypass** (Deterministic Mapping) | Avoids model inference for validated menu choices; the contract uses a fixed confidence baseline of `1.0`, not a calibrated model score. **Saves ~800ms GPU inference latency** and completely eliminates AI hallucinations for deterministic menu choices (Confidence = 1.0) |
 | **`FREE_TEXT` (Audio Modality)** | IVR Voice Calls, WhatsApp Audio | **Speech ASR + Sovereign SLM** | Transcribes audio via Speech-to-Text (Bhashini ASR) and parses domain parameters via Small Language Models. |
 | **`FREE_TEXT` (Text Modality)** | WhatsApp Chat, SMS | **Sovereign SLM** | Parses unstructured regional language text into canonical domain parameters (`district`, `crop_name`, `survey_number`). |
 
