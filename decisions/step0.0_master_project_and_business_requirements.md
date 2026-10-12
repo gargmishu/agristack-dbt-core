@@ -1,5 +1,7 @@
 # Step 0.0: AgriStack DBT Core — Master Project & Business Requirements Specification
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Executive Summary & Core Project Mandate
 
 ### 1.1 Project Vision & Purpose
@@ -31,7 +33,7 @@ The platform provides a unified, inclusive interface catering to farmers of all 
 | **`IVR_VOICE`** | SIP Trunk / SS7 Gateways (`SIP_TRUNK_BSNL_HAR_08`) | Vernacular Speech Streams | Mono 16kHz 16-bit PCM; Agricultural Background Noise Attenuation |
 | **`WHATSAPP`** | Meta WhatsApp Business API | Text & Voice Notes | Natural Language Text / Signed Audio URLs |
 | **`USSD`** | SS7 / SIGTRAN Carrier Gateway | DTMF / Structured Menu Strings | Compact Key-Value Payloads (`ussd_collected_payload`) |
-| **`WEB_PORTAL` / `MOBILE_APP`** | HTTPS REST API / Gateway | JSON Payloads | Structured Application Payloads |
+| **`SMS`** | Transactional SMS webhook | Plaintext message and carrier metadata | Text-based status and application interactions |
 
 ### 2.2 Vernacular Speech & Language Processing Pipeline
 For `IVR_VOICE` and `WHATSAPP` channels, raw input undergoes multi-stage AI translation:
@@ -46,12 +48,13 @@ For `IVR_VOICE` and `WHATSAPP` channels, raw input undergoes multi-stage AI tran
 
 ---
 
-## 3. Zero-Trust Security, Privacy & Consent Requirements (Layer 2)
+## 3. Zero-Trust Security, Privacy & Consent Requirements
 
 ### 3.1 Zero-PII Tokenization Architecture
 To comply with sovereign data privacy regulations (DPDP Act / GDPR principles):
-* **hashing_algorithm:** SHA-256 with environment-injected salt & pepper (`ENV_INJECTED_SYSTEM_PEPPER_KEY`).
-* **RAM Masking:** Raw identifiers (Aadhaar / MSISDN) are held in volatile RAM only during tokenization and zero-masked before writing telemetry to disk.
+* **Tokenization:** Layer 2 applies HMAC-SHA-256 with a high-entropy, environment-injected pepper; the key is never stored in the database or exposed to Layer 1 connectors.
+* **RAM Masking:** Raw identifiers (ex: Aadhaar / MSISDN) are held in volatile RAM only during tokenization and are removed from downstream contracts and persistence-bound data.
+* **Aadhaar Handling:** Raw Aadhaar must not be directly HMAC'd. Identity verification must use an authorized UIDAI-issued pseudonymous identifier where required by the applicable legal and program controls.
 * **Token Format:** `tokenized_citizen_id` and `tokenized_identity_hash` must be exact 64-character hex strings.
 
 ### 3.2 Consent Registry & Provenance Audit (`consent_registry`)
@@ -95,7 +98,7 @@ When `registry_match_flag == true`, verified parameters are staged into the Open
 
 ---
 
-## 6. Governance Routing, Adjudication & Ledger Requirements (Layer 5)
+## 6. Governance Routing, Adjudication & Ledger Requirements (Layer 4)
 
 ### 6.1 Threshold Evaluation Gate
 The rules engine evaluates claim criteria against state policy gates:
@@ -187,14 +190,14 @@ Emitted during Caseworker Incident Staging to push case context to the District 
 | `tokenized_citizen_id` | SHA-256 HMAC Token (64 hex chars) | Zero-PII citizen pseudonym |
 | `application_intent` | Intent Enum | Target scheme intent |
 | `extracted_entities` | Key-Value Mapping | Extracted domain parameters (allowed to be `{}` if AI extraction failed) |
-| `unprocessed_input_content` | String (max 5000 chars) | Raw citizen text or signed audio URL pointer |
+| `unprocessed_input_content` | String (max 5000 chars) | PII-redacted citizen text or an approved, short-lived audio reference; audio references are transient and not persisted |
 | `escalation_reason` | String (max 512 chars) | Non-empty reason for human escalation |
 | `staged_at` | UTC Timestamp | Ticket creation timestamp |
 
 ##### Validation Rules:
 * `escalation_case_id` **must** match pattern `^\w+-CASE-\d{4}-\d{6,}$`.
 * `tokenized_citizen_id` **must** be an exact 64-character SHA-256 HMAC token.
-* `unprocessed_input_content` and `escalation_reason` **must not be empty or whitespace**.
+* `unprocessed_input_content` and `escalation_reason` **must not be empty or whitespace**; the input content must be screened and PII-redacted before it leaves the ingress perimeter.
 * `extracted_entities` **is intentionally allowed to be empty `{}`** so that sessions where AI extraction failed completely can still be staged for human review based on `unprocessed_input_content`.
 
 ---
@@ -221,7 +224,7 @@ Submitted by a human officer adjudicating an escalated incident ticket.
 
 ---
 
-## 7. Financial Disbursement & Payment Clearing Rail Requirements (Layer 6)
+## 7. Financial Disbursement & Payment Clearing Rail Requirements (Downstream Services)
 
 ### 7.1 Treasury Payment Clearance Flow
 * **Target Clearing Rail:** National Payments Corporation of India (NPCI) Aadhaar Payment Bridge System (APBS) / Public Financial Management System (PFMS) Treasury Gateway.
