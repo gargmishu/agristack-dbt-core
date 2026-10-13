@@ -1,21 +1,23 @@
-# Token Service — README
+# Token Service Reference
+
+> Sequence authority: [roadmap.md](../roadmap.md).
 
 ## Purpose
 
-Provide a compact reference for the tokenization service used by the intake/orchestrator (Layer 3/4). This document describes API endpoints, expected inputs, example requests/responses, security notes, and operational guidance.
+Describe the identity-tokenization capability inside the Layer 2 perimeter. Raw identity values are accepted only at that boundary and are removed before the standardized intake contract is passed downstream.
 
 ## API Overview
 
 ### POST /v1/tokenize
 
-- **Description:** Generate a deterministic token for a supplied PII value.
-- **Auth:** Bearer token (service-to-service) or mTLS.
-- **Headers:** `Content-Type: application/json`, `Authorization: Bearer <svc-token>`, `X-Request-ID` (recommended)
+- **Description:** Generate a deterministic token for a supplied identity value.
+- **Authentication:** Service-to-service authorization or mutual TLS.
+- **Headers:** `Content-Type: application/json`, `Authorization`, and optional `X-Request-ID`.
 - **Body (JSON):**
 
 ```json
 {
-  "type": "phone|aadhaar|bank_account|custom",
+  "type": "phone|uidai_token|bank_account|custom",
   "value": "<raw-value>",
   "meta": { "tenant_id": "<tenant>" }
 }
@@ -25,72 +27,52 @@ Provide a compact reference for the tokenization service used by the intake/orch
 
 ```json
 {
-  "token": "hmac-sha256:<hex>",
-  "type": "aadhaar",
-  "algorithm": "HMAC-SHA256",
-  "token_version": "v1"
-}
-```
-
-- **Notes:** Service returns a one-way token (HMAC-SHA256 hex) prefixed with algorithm and version. Use `type` to disambiguate hashing/normalization rules.
-
-### POST /v1/tokenize/batch
-
-- **Description:** Batch tokenization for multiple values.
-- **Body schema:** `values: [{ type, value, meta }, ...]`
-
-### POST /v1/reverse (OPTIONAL, restricted)
-
-- **Description:** Resolve token -> raw value.
-- **Notes:** Disabled by default. If required for regulated vault access, restrict to operator vaults with strict audit and short TTL credentials.
-- **Recommendation:** Prefer downstream vaults to own raw PII and return short-lived dispatch tokens rather than reversing tokens in service.
-
-## Examples
-
-### Example curl (single)
-
-```bash
-curl -X POST https://token.example.svc/v1/tokenize \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"type":"phone","value":"+919876543210"}'
-```
-
-### Example Response
-
-```json
-{
-  "token": "hmac-sha256:3f7a8b...",
+  "token": "<64-character-lowercase-hex>",
   "type": "phone",
   "algorithm": "HMAC-SHA256",
   "token_version": "v1"
 }
 ```
 
+- **Notes:** The token field contains exactly 64 lowercase hexadecimal characters. The algorithm and token version are separate fields and must be persisted with the token. Never submit raw Aadhaar for direct tokenization; use an authorized UIDAI-issued pseudonymous identifier where a verification flow requires one.
+
+### POST /v1/tokenize/batch
+
+- **Description:** Batch tokenization for multiple values.
+- **Body schema:** `values: [{ type, value, meta }, ...]`
+
+There is no reverse-token operation. HMAC tokens are not decryptable. If a regulated workflow requires retrieval of a raw identity value, a separately governed vault must own that value and mediate access with explicit authorization and audit.
+
+## Example
+
+```bash
+curl -X POST https://token.example.svc/v1/tokenize \
+  -H "Authorization: <service-credential>" \
+  -H "Content-Type: application/json" \
+  -H "X-Request-ID: <request-id>" \
+  -d '{"type":"phone","value":"<phone-number>"}'
+```
+
 ## Token Format & Determinism
 
-- Primary implementation: deterministic HMAC-SHA256 using a service-managed secret (`pepper_salt`). Determinism allows consistent lookup across requests without storing cleartext.
-- Format convention: `<algorithm>:<hex>` (e.g., `hmac-sha256:...`). Include `type` and `token_version` in persisted records to support future algorithm/version changes.
-- Rotation: rotating the `pepper_salt` changes outputs; to preserve existing token lookups across rotations, maintain a versioned secret store and support lookup using previous secret versions, or store mapping records in a secure token registry.
+- Primary implementation: deterministic HMAC-SHA-256 using a managed secret pepper. Determinism allows consistent lookup across requests without storing cleartext.
+- Format convention: 64 lowercase hexadecimal characters in the token field. Persist the identity type, algorithm, and token version alongside it to support future algorithm or key changes.
+- Rotation: rotating the pepper changes outputs. Preserve lookups through a versioned secret store and controlled migration or by checking records against approved prior key versions.
 
-## Security & KMS
+## Security & Key Management
 
-- Store `pepper_salt` in a secrets manager (KMS/Vault). The token service should fetch keys via short-lived credentials and avoid writing secrets to disk.
-- Access to the token service must be authenticated and authorized (service-to-service credentials). Log only token identifiers (never raw values).
-- Audit all calls with `X-Request-ID`, caller identity, and outcome (success/failure); redact request bodies in long-term logs.
+- Store the pepper in an approved secrets manager. The tokenization capability should fetch keys via short-lived credentials and avoid writing secrets to disk.
+- Authenticate and authorize all callers. Log only token identifiers, never raw values.
+- Audit calls with request ID, caller identity, and outcome; redact request bodies from long-term logs.
 
 ## Operational Notes
 
-- **Idempotency:** Deterministic tokenization is idempotent per secret version. For non-deterministic needs (one-time tokens), implement a separate endpoint that stores mapping in a secure registry.
-- **Error handling:** return `4xx` for malformed requests, `401/403` for auth failures, `5xx` for KMS outages. Provide clear retry guidance to callers.
-- **Performance:** Tokenization is CPU-light; keep service stateless and horizontally scalable.
+- **Idempotency:** Deterministic tokenization is idempotent per secret version. One-time dispatch tokens require a separate, governed registry.
+- **Error handling:** Return `4xx` for malformed requests, `401/403` for authorization failures, and `5xx` for key-management outages. Provide clear retry guidance to callers.
+- **Performance:** Tokenization is CPU-light; the service can remain stateless and horizontally scalable.
 
-## Best Practices
+## Invariants
 
-- Perform tokenization at Layer 3 (Public Agent Intake Gateway) or immediately after entity extraction in Layer 4 (Orchestrator Brain).
-- Never persist raw PII; persist tokens + metadata only.
-- Prefer vault ownership of raw PII for long-term retention and retrieval; use tokens for correlation and lookups.
-
----
-
-For link-back: reference this file from `decisions/step0.3_zero_trust_tokenization.md` if desired.
+- Perform tokenization within the Layer 2 perimeter before data is passed to Layer 3 or Layer 4.
+- Never persist raw PII; persist tokens and approved metadata only.
+- Prefer a separately governed vault for any permitted raw-PII retention or retrieval.
