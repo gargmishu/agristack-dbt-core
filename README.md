@@ -1,5 +1,7 @@
 # AgriStack DBT Core: Sovereign Zero-Trust DPI Orchestrator & Governance Engine
 
+> Start here: [roadmap.md](./roadmap.md) is the authoritative project sequence and first document.
+
 [![Python: >=3.11](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type Checking: Mypy Strict](https://img.shields.io/badge/type%20checking-mypy%20strict-blue.svg)](https://mypy-lang.org/)
@@ -11,8 +13,8 @@
 
 ## 🏛️ Architectural Overview (4-Layer System)
 
-> 📘 **Deep Dive:** For detailed Mermaid sequence and step-by-step pipeline diagrams from channel ingress to final decision, see the [End-to-End Architecture & Code Flow Guide](docs/end_to_end_code_flow.md).
-> 🏛️ **Government Pilot Proposal:** For the 60-day single-district pilot blueprint, KPI matrix, and RFP procurement clauses, see the [Sovereign DPI Pilot Proposal](docs/government_pilot_proposal.md).
+> 📘 **Deep Dive:** See [end_to_end_code_flow.md](./docs/end_to_end_code_flow.md) for sequence and pipeline diagrams from channel ingress to final decision.
+> 🏛️ **Government Pilot Proposal:** See [government_pilot_proposal.md](./docs/government_pilot_proposal.md) for the proposed single-district pilot, KPI matrix, and procurement clauses.
 
 ```
 [ Citizen Channels: WhatsApp | IVR Voice | USSD | SMS ]
@@ -65,7 +67,7 @@
 
 ## 🔒 Zero-Trust Security & PII Architecture
 
-Layer 2 authenticates carrier requests, protects and sanitizes citizen identifiers in volatile memory, and screens untrusted content before emitting a zero-PII intake contract. Flagged adversarial content is neutralized by Layer 3 and routed deterministically by Layer 4. The complete security policy is in [Step 3.2](decisions/step3.2_security_and_ingestion_firewalls.md); [Step 4.2](decisions/step4.2_security_firewall_and_zero_trust_pii_auditing.md) records its end-to-end verification.
+Layer 2 authenticates carrier requests, tokenizes approved identifiers in volatile memory, redacts PII from free-text content, and screens untrusted content before emitting a sanitized intake contract. Flagged adversarial content is neutralized by Layer 3 and routed deterministically by Layer 4. The security policy and verification requirements are defined in [Step 3.2](./decisions/step3.2_security_and_ingestion_firewalls.md) and [Step 4.2](./decisions/step4.2_security_firewall_and_zero_trust_pii_auditing.md).
 
 ---
 
@@ -84,21 +86,21 @@ agristack-dbt-core/
 │   ├── step0.1_database_evaluation.md
 │   ├── step0.2_data_model_design.md
 │   ├── step0.3_hashing_algorithm_evaluation.md
-│   ├── step0.3_token_service_README.md
+│   ├── step0.3_token_service_readme.md
 │   ├── step0.3_zero_trust_tokenization.md
 │   ├── step0.4_database_schema_design.md
 │   ├── step1.1_tech_stack_evaluation.md
 │   ├── step1.2_runtime_strictness_linting.md
 │   ├── step2.0_canonical_domain_schemas.md
 │   ├── step2.1_package_manager_and_dependencies.md
-│   ├── step2.2_governance_flows_and_state_transitions.md
+│   ├── step2.3_governance_flows_and_state_transitions.md
 │   ├── step3.1_foundational_mock_boundaries.md
 │   ├── step3.2_security_and_ingestion_firewalls.md
 │   ├── step3.3_layer4_orchestrator_brain.md
 │   ├── step3.4_layer3_intake_gateway_and_connectors.md
 │   ├── step3.5_adaptive_multichannel_confirmation_delivery.md
-│   ├── step3.6_live_service_integration.md
 │   ├── step3.6_speech_and_translation_evaluation.md
+│   ├── step3.7_live_service_integration.md
 │   ├── step4.1_multichannel_ingress_and_modality_convergence.md
 │   ├── step4.2_security_firewall_and_zero_trust_pii_auditing.md
 │   ├── step4.3_three_gate_governance_and_conversational_loops.md
@@ -117,6 +119,7 @@ agristack-dbt-core/
 │   ├── end_to_end_code_flow.md
 │   └── government_pilot_proposal.md
 ├── src/                             # Core Python application modules
+│   ├── config/                      # Runtime and channel settings
 │   ├── connectors/                  # Layer 1 Channel Edge Connectors
 │   ├── gateway/                     # Layer 2 Gateway & Perimeter Security
 │   ├── public_agent/                # Layer 3 Public Agent Intake Gateway
@@ -135,7 +138,7 @@ agristack-dbt-core/
 │   │   ├── notification/            # Outbound Notification & Request Contracts
 │   │   └── disbursement/            # Payment Clearing Callback Contracts
 │   └── errors/                      # RFC 7807 problem details exception handlers
-├── tests/                           # Unit and integration test suite (1:1 mirror)
+├── tests/                           # Package tests plus integration and environment suites
 ├── pyproject.toml                   # Build, dependencies, Ruff, Mypy, and Pytest configs
 └── roadmap.md                       # Inside-Out Master Implementation Roadmap
 ```
