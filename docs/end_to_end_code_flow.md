@@ -9,82 +9,77 @@ This document maps the complete end-to-end architectural workflow of **AgriStack
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Citizen as 🌾 Citizen
-    participant L1 as Layer 1: Edge Connectors<br/>(WhatsApp / IVR / USSD / SMS)
-    participant L2 as Layer 2: Perimeter Security Gateway<br/>(Auth / Rate Limiting / Tokenizer)
-    participant L3 as Layer 3: Public Agent Gateway<br/>(Intake & Entity Extractor)
-    participant AI as Sovereign AI Services<br/>(Bhashini ASR/NMT & SLM Extractor)
-    participant L4_Orch as Layer 4: Claim Governance Engine<br/>(Completeness & Policy Coordinator)
-    participant L4_Adj as Layer 4: Governance Adjudication<br/>(Gate 3 Decision Matrix)
-    participant DPI as Authoritative Sovereign Registries<br/>(MOSIP / AgriStack / PFMS)
-    participant L4_Case as Layer 4: Case Management<br/>(Escalation Queue & Audit Log)
-    participant Deliv as Outbound Delivery Engine<br/>(Adaptive Multi-Channel Egress)
+    actor Citizen as Citizen
+    participant L1 as Layer 1<br/>Channels
+    participant L2 as Layer 2<br/>Security
+    participant L3 as Layer 3<br/>Intake
+    participant AI as AI Services<br/>ASR / SLM
+    participant L4 as Layer 4<br/>Governance
+    participant DPI as DPI<br/>Registries
+    participant Deliv as Notification<br/>Delivery
 
     %% Channel ingress
-    Citizen->>L1: Inbound Interaction (WhatsApp, IVR Voice, USSD Menu, SMS)
-    Note over L1: Validates raw carrier protocol format
+    Citizen->>L1: Submit Citizen Interaction
+    Note over L1: Validate carrier protocol
 
     %% Layer 2 perimeter
-    L1->>L2: Ingest Raw Payload
-    Note over L2: Authenticate carrier signature, apply rate limits, scan untrusted content, tokenize approved identifiers, redact PII, and validate the sanitized contract
-    L2-->>L3: Transmit Sanitized Intake Contract & Security Flags
+    L1->>L2: Forward Raw Interaction
+    Note over L2: Authenticate and rate-limit<br/>Scan, tokenize, redact, validate
+    L2-->>L3: Send Sanitized Intake Contract
 
     %% Layer 3 intake and entity extraction
 
     rect rgb(240, 248, 255)
-    Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction (Gate 1)
-    alt Ingress Modality is Audio
-        L3->>AI: Transcribe Audio (Bhashini Speech-to-Text ASR)
-        AI-->>L3: Vernacular Text Transcript
-        L3->>AI: Extract Domain Entities (Sovereign SLM)
-        AI-->>L3: Extracted Domain Entities & Confidence Score
-    else Structure Level is Menu / DTMF Selection
-        Note over L3: Structured Fast-Path Bypass<br/>(Validated mapping, fixed 1.0 contract baseline, not model confidence)
-    else Ingress Modality is Free Text
-        L3->>AI: Extract Domain Entities (Sovereign SLM)
-        AI-->>L3: Extracted Domain Entities & Confidence Score
+    Note over L3,AI: Gate 1: Modality Handling & Entity Extraction
+    alt Audio
+        L3->>AI: Transcribe Audio
+        AI-->>L3: Text Transcript
+        L3->>AI: Extract Domain Entities
+        AI-->>L3: Entities & Confidence Score
+    else Menu / DTMF Selection
+        Note over L3: Deterministic Fast Path<br/>Validated mapping, fixed baseline, no model inference
+    else Free Text
+        L3->>AI: Extract Domain Entities
+        AI-->>L3: Entities & Confidence Score
     end
     end
 
     %% Layer 4 claim orchestration and governance
-    L3->>L4_Orch: Execute Governance Cycle (Intake + Extracted Entities)
+    L3->>L4: Send Intake & Extracted Entities
 
     %% Gate 2: Mandatory Entity Completeness & Multi-Turn Reprompts
     rect rgb(255, 250, 240)
-    Note over L4_Orch: GATE 2: Intent & Mandatory Entity Validation
-    alt Missing Mandatory Entities (District, Crop Name) AND Attempts < 3
-        L4_Orch-->>Citizen: Trigger Conversational Re-Prompt (REQUEST_MORE_INFO)
+    Note over L4: Gate 2: Intent & Completeness Validation
+    alt Required Details Missing, Attempts below 3
+        L4-->>Citizen: Request Missing Details
     end
     end
 
     %% Gate 3: Policy Adjudication Matrix
     rect rgb(240, 255, 240)
-    Note over L4_Orch,L4_Adj: GATE 3: Governance Adjudication Matrix
-    L4_Orch->>L4_Adj: Evaluate Claim Rules
-    L4_Adj->>DPI: Verify Citizen Identity Token (Sovereign ID Registry)
-    DPI-->>L4_Adj: Identity Verified (True/False)
-    L4_Adj->>DPI: Cross-Match Cadastral Land & Crop (AgriStack Registry)
-    DPI-->>L4_Adj: Entitlement Verified (True/False)
-    Note over L4_Adj: Anti-Double-Dipping Active Season Validation
-    L4_Adj-->>L4_Orch: Final Governance Determination
+    Note over L4: Gate 3: Policy Adjudication
+    L4->>DPI: Verify Identity Token
+    DPI-->>L4: Identity Result
+    L4->>DPI: Check Land, Crop & Season
+    DPI-->>L4: Entitlement Result
+    Note over L4: Prevent Duplicate Seasonal Claims
     end
 
     %% Post-decision execution
     rect rgb(255, 245, 245)
-    Note over L4_Orch,DPI: Post-Decision Execution & Outbound Delivery
-    alt Verdict is AUTO_APPROVE (Score >= 0.85 & Eligible & Unique)
-        L4_Orch->>DPI: Dispatch Wire Payment (Payment Rails)
-        DPI-->>L4_Orch: Disbursement Callback (PENDING -> SUCCESS)
-        L4_Orch->>Deliv: Dispatch Notification (Approval Receipt)
-    else Verdict is ROUTE_FOR_MANUAL_REVIEW (Score < 0.85 / Flagged / Attempts >= 3)
-        L4_Orch->>L4_Case: Stage Incident Ticket (Caseworker Queue)
-        L4_Case-->>L4_Orch: Staged Incident Case ID (SPP-CASE-YYYY-XXXXXX)
-        L4_Orch->>Deliv: Dispatch Notification (Review Staged Receipt)
-    else Verdict is AUTO_REJECT (Ineligible / Duplicate Active Claim)
-        L4_Orch->>Deliv: Dispatch Notification (Rejection Reason + Helpline)
+    Note over L4,DPI: Decision Execution & Notification
+    alt AUTO_APPROVE: eligible, unique, score >= 0.85
+        L4->>DPI: Initiate Payment
+        DPI-->>L4: Payment Result
+        L4->>Deliv: Send Approval Notice
+    else ROUTE_FOR_MANUAL_REVIEW: low score, flagged, or retry limit
+        L4->>L4: Stage Review Case
+        L4->>Deliv: Send Review Notice
+    else AUTO_REJECT: ineligible or duplicate claim
+        L4->>Deliv: Send Rejection Notice
     end
-    Deliv->>L1: Adapted Outbound Notification (WhatsApp / IVR / USSD / SMS)
-    L1->>Citizen: Channel-Adapted Confirmation Receipt
+    Deliv->>L1: Send Channel-Adapted Notice
+    L1->>Citizen: Deliver Confirmation
     end
 ```
 
