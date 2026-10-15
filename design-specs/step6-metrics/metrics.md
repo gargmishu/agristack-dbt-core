@@ -1,10 +1,10 @@
 # Crop Loss Subsidy: Metrics
 
-This document defines the technical, mathematical, and operational specifications for the observability layer of the automated crop-loss subsidy pipeline. These metrics are designed to be monitored continuously from day one to ensure conversational stability, algorithmic fairness, infrastructure reliability, and strict financial auditability.
+This document proposes technical, mathematical, and operational measures for the observability layer of the crop-loss subsidy pipeline. The targets are initial pilot hypotheses: establish a measured baseline during rollout and review thresholds before treating them as production service-level objectives.
 
 ---
 
-## 🤖 Layer 1: AI Edge & Conversational Performance
+## 🤖 AI & Conversational Performance
 
 ### 1. AI Block Confidence Average
 * **Definition:** The arithmetic mean of the probabilistic certainty scores returned by an inference engine during structured data extraction or semantic parsing. It measures the core stability and accuracy of the localized language models.
@@ -42,7 +42,7 @@ This document defines the technical, mathematical, and operational specification
 
 ---
 
-## 📊 Layer 2: Core Infrastructure & Welfare Delivery
+## 📊 Infrastructure & Welfare Delivery
 
 ### 4. Volumetric Registry Intake
 * **Definition:** The absolute volume of unique, validated application files successfully compiled, matched against reference databases, and committed to the core social protection registry within a specific timeframe.
@@ -79,18 +79,18 @@ This document defines the technical, mathematical, and operational specification
 
 ---
 
-## 🛡️ Layer 3: System Integrity & Citizen Experience
+## 🛡️ System Integrity & Citizen Experience
 
 ### 7. Audit Log Completeness Rate
-* **Definition:** A structural data integrity metric verifying that $100\%$ of processed sessions have generated an unalterable, cryptographically signed telemetry and state record before session closure.
+* **Definition:** A structural data integrity metric verifying that every processed session has a corresponding append-only audit record and complete state history before closure.
 * **Formula:**
-  $$\text{Audit Completeness (\%)} = \left( \frac{S_{\text{signed\_records}}}{S_{\text{closed\_total}}} \right) \times 100$$
-  *Where $S_{\text{signed\_records}}$ is the number of terminated sessions where a valid cryptographic row signature has been written to the ledger, and $S_{\text{closed\_total}}$ is the total number of terminated sessions.*
+  $$\text{Audit Completeness (\%)} = \left( \frac{S_{\text{complete\_records}}}{S_{\text{closed\_total}}} \right) \times 100$$
+  *Where $S_{\text{complete\_records}}$ is the number of terminated sessions with a corresponding complete audit history, and $S_{\text{closed\_total}}$ is the total number of terminated sessions.*
 * **Tracking Window:**
   * *Calculation Interval:* Evaluated instantly at the micro-level upon every individual session termination event.
   * *Aggregation Interval:* Continuous data-pipeline compliance assertion.
-* **Target Goal:** **Hard $100.00\%$ Enforcement.** Any single non-signed, malformed, or missing state record breaks pipeline compliance and triggers an immediate infrastructure isolation protocol.
-* **Alerts:** A drop below $100.00\%$ instantly triggers a high-severity security exception, halting engine execution to verify database transaction integrity.
+* **Target Goal:** $100.00\%$ audit-history completeness.
+* **Alerts:** Any missing or malformed state record triggers a high-severity integrity alert and a review of the affected transaction before further processing.
 
 ### 8. Citizen Satisfaction Index (CSAT)
 * **Definition:** The baseline score measuring citizen sentiment, captured via post-transaction surveys deployed over the native channel immediately following session closure.
