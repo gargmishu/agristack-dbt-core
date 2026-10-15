@@ -1,8 +1,10 @@
 # Step 4.4: Outbound Confirmation & Financial Callback Verification
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Scope
 
-This phase verifies two integrations: the governance outcome is handed to outbound delivery, and asynchronous payment callbacks reconcile approved claims. Channel-specific rendering is defined in [Step 3.5: Adaptive Multichannel Confirmation Delivery](./step3.5_adaptive_multichannel_confirmation_delivery.md). Claim and financial lifecycle rules are defined in [Step 2.2](./step2.2_governance_flows_and_state_transitions.md); they are not redefined here.
+This phase verifies two integrations: the governance outcome is handed to outbound delivery, and asynchronous payment callbacks reconcile approved claims. Channel-specific rendering is defined in [Step 3.5: Adaptive Multichannel Confirmation Delivery](./step3.5_adaptive_multichannel_confirmation_delivery.md). Claim and financial lifecycle rules are defined in [Step 2.3](./step2.3_governance_flows_and_state_transitions.md); they are not redefined here.
 
 ```mermaid
 flowchart LR
