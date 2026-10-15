@@ -20,17 +20,16 @@ sequenceDiagram
     participant L4_Case as Layer 4: Case Management<br/>(Escalation Queue & Audit Log)
     participant Deliv as Outbound Delivery Engine<br/>(Adaptive Multi-Channel Egress)
 
-    %% Step 1: Channel Ingress
+    %% Channel ingress
     Citizen->>L1: Inbound Interaction (WhatsApp, IVR Voice, USSD Menu, SMS)
     Note over L1: Validates raw carrier protocol format
 
-    %% Step 2: Layer 2 Security Gateway
+    %% Layer 2 perimeter
     L1->>L2: Ingest Raw Payload
-    Note over L2: 1. Constant-Time HMAC Signature Check<br/>2. Token Bucket Rate Limiting<br/>3. Adversarial Prompt Injection Scan<br/>4. SHA-256 HMAC Identity Tokenization in RAM<br/>5. Strict Zero-PII Purge Assertion
-    L2-->>L1: Return Standardized Intake Contract & Security Flags
+    Note over L2: Authenticate carrier signature, apply rate limits, scan untrusted content, tokenize approved identifiers, redact PII, and validate the sanitized contract
+    L2-->>L3: Transmit Sanitized Intake Contract & Security Flags
 
-    %% Step 3: Layer 3 Public Agent Gateway & Entity Extraction
-    L1->>L3: Submit Standardized Intake Contract
+    %% Layer 3 intake and entity extraction
 
     rect rgb(240, 248, 255)
     Note over L3,AI: Layer 3: Modality Handling & SLM Entity Extraction (Gate 1)
@@ -40,14 +39,14 @@ sequenceDiagram
         L3->>AI: Extract Domain Entities (Sovereign SLM)
         AI-->>L3: Extracted Domain Entities & Confidence Score
     else Structure Level is Menu / DTMF Selection
-        Note over L3: Structured Fast-Path Bypass<br/>(Confidence = 1.0, bypasses GPU SLM)
+        Note over L3: Structured Fast-Path Bypass<br/>(Validated mapping, fixed 1.0 contract baseline, not model confidence)
     else Ingress Modality is Free Text
         L3->>AI: Extract Domain Entities (Sovereign SLM)
         AI-->>L3: Extracted Domain Entities & Confidence Score
     end
     end
 
-    %% Step 4: Layer 4 Claim Orchestration & Governance
+    %% Layer 4 claim orchestration and governance
     L3->>L4_Orch: Execute Governance Cycle (Intake + Extracted Entities)
 
     %% Gate 2: Mandatory Entity Completeness & Multi-Turn Reprompts
@@ -70,7 +69,7 @@ sequenceDiagram
     L4_Adj-->>L4_Orch: Final Governance Determination
     end
 
-    %% Post-Decision Execution
+    %% Post-decision execution
     rect rgb(255, 245, 245)
     Note over L4_Orch,DPI: Post-Decision Execution & Outbound Delivery
     alt Verdict is AUTO_APPROVE (Score >= 0.85 & Eligible & Unique)
@@ -106,9 +105,9 @@ flowchart TD
     C -- "Quota Allowed" --> D["Adversarial Prompt Firewall<br/>Scan for Injections & Overrides"]
     D -- "Flagged Threat" --> D1["Mark Threat Flag = True"]
     D -- "Clean Content" --> D2["Mark Threat Flag = False"]
-    D1 --> E["Payload Canonicalizer<br/>+ Identity Tokenizer"]
+    D1 --> E["Payload Canonicalizer"]
     D2 --> E
-    E --> F["Zero-Trust Identity Tokenizer<br/>SHA-256 HMAC in RAM"]
+    E --> F["Zero-Trust Identity Tokenizer<br/>HMAC-SHA-256 for approved identifiers"]
     F --> G["PII Purge Sentinel<br/>Strict Zero-PII Invariant Check"]
     G -- "Cleartext PII Detected" --> G1["Raise Security Error (Purge Guard Failed)"]
     G -- "Zero-PII Validated" --> H["Standardized Intake Contract<br/>(Zero-PII Normalized Payload)"]
@@ -127,7 +126,7 @@ flowchart TD
     I --> O{"Modality Dispatch"}
     O -- "Audio Voice Stream" --> P["Bhashini Speech-to-Text ASR<br/>+ Machine Translation NMT"]
     P --> Q["Sovereign SLM Entity Extractor"]
-    O -- "Structured Text Keypress" --> R["Direct Deterministic Entity Mapping<br/>Confidence = 1.0, Bypass GPU SLM"]
+    O -- "Structured Text Keypress" --> R["Direct Deterministic Entity Mapping<br/>Fixed 1.0 contract baseline; no SLM inference"]
     O -- "Free-Text Message" --> Q
 
     Q --> S["Extracted Domain Entity Contract<br/>(Intent, Entities, Confidence Score)"]
@@ -239,7 +238,7 @@ flowchart TD
 
 | Pipeline Stage | Active Data Contract | Key Attributes & Invariants | Consuming Architectural Layer |
 | :--- | :--- | :--- | :--- |
-| **Layer 1 Ingress** | *Carrier Ingress Contracts (WhatsApp, IVR, USSD, SMS)* | Raw phone number (`E.164`), raw text body or signed audio URL. | Layer 2 Perimeter Security Gateway |
+| **Layer 1 Ingress** | *Carrier Ingress Contracts (WhatsApp, IVR, USSD, SMS)* | Raw phone number (`E.164`), raw text body or signed audio URL, held transiently for Layer 2 processing only. | Layer 2 Perimeter Security Gateway |
 | **Layer 2 Security** | *Standardized Intake Payload* | 64-character SHA-256 HMAC pseudonymous citizen token. Zero cleartext PII. Redacted text content. | Layer 3 Public Agent Gateway |
 | **Layer 3 Perception & Extraction** | *Extracted Domain Entity Contract* | Application intent, domain entities map, AI confidence score, security threat flag. | Layer 4 Claim Governance Engine |
 | **Layer 4 Adjudication** | *Claim Evaluation Contract $\rightarrow$ Governance Determination Outcome* | Governance action (`AUTO_APPROVE` / `ROUTE_FOR_MANUAL_REVIEW` / `AUTO_REJECT`), transaction ID, escalation case ID. | Sovereign Payment Rails / Caseworker Management Service |
