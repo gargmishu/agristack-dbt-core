@@ -11,7 +11,7 @@ Additionally, this module provides standardized, resilient HTTP JSON transport l
 (ServiceHttpTransport) that handles timeouts, Bearer authentication, HTTP status-code triage,
 and domain exception mapping across all sovereign DPI and AI service adapters.
 
-See: decisions/step3.6_live_service_integration.md (Section 2: Production Invariant 3)
+See: decisions/step3.7_live_service_integration.md (Section 2: Production Invariant 3)
 """
 
 import asyncio

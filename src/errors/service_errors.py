@@ -3,7 +3,7 @@
 Defines structured domain exceptions for live external Digital Public Infrastructure (DPI)
 and Sovereign AI adapter integrations.
 
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 """
 
 from http import HTTPStatus

@@ -13,7 +13,7 @@ In non-production, MockPaymentRailService provides deterministic simulation for 
 
 See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.2 & 3.3)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.4)
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 

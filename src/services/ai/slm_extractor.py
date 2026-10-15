@@ -8,7 +8,7 @@ In non-production, MockSlmExtractor provides deterministic simulation for offlin
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.5)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: roadmap.md (Phase 2 Step 2.2 Service Abstractions)
 """
 

@@ -10,7 +10,7 @@ offline testing.
 
 See: decisions/step0.3_zero_trust_tokenization.md
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 

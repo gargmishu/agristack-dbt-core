@@ -10,7 +10,7 @@ In non-production, MockAgriRegistryService provides deterministic simulation for
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 See: decisions/step2.3_governance_flows_and_state_transitions.md
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)
 """
 

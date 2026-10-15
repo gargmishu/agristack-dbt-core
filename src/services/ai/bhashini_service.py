@@ -14,7 +14,7 @@ In non-production, MockBhashiniService provides deterministic simulation for off
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.1)
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: decisions/step3.6_speech_and_translation_evaluation.md
 """
 

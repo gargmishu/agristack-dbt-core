@@ -3,7 +3,7 @@
 Defines environment variable bindings, fail-fast production validators, and service
 endpoint settings for live digital public infrastructure and AI integrations.
 
-See: decisions/step3.6_live_service_integration.md
+See: decisions/step3.7_live_service_integration.md
 See: .agents/skills/zero-trust-security/SKILL.md (Section 2: Fail-Fast Configuration)
 """
 
