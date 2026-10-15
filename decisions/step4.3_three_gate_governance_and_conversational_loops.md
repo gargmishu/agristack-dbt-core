@@ -1,8 +1,10 @@
 # Step 4.3: Three-Gate Governance & Conversational Loop Verification
 
+> Sequence authority: [roadmap.md](../roadmap.md).
+
 ## 1. Scope
 
-This phase verifies the three-gate behavior and its boundary contracts. The governance architecture is defined in [Step 3.3](./step3.3_layer4_orchestrator_brain.md), the intake boundaries are defined in [Step 3.4](./step3.4_layer3_intake_gateway_and_connectors.md), and the authoritative lifecycle and financial state rules are defined in [Step 2.2](./step2.2_governance_flows_and_state_transitions.md). This file contains verification scenarios only; it does not re-declare the canonical governance logic.
+This phase verifies the three-gate behavior and its boundary contracts. The governance architecture is defined in [Step 3.3](./step3.3_layer4_orchestrator_brain.md), the intake boundaries are defined in [Step 3.4](./step3.4_layer3_intake_gateway_and_connectors.md), and the authoritative lifecycle and financial state rules are defined in [Step 2.3](./step2.3_governance_flows_and_state_transitions.md). This file contains verification scenarios only; it does not re-declare the canonical governance logic.
 
 ```mermaid
 flowchart TD
@@ -15,13 +17,13 @@ flowchart TD
 
 ## 2. Gate 1: Modality and Structure
 
-Verify that the structured USSD and DTMF paths produce the expected extracted-domain contract without engaging speech recognition or language-model extraction. The output must contain the canonical entity fields, modality metadata, and confidence values defined by the Layer 3 contract; for the deterministic path, confidence should be `1.0`.
+Verify that the structured USSD and DTMF paths produce the expected extracted-domain contract without engaging speech recognition or language-model extraction. The output must contain the canonical entity fields, modality metadata, and confidence values defined by the Layer 3 contract; the deterministic path uses the contract's fixed `1.0` baseline, not a calibrated model score.
 
 Verify that audio and free-text inputs produce the same contract shape and preserve the same downstream governance semantics, with modality and confidence metadata retained. A decoding or transcription failure must use the defined low-confidence handling rather than being mislabeled as an adversarial input.
 
 ## 3. Gate 2: Completeness and Conversational Loop
 
-Verify that non-claim intents follow their designated non-adjudication route. For `APPLY_SUBSIDY` claims, the mandatory fields are the canonical `DISTRICT`, `CROP_NAME`, and `SURVEY_NUMBER` fields defined in the Layer 4 gate contract.
+Verify that non-claim intents follow their designated non-adjudication route. For `APPLY_SUBSIDY` claims, the mandatory fields at initial intake are `DISTRICT` and `CROP_NAME`. A survey number is optional at this gate and may be resolved during Gate 3 cadastral registry cross-matching.
 
 ### 3.1 Three-Attempt Loop Cap Invariant
 Rural callers interacting over voice or messaging frequently omit required details on their initial turn (e.g., stating crop damage without specifying their district). Gate 2 enforces a strict **3-attempt conversational cap**:
