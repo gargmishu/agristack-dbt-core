@@ -29,9 +29,9 @@ The verification table captures each channel's transport rail, supported modalit
 
 ## 3. Modality Convergence Verification
 
-This phase verifies that every channel and modality converges on the same zero-PII intake boundary while preserving its expected structure, perception path, confidence, and outbound delivery. A confidence score of at least `0.85` makes a claim eligible for automated governance evaluation; eligibility and uniqueness remain separate governance checks.
+This phase verifies that every channel and modality converges on the same zero-PII intake boundary while preserving its expected structure, intake processing path, confidence, and outbound delivery. A confidence score of at least `0.85` makes a claim eligible for automated governance evaluation; eligibility and uniqueness remain separate governance checks.
 
-| Channel and modality | Structure level | Perception path | Expected token format | Expected confidence | Target delivery protocol |
+| Channel and modality | Structure level | Intake processing path | Expected token format | Expected confidence | Target delivery protocol |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **WhatsApp (text)** | Free text | SLM entity extraction | 64-character hexadecimal SHA-256 HMAC | $\ge 0.85$ (eligible for automated governance evaluation) | WhatsApp template Markdown card |
 | **WhatsApp (audio)** | Free text | Speech ASR followed by SLM entity extraction | 64-character hexadecimal SHA-256 HMAC | $\ge 0.85$ (transcribed claim; eligible for automated governance evaluation) | WhatsApp template Markdown card |
@@ -60,7 +60,7 @@ For every carrier path, verify authentication, rate limiting, and zero-cleartext
 
 The integration simulation must verify that:
 
-- Each channel-and-modality row in the convergence matrix follows the expected structure level and perception path.
+- Each channel-and-modality row in the convergence matrix follows the expected structure level and intake processing path.
 - Every path emits an exact 64-character hexadecimal SHA-256 HMAC token, with no cleartext citizen identifier crossing the Layer 2 boundary.
 - Free-text and transcribed claims at or above `0.85` become eligible for automated governance evaluation; this score does not bypass separate eligibility and uniqueness checks. USSD keypresses use deterministic mapping, bypass SLM inference, and carry the contract's fixed confidence baseline `1.00`, not a calibrated model score.
 - Outbound delivery matches the target protocol in the matrix, including the 160-character GSM 7-bit USSD limit.

@@ -4,12 +4,12 @@
 
 ## 1. Scope
 
-This record verifies the security controls and their end-to-end effect across the architecture. The security policy is defined in [Step 3.2](./step3.2_security_and_ingestion_firewalls.md), and the channel convergence boundary is verified in [Step 4.1](./step4.1_multichannel_ingress_and_modality_convergence.md). Layer 3 and Layer 4 remain distinct: perception identifies and neutralizes unsafe input; governance applies the deterministic routing decision.
+This record verifies the security controls and their end-to-end effect across the architecture. The security policy is defined in [Step 3.2](./step3.2_security_and_ingestion_firewalls.md), and the channel convergence boundary is verified in [Step 4.1](./step4.1_multichannel_ingress_and_modality_convergence.md). Layer 3 and Layer 4 remain distinct: intake processing identifies and neutralizes unsafe input; governance applies the deterministic routing decision.
 
 ```mermaid
 flowchart TD
     External["Untrusted Carrier Request"] --> L2["Layer 2: Perimeter Security Gateway"]
-    L2 -->|Authenticated, sanitized intake and perimeter threat flag| L3["Layer 3: Modality Processing & Perception"]
+    L2 -->|Authenticated, sanitized intake and perimeter threat flag| L3["Layer 3: Intake and Modality Processing"]
     L3 -->|Neutralized entities and security flag| L4["Layer 4: Governance & Routing"]
     L4 -->|Security escalation when flagged| Queue["Human Security Review Queue"]
 ```
@@ -81,7 +81,7 @@ The PII Purge Sentinel enforces both active sanitization and defensive verificat
 
 ## 5. Adversarial Input Security Routing
 
-The threat categories and perimeter screening policy are defined in Step 3.2. When a threat is detected at Layer 2 or during Layer 3 perception:
+The threat categories and perimeter screening policy are defined in Step 3.2. When a threat is detected at Layer 2 or during Layer 3 intake processing:
 
 - **Perimeter Detection:** Layer 2 rejects the request or flags it as adversarial before canonicalization.
 - **Confidence Neutralization:** Layer 3 sets the adversarial-attempt flag to `True` and forces extraction confidence to `0.0`.
@@ -102,7 +102,7 @@ Detection categories and screening policy remain defined in [Step 3.2](./step3.2
 | **Zero-PII tokenization** | Valid caller identifier | Output token is a 64-character hexadecimal value; the original identifier does not cross the boundary. |
 | **Zero-PII purge** | Phone-number or Aadhaar patterns in carrier metadata or message content | Sanitized output contains no residual patterns; a failed assertion aborts the handoff. |
 | **PII persistence** | Cleartext identifiers in logs, persistent records, analytics, or internal queues | No cleartext identifiers are retained. |
-| **Adversarial handling** | Representative input from each of the five threat categories, flagged at the perimeter or during perception | The adversarial flag is `True`, confidence is `0.0`, entities are `{}`, Gate 2 skips multi-turn re-prompting, and Gate 3 routes directly to manual security review with reason code `ADVERSARIAL_ATTEMPT_FLAGGED` and a dedicated case identifier. |
+| **Adversarial handling** | Representative input from each of the five threat categories, flagged at the perimeter or during intake processing | The adversarial flag is `True`, confidence is `0.0`, entities are `{}`, Gate 2 skips multi-turn re-prompting, and Gate 3 routes directly to manual security review with reason code `ADVERSARIAL_ATTEMPT_FLAGGED` and a dedicated case identifier. |
 
 ## 7. Acceptance Criteria
 

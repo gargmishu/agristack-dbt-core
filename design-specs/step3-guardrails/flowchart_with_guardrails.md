@@ -7,7 +7,7 @@ flowchart TD
     Request["Raw carrier request"] --> Auth{"Carrier authentication"}
     Auth -->|Invalid or missing| Deny["Reject at perimeter"]
     Auth -->|Valid| Quota{"Caller within quota?"}
-    Quota -->|No| RateReject["Reject before perception"]
+    Quota -->|No| RateReject["Reject before Layer 3 intake"]
     Quota -->|Yes| Transform["Tokenize identifiers and redact PII in memory"]
     Transform --> PiiCheck{"Zero-PII assertion passes?"}
     PiiCheck -->|No| Abort["Abort handoff; record no raw content"]
@@ -15,13 +15,13 @@ flowchart TD
     Threat -->|Yes| Flag["Forward sanitized intake with security flag"]
     Threat -->|No| Clean["Forward sanitized intake"]
 
-    Flag --> Perception["Layer 3: Perception and entity extraction"]
-    Perception --> Neutralize["Set adversarial confidence to 0.0 and clear entities"]
+    Flag --> IntakeProcessing["Layer 3: Intake, modality processing, and entity extraction"]
+    IntakeProcessing --> Neutralize["Set adversarial confidence to 0.0 and clear entities"]
     Neutralize --> Governance["Layer 4: Governance routing"]
     Governance -->|Flagged adversarial attempt| SecurityQueue["Security review queue"]
 
-    Clean --> NormalPerception["Layer 3: Modality processing"]
-    NormalPerception --> NormalGovernance["Layer 4: Deterministic governance"]
+    Clean --> NormalIntakeProcessing["Layer 3: Intake and modality processing"]
+    NormalIntakeProcessing --> NormalGovernance["Layer 4: Deterministic governance"]
     NormalGovernance -->|Low confidence, e.g. 0.40| Caseworker["Standard caseworker review"]
     NormalGovernance -->|Eligible and unique| Approved["Approved claim"]
     NormalGovernance -->|Ineligible or duplicate| Rejected["Rejected claim"]

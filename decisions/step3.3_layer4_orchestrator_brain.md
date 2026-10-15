@@ -41,7 +41,7 @@ The Orchestrator Brain coordinates the policy evaluation pipeline from structure
 
 ## 2. Gate 1: Ingress Modality & Structure Gate (Hosted in Layer 3)
 
-The Three-Gate Governance Architecture begins at **Gate 1**, encapsulated in Layer 3 (*Intake Entity Extractor*). Gate 1 decouples modality perception (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, and SLM domain entity parsing) from Layer 4 governance. Layer 4 operates exclusively on validated, structured domain entity contracts emitted by Gate 1:
+The Three-Gate Governance Architecture begins at **Gate 1**, encapsulated in Layer 3 (*Intake Entity Extractor*). Gate 1 decouples modality processing (Speech-to-Text ASR via Bhashini, USSD menu fast-path bypass, and SLM domain entity parsing) from Layer 4 governance. Layer 4 operates exclusively on validated, structured domain entity contracts emitted by Gate 1:
 
 ### 2.1 Modality Dispatch in Layer 3 (Gate 1)
 * **Audio Ingress (IVR voice calls & WhatsApp voice notes):** Transmits the audio URL to the Speech-to-Text Service (Bhashini ASR) to generate the text transcript before SLM extraction.
