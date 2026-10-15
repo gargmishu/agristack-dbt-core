@@ -1,7 +1,7 @@
 """Layer 4 Governance Engine: Claim Evaluation Input Context Schema.
 
 See: decisions/step3.3_layer4_orchestrator_brain.md (Section 4: Gate 3 Matrix)
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 """
 
@@ -38,7 +38,7 @@ class ClaimEvaluationPayload(StrictBaseModel):
         approved_payouts_ledger: Set of (tokenized_citizen_id, season) tuples tracking prior
             disbursements.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
 
     session_id: SessionId

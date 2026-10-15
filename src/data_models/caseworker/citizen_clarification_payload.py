@@ -1,7 +1,7 @@
 """Caseworker incident review citizen clarification payload schema.
 
 See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2 & 4.4)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2 & 4.4)
 See: decisions/step3.3_layer4_orchestrator_brain.md
 """
 
@@ -28,7 +28,7 @@ class CitizenClarificationPayload(StrictBaseModel):
     - `received_at`: Immutable UTC timestamp recording when the clarification was ingested.
 
     See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2 & 4.4)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2 & 4.4)
     See: decisions/step3.3_layer4_orchestrator_brain.md
     """
 

@@ -5,7 +5,7 @@ multi-turn conversational reprompts, deterministic policy adjudication, and
 post-decision payment/caseworker execution.
 
 See: decisions/step3.3_layer4_orchestrator_brain.md
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
 """
 
 import logging
@@ -69,7 +69,7 @@ class OrchestrationExecutionResult:
             initiated.
         caseworker_ticket_id: Escalation ticket ID (`SPP-CASE-YYYY-XXXXXX`) if staged for review.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
     governance_outcome: GovernanceOutcomePayload
@@ -100,7 +100,7 @@ class ClaimOrchestrator:
     - Governance Adjudication (Gate 3): Evaluates eligibility rules and routes to auto-payout,
       review, or rejection via the adjudication decision matrix.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
     def __init__(

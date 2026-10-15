@@ -190,7 +190,7 @@ source .venv/bin/activate
 | [`step1.2`](decisions/step1.2_runtime_strictness_linting.md) | Runtime Strictness & Linting | Ruff, Mypy strict configuration, and code quality boundaries. |
 | [`step2.0`](decisions/step2.0_canonical_domain_schemas.md) | Domain Contracts | Pydantic v2 domain schemas, constrained types, and truth tables. |
 | [`step2.1`](decisions/step2.1_package_manager_and_dependencies.md) | Dependencies & Tooling | Package manager configuration, virtual environment, and dependency pins. |
-| [`step2.2`](decisions/step2.2_governance_flows_and_state_transitions.md) | Governance Flows | 3-gate state machine, decision routing matrix, and caseworker lifecycle. |
+| [`step2.3`](decisions/step2.3_governance_flows_and_state_transitions.md) | Governance Flows | 3-gate state machine, decision routing matrix, and caseworker lifecycle. |
 | [`step3.1`](decisions/step3.1_foundational_mock_boundaries.md) | Mock Boundaries | Deterministic offline simulation fixtures for AI and DPI services. |
 | [`step3.2`](decisions/step3.2_security_and_ingestion_firewalls.md) | Security Firewalls | Layer 2 perimeter firewall, rate limiting, and adversarial defense. |
 | [`step3.3`](decisions/step3.3_layer4_orchestrator_brain.md) | Orchestrator Brain | 3-Gate evaluation pipeline, decision routing, and caseworker staging. |

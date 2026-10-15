@@ -34,7 +34,7 @@ class CaseworkerCaseReviewPayload(StrictBaseModel):
     - `escalation_case_id` must match the format `SPP-CASE-YYYY-XXXXXX`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#441-case-review-payload
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 4.4)
     See: decisions/step0.3_zero_trust_tokenization.md
     """
 

@@ -145,7 +145,7 @@ class ApplicationIntent(StrEnum):
     - `UNKNOWN`: Unclassified intent requiring clarification or re-prompting loops.
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 3.2)
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
     APPLY_SUBSIDY = "apply_subsidy"
@@ -175,7 +175,7 @@ class EligibilityStatus(StrEnum):
       verification.
 
     See: decisions/step3.1_foundational_mock_boundaries.md
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1)
     """
 
     PENDING_VERIFICATION = "PENDING_VERIFICATION"
@@ -200,7 +200,7 @@ class GovernanceAction(StrEnum):
       explanation.
 
     See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
 
     AUTOMATED_PAYOUT = "AUTOMATED_PAYOUT"
@@ -264,7 +264,7 @@ class SessionStatus(StrEnum):
     - `ABANDONED`: Citizen explicitly dropped or disconnected the session.
     - `TIMEOUT`: Session expired due to inactivity or telephony timeout.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
     ACTIVE = "ACTIVE"
@@ -289,7 +289,7 @@ class ApplicationStatus(StrEnum):
     - `REJECTED`: Claim formally rejected with documented determination code.
     - `APPEALED`: Citizen filed an appeal against a rejection determination.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 2.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 2.1)
     """
 
     DRAFT = "DRAFT"
@@ -321,7 +321,7 @@ class DisbursementStatus(StrEnum):
     - `RETURNED`: Post-credit reversal or clearing return from beneficiary bank.
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.5)
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 4.4)
     """
 
     PENDING = "PENDING"
@@ -420,7 +420,7 @@ class RejectionReasonCode(StrEnum):
       `INSUFFICIENT_DOCUMENTATION`
     - General: `OTHER`
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1)
     """
 
     INELIGIBLE_LAND_SIZE = "INELIGIBLE_LAND_SIZE"
@@ -443,7 +443,7 @@ class EscalationReasonCode(StrEnum):
     - Registry mismatches: `LAND_RECORD_MISMATCH`, `IDENTITY_VERIFICATION_FAILED`
     - Administrative: `POLICY_REVIEW_REQUIRED`, `CITIZEN_CLARIFICATION_RECEIVED`
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
     """
 
     LOW_AI_CONFIDENCE = "LOW_AI_CONFIDENCE"

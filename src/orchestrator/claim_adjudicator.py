@@ -5,7 +5,7 @@ cadastral landholdings, and anti-double-dipping ledgers to assign authoritative
 governance determinations (AUTO_APPROVE, AUTO_REJECT, or ROUTE_FOR_MANUAL_REVIEW).
 
 See: decisions/step3.3_layer4_orchestrator_brain.md (Section 4: Gate 3 Matrix)
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 See: roadmap.md (Phase 3 Step 3.3 Layer 4 Governance Router)
 """
@@ -54,7 +54,7 @@ class ClaimAdjudicator:
     - Rejection (`AUTO_REJECT`): Duplicate active-season claim, unverified identity token,
       or cadastral land record mismatch.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
 
     def __init__(

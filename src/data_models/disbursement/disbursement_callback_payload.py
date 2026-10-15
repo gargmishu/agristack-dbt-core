@@ -25,7 +25,7 @@ class DisbursementCallbackPayload(StrictBaseModel):
     - `SUCCESS` status strictly forbids `failure_reason_code`.
 
     See: decisions/step2.0_canonical_domain_schemas.md (Section 4.5)
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.4)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 4.4)
     """
 
     disbursement_txn_id: DisbursementTxnId

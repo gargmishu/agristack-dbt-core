@@ -9,7 +9,7 @@ audit logging, and citizen clarification resolution loops within Layer 4 Governa
 It interacts with external social protection registries strictly as an external DPI
 boundary client for OpenSPP synchronization.
 
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
 See: roadmap.md (Phase 3 Step 3.3 Layer 4 Brain)
 """
@@ -50,7 +50,7 @@ class CaseManagementService:
             repository without changing the case-management API; each case key is the natural
             partition for retention, retrieval, and compliance export.
 
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
     """
 
     def __init__(self, social_service: SocialRegistryService | None = None) -> None:

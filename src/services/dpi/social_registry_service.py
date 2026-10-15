@@ -10,7 +10,7 @@ In production environments, enforces live HTTPS communication via LiveSocialRegi
 strict fail-fast configuration and fail-closed error handling (no mock fallback).
 In non-production, MockSocialRegistryService provides deterministic simulation for offline testing.
 
-See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 3.2)
+See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
 See: decisions/step3.6_live_service_integration.md
 See: roadmap.md (Phase 3 Step 3.1 Service Abstractions)

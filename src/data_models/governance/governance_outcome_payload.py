@@ -3,7 +3,7 @@
 Represents authoritative adjudication verdicts, state transitions, and disbursement actions.
 
 See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
-See: decisions/step2.2_governance_flows_and_state_transitions.md
+See: decisions/step2.3_governance_flows_and_state_transitions.md
 """
 
 from pydantic import Field, model_validator
@@ -43,7 +43,7 @@ class GovernanceOutcomePayload(StrictBaseModel):
       and forbid `disbursement_txn_id`.
 
     See: decisions/step2.0_canonical_domain_schemas.md#governance-outcome-payload
-    See: decisions/step2.2_governance_flows_and_state_transitions.md (Section 4.1)
+    See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 4.1)
     """
 
     session_id: SessionId
