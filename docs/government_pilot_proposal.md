@@ -101,9 +101,11 @@ gantt
 - Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
 
 ### Phase 2: Registry Integration & Sandbox Verification (Days 15–28)
-- Cross-connect with state land records (AgriStack / Bhulekh / e-Bhoomi) and farmer registry databases.
-- Deploy the web-based district caseworker incident review queue for manual escalation routing.
-- Execute automated end-to-end verification suites verifying 100% compliance across all test cases.
+- **Secure Revenue & Farmer Registry Peering**: Establish secure API connectivity (via mutual TLS [mTLS] or state intranet peering) with state land revenue portals (such as AgriStack, Bhulekh, or e-Bhoomi) and farmer registries.
+- **Cadastral & Entitlement Verification**: Query connected registries in real time to validate applicant land ownership, survey/Khasra plot boundaries, and registered seasonal crop acreage against claimed entitlements.
+- **Schema Alignment & Resilience Testing**: Map state revenue schemas to canonical intake contracts, and validate sandbox fallbacks and retry queues to gracefully handle high latency or intermittent registry downtime.
+- **Caseworker Review Deployment**: Deploy the web-based district caseworker review queue for manual escalation routing when cadastral discrepancies or unverified plot boundaries occur.
+- **End-to-End Sandbox Simulation**: Execute automated end-to-end verification suites verifying 100% compliance across deterministic policy rules, fraud deduplication, and simulated payment rails.
 
 ### Phase 3: Controlled Field Rollout (Days 29–50)
 - **Cohort A (Days 29–42)**: Controlled trial with 500 progressive farmers across 5 pilot blocks.
