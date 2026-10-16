@@ -30,18 +30,18 @@ Financial states move forward only. Duplicate or stale callbacks must not cause 
 
 ## 3. Notification Handoff
 
-Verify that each terminal governance result creates the appropriate outbound notification request and that a reconciled payment result can trigger a follow-up status notification. Channel selection, localized formatting, transport constraints, and carrier receipt handling are specified in Step 3.5.
+Verify that each terminal governance result creates the appropriate outbound notification request and that a reconciled payment result can trigger a follow-up status notification. Channel selection, localized formatting, transport constraints, and carrier receipt handling are specified in [Step 3.5](./step3.5_adaptive_multichannel_confirmation_delivery.md).
 
 ## 4. Verification Matrix
 
 | Scenario | Required result |
 | :--- | :--- |
-| Approved claim dispatched once | One payment instruction is correlated with the internal transaction identifier. |
+| Approved claim payment dispatch (idempotency) | Exactly one payment instruction is emitted and correlated with the internal transaction identifier; retries do not cause duplicate disbursements. |
 | Successful callback with valid reference | State advances to `SUCCESS`; a status notification may be requested. |
 | Failed or returned callback with required details | State advances to the matching terminal result and retains its reference and reason. |
 | Missing, malformed, mismatched, duplicate, or stale callback | Reject or safely ignore according to the callback contract; do not mutate the ledger incorrectly. |
 | Non-approved claim | No payment instruction is emitted. |
-| Outbound notification handoff | Request is routed through the channel and rendering policy defined in Step 3.5. |
+| Outbound notification handoff | Request is routed through the channel and rendering policy defined in [Step 3.5](./step3.5_adaptive_multichannel_confirmation_delivery.md). |
 
 ## 5. Acceptance Criteria
 
