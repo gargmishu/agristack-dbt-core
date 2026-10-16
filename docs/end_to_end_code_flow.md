@@ -1,10 +1,14 @@
-# End-to-End Architecture & Workflow: Ingress to Governance Determination
+# End-to-End Architecture & Workflow: Citizen Ingress to Outcome Delivery
 
-This document maps the complete end-to-end architectural workflow of **AgriStack DBT Core** — from an initial multi-channel citizen event (e.g., WhatsApp message, IVR voice call, USSD keypress) through the 4-layer Zero-Trust pipeline to the final governance determination and adaptive outbound delivery.
+This document traces a citizen interaction through the **AgriStack DBT Core** Zero-Trust architecture: channel ingress, secure intake, governance evaluation, outcome handling, and citizen notification. It distinguishes the synchronous interaction from asynchronous payment settlement and treats persistence as cross-cutting rather than a final runtime step.
+
+The detailed flow follows meaningful runtime boundaries rather than forcing a fixed number of stages: channel ingress and perimeter security, Layer 3 intake, Layer 4 validation and adjudication, and outcome handling. Persistence and analytics are shown separately because they span or follow those runtime boundaries.
 
 ---
 
 ## 1. Master End-to-End Sequence Diagram
+
+The master view shows the major system handoffs. Modality and governance branches are detailed under their lifecycle boundaries below. Payment settlement is asynchronous and separate from the citizen request path.
 
 ```mermaid
 sequenceDiagram
@@ -85,157 +89,151 @@ sequenceDiagram
 
 ---
 
-## 2. Detailed Execution Flow by Layer
+## 2. Detailed Flow by Lifecycle Boundary
 
-### Phase 1: Edge Ingress & Layer 2 Perimeter Security
+Color key: **blue** ingress · **amber** security · **teal** intake and delivery · **indigo** governance · **green** approval · **orange** review · **red** rejection · **purple** persistence.
 
-An inbound request arrives from a carrier network and is processed through perimeter security:
+### Layer 1 Ingress: Carrier Interaction
+
+The originating channel validates its transport protocol and forwards the interaction. Raw identifiers and content remain transient and are passed only to Layer 2 for sanitization.
+
+```mermaid
+flowchart LR
+    A["Citizen interaction"] --> B["Layer 1: Validate channel protocol"]
+    B -- "Valid carrier event" --> C["Forward raw interaction to Layer 2"]
+    B -- "Invalid carrier event" --> D["Reject at channel boundary"]
+    classDef ingress fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    classDef reject fill:#fde8e8,stroke:#b94a48,color:#4a1515,stroke-width:1.5px
+    class A,B,C ingress
+    class D reject
+```
+
+### Layer 2 Security: Standardized Zero-PII Intake Contract
+
+Layer 2 authenticates and rate-limits the carrier request, screens content, tokenizes approved identifiers, canonicalizes the interaction, and fails closed if cleartext PII remains.
 
 ```mermaid
 flowchart TD
-    A["Inbound Request<br/>(e.g., WhatsApp Webhook)"] --> B["Carrier Auth Validator<br/>Constant-Time HMAC-SHA256 Check"]
-    B -- "Invalid / Missing Signature" --> B1["Fail Closed (HTTP 401/403)"]
-    B -- "Valid Signature" --> C["Rate Limiter<br/>Token Bucket Quota Guard"]
-    C -- "Rate Limit Exceeded" --> C1["Raise Permission Error (HTTP 429)"]
-    C -- "Quota Allowed" --> D["Adversarial Prompt Firewall<br/>Scan for Injections & Overrides"]
-    D -- "Flagged Threat" --> D1["Mark Threat Flag = True"]
-    D -- "Clean Content" --> D2["Mark Threat Flag = False"]
-    D1 --> E["Payload Canonicalizer"]
-    D2 --> E
-    E --> F["Zero-Trust Identity Tokenizer<br/>HMAC-SHA-256 for approved identifiers"]
-    F --> G["PII Purge Sentinel<br/>Strict Zero-PII Invariant Check"]
-    G -- "Cleartext PII Detected" --> G1["Raise Security Error (Purge Guard Failed)"]
-    G -- "Zero-PII Validated" --> H["Standardized Intake Contract<br/>(Zero-PII Normalized Payload)"]
+    A["Raw carrier interaction"] --> B["Authenticate carrier request<br/>Constant-time HMAC-SHA-256 check"]
+    B -- "Invalid or missing signature" --> B1["Fail closed"]
+    B -- "Valid signature" --> C["Apply rate limit"]
+    C -- "Quota exceeded" --> C1["Reject request"]
+    C -- "Within quota" --> D["Screen for adversarial content"]
+    D --> E["Canonicalize interaction"]
+    E --> F["HMAC-tokenize approved identifiers"]
+    F --> G{"Any cleartext PII remains?"}
+    G -- "Yes" --> G1["Fail closed; block handoff"]
+    G -- "No" --> H["Standardized zero-PII intake contract"]
+    classDef security fill:#fff4dd,stroke:#c28a1a,color:#49330b,stroke-width:1.5px
+    classDef reject fill:#fde8e8,stroke:#b94a48,color:#4a1515,stroke-width:1.5px
+    classDef contract fill:#e5f5f2,stroke:#3b8f83,color:#123c37,stroke-width:1.5px
+    class A,B,C,D,E,F,G security
+    class B1,C1,G1 reject
+    class H contract
+```
+
+### Layer 3 Intake & Extraction: Extracted Domain Entity Contract
+
+Layer 3 converts each supported modality into the same intent-and-entity contract. Structured menu selections bypass model inference but still proceed through Layer 4 intent and completeness validation.
+
+```mermaid
+flowchart TD
+    A["Standardized zero-PII intake contract"] --> B{"Modality"}
+    B -- "Audio" --> C["Speech transcription and translation"]
+    C --> D["Language-model entity extraction"]
+    B -- "Free text" --> D
+    B -- "Structured menu" --> E["Deterministic entity mapping<br/>Fixed confidence baseline: 1.0"]
+    D --> F["Extracted domain entity contract"]
+    E --> F
+    classDef intake fill:#e5f5f2,stroke:#3b8f83,color:#123c37,stroke-width:1.5px
+    classDef contract fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    classDef governance fill:#eef2ff,stroke:#5968a8,color:#252b55,stroke-width:1.5px
+    class A,C,D,E intake
+    class B governance
+    class F contract
+```
+
+### Layer 4 Governance: Claim Evaluation & Governance Outcome
+
+Gate 2 handles intent and intake completeness. Status and scheme inquiries follow a read-only route, while appeals go to caseworker review. District and crop are required at intake; a survey number may be resolved during registry matching. A citizen clarification reply is a new ingress interaction, not a bypass around the perimeter controls. Gate 3 verifies identity and entitlement against sovereign registries.
+
+```mermaid
+flowchart TD
+    A["Extracted domain entity contract"] --> B["Gate 2: Validate intent and completeness"]
+    B --> C{"Adversarial signal?"}
+    C -- "Yes" --> S["Manual security review"]
+    C -- "No" --> D{"Intent"}
+    D -- "Status or scheme inquiry" --> E["Read-only inquiry result"]
+    D -- "Appeal" --> R["Caseworker review"]
+    D -- "Claim" --> F{"Required details complete?"}
+    F -- "No; attempts remain" --> G["Request clarification<br/>Reply re-enters through Layer 1"]
+    F -- "No; limit reached" --> R
+    F -- "Yes" --> H["Gate 3: Verify identity, landholding,<br/>crop, season, and duplicate status"]
+    H --> I{"Authoritative result"}
+    I -- "Eligible, unique, confidence >= 0.85" --> J["Approve claim<br/>Disbursement status: PENDING"]
+    I -- "Low confidence or unresolved result" --> R
+    I -- "Ineligible or duplicate" --> K["Reject claim with reason"]
+    classDef contract fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    classDef governance fill:#eef2ff,stroke:#5968a8,color:#252b55,stroke-width:1.5px
+    classDef success fill:#e6f4ea,stroke:#4a8f5b,color:#173b20,stroke-width:1.5px
+    classDef review fill:#fff0db,stroke:#c27a24,color:#4d310d,stroke-width:1.5px
+    classDef reject fill:#fde8e8,stroke:#b94a48,color:#4a1515,stroke-width:1.5px
+    class A contract
+    class B,C,D,F,H,I governance
+    class E,G,R review
+    class S,R review
+    class J success
+    class K reject
+```
+
+**Outcome rules:** Claims with confidence of at least `0.85` and verified as eligible and unique are approved. Adversarial signals route to manual security review. Confidence below `0.85`, unresolved verification, or exhausted clarification attempts route to manual case review. Only authoritative ineligibility or a duplicate active claim results in rejection; an unavailable or inconclusive registry result is not proof of ineligibility. Payment dispatch follows approval asynchronously and does not change the governance outcome.
+
+### Notification Egress: Channel-Adapted Citizen Notice
+
+Notification delivery consumes inquiry responses, appeal acknowledgments, clarification requests, and governance outcomes. Payment settlement can later produce a separate status notice. The notification is rendered for the originating channel; the carrier acknowledgment is recorded when available.
+
+```mermaid
+flowchart TD
+    A["Inquiry response, clarification request,<br/>appeal acknowledgment, or governance outcome"] --> B["Compose channel-adapted notice"]
+    C["Reconciled payment status"] --> B
+    B --> D["Dispatch through originating channel"]
+    D --> E["Carrier acknowledgment, when available"]
+    classDef delivery fill:#e3f6f8,stroke:#348998,color:#123b42,stroke-width:1.5px
+    classDef outcome fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    class A,C outcome
+    class B,D,E delivery
 ```
 
 ---
 
-### Phase 2: Layer 3 Modality Handling & SLM Entity Extraction
+## 3. Persistence & Analytics: Operational Records & Analytical Read Models
 
-The standardized intake contract enters Layer 3 for speech transcription and SLM domain entity extraction:
+Session, extraction, governance, and financial records are persisted as the interaction progresses; persistence is not a post-delivery stage. Only tokenized identifiers and redacted content cross the durable-storage boundary. Governance and financial state changes are captured in an append-only audit history. Analytical views are downstream read models, not part of the citizen request path.
 
 ```mermaid
-flowchart TD
-    H["Standardized Intake Contract"] --> I["Public Agent Gateway<br/>Intake Entity Extractor"]
-
-    I --> O{"Modality Dispatch"}
-    O -- "Audio Voice Stream" --> P["Bhashini Speech-to-Text ASR<br/>+ Machine Translation NMT"]
-    P --> Q["Sovereign SLM Entity Extractor"]
-    O -- "Structured Text Keypress" --> R["Direct Deterministic Entity Mapping<br/>Fixed 1.0 contract baseline; no SLM inference"]
-    O -- "Free-Text Message" --> Q
-
-    Q --> S["Extracted Domain Entity Contract<br/>(Intent, Entities, Confidence Score)"]
-    R --> S
+flowchart LR
+    A["Sanitized interaction"] --> S["Session record"]
+    A --> T["Extraction attempt records"]
+    T -->|Final committed attempt| G["Governance record"]
+    G --> H["Append-only audit history"]
+    S & T & G --> V["Analytics read model"]
+    classDef persistence fill:#f1eafe,stroke:#7955a1,color:#33214e,stroke-width:1.5px
+    classDef analytics fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    class A,S,T,G,H persistence
+    class V analytics
 ```
+
+Multi-turn attempts remain distinguishable so analytics can select the committed extraction for a governance outcome without counting every clarification turn as a separate claim. The audit history records governance-state changes with actor attribution.
 
 ---
 
-### Phase 3: Layer 4 Gate 2 — Intent & Completeness Validation
+## 4. Data Contract Lifecycle & Transformation Progression
 
-Gate 2 evaluates domain intent, checks for required fields, and coordinates multi-turn conversational re-prompts:
-
-```mermaid
-flowchart TD
-    S["Extracted Entity Contract"] --> T["Layer 4 Orchestrator<br/>Gate 2: Intake Completeness & Intent Validation"]
-
-    T --> U{"Is Structured Bypass or Adversarial?"}
-    U -- "Yes" --> V["Bypass Gate 2 Completeness Check"]
-    U -- "No" --> W{"Application Intent == APPLY_SUBSIDY?"}
-
-    W -- "No (Status Check / Grievance)" --> X["Route to Read-Only Inquiry Flow"]
-    W -- "Yes" --> Y["Scan Mandatory Domain Entities:<br/>1. District<br/>2. Crop Name<br/>(Survey Number is Cadastral Checked)"]
-
-    Y --> Z{"Missing Mandatory Entities?"}
-    Z -- "No (All Present)" --> AA["Proceed to Gate 3 Policy Adjudication"]
-    Z -- "Yes" --> AB{"Attempt Count < 3?"}
-    AB -- "Yes" --> AC["Build Re-prompt Directive<br/>(REQUEST_MORE_INFO)<br/>Return to Citizen"]
-    AB -- "No (Attempts >= 3)" --> AD["Halt Multi-turn Loop to Prevent Fatigue<br/>Proceed to Gate 3 (Will Route to Review)"]
-```
-
----
-
-### Phase 4: Layer 4 Gate 3 — Governance Adjudication Matrix
-
-Gate 3 cross-matches the claim against sovereign DPI registries and evaluates the tri-state decision matrix:
-
-```mermaid
-flowchart TD
-    AA["Claim Evaluation Contract"] --> AE["Claim Adjudication Engine<br/>Gate 3: Policy Decision Matrix"]
-
-    AE --> AF["Identity Verification Service<br/>Verify Token in Sovereign Registry"]
-    AE --> AG["AgriStack Registry Service<br/>Cross-Match Cadastral Land & Crop"]
-    AE --> AH["Anti-Double-Dipping Ledger<br/>Validate (Citizen Token, Season)"]
-
-    AF & AG & AH --> AI{"Decision Matrix Evaluation"}
-
-    AI -- "Score >= 0.85 & Eligible & Unique" --> AJ["Verdict: AUTO_APPROVE<br/>Status: APPROVED<br/>Financial State: PENDING<br/>DisbursementTxnId: TXN-YYYY-XXXXXX"]
-
-    AI -- "Score < 0.85 OR Flagged Adversarial OR Missing Entities" --> AK["Verdict: ROUTE_FOR_MANUAL_REVIEW<br/>Status: UNDER_REVIEW<br/>Financial State: Bypassed<br/>EscalationCaseId: SPP-CASE-YYYY-XXXXXX"]
-
-    AI -- "Ineligible Land Record OR Duplicate Claim Detected" --> AL["Verdict: AUTO_REJECT<br/>Status: REJECTED<br/>Financial State: Bypassed<br/>RejectionReason: Non-empty Reason Code"]
-```
-
----
-
-### Phase 5: Post-Decision Execution & Outbound Confirmation Delivery
-
-Once the decision is made, financial clearing or caseworker queues are updated, and the outbound delivery service dispatches channel-native confirmations:
-
-```mermaid
-flowchart TD
-    AJ --> AM["Payment Rail Service<br/>Initiate Treasury Wire Transfer"]
-    AM --> AN["Disbursement Callback Receipt<br/>(Disbursement Status = SUCCESS)"]
-
-    AK --> AO["Case Management Service<br/>Stage Incident Review Ticket"]
-    AO --> AP["District Caseworker Dashboard<br/>(Staged SPP-CASE Ticket)"]
-
-    AN & AP & AL --> AQ["Adaptive Multi-Channel Notification Engine<br/>Compose Outbound Notification"]
-
-    AQ --> AR{"Originating Ingress Channel"}
-    AR -- "WhatsApp" --> AS["Render Rich Markdown Card<br/>(Txn ID / Case ID + Emojis)"]
-    AR -- "IVR Voice" --> AT["Synthesize Spoken Vernacular Audio<br/>(Bhashini TTS Audio URL)"]
-    AR -- "USSD / SMS" --> AU["Format GSM Plain Text String<br/>(Strictly <= 160 Characters)"]
-
-    AS & AT & AU --> AV["Edge Connector Egress Dispatch<br/>(WhatsApp / IVR / USSD / SMS)"]
-    AV --> AW["Transmission Acknowledgment Receipt<br/>Delivered to Citizen"]
-```
-
----
-
-### Phase 6: Relational Persistence, Immutable Audit History & Analytical Deduplication
-
-Operational state transitions and multi-turn conversational attempts are persisted to the normalized relational ledger while preserving strict Zero-PII invariants and preventing analytical cartesian fan-out:
-
-```mermaid
-flowchart TD
-    S_LOG["Session Telemetry Log<br/>(session_telemetry_log)"]
-    E_DET["Session Extraction Details<br/>(session_extraction_details)"]
-    G_LED["Application Governance Ledger<br/>(application_governance_ledger)"]
-    G_HIST["Immutable Audit History<br/>(application_governance_ledger_history)"]
-    V_DEDUP["Analytical Deduplicated View<br/>ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1"]
-    V_OBT["Citizen Journey Funnel OBT<br/>(citizen_journey_funnel)"]
-
-    AW --> S_LOG
-    S_LOG -- "1:N Child Attempts (STAGED / SUPERSEDED / COMMITTED)" --> E_DET
-    E_DET -- "Final Committed Turn (Attempt N)" --> G_LED
-    G_LED -- "AFTER INSERT / AFTER UPDATE Triggers" --> G_HIST
-    E_DET --> V_DEDUP
-    S_LOG & V_DEDUP & G_LED --> V_OBT
-```
-
-1. **Multi-Turn Conversational State Separation**: Operational extraction attempts are recorded in `session_extraction_details` with lifecycle markers (`STAGED`, `SUPERSEDED`, `COMMITTED`).
-2. **Window-Function Deduplication**: Downstream Business Intelligence (BI) views isolate the single authoritative extraction attempt per session via `ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1`, eliminating multi-turn cartesian fan-out.
-3. **Immutable Governance Audit Trail**: Database triggers (`AFTER INSERT`, `AFTER UPDATE`) automatically append every status and action transition to `application_governance_ledger_history` with actor attribution.
-
----
-
-## 3. Data Contract Lifecycle & Transformation Progression
-
-| Pipeline Stage | Active Data Contract | Key Attributes & Invariants | Consuming Architectural Layer |
+| Lifecycle Boundary | Active Data Contract | Key Attributes & Invariants | Consuming Architectural Layer |
 | :--- | :--- | :--- | :--- |
-| **Layer 1 Ingress** | *Carrier Ingress Contracts (WhatsApp, IVR, USSD, SMS)* | Raw phone number (`E.164`), raw text body or signed audio URL, held transiently for Layer 2 processing only. | Layer 2 Perimeter Security Gateway |
-| **Layer 2 Security** | *Standardized Intake Payload* | 64-character SHA-256 HMAC pseudonymous citizen token. Zero cleartext PII. Redacted text content. | Layer 3 Public Agent Gateway |
-| **Layer 3 Intake, Modality Processing & Extraction** | *Extracted Domain Entity Contract* | Application intent, domain entities map, AI confidence score, security threat flag. | Layer 4 Claim Governance Engine |
-| **Layer 4 Adjudication** | *Claim Evaluation Contract $\rightarrow$ Governance Determination Outcome* | Governance action (`AUTO_APPROVE` / `ROUTE_FOR_MANUAL_REVIEW` / `AUTO_REJECT`), transaction ID, escalation case ID. | Sovereign Payment Rails / Caseworker Management Service |
-| **Delivery Egress** | *Outbound Notification Request $\rightarrow$ Channel Notification Payload $\rightarrow$ Transmission Acknowledgment* | Adapted message string ($\le 160$ chars for USSD/SMS, Markdown card for WhatsApp, TTS URL for IVR), carrier message reference ID. | Originating Carrier Gateway $\rightarrow$ Citizen Device |
-| **Persistence & Analytics** | *Relational Ledger Records $\rightarrow$ Citizen Journey Funnel View* | 64-character pseudonymous HMAC token, terminal JSONB governance metadata (`approval_amount` / `rejection_reason`), window-deduplicated attempt (`rn = 1`), immutable audit history. | Relational Database / Analytical BI Layer |
+| **Layer 1 Ingress** | *Carrier Interaction* | Raw identifiers and content are transient and passed only to perimeter security for sanitization. | Layer 2 Perimeter Security |
+| **Layer 2 Security** | *Standardized Zero-PII Intake Contract* | Approved identifiers are HMAC-tokenized; cleartext PII is removed before the Layer 3 handoff. | Layer 3 Intake |
+| **Layer 3 Intake & Extraction** | *Extracted Domain Entity Contract* | Intent, extracted entities, confidence, and security signal; structured menu input is mapped without model inference. | Layer 4 Governance |
+| **Layer 4 Governance** | *Claim Evaluation & Governance Outcome* | Approval, manual review, or rejection with the applicable transaction, case, or reason details. | Payment Rails, Caseworker Queue, and Notification Delivery |
+| **Notification Egress** | *Channel-Adapted Citizen Notice* | Content is rendered for the originating channel; a carrier receipt records transport feedback. | Originating Channel |
+| **Persistence & Analytics** | *Operational Records & Analytical Read Models* | Tokenized and redacted records, auditable state changes, and deduplicated views for reporting. | Relational Store and Analytics |
