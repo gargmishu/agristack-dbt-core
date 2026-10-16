@@ -1,49 +1,27 @@
-# Step 4.5: Database Persistence & Analytical Deduplication Architecture
+# Step 4.5: Database Persistence & Analytical Deduplication Verification
 
 > Sequence authority: [roadmap.md](../roadmap.md).
 
-## 1. Executive Summary & Data Governance Scope
+## 1. Scope
 
-This document defines the relational persistence architecture, immutable audit triggers, and analytical deduplication specifications for **Phase 4, Step 4.5: Database Persistence & Analytical Deduplication** within the AgriStack Zero-Trust Digital Public Infrastructure (DPI) Orchestrator.
+This phase verifies relational schema conformance, multi-turn analytical deduplication, terminal metadata constraint enforcement, and append-only audit history population. The conceptual entity model is defined in [Step 0.2](./step0.2_data_model_design.md), zero-PII tokenization rules are defined in [Step 0.3](./step0.3_zero_trust_tokenization.md) and verified in [Step 4.2](./step4.2_security_firewall_and_zero_trust_pii_auditing.md), claim and financial lifecycle transitions are defined in [Step 2.3](./step2.3_governance_flows_and_state_transitions.md), and the authoritative table schemas, check constraints, triggers, indexes, and analytical views are defined in [Step 0.4](./step0.4_database_schema_design.md); they are not redefined here.
 
-When citizens interact with the public welfare orchestrator over multi-turn voice or messaging sessions, each conversational turn generates an extraction record (`attempt_id = 1, 2, 3`). Without rigorous relational state management and analytical deduplication, downstream Business Intelligence (BI) dashboards and treasury reconciliation reports suffer from **cartesian fan-out**—inflating claim counts and double-counting subsidy liabilities.
-
-The relational persistence layer solves this through a three-tier data architecture:
-1. **Normalized Transactional Core:** Separation of session telemetry (`session_telemetry_log`), multi-attempt perception logs (`session_extraction_details`), and authoritative adjudication decisions (`application_governance_ledger`).
-2. **Immutable Audit Ledger:** Database-level triggers automatically capturing every state transition (`application_governance_ledger_history`) with zero application-side bypass risk.
-3. **Analytical Deduplication & One-Big-Table (OBT) Marts:** Window-function deduplication (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC)`) paired with state filtering (`processing_state = 'COMMITTED'`) to guarantee strictly one canonical row per citizen session in analytical views (`citizen_journey_funnel`).
-
-```
-  ┌──────────────────────────────────────────────────────────────────────────────────┐
-  │                       TRANSACTIONAL PERSISTENCE LAYER                            │
-  │                                                                                  │
-  │  [session_telemetry_log] (1) ──────< (N) [session_extraction_details]            │
-  │    - session_id (PK)                       - payload_id (PK)                     │
-  │    - tokenized_phone_hash (64-char HMAC)   - attempt_id (1, 2, 3)                │
-  │                                            - processing_state (SUPERSEDED/COMMIT)│
-  │                                                      │                           │
-  │                                                      ▼ (1:1 Authoritative Turn)  │
-  │  [consent_registry]                      [application_governance_ledger]         │
-  │    - consent_id (PK)                       - claim_id (PK)                       │
-  │    - tokenized_identity_hash               - governance_action (APPROVE/REJECT)  │
-  │    - provenance (JSONB Audit)              - disbursement_status (PENDING/...)   │
-  └──────────────────────────────────────────────────────┬───────────────────────────┘
-                                                         │
-                                    [Database Triggers]  │  [Analytical Views]
-                                                         ▼
-  ┌──────────────────────────────────────────────────────────────────────────────────┐
-  │                  AUDIT & ANALYTICAL DEDUPLICATION LAYER                          │
-  │                                                                                  │
-  │  1. Immutable History Ledger (application_governance_ledger_history)             │
-  │  2. Committed Turn Filter (staging_committed_extractions)                        │
-  │  3. Window-Function Deduplication (ROW_NUMBER() OVER PARTITION BY session_id)    │
-  │  4. Unified Citizen Journey Funnel View (citizen_journey_funnel OBT)             │
-  └──────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    Turns["Multi-turn extraction attempts<br/>(Attempts 1..3)"] --> Window["Window-function deduplication<br/>(Latest attempt per session)"]
+    Turns --> Committed["Committed-turn filter<br/>(COMMITTED state only)"]
+    Window --> Canonical["1 canonical latest-attempt row<br/>(Completed and abandoned sessions)"]
+    Committed --> Funnel["Citizen journey funnel view<br/>(1 consolidated row per session)"]
+    classDef persistence fill:#f1eafe,stroke:#7955a1,color:#33214e,stroke-width:1.5px
+    classDef governance fill:#eef2ff,stroke:#5968a8,color:#252b55,stroke-width:1.5px
+    classDef ingress fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    class Turns persistence
+    class Window,Committed governance
+    class Canonical,Funnel ingress
 ```
 
----
 
-## 2. Relational Schema & Zero-PII Invariants
+### 2. Relational Schema & Zero-PII Invariants
 
 ### 2.1 Zero-PII Storage Invariant
 In strict compliance with sovereign data protection mandates, no table in the database stores cleartext citizen phone numbers, Aadhaar numbers, or unredacted personal identifiers:
@@ -107,26 +85,24 @@ erDiagram
 
 ## 3. Multi-Turn Conversational State Transitions & Deduplication
 
+### 3.1 State Transitions
 When a citizen requires multiple conversational turns to complete an agricultural subsidy claim, the database records each turn while transitioning prior incomplete turns to `SUPERSEDED`:
 
 ```mermaid
 flowchart LR
-    Turn1["Turn 1 (Attempt 1)\nMissing Crop Entity\nState = SUPERSEDED"] --> Turn2["Turn 2 (Attempt 2)\nMissing Survey Number\nState = SUPERSEDED"]
-    Turn2 --> Turn3["Turn 3 (Attempt 3)\nAll Entities Complete\nState = COMMITTED"]
-    Turn3 --> Dedupe{"Analytical Deduplication\n(ROW_NUMBER = 1 /\nState = COMMITTED)"}
-    Dedupe --> OBT["Unified Citizen Journey Funnel\n(Strictly 1 Row per Session)"]
+    Turn1["Turn 1 (Attempt 1) <br/>Missing Crop Entity <br/>State = SUPERSEDED"] --> Turn2["Turn 2 (Attempt 2) <br/>Missing Survey Number <br/>State = SUPERSEDED"]
+    Turn2 --> Turn3["Turn 3 (Attempt 3) <br/>All Entities Complete <br/>State = COMMITTED"]
+    Turn3 --> Dedupe{"Analytical Deduplication <br/>(ROW_NUMBER = 1 / <br/>State = COMMITTED)"}
+    Dedupe --> OBT["Unified Citizen Journey Funnel <br/>(Strictly 1 Row per Session)"]
 ```
 
-### 3.1 Analytical Deduplication Strategies
-To eliminate fan-out during analytical queries, the persistence layer supports two complementary deduplication patterns:
-1. **State-Driven Deduplication (`staging_committed_extractions`):**
-   * Filters `session_extraction_details` where `processing_state = 'COMMITTED'`.
-   * Guarantees that intermediate `STAGED` or `SUPERSEDED` turns are excluded from downstream joins.
-2. **Window-Function Analytical Deduplication (`ROW_NUMBER() OVER (...)`):**
-   * Partitions extraction records by `session_id` ordered by `attempt_id DESC` (and `created_at DESC`).
-   * Selects strictly rank `1` (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1`), ensuring that even if a session was abandoned mid-dialogue before reaching `COMMITTED`, analytical queries retrieve the latest conversational state without duplicate rows.
+### 3.2 States deduplication
+While [Step 0.4](./step0.4_database_schema_design.md) defines the committed-extraction staging view and the session-journey funnel view, this phase verifies that multi-attempt conversational logs do not produce cartesian fan-out under two distinct analytical query patterns:
 
----
+| Analytical query pattern | Completed 3-turn session (`SUPERSEDED` $\rightarrow$ `SUPERSEDED` $\rightarrow$ `COMMITTED`) | Abandoned 2-turn session (`SUPERSEDED` $\rightarrow$ `STAGED`) | Verified invariant |
+| :--- | :--- | :--- | :--- |
+| **Window-function deduplication** (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1`) | Returns attempt `3` (`COMMITTED`) with the final extracted district and crop entities. | Returns attempt `2` (`STAGED`) capturing the latest conversational state before drop-off. | Strictly 1 row per session across both completed and abandoned dialogues. |
+| **Citizen journey funnel view** (`citizen_journey_funnel`) | Left-joins the single `COMMITTED` attempt (`3`) and unpacks the associated governance outcome (`approval_amount` / `rejection_reason`). | Preserves the parent session telemetry row with `NULL` committed-extraction and governance columns because no turn reached `COMMITTED`. | Strictly 1 row per session with zero duplicate claim or subsidy counting. |
 
 ## 4. Database Safety Nets & Immutable Audit Triggers
 
@@ -139,19 +115,21 @@ The `application_governance_ledger` table enforces database-level check constrai
 Database triggers (`trg_audit_governance_ledger_insert` and `trg_audit_governance_ledger_update`) automatically append a record to `application_governance_ledger_history` whenever a claim is inserted or its status/action changes. This guarantees an immutable, tamper-evident audit trail for Comptroller and Auditor General (CAG) statutory inspections.
 
 ---
+## 3. Verification Matrix
 
-## 5. Verification & Analytical Simulation Matrix
+| Verification dimension | Test scenario | Required result |
+| :--- | :--- | :--- |
+| **Physical DDL conformance** | Inspect the physical DDL schema against [Step 0.4](./step0.4_database_schema_design.md) | All five tables, four analytical views, audit triggers, deduplication indexes, and 64-character token columns are present. |
+| **Window-function deduplication** | Query a 5-row extraction log spanning a completed 3-turn session and an abandoned 2-turn session using `ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_id DESC) = 1` | Returns exactly 2 rows: attempt `3` (`COMMITTED`) for the completed session and attempt `2` (`STAGED`) for the abandoned session. |
+| **Funnel view zero fan-out** | Query `citizen_journey_funnel` across the same completed and abandoned multi-turn sessions | Returns exactly 2 rows: the completed session with unpacked governance metadata and the abandoned session with `NULL` committed-extraction and claim attributes. |
+| **Terminal metadata constraints** | Insert an approved claim missing `approval_amount` or a rejected claim missing `rejection_reason` | Both inserts fail the database check constraints defined in [Step 0.4](./step0.4_database_schema_design.md). |
+| **Append-only audit history triggers** | Insert an initial claim (`UNDER_REVIEW`) and subsequently update it to `APPROVED` (`MANUAL_APPROVE`) | Database triggers automatically record 2 chronological history rows capturing the prior status (`NULL`, then `UNDER_REVIEW`), new status, governance action, and actor identifier. |
 
-The automated integration test suite verifies schema integrity, constraint enforcement, and analytical deduplication:
+## 4. Acceptance Criteria
 
-| Verification Dimension | Tested Scenario | Expected Relational / Analytical Outcome | Audited Invariant |
-| :--- | :--- | :--- | :--- |
-| **Schema DDL Conformance** | Structural inspection of `schema.sql` | Verifies all 5 tables, 4 analytical views, triggers, indexes, and zero-PII 64-char HMAC columns | 100% DDL contract compliance |
-| **Multi-Turn Deduplication** | 3-attempt session (`attempt_id = 1, 2, 3`) | Window function (`ROW_NUMBER() OVER PARTITION BY session_id`) and `COMMITTED` view return strictly 1 row (`attempt_id = 3`) | Zero cartesian fan-out in BI queries |
-| **OBT Funnel Join** | Joining telemetry, extractions, and governance ledger | `citizen_journey_funnel` returns 1 consolidated row per session with unpacked JSON metadata | Accurate end-to-end funnel metrics |
-| **Terminal Constraints** | Approval without `approval_amount` or Rejection without `rejection_reason` | Database constraint check rejects invalid terminal state rows | Zero malformed financial verdicts |
-
----
+- The physical DDL schema satisfies all table, view, index, constraint, and trigger specifications from [Step 0.4](./step0.4_database_schema_design.md).
+- Both window-function deduplication (`ROW_NUMBER() OVER (...) = 1`) and the `citizen_journey_funnel` view emit strictly one row per session across multi-attempt completed and abandoned conversations.
+- Terminal approval and rejection check constraints reject malformed metadata payloads at the database boundary, and every ledger insert or status transition is automatically captured in the append-only audit history table.
 
 ## 6. Architectural Consequences
 
