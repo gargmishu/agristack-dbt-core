@@ -2,9 +2,9 @@
 # ==============================================================================
 # AgriStack Zero-Trust Sovereign DPI Orchestrator - Environment Setup Script
 # ==============================================================================
-# This script sets up the local Python virtual environment (.venv), installs all
-# core runtime, database driver, and development dependencies declared in pyproject.toml,
-# and verifies environment sanity via static analysis toolchains.
+# This script sets up a fully self-healing Python virtual environment (.venv),
+# downloads and configures Python 3.13 (via uv), handles macOS code-signing,
+# installs all project & dev dependencies, and configures VS Code settings.
 # ==============================================================================
 
 set -euo pipefail
@@ -19,63 +19,117 @@ echo "======================================================================"
 echo "  AgriStack DPI Orchestrator - Environment & Dependency Setup"
 echo "======================================================================"
 echo "Project Root: ${PROJECT_ROOT}"
-echo "Python Executable: $(which python3)"
+echo "OS:           $(uname -s) ($(uname -m))"
 echo "----------------------------------------------------------------------"
 
-# Step 1: Create virtual environment if it doesn't exist
-if [ ! -d ".venv" ]; then
-    echo "[1/4] Creating virtual environment in .venv..."
-    python3 -m venv .venv
-else
-    echo "[1/4] Existing virtual environment found at .venv"
+# Ensure PATH includes common uv locations
+export PATH="${HOME}/.local/bin:${HOME}/.cargo/bin:/opt/homebrew/bin:${PATH}"
+
+# Step 1: Check / Install uv
+echo "[1/6] Checking for 'uv' package manager..."
+if ! command -v uv &> /dev/null; then
+    echo "  'uv' not found. Installing uv standalone binary..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="${HOME}/.local/bin:${PATH}"
+fi
+echo "  uv version: $(uv --version)"
+
+# Step 2: Ensure Python 3.13 runtime is installed & signed
+echo "[2/6] Provisioning Python 3.13 runtime..."
+uv python install 3.13
+
+# Resolve Python 3.13 binary path
+PYTHON_BIN="$(uv python find 3.13 2>/dev/null || true)"
+if [ -z "${PYTHON_BIN}" ] || [ ! -f "${PYTHON_BIN}" ]; then
+    # Fallback search in standard uv python share directory
+    PYTHON_BIN="$(find "${HOME}/.local/share/uv/python" -name "python3.13" -type f 2>/dev/null | head -n 1 || true)"
 fi
 
-# Step 2: Activate virtual environment
-echo "[2/4] Activating virtual environment..."
-# shellcheck source=/dev/null
-source .venv/bin/activate
+# macOS Gatekeeper / ad-hoc codesign fix for arm64/Apple Silicon
+if [[ "$(uname -s)" == "Darwin" ]] && [ -n "${PYTHON_BIN}" ]; then
+    echo "  Applying macOS quarantine removal and ad-hoc code signature..."
+    PYTHON_DIR="$(dirname "$(dirname "${PYTHON_BIN}")")"
+    xattr -r -d com.apple.quarantine "${PYTHON_DIR}" 2>/dev/null || true
+    find "${PYTHON_DIR}" \( -name "*.dylib" -o -name "*.so" -o -type f -perm +111 \) -exec codesign --force --sign - {} + 2>/dev/null || true
+fi
 
-# Step 3: Install dependencies listed in pyproject.toml
-echo "[3/4] Installing dependencies declared in pyproject.toml..."
+# Step 3: Create / Rebuild virtual environment (.venv)
+echo "[3/6] Configuring virtual environment at .venv..."
+VENV_PYTHON="${PROJECT_ROOT}/.venv/bin/python"
+REBUILD_VENV=0
 
-if command -v uv &> /dev/null; then
-    echo "  Using 'uv' fast installer..."
-    uv pip install -e ".[dev]"
-else
-    echo "  Using standard 'pip' installer..."
-    pip install --upgrade pip setuptools wheel 2>/dev/null || true
+if [ ! -f "${VENV_PYTHON}" ]; then
+    REBUILD_VENV=1
+elif ! "${VENV_PYTHON}" -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)" 2>/dev/null; then
+    echo "  Existing .venv interpreter is broken or incompatible (< Python 3.11). Rebuilding..."
+    REBUILD_VENV=1
+fi
 
-    # Try standard editable install first, fallback to reading pyproject.toml directly
-    if ! pip install -e ".[dev]"; then
-        echo "  Standard build failed, retrying with --no-build-isolation..."
-        if ! pip install --no-build-isolation -e ".[dev]"; then
-            echo "  Parsing dependencies directly from pyproject.toml..."
-            DEPS=$(python3 -c 'import sys; sys.version_info >= (3, 11) or sys.exit("Python 3.11+ required for tomllib"); import tomllib; f=open("pyproject.toml","rb"); d=tomllib.load(f); deps=d.get("project",{}).get("dependencies",[])+d.get("project",{}).get("optional-dependencies",{}).get("dev",[]); print(" ".join(deps))')
-            echo "  Installing parsed dependencies: ${DEPS}"
-            # shellcheck disable=SC2086
-            pip install ${DEPS}
-        fi
+if [ "${REBUILD_VENV}" -eq 1 ]; then
+    if [ -n "${PYTHON_BIN}" ] && [ -f "${PYTHON_BIN}" ]; then
+        uv venv --python "${PYTHON_BIN}" .venv --clear
+    else
+        uv venv --python 3.13 .venv --clear
     fi
-fi
-
-# Step 4: Verify environment setup
-echo "[4/4] Verifying static analysis & test tooling..."
-echo "----------------------------------------------------------------------"
-echo "pytest version: $(pytest --version 2>&1 | head -n 1)"
-echo "ruff version:   $(ruff --version 2>&1)"
-echo "mypy version:   $(mypy --version 2>&1)"
-echo "----------------------------------------------------------------------"
-
-if [ -f "src/__init__.py" ]; then
-    echo "Running ruff & mypy verification..."
-    ruff check .
-    mypy src
 else
-    echo "Note: 'src/__init__.py' not found. Skipping mypy and ruff checks."
+    echo "  Existing valid .venv found."
 fi
+
+# Step 4: Install dependencies declared in pyproject.toml
+echo "[4/6] Installing dependencies (editable + dev extras)..."
+uv pip install -e ".[dev]"
+
+# Step 5: Configure VS Code / IDE settings
+echo "[5/6] Ensuring IDE settings (.vscode/settings.json & pyrightconfig.json)..."
+mkdir -p .vscode
+
+# Detect python minor version inside .venv for extraPaths
+PY_VER="$("${VENV_PYTHON}" -c 'import sys; print(f"python{sys.version_info.major}.{sys.version_info.minor}")')"
+
+cat <<EOF > .vscode/settings.json
+{
+  "python.defaultInterpreterPath": "\${workspaceFolder}/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "\${workspaceFolder}",
+    "\${workspaceFolder}/src",
+    "\${workspaceFolder}/.venv/lib/${PY_VER}/site-packages"
+  ],
+  "python.autoComplete.extraPaths": [
+    "\${workspaceFolder}",
+    "\${workspaceFolder}/src",
+    "\${workspaceFolder}/.venv/lib/${PY_VER}/site-packages"
+  ]
+}
+EOF
+
+cat <<EOF > pyrightconfig.json
+{
+  "include": ["src", "tests"],
+  "extraPaths": [".", ".venv/lib/${PY_VER}/site-packages"],
+  "venvPath": ".",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ]
+}
+EOF
+
+# Step 6: Verify environment and run test suite
+echo "[6/6] Verifying environment & running test suite..."
+echo "----------------------------------------------------------------------"
+echo "Python: $("${VENV_PYTHON}" --version)"
+echo "Pytest: $("${PROJECT_ROOT}/.venv/bin/pytest" --version | head -n 1)"
+echo "Ruff:   $("${PROJECT_ROOT}/.venv/bin/ruff" --version)"
+echo "----------------------------------------------------------------------"
+
+echo "Running pytest..."
+"${PROJECT_ROOT}/.venv/bin/pytest"
 
 echo "======================================================================"
 echo "  Success! Environment setup is complete."
-echo "  To activate in your current shell, run:"
+echo "  Selected Interpreter: ${PROJECT_ROOT}/.venv/bin/python"
+echo "  To activate in your shell, run:"
 echo "    source .venv/bin/activate"
 echo "======================================================================"
