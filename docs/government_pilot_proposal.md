@@ -98,6 +98,7 @@ gantt
 - Deploy the orchestrator in the State Data Centre (SDC), MeghRaj NIC Cloud, or dedicated cloud tenancy.
 - Provision WhatsApp Business API number, state IVR SIP trunk, and dedicated shortcode/USSD endpoint.
 - Connect the perimeter security gateway to state secret managers for tokenization key management.
+- Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
 
 ### Phase 2: Registry Integration & Sandbox Verification (Days 15–28)
 - Cross-connect with state land records (AgriStack / Bhulekh / e-Bhoomi) and farmer registry databases.
@@ -118,7 +119,7 @@ gantt
 
 ## 4. Key Performance Indicators (KPIs)
 
-State IT agencies and Project Management Units (PMUs) can incorporate the following technical clauses directly into upcoming tender documents and procurement specifications:
+To evaluate the pilot's operational, fiscal, and accessibility impacts, the Project Management Unit (PMU) tracks the following core performance dimensions:
 
 | Measure | How to measure | Baseline and target |
 | :--- | :--- | :--- |
@@ -129,6 +130,19 @@ State IT agencies and Project Management Units (PMUs) can incorporate the follow
 | Registry and service reliability | Track integration availability, response time, failure and retry rates, and unresolved verification results. | Set service thresholds with each system owner before live integration. |
 | Privacy and security | Record security incidents, unauthorized disclosures, tokenization/purge failures, access exceptions, and retention findings. | Zero tolerance for unauthorized PII disclosure; define incident response and audit method before launch. |
 | Audit completeness | Sample claims and verify traceability of decision inputs, state changes, reviewer actions, and payment callbacks. | Agree the sampling method and required evidence with authorized audit stakeholders. |
+
+### 4.1 Rationale for District-Specific Baseline Calibration
+
+Government DBT pilots often encounter audit and administrative challenges when performance is evaluated against hypothetical national averages rather than empirical local baselines. The pilot mandates establishing a pre-implementation district baseline based on three operational imperatives:
+
+1. **Infrastructural & Socio-Economic Heterogeneity**:
+   Intermediary density (such as Common Service Centres and village kiosks), village-to-kiosk transit distances, mobile network coverage (2G vs. 4G/5G), and vernacular dialect comprehension vary substantially across districts. A standardized national assumption obscures whether citizen friction stems from technical barriers, language mismatch, or physical transit constraints.
+
+2. **Counterfactual & Evaluation Integrity**:
+   Measuring genuine administrative efficiency (application completion rate, time-to-decision, and reduction in out-of-pocket citizen costs) requires an auditable local counterfactual. Comparing pilot outcomes against the actual pre-existing workflow of the chosen pilot district prevents artificial impact inflation, provides credible attribution, and withstands scrutiny by state finance departments and statutory auditors.
+
+3. **Informed Channel & Capacity Sizing**:
+   Empirical baseline assessment reveals local channel preferences (e.g., the proportion of feature-phone IVR/USSD users relative to smartphone WhatsApp users) and existing caseworker review latency. This allows the Project Management Unit (PMU) to right-size cloud resources, telephony trunks, and departmental review queues prior to district-wide live operations.
 
 ---
 
