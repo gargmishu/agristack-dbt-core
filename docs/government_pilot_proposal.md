@@ -95,7 +95,7 @@ gantt
 ```
 
 ### Phase 1: Environment Readiness & Channel Binding (Days 1–14)
-- Deploy the orchestrator in the State Data Centre (SDC), MeghRaj NIC Cloud, or dedicated cloud tenancy.
+- Deploy the orchestrator in state-approved infrastructure: the State Data Centre (SDC), MeghRaj (NIC's Government of India Cloud), or a dedicated MeitY-empanelled cloud tenancy (an isolated Virtual Private Cloud within Indian data center regions).
 - Provision WhatsApp Business API number, state IVR SIP trunk, and dedicated shortcode/USSD endpoint.
 - Connect the perimeter security gateway to state secret managers for tokenization key management.
 - Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
