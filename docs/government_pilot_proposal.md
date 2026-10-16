@@ -75,7 +75,7 @@ Government funds are never allocated by non-deterministic artificial intelligenc
 
 ## 3. The 60-Day Single-District Pilot Blueprint
 
-We propose a **60-Day Single-District Pilot** covering one selected agricultural district (e.g., Karnal in Haryana, Nashik in Maharashtra, or Gorakhpur in Uttar Pradesh) focused on **Crop Damage Compensation** or **Seasonal Input Subsidies**.
+We propose a **60-Day Single-District Pilot** covering one selected agricultural district (e.g., Karnal in Haryana, Nashik in Maharashtra, or Gorakhpur in Uttar Pradesh) focused on **Crop Damage Compensation** or **Seasonal Input Subsidies**. The 60-day window maps onto the active intake window of an agricultural season while accommodating real-world government cloud provisioning, telecom onboarding, inter-departmental integration, and treasury settlement cycles.
 
 ```mermaid
 gantt
@@ -99,6 +99,7 @@ gantt
 - Provision WhatsApp Business API number, state IVR SIP trunk, and dedicated shortcode/USSD endpoint.
 - Connect the perimeter security gateway to state secret managers for tokenization key management.
 - Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
+- **Duration & SLA Rationale (14 Days)**: Accommodates external telecom and messaging carrier lead times (telecom shortcode allocation, Meta WhatsApp Business verification, and SIP trunk binding standardly require 7–10 business days), state cloud firewall and security approvals (3–7 days), and concurrent baseline survey sampling.
 
 ### Phase 2: Cadastral Registry Integration & Sandbox Verification (Days 15–28)
 - **Secure Revenue & Farmer Registry Peering**: Establish secure API connectivity (via mutual TLS [mTLS] or state intranet peering) with state land revenue portals (such as AgriStack, Bhulekh, or e-Bhoomi) and farmer registries.
@@ -106,16 +107,19 @@ gantt
 - **Schema Alignment & Resilience Testing**: Map state revenue schemas to canonical intake contracts, and validate sandbox fallbacks and retry queues to gracefully handle high latency or intermittent registry downtime.
 - **Caseworker Review Deployment**: Deploy the web-based district caseworker review queue for manual escalation routing when cadastral discrepancies or unverified plot boundaries occur.
 - **End-to-End Sandbox Simulation**: Execute automated end-to-end verification suites verifying 100% compliance across deterministic policy rules, fraud deduplication, and simulated payment rails.
+- **Duration & SLA Rationale (14 Days)**: Accounts for cross-departmental coordination between the Department of Agriculture and the Revenue Department (mTLS certificates, VPN peering, and IP whitelisting across separate administrative networks), resolving localized cadastral schema edge cases (joint holdings, fragmented plot notations), and conducting caseworker dashboard training.
 
 ### Phase 3: Controlled Field Rollout (Days 29–50)
-- **Cohort A: Targeted Sub-District Trial (Days 29–42)**: Supervised trial with 500 progressive farmers across 5 selected administrative development blocks (sub-district revenue units), chosen to represent diverse conditions (e.g., varying cellular connectivity, irrigation profiles, and dialect variations) in coordination with Block Agriculture Officers (BAOs).
-- **Cohort B: District-Wide Expansion (Days 43–50)**: Open district-wide access across all remaining administrative blocks in the pilot district.
+- **Cohort A: Targeted Sub-District Trial (Days 29–42 / 14 Days)**: Supervised trial with 500 progressive farmers across 5 selected administrative development blocks (sub-district revenue units), chosen to represent diverse conditions (e.g., varying cellular connectivity, irrigation profiles, and dialect variations) in coordination with Block Agriculture Officers (BAOs).
+- **Cohort B: District-Wide Expansion (Days 43–50 / 8 Days)**: Open district-wide access across all remaining administrative blocks in the pilot district.
 - **Operational Performance Tracking**: Continuously monitor straight-through processing rates, conversational reprompt completions, dialect recognition accuracy, and caseworker queue turnaround times.
+- **Duration & SLA Rationale (22 Days)**: Cohort A (14 days) spans two full weekly rural market (*haat*) cycles to observe natural farmer interaction patterns and allows multi-day treasury settlement loops (24–72 hours via PFMS/NPCI) to verify end-to-end payouts while fine-tuning speech models for local dialects. Cohort B (8 days) subsequently stress-tests system concurrency and straight-through processing under high-volume open district load.
 
 ### Phase 4: Comprehensive Audit & Transition (Days 51–60)
 - Generate automated analytical reporting using window-function deduplication (`ROW_NUMBER() OVER`) to prove zero cartesian fan-out.
 - Export immutable SQL audit history trails demonstrating end-to-end accountability for CAG review.
 - Deliver comprehensive technical documentation, architecture decision records, and operational runbooks.
+- **Duration & SLA Rationale (10 Days)**: Provides necessary trailing buffer for final banking settlement callbacks to reconcile, compiling tamper-evident state transition trails for statutory audit (CAG) compliance, conducting comparative evaluation against Phase 1 district baselines, and presenting the scale-up transition brief to state executive leadership.
 
 ---
 
