@@ -11,20 +11,35 @@
 
 State Direct Benefit Transfer (DBT) schemes for agriculture—including crop loss compensation, input subsidies, and disaster relief—face four fundamental administrative bottlenecks:
 
-1. **The Last-Mile Vernacular Exclusion Barrier**: Over 70% of smallholder farmers struggle with complex 14-page multi-step web portals, forcing them to rely on Common Service Centre (CSC) intermediaries who charge informal facilitation fees of ₹200 to ₹500 per application.
+1. **The Last-Mile Vernacular Exclusion Barrier**: Multi-step web forms and dependence on Common Service Centre (CSC) intermediaries can create access barriers. The pilot should establish a district-specific baseline for application effort, completion, and any facilitation costs rather than assume a single national rate.
 2. **Data Privacy & Statutory Liability (DPDP Act 2023)**: Persistent storage of cleartext Aadhaar numbers and mobile phone numbers across distributed government databases exposes departmental leadership to severe regulatory penalties and citizen privacy risks.
 3. **Cloud & AI Inference Cost Overruns**: Deploying massive language models across millions of citizen interactions rapidly exhausts state IT budgets on GPU hosting.
 4. **Audit Liability & Double-Dipping Fraud**: Disbursing public funds without immutable, tamper-evident audit logs risks adverse Comptroller and Auditor General (CAG) findings, while lack of cross-season deduplication enables fraudulent double-claiming.
 
-**AgriStack DBT Core** is a sovereign-aligned, Zero-Trust Direct Benefit Transfer simulation and orchestration platform. It enables farmers to apply for agricultural entitlements in their native spoken dialect via WhatsApp Voice Notes, IVR phone calls, USSD menu signaling (`*99#`), or SMS, and coordinates straight-through deterministic adjudication against land registries and treasury rails with strict Zero-PII guarantees.
+**AgriStack DBT Core** is a sovereign-aligned, Zero-Trust Direct Benefit Transfer simulation and orchestration platform. It enables farmers to apply for agricultural entitlements in their native spoken dialect via WhatsApp Voice Notes, IVR phone calls, USSD menu signaling (`*147#`), or SMS, and coordinates deterministic adjudication against land registries and treasury rails. Direct identifiers are tokenized at the Layer 2 perimeter, and free-text content must be redacted before downstream processing.
 
 ```mermaid
 flowchart LR
-    A["🌾 Farmer Ingress<br/>(WhatsApp Voice / IVR / USSD / SMS)"] --> B["🔒 Perimeter Security<br/>(RAM-Only HMAC Tokenizer & Prompt Firewall)"]
-    B --> C["🗣️ Sovereign AI Intake<br/>(Bhashini Speech-to-Text & SLM Extractor)"]
-    C --> D["🏛️ 3-Gate Governance<br/>(AgriStack Land Match & Policy Matrix)"]
-    D --> E["⚡ Straight-Through Payout<br/>(PFMS / NPCI APBS Rails)"]
-    D --> F["📋 Caseworker Staging<br/>(OpenSPP Incident Queue)"]
+    A["Farmer Interaction<br/>(WhatsApp / IVR / USSD / SMS)"] --> B["Perimeter Security<br/>(Tokenization & Threat Screening)"]
+    B --> C["Intake & Entity Extraction<br/>(Speech and Text Processing)"]
+    C --> D["Governance Decision<br/>(Completeness, Eligibility & Uniqueness)"]
+    D --> E["Approved Claim<br/>(Asynchronous Payment Processing)"]
+    D --> F["Manual Review<br/>(Caseworker Queue)"]
+    D --> G["Rejected Claim<br/>(Reason Recorded)"]
+    classDef ingress fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    classDef security fill:#fff4dd,stroke:#c28a1a,color:#49330b,stroke-width:1.5px
+    classDef intake fill:#e5f5f2,stroke:#3b8f83,color:#123c37,stroke-width:1.5px
+    classDef governance fill:#eef2ff,stroke:#5968a8,color:#252b55,stroke-width:1.5px
+    classDef approved fill:#e6f4ea,stroke:#4a8f5b,color:#173b20,stroke-width:1.5px
+    classDef review fill:#fff0db,stroke:#c27a24,color:#4d310d,stroke-width:1.5px
+    classDef rejected fill:#fde8e8,stroke:#b94a48,color:#4a1515,stroke-width:1.5px
+    class A ingress
+    class B security
+    class C intake
+    class D governance
+    class E approved
+    class F review
+    class G rejected
 ```
 
 ---
@@ -35,11 +50,11 @@ flowchart LR
 Farmers interact through the tools they already use daily:
 - **WhatsApp Messaging & Voice Notes**: Farmers record audio messages in vernacular Hindi or regional dialects explaining crop damage (*"Mera 2 acre gehu barish se kharab ho gaya"*).
 - **Interactive Voice Response (IVR)**: Automated inbound dial-in supporting vernacular speech recognition and interactive voice synthesis.
-- **USSD Signaling (`*99#`) & SMS Relay**: Feature-phone access requiring zero internet connectivity or smartphone ownership.
+- **USSD Signaling (`*147#`) & SMS Relay**: Feature-phone access requiring zero internet connectivity or smartphone ownership.
 
 ### 2.2 Sovereign Zero-Trust Security & DPDP Act 2023 Compliance
-- **RAM-Only Cryptographic Tokenization**: Cleartext phone numbers and Aadhaar identifiers are ingested strictly into volatile RAM, transformed into cryptographically peppered 64-character SHA-256 HMAC pseudonymous tokens, and instantly purged from memory.
-- **Strict Zero-Retention Disk Storage**: Persistent operational tables and analytical warehouses store exclusively HMAC tokens. Cleartext citizen identifiers never touch persistent disk storage.
+- **RAM-Only Cryptographic Tokenization**: Phone numbers and other approved identifiers are processed in volatile memory, transformed into keyed 64-character HMAC-SHA-256 pseudonymous tokens, and removed from the downstream contract. Raw Aadhaar must not be directly hashed; use an authorized UIDAI-issued pseudonymous identifier where required.
+- **Strict Zero-Retention Disk Storage**: Identity columns store tokens rather than cleartext identifiers. Other persisted fields must be minimized, and free-text content must be PII-redacted before persistence; tokens remain sensitive and linkable.
 - **Adversarial Threat Firewall**: Inbound citizen text is inspected at the perimeter for system overrides, role usurpation, and delimiter injection. Suspected adversarial payloads are neutralized before reaching language models.
 
 ### 2.3 Hybrid Cost Optimization: Structured Fast-Path
@@ -50,7 +65,7 @@ To prevent unsustainable GPU compute costs:
 ### 2.4 Deterministic Three-Gate Governance & Anti-Double-Dipping
 Government funds are never allocated by non-deterministic artificial intelligence:
 - **Gate 1 (Ingress & Modality)**: Standardizes multi-channel carrier events into canonical intake contracts.
-- **Gate 2 (Completeness & Conversational Loops)**: Checks for mandatory domain parameters (District, Crop Name, Survey/Khasra Number) and initiates up to 3 automated conversational re-prompts before escalating.
+- **Gate 2 (Completeness & Conversational Loops)**: Checks for mandatory domain parameters (District and Crop Name) and initiates bounded clarification before escalating. Survey/Khasra Number is optional at intake and may be resolved during Gate 3 registry matching.
 - **Gate 3 (Deterministic Policy Matrix)**: Evaluates extracted parameters against AgriStack cadastral land records and seasonal double-dipping ledgers:
   - **Automated Payout (`AUTO_APPROVE`)**: Extraction confidence $\ge 85\%$, land ownership confirmed in registry, no prior claim in active season.
   - **Caseworker Review (`ROUTE_FOR_MANUAL_REVIEW`)**: Extraction confidence $< 85\%$, boundary discrepancies, or flagged overrides staged into district caseworker queues.
@@ -103,14 +118,17 @@ gantt
 
 ## 4. Key Performance Indicators (KPIs)
 
-| Performance Dimension | Traditional Web / Physical Workflow | Target with AgriStack DBT Core |
+State IT agencies and Project Management Units (PMUs) can incorporate the following technical clauses directly into upcoming tender documents and procurement specifications:
+
+| Measure | How to measure | Baseline and target |
 | :--- | :--- | :--- |
-| **Claim Submission Time** | 3 to 7 days (CSC physical visit) | $< 3$ minutes via WhatsApp Voice or IVR |
-| **Intermediary Leakage** | ₹200–₹500 per application | ₹0 (Direct self-service from citizen phone) |
-| **Straight-Through Processing** | $0\%$ (100% manual file processing) | $\ge 65\%$ automated payout within 24 hours |
-| **Caseworker Processing Burden** | 100% of all submitted claims | $< 35\%$ (Only high-risk / ambiguous claims) |
-| **PII Data Breach Risk** | High (Cleartext Aadhaar/phones in CSVs) | Zero (RAM-only cryptographic tokenization) |
-| **Audit Resolution Time** | Weeks (Tracing paper files) | Instantaneous via automated SQL audit ledger |
+| Submission completion and time | Sample comparable applications by channel; measure from first interaction to valid submission, including abandoned sessions. | Establish from current district process; set target with scheme owners before launch. |
+| Channel reach and accessibility | Track eligible users reached, successful channel starts, completion, language, and accessibility issues, using minimized data. | Baseline and targets agreed with district outreach and inclusion teams. |
+| Straight-through decision rate | Share of eligible submitted claims receiving a deterministic decision without manual intervention; report approval and rejection separately. | Measure against sandbox and current process; set target only after scheme rules and data quality are assessed. |
+| Manual review workload and turnaround | Track incoming cases, reviewer hours, queue age, resolution time, and outcomes. | Size cohort and service targets against appointed reviewer capacity. |
+| Registry and service reliability | Track integration availability, response time, failure and retry rates, and unresolved verification results. | Set service thresholds with each system owner before live integration. |
+| Privacy and security | Record security incidents, unauthorized disclosures, tokenization/purge failures, access exceptions, and retention findings. | Zero tolerance for unauthorized PII disclosure; define incident response and audit method before launch. |
+| Audit completeness | Sample claims and verify traceability of decision inputs, state changes, reviewer actions, and payment callbacks. | Agree the sampling method and required evidence with authorized audit stakeholders. |
 
 ---
 
@@ -135,5 +153,5 @@ State IT agencies and Project Management Units (PMUs) can incorporate the follow
 
 To initiate a single-district pilot:
 1. **Letter of Intent (LoI)**: Department of Agriculture issues a formal pilot letter authorizing single-district sandbox evaluation.
-2. **Startup India / GeM Procurement**: Direct work order under General Financial Rules (GFR) Rule 170/173 exemptions for DPIIT-recognized innovative startups, or through state IT agency rate contracts.
-3. **Kickoff Workshop**: 2-day stakeholder alignment with district agricultural officers and state IT leadership.
+2. **Procurement route review**: The department's procurement, finance, and legal authorities should select the applicable route under current state policy and any applicable central rules. The General Financial Rules (GFR) are central-government financial and procurement rules; applicability depends on the purchasing authority and transaction. The Government e-Marketplace (GeM) is an online public procurement marketplace and may be relevant where the authority's rules require or permit its use. GFR and GeM are not interchangeable: one is a rules framework, the other a marketplace. The Department for Promotion of Industry and Internal Trade (DPIIT) administers Startup India recognition; recognition should not be treated as automatic authority for a direct award or exemption. These are potential review points, not a selected procurement route. Confirm any proposed route and eligibility in writing with the responsible procurement authority; do not assume a specific GFR rule or exemption applies.
+3. **Kickoff workshop**: Align district agriculture officers, state IT leadership, registry owners, security, and operations stakeholders. Set the workshop duration during planning.
