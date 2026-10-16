@@ -100,7 +100,7 @@ gantt
 - Connect the perimeter security gateway to state secret managers for tokenization key management.
 - Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
 
-### Phase 2: Registry Integration & Sandbox Verification (Days 15–28)
+### Phase 2: Cadastral Registry Integration & Sandbox Verification (Days 15–28)
 - **Secure Revenue & Farmer Registry Peering**: Establish secure API connectivity (via mutual TLS [mTLS] or state intranet peering) with state land revenue portals (such as AgriStack, Bhulekh, or e-Bhoomi) and farmer registries.
 - **Cadastral & Entitlement Verification**: Query connected registries in real time to validate applicant land ownership, survey/Khasra plot boundaries, and registered seasonal crop acreage against claimed entitlements.
 - **Schema Alignment & Resilience Testing**: Map state revenue schemas to canonical intake contracts, and validate sandbox fallbacks and retry queues to gracefully handle high latency or intermittent registry downtime.
@@ -108,9 +108,9 @@ gantt
 - **End-to-End Sandbox Simulation**: Execute automated end-to-end verification suites verifying 100% compliance across deterministic policy rules, fraud deduplication, and simulated payment rails.
 
 ### Phase 3: Controlled Field Rollout (Days 29–50)
-- **Cohort A (Days 29–42)**: Controlled trial with 500 progressive farmers across 5 pilot blocks.
-- **Cohort B (Days 43–50)**: Open district-wide availability across all agricultural blocks.
-- Monitor automated straight-through processing rates, conversational reprompt completion, and caseworker resolution turnaround times.
+- **Cohort A: Targeted Sub-District Trial (Days 29–42)**: Supervised trial with 500 progressive farmers across 5 selected administrative development blocks (sub-district revenue units), chosen to represent diverse conditions (e.g., varying cellular connectivity, irrigation profiles, and dialect variations) in coordination with Block Agriculture Officers (BAOs).
+- **Cohort B: District-Wide Expansion (Days 43–50)**: Open district-wide access across all remaining administrative blocks in the pilot district.
+- **Operational Performance Tracking**: Continuously monitor straight-through processing rates, conversational reprompt completions, dialect recognition accuracy, and caseworker queue turnaround times.
 
 ### Phase 4: Comprehensive Audit & Transition (Days 51–60)
 - Generate automated analytical reporting using window-function deduplication (`ROW_NUMBER() OVER`) to prove zero cartesian fan-out.
