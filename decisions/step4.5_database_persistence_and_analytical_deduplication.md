@@ -20,6 +20,7 @@ flowchart LR
     class Canonical,Funnel ingress
 ```
 
+---
 
 ### 2. Relational Schema & Zero-PII Invariants
 
@@ -115,7 +116,7 @@ The `application_governance_ledger` table enforces database-level check constrai
 Database triggers (`trg_audit_governance_ledger_insert` and `trg_audit_governance_ledger_update`) automatically append a record to `application_governance_ledger_history` whenever a claim is inserted or its status/action changes. This guarantees an immutable, tamper-evident audit trail for Comptroller and Auditor General (CAG) statutory inspections.
 
 ---
-## 3. Verification Matrix
+## 5. Verification Matrix
 
 | Verification dimension | Test scenario | Required result |
 | :--- | :--- | :--- |
@@ -124,12 +125,6 @@ Database triggers (`trg_audit_governance_ledger_insert` and `trg_audit_governanc
 | **Funnel view zero fan-out** | Query `citizen_journey_funnel` across the same completed and abandoned multi-turn sessions | Returns exactly 2 rows: the completed session with unpacked governance metadata and the abandoned session with `NULL` committed-extraction and claim attributes. |
 | **Terminal metadata constraints** | Insert an approved claim missing `approval_amount` or a rejected claim missing `rejection_reason` | Both inserts fail the database check constraints defined in [Step 0.4](./step0.4_database_schema_design.md). |
 | **Append-only audit history triggers** | Insert an initial claim (`UNDER_REVIEW`) and subsequently update it to `APPROVED` (`MANUAL_APPROVE`) | Database triggers automatically record 2 chronological history rows capturing the prior status (`NULL`, then `UNDER_REVIEW`), new status, governance action, and actor identifier. |
-
-## 4. Acceptance Criteria
-
-- The physical DDL schema satisfies all table, view, index, constraint, and trigger specifications from [Step 0.4](./step0.4_database_schema_design.md).
-- Both window-function deduplication (`ROW_NUMBER() OVER (...) = 1`) and the `citizen_journey_funnel` view emit strictly one row per session across multi-attempt completed and abandoned conversations.
-- Terminal approval and rejection check constraints reject malformed metadata payloads at the database boundary, and every ledger insert or status transition is automatically captured in the append-only audit history table.
 
 ## 6. Architectural Consequences
 
