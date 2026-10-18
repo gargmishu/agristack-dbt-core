@@ -36,9 +36,7 @@ def _load_sqlite_schema() -> tuple[str, ...]:
 _SQLITE_SCHEMA_DDL_STATEMENTS: Final[tuple[str, ...]] = _load_sqlite_schema()
 
 # Upsert query for session telemetry log
-def _session_telemetry_upsert_template() -> str:
-    """Return the SQL upsert statement for session telemetry log."""
-    return """
+SESSION_TELEMETRY_LOG_UPSERT: Final[str] = """
 INSERT INTO session_telemetry_log (
     session_id,
     tokenized_phone_hash,
@@ -58,8 +56,76 @@ ON CONFLICT(session_id) DO UPDATE SET
     session_status = excluded.session_status,
     completed_at = COALESCE(excluded.completed_at, session_telemetry_log.completed_at)
 """
+# SQL templates for extraction details
+SUPERSEDE_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
+    UPDATE session_extraction_details
+    SET processing_state = 'SUPERSEDED'
+    WHERE session_id = :session_id
+      AND attempt_id < :attempt_id
+      AND processing_state = 'STAGED'
+"""
 
-SESSION_TELEMETRY_LOG_UPSERT: Final[str] = _session_telemetry_upsert_template()
+INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
+    INSERT INTO session_extraction_details (
+        payload_id,
+        session_id,
+        attempt_id,
+        raw_unstructured_text,
+        extraction_confidence,
+        extracted_district,
+        extracted_crop_type,
+        processing_state,
+        created_at
+    ) VALUES (
+        :payload_id,
+        :session_id,
+        :attempt_id,
+        :raw_unstructured_text,
+        :extraction_confidence,
+        :extracted_district,
+        :extracted_crop_type,
+        :processing_state,
+        :created_at
+    ) ON CONFLICT(payload_id) DO UPDATE SET
+        processing_state = excluded.processing_state,
+        extracted_district = excluded.extracted_district,
+        extracted_crop_type = excluded.extracted_crop_type
+"""
+
+# SQL template for governance ledger upsert
+GOVERNANCE_LEDGER_UPSERT_SQL: Final[str] = """
+    INSERT INTO application_governance_ledger (
+        claim_id,
+        session_id,
+        payload_id,
+        tokenized_identity_hash,
+        application_status,
+        claimant_eligibility_status,
+        governance_action,
+        evaluated_at,
+        disbursement_status,
+        governance_metadata
+    ) VALUES (
+        :claim_id,
+        :session_id,
+        :payload_id,
+        :tokenized_identity_hash,
+        :application_status,
+        :claimant_eligibility_status,
+        :governance_action,
+        :evaluated_at,
+        :disbursement_status,
+        :governance_metadata
+    ) ON CONFLICT(claim_id) DO UPDATE SET
+        application_status = excluded.application_status,
+        governance_action = excluded.governance_action,
+        evaluated_at = excluded.evaluated_at,
+        disbursement_status = COALESCE(
+            excluded.disbursement_status,
+            application_governance_ledger.disbursement_status
+        ),
+        governance_metadata = excluded.governance_metadata
+"""
 
 
 class LedgerPersistenceService:
@@ -169,51 +235,15 @@ class LedgerPersistenceService:
         """
         effective_created_at = created_at or datetime.now(UTC).isoformat()
 
-        supersede_query = text(
-            """
-            UPDATE session_extraction_details
-            SET processing_state = 'SUPERSEDED'
-            WHERE session_id = :session_id
-              AND attempt_id < :attempt_id
-              AND processing_state = 'STAGED'
-            """
-        )
-        insert_query = text(
-            """
-            INSERT INTO session_extraction_details (
-                payload_id,
-                session_id,
-                attempt_id,
-                raw_unstructured_text,
-                extraction_confidence,
-                extracted_district,
-                extracted_crop_type,
-                processing_state,
-                created_at
-            ) VALUES (
-                :payload_id,
-                :session_id,
-                :attempt_id,
-                :raw_unstructured_text,
-                :extraction_confidence,
-                :extracted_district,
-                :extracted_crop_type,
-                :processing_state,
-                :created_at
-            )
-            ON CONFLICT(payload_id) DO UPDATE SET
-                processing_state = excluded.processing_state,
-                extracted_district = excluded.extracted_district,
-                extracted_crop_type = excluded.extracted_crop_type
-            """
-        )
+        supersede_sql = text(SUPERSIDE_EXTRACTION_UPDATE_SQL)
+        insertion_sql = text(INSERT_SESSION_EXTRACTION_DETAILS_SQL)
         with self.database_engine.begin() as database_connection:
             database_connection.execute(
-                supersede_query,
+                supersede_sql,
                 {"session_id": session_id, "attempt_id": attempt_id},
             )
             database_connection.execute(
-                insert_query,
+                insertion_sql,
                 {
                     "payload_id": payload_id,
                     "session_id": session_id,
@@ -266,45 +296,10 @@ class LedgerPersistenceService:
         effective_evaluated_at = evaluated_at or datetime.now(UTC).isoformat()
         metadata_json_string = json.dumps(governance_metadata or {})
 
-        upsert_query = text(
-            """
-            INSERT INTO application_governance_ledger (
-                claim_id,
-                session_id,
-                payload_id,
-                tokenized_identity_hash,
-                application_status,
-                claimant_eligibility_status,
-                governance_action,
-                evaluated_at,
-                disbursement_status,
-                governance_metadata
-            ) VALUES (
-                :claim_id,
-                :session_id,
-                :payload_id,
-                :tokenized_identity_hash,
-                :application_status,
-                :claimant_eligibility_status,
-                :governance_action,
-                :evaluated_at,
-                :disbursement_status,
-                :governance_metadata
-            )
-            ON CONFLICT(claim_id) DO UPDATE SET
-                application_status = excluded.application_status,
-                governance_action = excluded.governance_action,
-                evaluated_at = excluded.evaluated_at,
-                disbursement_status = COALESCE(
-                    excluded.disbursement_status,
-                    application_governance_ledger.disbursement_status
-                ),
-                governance_metadata = excluded.governance_metadata
-            """
-        )
+        upsert_sql = text(GOVERNANCE_LEDGER_UPSERT_SQL)
         with self.database_engine.begin() as database_connection:
             database_connection.execute(
-                upsert_query,
+                upsert_sql,
                 {
                     "claim_id": claim_id,
                     "session_id": session_id,
