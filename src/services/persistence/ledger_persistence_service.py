@@ -88,6 +88,7 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         :processing_state,
         :created_at
     ) ON CONFLICT(session_id, attempt_id) DO UPDATE SET
+        -- Use UNIQUE (session_id, attempt_id) conflict to upsert attempt data safely
         payload_id = excluded.payload_id,
         raw_unstructured_text = excluded.raw_unstructured_text,
         extraction_confidence = excluded.extraction_confidence,
@@ -96,11 +97,10 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         processing_state = excluded.processing_state,
         created_at = excluded.created_at
     )
-    -- Use UNIQUE (session_id, attempt_id) conflict to upsert attempt data safely
 """
 # SQL template for the deduplicated citizen journey funnel
 DEDUPLICATED_CITIZEN_JOURNEY_FUNNEL_SQL: Final[str] = """
-WITH deduplicated_extractions AS (
+WITH ranked_extractions AS (
     SELECT
         payload_id,
         session_id,
@@ -114,6 +114,33 @@ WITH deduplicated_extractions AS (
             ORDER BY attempt_id DESC
         ) AS row_rank
     FROM session_extraction_details
+),
+deduplicated_extractions AS (
+    SELECT * 
+    FROM ranked_extractions 
+    WHERE row_rank = 1
+),
+ranked_ledger AS (
+    SELECT
+        claim_id,
+        session_id,
+        payload_id,
+        tokenized_identity_hash,
+        application_status,
+        claimant_eligibility_status,
+        governance_action,
+        disbursement_status,
+        governance_metadata,
+        ROW_NUMBER() OVER (
+            PARTITION BY session_id
+            ORDER BY claim_id DESC
+        ) AS ledger_rank
+    FROM application_governance_ledger
+),
+deduplicated_ledger AS (
+    SELECT * 
+    FROM ranked_ledger 
+    WHERE ledger_rank = 1
 )
 SELECT
     session_log.session_id,
@@ -135,11 +162,11 @@ SELECT
 FROM session_telemetry_log AS session_log
 LEFT JOIN deduplicated_extractions AS extractions
     ON session_log.session_id = extractions.session_id
-    AND extractions.row_rank = 1
-LEFT JOIN application_governance_ledger AS ledger
+LEFT JOIN deduplicated_ledger AS ledger
     ON session_log.session_id = ledger.session_id
-ORDER BY session_log.created_at ASC
+ORDER BY session_log.created_at ASC;
 """
+
 # SQL template for governance ledger upsert
 GOVERNANCE_LEDGER_UPSERT_SQL: Final[str] = """
     INSERT INTO application_governance_ledger (
