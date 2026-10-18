@@ -91,7 +91,48 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         extracted_district = excluded.extracted_district,
         extracted_crop_type = excluded.extracted_crop_type
 """
-
+# SQL template for the deduplicated citizen journey funnel
+DEDUPLICATED_CITIZEN_JOURNEY_FUNNEL_SQL: Final[str] = """
+WITH deduplicated_extractions AS (
+    SELECT
+        payload_id,
+        session_id,
+        attempt_id AS total_conversational_turns,
+        extraction_confidence AS final_extraction_confidence,
+        extracted_district,
+        extracted_crop_type,
+        processing_state,
+        ROW_NUMBER() OVER (
+            PARTITION BY session_id
+            ORDER BY attempt_id DESC
+        ) AS row_rank
+    FROM session_extraction_details
+)
+SELECT
+    session_log.session_id,
+    session_log.tokenized_phone_hash,
+    session_log.ingress_channel,
+    session_log.session_status,
+    session_log.created_at AS session_started_at,
+    session_log.completed_at AS session_completed_at,
+    extractions.total_conversational_turns,
+    extractions.final_extraction_confidence,
+    extractions.extracted_district,
+    extractions.extracted_crop_type,
+    ledger.claim_id,
+    ledger.application_status,
+    ledger.claimant_eligibility_status,
+    ledger.governance_action,
+    ledger.disbursement_status,
+    ledger.governance_metadata
+FROM session_telemetry_log AS session_log
+LEFT JOIN deduplicated_extractions AS extractions
+    ON session_log.session_id = extractions.session_id
+    AND extractions.row_rank = 1
+LEFT JOIN application_governance_ledger AS ledger
+    ON session_log.session_id = ledger.session_id
+ORDER BY session_log.created_at ASC
+"""
 # SQL template for governance ledger upsert
 GOVERNANCE_LEDGER_UPSERT_SQL: Final[str] = """
     INSERT INTO application_governance_ledger (
@@ -321,51 +362,9 @@ class LedgerPersistenceService:
         exactly 1 row per citizen session (zero multi-turn cartesian fan-out).
 
         Returns:
-            List of dictionaries representing deduplicated citizen journey funnel rows.
+            A list of dictionaries, each representing a deduplicated citizen‑journey funnel row.
         """
-        funnel_query = text(
-            """
-            WITH deduplicated_extractions AS (
-                SELECT
-                    payload_id,
-                    session_id,
-                    attempt_id AS total_conversational_turns,
-                    extraction_confidence AS final_extraction_confidence,
-                    extracted_district,
-                    extracted_crop_type,
-                    processing_state,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY session_id
-                        ORDER BY attempt_id DESC
-                    ) AS row_rank
-                FROM session_extraction_details
-            )
-            SELECT
-                session_log.session_id,
-                session_log.tokenized_phone_hash,
-                session_log.ingress_channel,
-                session_log.session_status,
-                session_log.created_at AS session_started_at,
-                session_log.completed_at AS session_completed_at,
-                extractions.total_conversational_turns,
-                extractions.final_extraction_confidence,
-                extractions.extracted_district,
-                extractions.extracted_crop_type,
-                ledger.claim_id,
-                ledger.application_status,
-                ledger.claimant_eligibility_status,
-                ledger.governance_action,
-                ledger.disbursement_status,
-                ledger.governance_metadata
-            FROM session_telemetry_log AS session_log
-            LEFT JOIN deduplicated_extractions AS extractions
-                ON session_log.session_id = extractions.session_id
-                AND extractions.row_rank = 1
-            LEFT JOIN application_governance_ledger AS ledger
-                ON session_log.session_id = ledger.session_id
-            ORDER BY session_log.created_at ASC
-            """
-        )
+        funnel_query = text(DEDUPLICATED_CITIZEN_JOURNEY_FUNNEL_SQL)
         with self.database_engine.connect() as database_connection:
             query_result = database_connection.execute(funnel_query)
             return [dict(row_mapping) for row_mapping in query_result.mappings()]
