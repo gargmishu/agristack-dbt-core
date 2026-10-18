@@ -88,12 +88,14 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         :processing_state,
         :created_at
     ) ON CONFLICT(session_id, attempt_id) DO UPDATE SET
+        payload_id = excluded.payload_id,
         raw_unstructured_text = excluded.raw_unstructured_text,
         extraction_confidence = excluded.extraction_confidence,
         extracted_district = excluded.extracted_district,
         extracted_crop_type = excluded.extracted_crop_type,
         processing_state = excluded.processing_state,
         created_at = excluded.created_at
+    )
     -- Use UNIQUE (session_id, attempt_id) conflict to upsert attempt data safely
 """
 # SQL template for the deduplicated citizen journey funnel
