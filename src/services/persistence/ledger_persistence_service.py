@@ -63,6 +63,7 @@ SUPERSEDE_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
     WHERE session_id = :session_id
       AND attempt_id < :attempt_id
       AND processing_state = 'STAGED'
+    -- Ensure only staged rows prior to the current attempt are superseded
 """
 
 INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
@@ -86,10 +87,14 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         :extracted_crop_type,
         :processing_state,
         :created_at
-    ) ON CONFLICT(payload_id) DO UPDATE SET
-        processing_state = excluded.processing_state,
+    ) ON CONFLICT(session_id, attempt_id) DO UPDATE SET
+        raw_unstructured_text = excluded.raw_unstructured_text,
+        extraction_confidence = excluded.extraction_confidence,
         extracted_district = excluded.extracted_district,
-        extracted_crop_type = excluded.extracted_crop_type
+        extracted_crop_type = excluded.extracted_crop_type,
+        processing_state = excluded.processing_state,
+        created_at = excluded.created_at
+    -- Use UNIQUE (session_id, attempt_id) conflict to upsert attempt data safely
 """
 # SQL template for the deduplicated citizen journey funnel
 DEDUPLICATED_CITIZEN_JOURNEY_FUNNEL_SQL: Final[str] = """
