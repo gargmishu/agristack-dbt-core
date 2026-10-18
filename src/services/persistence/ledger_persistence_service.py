@@ -168,6 +168,21 @@ GOVERNANCE_LEDGER_UPSERT_SQL: Final[str] = """
         governance_metadata = excluded.governance_metadata
 """
 
+# SQL template for fetching the immutable audit trail for a claim
+FETCH_GOVERNANCE_AUDIT_HISTORY_SQL: Final[str] = """\
+    SELECT
+        history_id,
+        claim_id,
+        previous_application_status,
+        new_application_status,
+        governance_action,
+        actor_id,
+        changed_at
+    FROM application_governance_ledger_history
+    WHERE claim_id = :claim_id
+    ORDER BY changed_at ASC, history_id ASC\
+"""
+
 
 class LedgerPersistenceService:
     """Relational persistence service for AgriStack DBT sessions, turns, and governance ledgers."""
@@ -276,7 +291,7 @@ class LedgerPersistenceService:
         """
         effective_created_at = created_at or datetime.now(UTC).isoformat()
 
-        supersede_sql = text(SUPERSIDE_EXTRACTION_UPDATE_SQL)
+        supersede_sql = text(SUPERSEDE_SESSION_EXTRACTION_DETAILS_SQL)
         insertion_sql = text(INSERT_SESSION_EXTRACTION_DETAILS_SQL)
         with self.database_engine.begin() as database_connection:
             database_connection.execute(
@@ -370,32 +385,23 @@ class LedgerPersistenceService:
             return [dict(row_mapping) for row_mapping in query_result.mappings()]
 
     def fetch_governance_audit_history(self, claim_id: str) -> list[dict[str, object]]:
-        """Fetches the immutable audit trail for a specific claim ordered chronologically.
+        """Fetch the immutable audit trail for a claim.
 
         Args:
-            claim_id: Unique claim identifier.
+            claim_id: Unique claim identifier. Must be a non‑empty string.
 
         Returns:
-            List of audit trail dictionaries recorded by SQL AFTER INSERT / UPDATE triggers.
+            A list of audit‑trail dictionaries ordered by the timestamp (`changed_at`).
         """
-        audit_query = text(
-            """
-            SELECT
-                history_id,
-                claim_id,
-                previous_application_status,
-                new_application_status,
-                governance_action,
-                actor_id,
-                changed_at
-            FROM application_governance_ledger_history
-            WHERE claim_id = :claim_id
-            ORDER BY history_id ASC
-            """
-        )
-        with self.database_engine.connect() as database_connection:
+        if not claim_id:
+            raise ValueError("claim_id must be a non‑empty string")
+        audit_query = text(FETCH_GOVERNANCE_AUDIT_HISTORY_SQL)
+        # Use a transaction for a consistent snapshot across databases.
+        with self.database_engine.begin() as database_connection:
             query_result = database_connection.execute(audit_query, {"claim_id": claim_id})
-            return [dict(row_mapping) for row_mapping in query_result.mappings()]
+            return [dict(row) for row in query_result.mappings()]
+        
+
     def _initialize_relational_schema(self) -> None:
         """Executes idempotent DDL to initialize tables and audit triggers."""
         with self.database_engine.begin() as database_connection:
