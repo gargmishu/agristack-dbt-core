@@ -18,121 +18,48 @@ from typing import Final
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
-
+from pathlib import Path
 from src.config.service_settings import get_database_url
 
 __all__ = ["LedgerPersistenceService"]
 
 EXPECTED_TOKEN_HEX_LENGTH: Final[int] = 64
 
-_SQLITE_SCHEMA_DDL_STATEMENTS: Final[tuple[str, ...]] = (
-    """
-    CREATE TABLE IF NOT EXISTS session_telemetry_log (
-        session_id TEXT PRIMARY KEY,
-        tokenized_phone_hash TEXT NOT NULL CHECK (length(tokenized_phone_hash) = 64),
-        ingress_channel TEXT NOT NULL
-            CHECK (ingress_channel IN ('WHATSAPP', 'IVR_VOICE', 'USSD', 'SMS')),
-        session_status TEXT NOT NULL
-            CHECK (session_status IN ('ACTIVE', 'PENDING', 'COMPLETED', 'ABANDONED', 'TIMEOUT')),
-        created_at TEXT NOT NULL,
-        completed_at TEXT
-    );
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS session_extraction_details (
-        payload_id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES session_telemetry_log(session_id) ON DELETE CASCADE,
-        attempt_id INTEGER NOT NULL CHECK (attempt_id > 0),
-        raw_unstructured_text TEXT NOT NULL,
-        extraction_confidence REAL NOT NULL
-            CHECK (extraction_confidence >= 0.0 AND extraction_confidence <= 1.0),
-        extracted_district TEXT,
-        extracted_crop_type TEXT,
-        processing_state TEXT NOT NULL
-            CHECK (processing_state IN ('STAGED', 'SUPERSEDED', 'COMMITTED')),
-        created_at TEXT NOT NULL,
-        UNIQUE (session_id, attempt_id)
-    );
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS application_governance_ledger (
-        claim_id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES session_telemetry_log(session_id),
-        payload_id TEXT NOT NULL REFERENCES session_extraction_details(payload_id),
-        tokenized_identity_hash TEXT NOT NULL CHECK (length(tokenized_identity_hash) = 64),
-        application_status TEXT NOT NULL,
-        claimant_eligibility_status TEXT NOT NULL,
-        governance_action TEXT NOT NULL,
-        evaluated_at TEXT NOT NULL,
-        disbursement_status TEXT,
-        governance_metadata TEXT NOT NULL DEFAULT '{}',
-        CHECK (
-            governance_action NOT IN ('AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE')
-            OR json_extract(governance_metadata, '$.approval_amount') IS NOT NULL
-        ),
-        CHECK (
-            governance_action NOT IN ('AUTO_REJECT', 'MANUAL_REJECT')
-            OR json_extract(governance_metadata, '$.rejection_reason') IS NOT NULL
-        )
-    );
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS application_governance_ledger_history (
-        history_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        claim_id TEXT NOT NULL
-            REFERENCES application_governance_ledger(claim_id) ON DELETE CASCADE,
-        previous_application_status TEXT,
-        new_application_status TEXT NOT NULL,
-        governance_action TEXT NOT NULL,
-        actor_id TEXT NOT NULL,
-        changed_at TEXT NOT NULL
-    );
-    """,
-    """
-    CREATE TRIGGER IF NOT EXISTS trg_audit_governance_ledger_insert
-    AFTER INSERT ON application_governance_ledger
-    BEGIN
-        INSERT INTO application_governance_ledger_history (
-            claim_id,
-            previous_application_status,
-            new_application_status,
-            governance_action,
-            actor_id,
-            changed_at
-        ) VALUES (
-            NEW.claim_id,
-            NULL,
-            NEW.application_status,
-            NEW.governance_action,
-            COALESCE(json_extract(NEW.governance_metadata, '$.reviewer_id'), 'SYSTEM:DEFAULT'),
-            NEW.evaluated_at
-        );
-    END;
-    """,
-    """
-    CREATE TRIGGER IF NOT EXISTS trg_audit_governance_ledger_update
-    AFTER UPDATE OF application_status, governance_action ON application_governance_ledger
-    WHEN OLD.application_status IS NOT NEW.application_status
-      OR OLD.governance_action IS NOT NEW.governance_action
-    BEGIN
-        INSERT INTO application_governance_ledger_history (
-            claim_id,
-            previous_application_status,
-            new_application_status,
-            governance_action,
-            actor_id,
-            changed_at
-        ) VALUES (
-            NEW.claim_id,
-            OLD.application_status,
-            NEW.application_status,
-            NEW.governance_action,
-            COALESCE(json_extract(NEW.governance_metadata, '$.reviewer_id'), 'SYSTEM:DEFAULT'),
-            NEW.evaluated_at
-        );
-    END;
-    """,
+def _load_sqlite_schema() -> tuple[str, ...]:
+    """Load SQLite DDL statements from the external .sql file."""
+    schema_path = Path(__file__).with_name("schema") / "sqlite_schema.sql"
+    raw = schema_path.read_text().strip()
+    # Split on blank lines between statements; ensure each ends with a semicolon.
+    statements = [stmt.strip() for stmt in raw.split(";\n\n") if stmt.strip()]
+    return tuple(stmt if stmt.endswith(";") else stmt + ";" for stmt in statements)
+
+_SQLITE_SCHEMA_DDL_STATEMENTS: Final[tuple[str, ...]] = _load_sqlite_schema()
+
+# Upsert query for session telemetry log
+def _session_telemetry_upsert_template() -> str:
+    """Return the SQL upsert statement for session telemetry log."""
+    return """
+INSERT INTO session_telemetry_log (
+    session_id,
+    tokenized_phone_hash,
+    ingress_channel,
+    session_status,
+    created_at,
+    completed_at
+) VALUES (
+    :session_id,
+    :tokenized_phone_hash,
+    :ingress_channel,
+    :session_status,
+    :created_at,
+    :completed_at
 )
+ON CONFLICT(session_id) DO UPDATE SET
+    session_status = excluded.session_status,
+    completed_at = COALESCE(excluded.completed_at, session_telemetry_log.completed_at)
+"""
+
+SESSION_TELEMETRY_LOG_UPSERT: Final[str] = _session_telemetry_upsert_template()
 
 
 class LedgerPersistenceService:
@@ -164,17 +91,12 @@ class LedgerPersistenceService:
 
         self._initialize_relational_schema()
 
-    def _initialize_relational_schema(self) -> None:
-        """Executes idempotent DDL to initialize tables and audit triggers."""
-        with self.database_engine.begin() as database_connection:
-            for statement in _SQLITE_SCHEMA_DDL_STATEMENTS:
-                database_connection.execute(text(statement))
 
     def dispose(self) -> None:
         """Disposes underlying SQLAlchemy connection pool and closes open handles."""
         self.database_engine.dispose()
 
-    def record_session_telemetry(  # noqa: PLR0913
+    def record_session_telemetry(
         self,
         session_id: str,
         tokenized_phone_hash: str,
@@ -203,28 +125,7 @@ class LedgerPersistenceService:
             )
 
         effective_created_at = created_at or datetime.now(UTC).isoformat()
-        upsert_query = text(
-            """
-            INSERT INTO session_telemetry_log (
-                session_id,
-                tokenized_phone_hash,
-                ingress_channel,
-                session_status,
-                created_at,
-                completed_at
-            ) VALUES (
-                :session_id,
-                :tokenized_phone_hash,
-                :ingress_channel,
-                :session_status,
-                :created_at,
-                :completed_at
-            )
-            ON CONFLICT(session_id) DO UPDATE SET
-                session_status = excluded.session_status,
-                completed_at = COALESCE(excluded.completed_at, session_telemetry_log.completed_at)
-            """
-        )
+        upsert_query = text(SESSION_TELEMETRY_LOG_UPSERT)
         with self.database_engine.begin() as database_connection:
             database_connection.execute(
                 upsert_query,
@@ -501,3 +402,8 @@ class LedgerPersistenceService:
         with self.database_engine.connect() as database_connection:
             query_result = database_connection.execute(audit_query, {"claim_id": claim_id})
             return [dict(row_mapping) for row_mapping in query_result.mappings()]
+    def _initialize_relational_schema(self) -> None:
+        """Executes idempotent DDL to initialize tables and audit triggers."""
+        with self.database_engine.begin() as database_connection:
+            for statement in _SQLITE_SCHEMA_DDL_STATEMENTS:
+                database_connection.execute(text(statement))
