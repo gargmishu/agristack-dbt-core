@@ -13,25 +13,32 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Final
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
-from pathlib import Path
+
 from src.config.service_settings import get_database_url
 
 __all__ = ["LedgerPersistenceService"]
 
 EXPECTED_TOKEN_HEX_LENGTH: Final[int] = 64
 
+
 def _load_sqlite_schema() -> tuple[str, ...]:
     """Load SQLite DDL statements from the external .sql file."""
     schema_path = Path(__file__).with_name("schema") / "sqlite_schema.sql"
-    raw = schema_path.read_text().strip()
+    raw_schema_text = schema_path.read_text(encoding="utf-8").strip()
     # Split on blank lines between statements; ensure each ends with a semicolon.
-    statements = [stmt.strip() for stmt in raw.split(";\n\n") if stmt.strip()]
-    return tuple(stmt if stmt.endswith(";") else stmt + ";" for stmt in statements)
+    statements = [
+        statement.strip() for statement in raw_schema_text.split(";\n\n") if statement.strip()
+    ]
+    return tuple(
+        statement if statement.endswith(";") else f"{statement};" for statement in statements
+    )
+
 
 _SQLITE_SCHEMA_DDL_STATEMENTS: Final[tuple[str, ...]] = _load_sqlite_schema()
 
@@ -96,7 +103,6 @@ INSERT_SESSION_EXTRACTION_DETAILS_SQL: Final[str] = """
         extracted_crop_type = excluded.extracted_crop_type,
         processing_state = excluded.processing_state,
         created_at = excluded.created_at
-    )
 """
 # SQL template for the deduplicated citizen journey funnel
 DEDUPLICATED_CITIZEN_JOURNEY_FUNNEL_SQL: Final[str] = """
@@ -116,8 +122,8 @@ WITH ranked_extractions AS (
     FROM session_extraction_details
 ),
 deduplicated_extractions AS (
-    SELECT * 
-    FROM ranked_extractions 
+    SELECT *
+    FROM ranked_extractions
     WHERE row_rank = 1
 ),
 ranked_ledger AS (
@@ -138,8 +144,8 @@ ranked_ledger AS (
     FROM application_governance_ledger
 ),
 deduplicated_ledger AS (
-    SELECT * 
-    FROM ranked_ledger 
+    SELECT *
+    FROM ranked_ledger
     WHERE ledger_rank = 1
 )
 SELECT
@@ -247,12 +253,11 @@ class LedgerPersistenceService:
 
         self._initialize_relational_schema()
 
-
     def dispose(self) -> None:
         """Disposes underlying SQLAlchemy connection pool and closes open handles."""
         self.database_engine.dispose()
 
-    def record_session_telemetry(
+    def record_session_telemetry(  # noqa: PLR0913
         self,
         session_id: str,
         tokenized_phone_hash: str,
@@ -434,7 +439,6 @@ class LedgerPersistenceService:
         with self.database_engine.begin() as database_connection:
             query_result = database_connection.execute(audit_query, {"claim_id": claim_id})
             return [dict(row) for row in query_result.mappings()]
-        
 
     def _initialize_relational_schema(self) -> None:
         """Executes idempotent DDL to initialize tables and audit triggers."""
