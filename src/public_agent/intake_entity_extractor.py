@@ -33,6 +33,26 @@ __all__ = ["IntakeEntityExtractor"]
 
 _FALLBACK_CONFIDENCE_SCORE: Final[float] = 0.40
 
+_STRUCTURED_INTENT_MAP: Final[dict[str, ApplicationIntent]] = {
+    "1": ApplicationIntent.APPLY_SUBSIDY,
+    "2": ApplicationIntent.CHECK_STATUS,
+    "3": ApplicationIntent.SUBMIT_APPEAL,
+    "4": ApplicationIntent.SCHEME_INQUIRY,
+}
+
+_STRUCTURED_CROP_MAP: Final[dict[str, str]] = {
+    "1": "Rice",
+    "2": "Wheat",
+    "3": "Sugarcane",
+}
+
+_STRUCTURED_PARCEL_MAP: Final[dict[str, tuple[str, str]]] = {
+    "101": ("Karnal", "LAND-REC-1002"),
+    "204": ("Karnal", "LAND-REC-2004"),
+    "306": ("Nashik", "LAND-REC-3006"),
+    "000": ("Karnal", "000/0"),
+}
+
 
 class IntakeEntityExtractor:
     """Extracts structured domain entities from standardized public agent intake payloads.
@@ -78,18 +98,7 @@ class IntakeEntityExtractor:
                 intake.session_id,
                 intake.channel_type,
             )
-            entities: DomainEntities = {
-                DomainEntityKey.DISTRICT: "Karnal",
-                DomainEntityKey.CROP_NAME: "Wheat",
-                DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
-            }
-            return ExtractedEntityPayload(
-                application_intent=ApplicationIntent.APPLY_SUBSIDY,
-                ai_confidence_score=1.0,
-                domain_entities=entities,
-                is_adversarial_attempt=False,
-                is_structured_menu_bypass=True,
-            )
+            return self._parse_structured_menu_input(intake.unprocessed_input_content)
 
         # Audio Modality: Transcribe via Bhashini ASR
         text_to_extract = intake.unprocessed_input_content
@@ -126,6 +135,50 @@ class IntakeEntityExtractor:
     # -------------------------------------------------------------------------
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _parse_structured_menu_input(raw_menu_input: str) -> ExtractedEntityPayload:
+        """Parses USSD or DTMF keypad sequences (e.g. '1*2*101' or '1#') into domain entities.
+
+        Menu sequence format: '<intent_code>*<crop_code>*<parcel_code>'
+        - intent_code: '1' -> APPLY_SUBSIDY, '2' -> CHECK_STATUS, '3' -> SUBMIT_APPEAL,
+          '4' -> SCHEME_INQUIRY
+        - crop_code: '1' -> Rice, '2' -> Wheat, '3' -> Sugarcane
+        - parcel_code: '101' -> (Karnal, LAND-REC-1002), '204' -> (Karnal, LAND-REC-2004),
+          '306' -> (Nashik, LAND-REC-3006), '000' -> (Karnal, 000/0)
+        """
+        normalized_menu_text = raw_menu_input.strip().rstrip("#")
+        menu_segments = [
+            segment.strip() for segment in normalized_menu_text.split("*") if segment.strip()
+        ]
+
+        intent_code = menu_segments[0] if menu_segments else "1"
+        crop_code = menu_segments[1] if len(menu_segments) > 1 else "2"
+        parcel_segment_index = 2
+        parcel_code = (
+            menu_segments[parcel_segment_index]
+            if len(menu_segments) > parcel_segment_index
+            else "101"
+        )
+
+        resolved_intent = _STRUCTURED_INTENT_MAP.get(intent_code, ApplicationIntent.APPLY_SUBSIDY)
+        resolved_crop = _STRUCTURED_CROP_MAP.get(crop_code, "Wheat")
+        resolved_district, resolved_survey_number = _STRUCTURED_PARCEL_MAP.get(
+            parcel_code, ("Karnal", "LAND-REC-1002")
+        )
+
+        entities: DomainEntities = {
+            DomainEntityKey.DISTRICT: resolved_district,
+            DomainEntityKey.CROP_NAME: resolved_crop,
+            DomainEntityKey.SURVEY_NUMBER: resolved_survey_number,
+        }
+        return ExtractedEntityPayload(
+            application_intent=resolved_intent,
+            ai_confidence_score=1.0,
+            domain_entities=entities,
+            is_adversarial_attempt=False,
+            is_structured_menu_bypass=True,
+        )
 
     @staticmethod
     def _create_fallback_extracted_payload() -> ExtractedEntityPayload:

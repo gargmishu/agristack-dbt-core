@@ -134,10 +134,10 @@ async def test_ivr_and_ussd_webhooks_with_bearer_authentication() -> None:
             assert ok_ivr.status_code == HTTPStatus.OK
             assert ok_ivr.json()["channel_type"] == ChannelType.IVR_VOICE
 
-            # 3. Authorized USSD fast-path request
+            # 3. Authorized USSD fast-path request from distinct citizen
             ussd_payload = {
                 "session_id": "sess-http-ussd-003",
-                "originating_phone_number": "+919812022222",
+                "originating_phone_number": "+919812055555",
                 "ussd_service_code": "*147#",
                 "ussd_user_digit_selection": "1*2*101",
                 "received_at": datetime.now(UTC).isoformat(),
@@ -148,6 +148,25 @@ async def test_ivr_and_ussd_webhooks_with_bearer_authentication() -> None:
             assert ok_ussd.status_code == HTTPStatus.OK
             assert ok_ussd.json()["governance_outcome"]["governance_action"] == (
                 GovernanceAction.AUTO_APPROVE
+            )
+
+            # 4. Duplicate seasonal claim from already-approved citizen -> AUTO_REJECT
+            duplicate_ussd_payload = {
+                "session_id": "sess-http-ussd-003-dup",
+                "originating_phone_number": "+919812055555",
+                "ussd_service_code": "*147#",
+                "ussd_user_digit_selection": "1*2*101",
+                "received_at": datetime.now(UTC).isoformat(),
+            }
+            duplicate_ussd = await client.post(
+                "/v1/webhooks/ussd", json=duplicate_ussd_payload, headers=auth_headers
+            )
+            assert duplicate_ussd.status_code == HTTPStatus.OK
+            assert duplicate_ussd.json()["governance_outcome"]["governance_action"] == (
+                GovernanceAction.AUTO_REJECT
+            )
+            assert duplicate_ussd.json()["governance_outcome"]["rejection_reason"] == (
+                RejectionReasonCode.DUPLICATE_CLAIM_ACTIVE_SEASON
             )
     finally:
         persistence_service.dispose()
@@ -247,5 +266,64 @@ async def test_webhook_validation_error_returns_rfc7807_unprocessable_entity() -
             )
             assert invalid_response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
             assert invalid_response.json()["title"] == "Invalid Payload Structure"
+    finally:
+        persistence_service.dispose()
+
+
+@pytest.mark.asyncio
+async def test_payment_callback_webhook_reconciliation_and_conflict() -> None:
+    """Verifies POST /v1/webhooks/payments/callback reconciles valid callbacks and 409s unknown."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        server = PublicAgentHttpServer(
+            ledger_persistence_service=persistence_service,
+            carrier_bearer_token=TEST_BEARER_TOKEN,
+        )
+        auth_headers = {"Authorization": f"Bearer {TEST_BEARER_TOKEN}"}
+        async with AsyncClient(
+            transport=ASGITransport(app=server.app), base_url=BASE_TEST_URL
+        ) as client:
+            ussd_payload = {
+                "session_id": "sess-http-pay-005",
+                "originating_phone_number": "+919812055555",
+                "ussd_service_code": "*147#",
+                "ussd_user_digit_selection": "1*2*101",
+                "received_at": datetime.now(UTC).isoformat(),
+            }
+            ussd_response = await client.post(
+                "/v1/webhooks/ussd",
+                json=ussd_payload,
+                headers=auth_headers,
+            )
+            assert ussd_response.status_code == HTTPStatus.OK
+            disbursement_txn_id = ussd_response.json()["governance_outcome"]["disbursement_txn_id"]
+            assert disbursement_txn_id is not None
+
+            valid_callback = {
+                "disbursement_txn_id": disbursement_txn_id,
+                "bank_reference_id": "NPCI-UTR-555555",
+                "disbursement_status": "SUCCESS",
+                "cleared_at": datetime.now(UTC).isoformat(),
+            }
+            callback_response = await client.post(
+                "/v1/webhooks/payments/callback",
+                json=valid_callback,
+                headers=auth_headers,
+            )
+            assert callback_response.status_code == HTTPStatus.OK
+            assert callback_response.json()["reconciled"] is True
+
+            unknown_callback = {
+                "disbursement_txn_id": "PFMS-2026-000000",
+                "bank_reference_id": "NPCI-UTR-000000",
+                "disbursement_status": "SUCCESS",
+                "cleared_at": datetime.now(UTC).isoformat(),
+            }
+            conflict_response = await client.post(
+                "/v1/webhooks/payments/callback",
+                json=unknown_callback,
+                headers=auth_headers,
+            )
+            assert conflict_response.status_code == HTTPStatus.CONFLICT
     finally:
         persistence_service.dispose()

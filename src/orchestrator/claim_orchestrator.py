@@ -157,10 +157,9 @@ class ClaimOrchestrator:
             )
             self._persist_orchestration_turn(
                 intake=intake,
-                payload_id=payload_id,
-                extracted_entities=extracted_entities,
                 attempt_count=attempt_count,
                 orchestration_result=reprompt_result,
+                active_season=active_season,
             )
             return reprompt_result
 
@@ -199,10 +198,9 @@ class ClaimOrchestrator:
         )
         self._persist_orchestration_turn(
             intake=intake,
-            payload_id=payload_id,
-            extracted_entities=extracted_entities,
             attempt_count=attempt_count,
             orchestration_result=final_result,
+            active_season=active_season,
         )
         return final_result
 
@@ -275,13 +273,17 @@ class ClaimOrchestrator:
         Returns:
             GovernanceOutcomePayload containing the adjudication verdict.
         """
+        effective_payouts_ledger: set[tuple[str, str]] = set(approved_payouts_ledger or set())
+        if self._persistence is not None:
+            effective_payouts_ledger.update(self._persistence.fetch_approved_payouts_ledger())
+
         claim_payload = ClaimEvaluationPayload(
             session_id=intake.session_id,
             payload_id=payload_id,
             tokenized_citizen_id=intake.tokenized_citizen_id,
             extracted_payload=extracted_entities,
             active_season=active_season,
-            approved_payouts_ledger=approved_payouts_ledger or set(),
+            approved_payouts_ledger=effective_payouts_ledger,
         )
         return await self._claim_adjudicator.evaluate_claim(claim_payload)
 
@@ -362,15 +364,16 @@ class ClaimOrchestrator:
     def _persist_orchestration_turn(
         self,
         intake: PublicAgentStandardizedIntakePayload,
-        payload_id: str,
-        extracted_entities: ExtractedEntityPayload,
         attempt_count: int,
         orchestration_result: OrchestrationExecutionResult,
+        active_season: CropSeason,
     ) -> None:
         """Persists session telemetry, extraction attempt, and governance outcome to the ledger."""
         if self._persistence is None:
             return
 
+        payload_id = orchestration_result.governance_outcome.payload_id
+        extracted_entities = orchestration_result.extracted_entities
         district_value = extracted_entities.domain_entities.get(DomainEntityKey.DISTRICT)
         crop_value = extracted_entities.domain_entities.get(DomainEntityKey.CROP_NAME)
         is_reprompt = orchestration_result.requires_reprompt
@@ -400,6 +403,7 @@ class ClaimOrchestrator:
             outcome = orchestration_result.governance_outcome
             metadata_dictionary: dict[str, object] = {
                 "reviewer_id": "SYSTEM:GATE3_ADJUDICATOR",
+                "active_season": active_season,
             }
             if outcome.governance_action.is_approval:
                 application_status = "APPROVED"
@@ -421,7 +425,11 @@ class ClaimOrchestrator:
             disbursement_state = (
                 orchestration_result.disbursement_callback.disbursement_status.value.upper()
                 if orchestration_result.disbursement_callback
-                else None
+                else (
+                    outcome.disbursement_status.value.upper()
+                    if outcome.disbursement_status
+                    else None
+                )
             )
             self._persistence.record_governance_decision(
                 claim_id=f"claim-{intake.session_id}",

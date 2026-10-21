@@ -170,8 +170,9 @@ class PublicAgentApi:
     # Private Helpers (Strictly at Bottom)
     # -------------------------------------------------------------------------
 
-    @staticmethod
+    @classmethod
     def _build_notification_request(
+        cls,
         intake: PublicAgentStandardizedIntakePayload,
         orchestration_result: OrchestrationExecutionResult,
     ) -> NotificationRequestPayload:
@@ -188,7 +189,7 @@ class PublicAgentApi:
         missing_entity: DomainEntityKey | None = None
 
         if outcome.governance_action == GovernanceAction.REQUEST_MORE_INFO:
-            missing_entity = DomainEntityKey.DISTRICT
+            missing_entity = cls._resolve_first_missing_entity(orchestration_result)
 
         return NotificationRequestPayload(
             session_id=intake.session_id,
@@ -200,3 +201,15 @@ class PublicAgentApi:
             rejection_reason=outcome.rejection_reason,
             missing_entity=missing_entity,
         )
+
+    @staticmethod
+    def _resolve_first_missing_entity(
+        orchestration_result: OrchestrationExecutionResult,
+    ) -> DomainEntityKey:
+        """Identifies the first missing mandatory subsidy entity for citizen clarification."""
+        extracted_domain_entities = orchestration_result.extracted_entities.domain_entities
+        for mandatory_key in (DomainEntityKey.DISTRICT, DomainEntityKey.CROP_NAME):
+            raw_entity_value = extracted_domain_entities.get(mandatory_key)
+            if raw_entity_value is None or not str(raw_entity_value).strip():
+                return mandatory_key
+        return DomainEntityKey.DISTRICT

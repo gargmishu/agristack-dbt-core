@@ -36,6 +36,7 @@ from src.data_models.common import (
     GovernanceAction,
     LanguageLocale,
 )
+from src.data_models.disbursement import DisbursementCallbackPayload
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
     SmsIngressPayload,
@@ -58,6 +59,7 @@ _WHATSAPP_WEBHOOK_PATH: Final[str] = "/v1/webhooks/whatsapp"
 _IVR_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ivr"
 _USSD_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ussd"
 _SMS_WEBHOOK_PATH: Final[str] = "/v1/webhooks/sms"
+_PAYMENT_CALLBACK_WEBHOOK_PATH: Final[str] = "/v1/webhooks/payments/callback"
 _CASEWORKER_LIST_PATH: Final[str] = "/v1/caseworker/cases"
 _CASEWORKER_REVIEW_PATH: Final[str] = "/v1/caseworker/cases/{escalation_case_id}/review"
 _AUDIT_FUNNEL_PATH: Final[str] = "/v1/audit/funnel"
@@ -224,6 +226,38 @@ class PublicAgentHttpServer:
             },
         )
 
+    async def handle_payment_callback(self, incoming_request: Request) -> JSONResponse:
+        """Processes asynchronous NPCI APBS / PFMS payment clearing callback webhooks."""
+        auth_error_response = self._verify_bearer_token_if_configured(incoming_request)
+        if auth_error_response is not None:
+            return auth_error_response
+
+        payload_mapping = await self._parse_json_mapping(incoming_request)
+        callback_payload = DisbursementCallbackPayload.model_validate(payload_mapping)
+        was_reconciled = self._ledger_persistence_service.reconcile_disbursement_callback(
+            callback_payload
+        )
+        if not was_reconciled:
+            return self._build_problem_response(
+                http_status=HTTPStatus.CONFLICT,
+                error_type="https://api.agristack.gov.in/errors/payment-reconciliation-failed",
+                title="Payment Callback Reconciliation Failed",
+                detail=(
+                    f"Disbursement transaction '{callback_payload.disbursement_txn_id}' was not "
+                    "found or violated monotonic state progression."
+                ),
+            )
+
+        return JSONResponse(
+            status_code=HTTPStatus.OK,
+            content={
+                "disbursement_txn_id": callback_payload.disbursement_txn_id,
+                "disbursement_status": callback_payload.disbursement_status,
+                "bank_reference_id": callback_payload.bank_reference_id,
+                "reconciled": True,
+            },
+        )
+
     async def handle_audit_funnel(self) -> JSONResponse:
         """Returns the window-deduplicated Citizen Journey Funnel analytical rows."""
         funnel_rows = self._ledger_persistence_service.fetch_deduplicated_citizen_journey_funnel()
@@ -265,6 +299,11 @@ class PublicAgentHttpServer:
         fastapi_app.add_api_route(_USSD_WEBHOOK_PATH, self.handle_ussd_webhook, methods=["POST"])
         fastapi_app.add_api_route(_SMS_WEBHOOK_PATH, self.handle_sms_webhook, methods=["POST"])
         fastapi_app.add_api_route(
+            _PAYMENT_CALLBACK_WEBHOOK_PATH,
+            self.handle_payment_callback,
+            methods=["POST"],
+        )
+        fastapi_app.add_api_route(
             _CASEWORKER_LIST_PATH, self.handle_list_staged_cases, methods=["GET"]
         )
         fastapi_app.add_api_route(
@@ -299,7 +338,10 @@ class PublicAgentHttpServer:
     ) -> JSONResponse:
         """Runs the Layer 2-4 intake pipeline and maps security errors to RFC 7807 responses."""
         language_locale = self._resolve_language_locale(incoming_request)
-        attempt_count = self._resolve_attempt_count(incoming_request)
+        attempt_count = self._resolve_attempt_count(
+            incoming_request=incoming_request,
+            session_id=str(validated_payload.session_id),
+        )
 
         try:
             intake_result = await self._public_agent_api.process_raw_ingress(
@@ -381,12 +423,11 @@ class PublicAgentHttpServer:
         except ValueError:
             return LanguageLocale.HINDI
 
-    @staticmethod
-    def _resolve_attempt_count(incoming_request: Request) -> int:
-        """Extracts optional X-Attempt-Count header or defaults to 1."""
+    def _resolve_attempt_count(self, incoming_request: Request, session_id: str) -> int:
+        """Resolves attempt count from X-Attempt-Count header or session extraction history."""
         raw_attempt = incoming_request.headers.get(_ATTEMPT_HEADER_NAME)
         if raw_attempt is None:
-            return 1
+            return self._ledger_persistence_service.fetch_next_attempt_count(session_id)
         try:
             parsed_attempt = int(raw_attempt.strip())
         except ValueError:

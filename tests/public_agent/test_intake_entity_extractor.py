@@ -42,6 +42,28 @@ async def test_intake_entity_extractor_structured_menu_bypass() -> None:
 
 
 @pytest.mark.asyncio
+async def test_intake_entity_extractor_dynamic_structured_menu_combinations() -> None:
+    extractor = IntakeEntityExtractor()
+    nashik_intake = PublicAgentStandardizedIntakePayload(
+        session_id="sess_ussd_bypass_2",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        channel_type=ChannelType.USSD,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.DTMF_SELECTION,
+        language_locale=LanguageLocale.MARATHI,
+        unprocessed_input_content="2*1*306",
+        received_at=datetime.now(UTC),
+    )
+
+    extracted = await extractor.extract_entities(nashik_intake)
+    assert extracted.is_structured_menu_bypass is True
+    assert extracted.application_intent == ApplicationIntent.CHECK_STATUS
+    assert extracted.domain_entities[DomainEntityKey.DISTRICT] == "Nashik"
+    assert extracted.domain_entities[DomainEntityKey.CROP_NAME] == "Rice"
+    assert extracted.domain_entities[DomainEntityKey.SURVEY_NUMBER] == "LAND-REC-3006"
+
+
+@pytest.mark.asyncio
 async def test_intake_entity_extractor_audio_transcription() -> None:
     extractor = IntakeEntityExtractor()
     intake = PublicAgentStandardizedIntakePayload(

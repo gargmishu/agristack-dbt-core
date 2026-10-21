@@ -52,6 +52,21 @@ async def test_public_agent_api_process_raw_ingress_reprompt(
     assert result.orchestration_result.requires_reprompt is True
     assert result.transmission_ack.carrier_reference_id.startswith("wamid.")
 
+    crop_missing_whatsapp = WhatsAppIngressPayload(
+        session_id="sess_reprompt_101",
+        originating_phone_number="+919876543210",
+        channel_message_id="wamid.reprompt_124",
+        payload_type=PayloadType.TEXT,
+        text_body="zila Karnal missing crop details",
+        received_at=datetime.now(UTC),
+    )
+    crop_missing_result = await api.process_raw_ingress(
+        raw_payload=crop_missing_whatsapp,
+        attempt_count=1,
+    )
+    assert crop_missing_result.orchestration_result.requires_reprompt is True
+    assert "crop_name" in (crop_missing_result.orchestration_result.reprompt_message or "")
+
 
 @pytest.mark.asyncio
 async def test_public_agent_api_process_raw_ingress_e2e(monkeypatch: pytest.MonkeyPatch) -> None:
