@@ -85,6 +85,8 @@ This repository serves as an executable reference architecture for the three cor
 
 ### 2. Digital Public Goods (DPG) Standard Alignment (9 Indicators)
 
+> 📋 **Full DPG Evidence Matrix:** See [dpg_standard_compliance.md](./docs/dpg_standard_compliance.md) for the complete 9-indicator assessment and artifact mapping.
+
 | DPG Standard Indicator | Architectural Evidence & Verification |
 | :--- | :--- |
 | **1. SDG Relevance** | **SDG 1.3** (Social Protection Systems), **SDG 2.3** (Smallholder Agricultural Productivity & Disaster Relief), **SDG 16.9** (Inclusive Digital Identity & Public Institutions). |
@@ -144,6 +146,7 @@ agristack-dbt-core/
 │   ├── step5-public-agent/
 │   └── step6-metrics/
 ├── docs/                            # End-to-end architecture flows & pilot blueprints
+│   ├── dpg_standard_compliance.md
 │   ├── end_to_end_code_flow.md
 │   └── government_pilot_proposal.md
 ├── src/                             # Core Python application modules
