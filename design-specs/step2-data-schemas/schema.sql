@@ -1,9 +1,14 @@
 -- ==============================================================================
+-- Canonical PostgreSQL Production Schema Specification
+-- Runtime SQLite 3 Equivalent: src/services/persistence/schema/sqlite_schema.sql
+-- ==============================================================================
+
+-- ==============================================================================
 -- 1. TYPE DEFINITIONS (ENUMS)
 -- ==============================================================================
 
 CREATE TYPE ingress_channel_type AS ENUM (
-    'WHATSAPP', 'IVR_VOICE', 'USSD'
+    'WHATSAPP', 'IVR_VOICE', 'USSD', 'SMS'
 );
 
 CREATE TYPE session_status_enum AS ENUM (

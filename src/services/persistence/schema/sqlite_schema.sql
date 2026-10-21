@@ -1,3 +1,7 @@
+-- ==============================================================================
+-- Runtime SQLite 3 Schema for Local & Pilot Execution
+-- Canonical PostgreSQL Production Spec: design-specs/step2-data-schemas/schema.sql
+-- ==============================================================================
 CREATE TABLE IF NOT EXISTS session_telemetry_log (
     session_id TEXT PRIMARY KEY,
     tokenized_phone_hash TEXT NOT NULL CHECK (length(tokenized_phone_hash) = 64),
@@ -109,4 +113,33 @@ BEFORE DELETE ON application_governance_ledger_history
 BEGIN
     SELECT RAISE(ABORT, 'Audit history table is append-only and cannot be deleted.');
 END;
+
+CREATE VIEW IF NOT EXISTS staging_committed_extractions AS
+SELECT *
+FROM session_extraction_details
+WHERE processing_state = 'COMMITTED';
+
+CREATE VIEW IF NOT EXISTS citizen_journey_funnel AS
+SELECT
+    t.session_id,
+    t.tokenized_phone_hash,
+    t.ingress_channel,
+    t.session_status,
+    e.payload_id,
+    e.attempt_id,
+    e.extracted_district,
+    e.extracted_crop_type,
+    e.extraction_confidence,
+    g.claim_id,
+    g.application_status,
+    g.governance_action,
+    g.disbursement_status,
+    json_extract(g.governance_metadata, '$.approval_amount') AS approval_amount,
+    json_extract(g.governance_metadata, '$.rejection_reason') AS rejection_reason
+FROM session_telemetry_log t
+LEFT JOIN staging_committed_extractions e
+    ON t.session_id = e.session_id
+LEFT JOIN application_governance_ledger g
+    ON e.payload_id = g.payload_id;
+
 
