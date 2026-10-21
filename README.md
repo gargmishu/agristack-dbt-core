@@ -6,6 +6,7 @@
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type Checking: Mypy Strict](https://img.shields.io/badge/type%20checking-mypy%20strict-blue.svg)](https://mypy-lang.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![DPG Standard: GID0094462 (In Review)](https://img.shields.io/badge/DPG%20Standard-GID0094462%20(In%20Review)-purple.svg)](./docs/dpg_standard_compliance.md)
 
 **AgriStack DBT Core** is a sovereign-aligned, Zero-Trust Direct Benefit Transfer (DBT) simulation and orchestration platform built on Digital Public Infrastructure (DPI) principles. It connects multi-channel citizen entry points (IVR Voice, WhatsApp Messaging, USSD Menu Signaling) with sovereign AI language blocks for intent and entity extraction, cross-matches claims against federated agricultural land registries, enforces deterministic governance routing, and interfaces with sovereign clearing rails with strict Zero-PII guarantees.
 
