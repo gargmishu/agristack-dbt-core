@@ -97,3 +97,16 @@ BEGIN
         NEW.evaluated_at
     );
 END;
+
+CREATE TRIGGER IF NOT EXISTS trg_prevent_governance_history_update
+BEFORE UPDATE ON application_governance_ledger_history
+BEGIN
+    SELECT RAISE(ABORT, 'Audit history table is append-only and cannot be updated.');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_prevent_governance_history_delete
+BEFORE DELETE ON application_governance_ledger_history
+BEGIN
+    SELECT RAISE(ABORT, 'Audit history table is append-only and cannot be deleted.');
+END;
+

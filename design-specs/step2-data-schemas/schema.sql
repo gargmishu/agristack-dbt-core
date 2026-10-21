@@ -242,6 +242,19 @@ AFTER INSERT ON application_governance_ledger
 FOR EACH ROW
 EXECUTE FUNCTION log_governance_ledger_history();
 
+-- Enforce append-only immutability on audit history records (block UPDATE/DELETE)
+CREATE OR REPLACE FUNCTION prevent_governance_ledger_history_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'Audit history table is append-only and cannot be updated or deleted.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_prevent_governance_ledger_history_mutation
+BEFORE UPDATE OR DELETE ON application_governance_ledger_history
+FOR EACH ROW
+EXECUTE FUNCTION prevent_governance_ledger_history_mutation();
+
 -- ==============================================================================
 -- 5. ANALYTICS VIEWS (Schema Contracts for DBT / BI)
 -- ==============================================================================

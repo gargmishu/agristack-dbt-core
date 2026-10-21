@@ -244,3 +244,62 @@ async def test_persistent_anti_double_dipping_and_payment_callback_reconciliatio
         assert persistence_service.reconcile_disbursement_callback(contradictory_callback) is False
     finally:
         persistence_service.dispose()
+
+
+def test_audit_history_table_blocks_update_and_delete_tampering() -> None:
+    """Verifies BEFORE UPDATE and BEFORE DELETE triggers block tampering on audit history."""
+    from sqlalchemy import text  # noqa: PLC0415
+    from sqlalchemy.exc import IntegrityError  # noqa: PLC0415
+
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        persistence_service.record_session_telemetry(
+            session_id="sess-audit-immut-001",
+            tokenized_phone_hash=VALID_PILOT_CITIZEN_HMAC,
+            ingress_channel="WHATSAPP",
+            session_status="COMPLETED",
+        )
+        persistence_service.record_extraction_attempt(
+            payload_id="ext-audit-immut-001",
+            session_id="sess-audit-immut-001",
+            attempt_id=1,
+            raw_unstructured_text="Karnal Wheat",
+            extraction_confidence=0.97,
+            processing_state="COMMITTED",
+        )
+        persistence_service.record_governance_decision(
+            claim_id="claim-audit-immut-001",
+            session_id="sess-audit-immut-001",
+            payload_id="ext-audit-immut-001",
+            tokenized_identity_hash=VALID_PILOT_CITIZEN_HMAC,
+            application_status="APPROVED",
+            claimant_eligibility_status="ELIGIBLE",
+            governance_action="AUTO_APPROVE",
+            disbursement_status="PENDING",
+            governance_metadata={"approval_amount": 6000.0},
+        )
+
+        with (
+            pytest.raises(IntegrityError, match="append-only"),
+            persistence_service.database_engine.begin() as connection,
+        ):
+            connection.execute(
+                text(
+                    "UPDATE application_governance_ledger_history "
+                    "SET new_application_status = 'REJECTED' "
+                    "WHERE claim_id = 'claim-audit-immut-001'"
+                )
+            )
+
+        with (
+            pytest.raises(IntegrityError, match="append-only"),
+            persistence_service.database_engine.begin() as connection,
+        ):
+            connection.execute(
+                text(
+                    "DELETE FROM application_governance_ledger_history "
+                    "WHERE claim_id = 'claim-audit-immut-001'"
+                )
+            )
+    finally:
+        persistence_service.dispose()

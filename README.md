@@ -94,10 +94,10 @@ This repository serves as an executable reference architecture for the three cor
 | **3. Clear Ownership** | Open-source reference implementation with documented governance, ADRs ([`decisions/`](./decisions/)), and declarative system specs ([`design-specs/`](./design-specs/)). |
 | **4. Platform Independence** | Zero mandatory proprietary dependencies; supports deterministic offline simulation fixtures alongside live sovereign DPI/AI HTTP adapters. |
 | **5. Documentation** | End-to-end sequence blueprints ([`docs/end_to_end_code_flow.md`](./docs/end_to_end_code_flow.md)), government pilot proposal ([`docs/government_pilot_proposal.md`](./docs/government_pilot_proposal.md)), and 24 Architecture Decision Records. |
-| **6. Non-PII Data Extraction** | Append-only relational ledger and analytical views export anonymized, cryptographically hashed governance and disbursement records with zero raw PII. |
+| **6. Non-PII Data Extraction** | Stores pseudonymized records in ANSI SQL tables (`session_telemetry_log`, `session_extraction_details`, `application_governance_ledger`, `application_governance_ledger_history`) and exports non-PII JSON via `GET /v1/audit/funnel`, `GET /v1/audit/history/{claim_id}`, and `GET /v1/caseworker/cases`. |
 | **7. Privacy & Applicable Laws** | Enforces India DPDP Act 2023 data minimization via **One-Way SHA-256 HMAC Pseudonymization** in volatile RAM and strict Zero-PII storage/logging guards. |
 | **8. Open Standards & Best Practices** | Aligned with AgriStack Federated Farmer Registry schemas, OpenSPP/OpenG2P social protection workflows, PFMS asynchronous clearing callbacks, and RFC 7807 error contracts. |
-| **9. Do No Harm by Design (9A / 9B / 9C)** | **9A Security:** In-memory PII Purge Sentinel and immutable SQL audit triggers.<br/>**9B Content Safety:** Perimeter Adversarial Prompt Firewall neutralizing injection/override payloads.<br/>**9C Protection & Recourse:** Deterministic policy matrix (no LLM financial decisions) + mandatory Human-in-the-Loop caseworker escalation and multi-channel citizen notifications. |
+| **9. Do No Harm by Design (9A / 9B / 9C)** | **9A Security:** In-memory PII Purge Sentinel and append-only SQL audit triggers blocking `UPDATE`/`DELETE` tampering on `application_governance_ledger_history`.<br/>**9B Content Safety:** Perimeter Adversarial Prompt Firewall neutralizing injection/override payloads.<br/>**9C Protection & Recourse:** Deterministic policy matrix (no LLM financial decisions), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), and mandatory Human-in-the-Loop caseworker escalation. |
 
 ---
 
@@ -170,8 +170,11 @@ agristack-dbt-core/
 │   │   └── disbursement/            # Payment Clearing Callback Contracts
 │   └── errors/                      # RFC 7807 problem details exception handlers
 ├── tests/                           # Package tests plus integration and environment suites
+├── CODE_OF_CONDUCT.md               # Contributor Covenant & DPG Indicator 9C safety policy
+├── LICENSE                          # MIT License
 ├── pyproject.toml                   # Build, dependencies, Ruff, Mypy, and Pytest configs
-└── roadmap.md                       # Inside-Out Master Implementation Roadmap
+├── roadmap.md                       # Inside-Out Master Implementation Roadmap
+└── SECURITY.md                      # Zero-Trust security invariants & vulnerability reporting
 ```
 
 ---
@@ -189,6 +192,15 @@ bash scripts/setup_environment.sh
 
 # Activate virtual environment
 source .venv/bin/activate
+```
+
+### Running the End-to-End Pilot Simulation & HTTP Server
+```bash
+# Run the self-contained 4-scenario pilot simulation (Happy Path, Prompt Injection, Multi-Turn, HITL Escalation)
+PYTHONPATH=. .venv/bin/python scripts/run_pilot_simulation.py
+
+# Launch the ASGI HTTP Server locally on port 8000 (exposing /healthz, /v1/webhooks/*, /v1/caseworker/*, /v1/audit/*)
+PYTHONPATH=. .venv/bin/uvicorn src.public_agent.public_agent_http_server:create_public_agent_http_app --factory --host 127.0.0.1 --port 8000
 ```
 
 ### Static Analysis & Testing

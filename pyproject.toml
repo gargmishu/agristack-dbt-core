@@ -7,6 +7,10 @@ name = "agristack-dbt-core"
 version = "0.1.0"
 description = "Zero-Trust Sovereign DPI Orchestrator & Governance Engine"
 readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Mishu Garg" },
+]
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110.0",
@@ -17,6 +21,11 @@ dependencies = [
     "sqlalchemy>=2.0.28",
     "uvicorn>=0.28.0",
 ]
+
+[project.urls]
+Repository = "https://github.com/gargmishu/agristack-dbt-core"
+Documentation = "https://github.com/gargmishu/agristack-dbt-core/tree/main/docs"
+Issues = "https://github.com/gargmishu/agristack-dbt-core/issues"
 
 [project.optional-dependencies]
 dev = [
