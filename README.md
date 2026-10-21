@@ -71,6 +71,34 @@ Layer 2 authenticates carrier requests, tokenizes approved identifiers in volati
 
 ---
 
+## 🌐 Global DPI-AI Framework & DPG Standard Alignment
+
+### 1. CDPI 2026 DPI-AI Framework Mapping (`digitalpublicinfrastructure.ai`)
+
+This repository serves as an executable reference architecture for the three core primitives defined in the **2026 DPI-AI Framework** (*Building AI-Ready Nations through Digital Public Infrastructure*):
+
+| DPI-AI Framework Primitive | Architectural Role & Guarantee | AgriStack DBT Core Subsystem |
+| :--- | :--- | :--- |
+| **1. Public Agents**<br/>*(Constrained, accountable citizen interfaces)* | Accepts vernacular voice, text, and USSD menu signaling; strips and pseudonymizes citizen PII in volatile RAM before any AI block executes; blocks prompt injection at the perimeter. | **Layer 1 Channel Edge Connectors** + **Layer 2 Perimeter Security Gateway** + **Layer 3 Public Agent Intake Gateway** |
+| **2. DPI Workflows**<br/>*(Deterministic orchestration, policy rules & human oversight)* | Enforces **0% generative AI involvement in financial adjudication** via a 3-Gate Governance state machine, multi-turn completeness clarification, seasonal anti-double-dipping, and automatic caseworker escalation when extraction confidence is below `0.85`. | **Layer 4 Orchestrator Brain & Governance** + **Authoritative DPI Registry Connectors** + **Relational Audit Ledger** |
+| **3. AI Blocks**<br/>*(Modular, composable, governable AI functions)* | Stateless, replaceable language and extraction primitives with a zero-GPU fast-path bypass for structured feature-phone USSD (`*99#`) menus. | **Sovereign AI Blocks** (*Bhashini ASR / NMT / TTS* + *Constrained SLM Entity Extractor*) |
+
+### 2. Digital Public Goods (DPG) Standard Alignment (9 Indicators)
+
+| DPG Standard Indicator | Architectural Evidence & Verification |
+| :--- | :--- |
+| **1. SDG Relevance** | **SDG 1.3** (Social Protection Systems), **SDG 2.3** (Smallholder Agricultural Productivity & Disaster Relief), **SDG 16.9** (Inclusive Digital Identity & Public Institutions). |
+| **2. Open Licensing** | Licensed under the OSI-approved **MIT License** ([LICENSE](LICENSE)). |
+| **3. Clear Ownership** | Open-source reference implementation with documented governance, ADRs ([`decisions/`](./decisions/)), and declarative system specs ([`design-specs/`](./design-specs/)). |
+| **4. Platform Independence** | Zero mandatory proprietary dependencies; supports deterministic offline simulation fixtures alongside live sovereign DPI/AI HTTP adapters. |
+| **5. Documentation** | End-to-end sequence blueprints ([`docs/end_to_end_code_flow.md`](./docs/end_to_end_code_flow.md)), government pilot proposal ([`docs/government_pilot_proposal.md`](./docs/government_pilot_proposal.md)), and 24 Architecture Decision Records. |
+| **6. Non-PII Data Extraction** | Append-only relational ledger and analytical views export anonymized, cryptographically hashed governance and disbursement records with zero raw PII. |
+| **7. Privacy & Applicable Laws** | Enforces India DPDP Act 2023 data minimization via **One-Way SHA-256 HMAC Pseudonymization** in volatile RAM and strict Zero-PII storage/logging guards. |
+| **8. Open Standards & Best Practices** | Aligned with AgriStack Federated Farmer Registry schemas, OpenSPP/OpenG2P social protection workflows, PFMS asynchronous clearing callbacks, and RFC 7807 error contracts. |
+| **9. Do No Harm by Design (9A / 9B / 9C)** | **9A Security:** In-memory PII Purge Sentinel and immutable SQL audit triggers.<br/>**9B Content Safety:** Perimeter Adversarial Prompt Firewall neutralizing injection/override payloads.<br/>**9C Protection & Recourse:** Deterministic policy matrix (no LLM financial decisions) + mandatory Human-in-the-Loop caseworker escalation and multi-channel citizen notifications. |
+
+---
+
 ## 📂 Repository Package Structure
 
 ```
