@@ -21,10 +21,15 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import StaticPool
 
 from src.config.service_settings import get_database_url
+from src.data_models.disbursement import DisbursementCallbackPayload
 
 __all__ = ["LedgerPersistenceService"]
 
 EXPECTED_TOKEN_HEX_LENGTH: Final[int] = 64
+_DEFAULT_ACTIVE_SEASON: Final[str] = "KHARIF-2026"
+_TERMINAL_DISBURSEMENT_STATUSES: Final[frozenset[str]] = frozenset(
+    {"SUCCESS", "FAILED", "RETURNED"}
+)
 
 
 def _load_sqlite_schema() -> tuple[str, ...]:
@@ -223,6 +228,29 @@ FETCH_GOVERNANCE_AUDIT_HISTORY_SQL: Final[str] = """\
     ORDER BY changed_at ASC, history_id ASC\
 """
 
+FETCH_APPROVED_CLAIMS_SQL: Final[str] = """\
+    SELECT
+        claim_id,
+        tokenized_identity_hash,
+        disbursement_status,
+        governance_metadata
+    FROM application_governance_ledger
+    WHERE application_status = 'APPROVED'\
+"""
+
+FETCH_NEXT_ATTEMPT_COUNT_SQL: Final[str] = """\
+    SELECT COALESCE(MAX(attempt_id), 0) + 1 AS next_attempt_id
+    FROM session_extraction_details
+    WHERE session_id = :session_id\
+"""
+
+UPDATE_DISBURSEMENT_SETTLEMENT_SQL: Final[str] = """\
+    UPDATE application_governance_ledger
+    SET disbursement_status = :disbursement_status,
+        governance_metadata = :governance_metadata
+    WHERE claim_id = :claim_id\
+"""
+
 
 class LedgerPersistenceService:
     """Relational persistence service for AgriStack DBT sessions, turns, and governance ledgers."""
@@ -409,6 +437,79 @@ class LedgerPersistenceService:
                 },
             )
 
+    def fetch_approved_payouts_ledger(self) -> set[tuple[str, str]]:
+        """Returns the set of (tokenized_identity_hash, active_season) for all APPROVED claims."""
+        payouts_query = text(FETCH_APPROVED_CLAIMS_SQL)
+        approved_entries: set[tuple[str, str]] = set()
+        with self.database_engine.connect() as database_connection:
+            query_result = database_connection.execute(payouts_query)
+            for row_mapping in query_result.mappings():
+                tokenized_hash = str(row_mapping["tokenized_identity_hash"])
+                metadata_dict = self._parse_metadata_dictionary(row_mapping["governance_metadata"])
+                raw_season = metadata_dict.get("active_season")
+                active_season = (
+                    str(raw_season).strip()
+                    if raw_season is not None and str(raw_season).strip()
+                    else _DEFAULT_ACTIVE_SEASON
+                )
+                approved_entries.add((tokenized_hash, active_season))
+        return approved_entries
+
+    def fetch_next_attempt_count(self, session_id: str) -> int:
+        """Returns the 1-indexed conversational attempt number for the next turn of a session."""
+        attempt_query = text(FETCH_NEXT_ATTEMPT_COUNT_SQL)
+        with self.database_engine.connect() as database_connection:
+            query_result = database_connection.execute(
+                attempt_query, {"session_id": session_id}
+            ).scalar()
+            return int(query_result) if query_result is not None else 1
+
+    def reconcile_disbursement_callback(
+        self, callback_payload: DisbursementCallbackPayload
+    ) -> bool:
+        """Reconciles an asynchronous NPCI APBS / PFMS payment callback monotonically.
+
+        Args:
+            callback_payload: Validated DisbursementCallbackPayload from payment rail webhook.
+
+        Returns:
+            True if the matching approved claim was found and updated monotonically;
+            False if the transaction ID is unknown or the state transition is invalid.
+        """
+        target_txn_id = str(callback_payload.disbursement_txn_id)
+        target_status = callback_payload.disbursement_status.value.upper()
+        select_query = text(FETCH_APPROVED_CLAIMS_SQL)
+        update_query = text(UPDATE_DISBURSEMENT_SETTLEMENT_SQL)
+
+        with self.database_engine.begin() as database_connection:
+            query_result = database_connection.execute(select_query)
+            for row_mapping in query_result.mappings():
+                metadata_dict = self._parse_metadata_dictionary(row_mapping["governance_metadata"])
+                if metadata_dict.get("disbursement_txn_id") != target_txn_id:
+                    continue
+
+                raw_current_status = row_mapping["disbursement_status"]
+                current_status = str(raw_current_status) if raw_current_status is not None else None
+                if not self._is_valid_disbursement_transition(current_status, target_status):
+                    return False
+
+                metadata_dict["bank_reference_id"] = callback_payload.bank_reference_id
+                metadata_dict["cleared_at"] = callback_payload.cleared_at.isoformat()
+                if callback_payload.failure_reason_code is not None:
+                    metadata_dict["failure_reason_code"] = str(callback_payload.failure_reason_code)
+
+                database_connection.execute(
+                    update_query,
+                    {
+                        "claim_id": str(row_mapping["claim_id"]),
+                        "disbursement_status": target_status,
+                        "governance_metadata": json.dumps(metadata_dict),
+                    },
+                )
+                return True
+
+        return False
+
     def fetch_deduplicated_citizen_journey_funnel(self) -> list[dict[str, object]]:
         """Executes the window-deduplicated Citizen Journey Funnel query across all sessions.
 
@@ -440,8 +541,41 @@ class LedgerPersistenceService:
             query_result = database_connection.execute(audit_query, {"claim_id": claim_id})
             return [dict(row) for row in query_result.mappings()]
 
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
+
     def _initialize_relational_schema(self) -> None:
         """Executes idempotent DDL to initialize tables and audit triggers."""
         with self.database_engine.begin() as database_connection:
             for statement in _SQLITE_SCHEMA_DDL_STATEMENTS:
                 database_connection.execute(text(statement))
+
+    @staticmethod
+    def _parse_metadata_dictionary(raw_metadata: object) -> dict[str, object]:
+        """Safely parses JSON string or mapping metadata into a mutable dictionary."""
+        if isinstance(raw_metadata, dict):
+            return dict(raw_metadata)
+        if isinstance(raw_metadata, str) and raw_metadata.strip():
+            try:
+                parsed = json.loads(raw_metadata)
+            except ValueError:
+                return {}
+            if isinstance(parsed, dict):
+                return dict(parsed)
+        return {}
+
+    @staticmethod
+    def _is_valid_disbursement_transition(
+        current_status: str | None,
+        target_status: str,
+    ) -> bool:
+        """Enforces monotonic forward-only disbursement state transitions."""
+        if current_status is None:
+            return True
+        normalized_current = current_status.strip().upper()
+        if normalized_current == target_status:
+            return True
+        if normalized_current in _TERMINAL_DISBURSEMENT_STATUSES:
+            return False
+        return not (normalized_current == "INITIATED" and target_status == "PENDING")
