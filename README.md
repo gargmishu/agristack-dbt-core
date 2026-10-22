@@ -2,6 +2,7 @@
 
 > Start here: [roadmap.md](./roadmap.md) is the authoritative project sequence and first document.
 
+[![Zero-Trust DPI CI](https://github.com/gargmishu/agristack-dbt-core/actions/workflows/ci.yml/badge.svg)](https://github.com/gargmishu/agristack-dbt-core/actions/workflows/ci.yml)
 [![Python: >=3.11](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type Checking: Mypy Strict](https://img.shields.io/badge/type%20checking-mypy%20strict-blue.svg)](https://mypy-lang.org/)

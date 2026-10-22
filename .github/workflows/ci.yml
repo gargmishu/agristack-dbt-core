@@ -1,0 +1,52 @@
+name: Zero-Trust DPI Quality & Security Gate
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-and-security-gate:
+    name: Lint, Strict Typecheck, Test & Pilot Simulation (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install package and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run Ruff Linter (Security & Clean Code Rules)
+        run: ruff check src tests scripts
+
+      - name: Verify Ruff Formatting
+        run: ruff format --check src tests scripts
+
+      - name: Run Mypy Strict Type Checking
+        run: mypy src tests scripts/run_pilot_simulation.py
+
+      - name: Run Full Unit, Integration & Zero-Trust Security Test Suite
+        run: pytest
+
+      - name: Run End-to-End 60-Day Pilot Simulation & Audit Smoke Test
+        env:
+          PYTHONPATH: "."
+        run: python scripts/run_pilot_simulation.py
