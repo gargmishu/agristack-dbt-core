@@ -37,7 +37,15 @@ from src.data_models.common import (
     UnprocessedInputContent,
     UtcTimestamp,
 )
-from src.data_models.disbursement import DisbursementCallbackPayload
+from src.data_models.disbursement import (
+    DisbursementCallbackPayload,
+    G2pConnectAction,
+    G2pConnectDisbursementEnvelope,
+    G2pConnectDisbursementInstruction,
+    G2pConnectHeader,
+    G2pConnectOnDisbursePayload,
+    G2pConnectRegistrySearchEnvelope,
+)
 from src.data_models.governance import (
     ExtractedEntityPayload,
     GovernanceOutcomePayload,
@@ -79,6 +87,12 @@ __all__ = [
     "EscalationReasonCode",
     "ExtractedEntityPayload",
     "ExtractionPayloadId",
+    "G2pConnectAction",
+    "G2pConnectDisbursementEnvelope",
+    "G2pConnectDisbursementInstruction",
+    "G2pConnectHeader",
+    "G2pConnectOnDisbursePayload",
+    "G2pConnectRegistrySearchEnvelope",
     "GovernanceAction",
     "GovernanceOutcomePayload",
     "HmacCitizenToken",

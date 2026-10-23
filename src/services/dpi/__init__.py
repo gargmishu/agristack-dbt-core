@@ -6,6 +6,12 @@ from src.services.dpi.agri_registry_service import (
     MockAgriRegistryService,
     create_agri_registry_service,
 )
+from src.services.dpi.g2p_connect_mapper_service import (
+    DEFAULT_G2P_PAYMENT_RECEIVER_ID,
+    DEFAULT_G2P_REGISTRY_RECEIVER_ID,
+    DEFAULT_G2P_SENDER_ID,
+    G2pConnectMapperService,
+)
 from src.services.dpi.identity_verification_service import (
     IdentityVerificationService,
     LiveIdentityVerificationService,
@@ -26,7 +32,11 @@ from src.services.dpi.social_registry_service import (
 )
 
 __all__ = [
+    "DEFAULT_G2P_PAYMENT_RECEIVER_ID",
+    "DEFAULT_G2P_REGISTRY_RECEIVER_ID",
+    "DEFAULT_G2P_SENDER_ID",
     "AgriRegistryService",
+    "G2pConnectMapperService",
     "IdentityVerificationService",
     "LiveAgriRegistryService",
     "LiveIdentityVerificationService",
