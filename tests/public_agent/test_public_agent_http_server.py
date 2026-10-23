@@ -18,7 +18,9 @@ from src.data_models.common import (
     PayloadType,
     RejectionReasonCode,
 )
+from src.data_models.disbursement import G2pConnectAction, G2pConnectHeader
 from src.public_agent import PublicAgentHttpServer, create_public_agent_http_app
+from src.services.dpi import G2pConnectMapperService
 from src.services.persistence import LedgerPersistenceService
 
 TEST_PEPPER_SECRET: Final[str] = "sovereign_karnal_pilot_hmac_pepper_2026_secret_key"  # noqa: S105
@@ -325,5 +327,79 @@ async def test_payment_callback_webhook_reconciliation_and_conflict() -> None:
                 headers=auth_headers,
             )
             assert conflict_response.status_code == HTTPStatus.CONFLICT
+    finally:
+        persistence_service.dispose()
+
+
+@pytest.mark.asyncio
+async def test_g2p_connect_on_disburse_webhook_signature_and_reconciliation() -> None:
+    """Verifies POST /v1/webhooks/g2p-connect/on-disburse verifies signature and reconciles."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        mapper = G2pConnectMapperService(signing_key=TEST_PEPPER_SECRET)
+        server = PublicAgentHttpServer(
+            ledger_persistence_service=persistence_service,
+            g2p_connect_mapper=mapper,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=server.app), base_url=BASE_TEST_URL
+        ) as client:
+            ussd_payload = {
+                "session_id": "sess-http-g2p-006",
+                "originating_phone_number": "+919812066666",
+                "ussd_service_code": "*147#",
+                "ussd_user_digit_selection": "1*2*101",
+                "received_at": datetime.now(UTC).isoformat(),
+            }
+            ussd_response = await client.post("/v1/webhooks/ussd", json=ussd_payload)
+            assert ussd_response.status_code == HTTPStatus.OK
+            disbursement_txn_id = ussd_response.json()["governance_outcome"]["disbursement_txn_id"]
+            assert disbursement_txn_id is not None
+
+            now_iso = datetime.now(UTC).isoformat()
+            header = G2pConnectHeader(
+                message_id="g2p-ondisb-http-006",
+                message_timestamp=datetime.fromisoformat(now_iso),
+                action=G2pConnectAction.ON_DISBURSE,
+                sender_id="payment-bridge.openg2p.gov.in",
+                receiver_id="agristack-dbt-core.gov.in",
+            )
+            valid_signature = mapper._compute_envelope_signature(
+                header=header,
+                transaction_id=disbursement_txn_id,
+                subject_reference="NPCI-UTR-G2P-666666:SUCCESS",
+            )
+
+            # 1. Tampered signature -> 401 Unauthorized
+            tampered_payload = {
+                "signature": "0" * 64,
+                "header": header.model_dump(mode="json"),
+                "transaction_id": disbursement_txn_id,
+                "bank_reference_id": "NPCI-UTR-G2P-666666",
+                "disbursement_status": "SUCCESS",
+                "cleared_at": now_iso,
+            }
+            unauth_response = await client.post(
+                "/v1/webhooks/g2p-connect/on-disburse",
+                json=tampered_payload,
+            )
+            assert unauth_response.status_code == HTTPStatus.UNAUTHORIZED
+
+            # 2. Valid signature -> 200 OK & reconciled
+            valid_payload = {
+                "signature": valid_signature,
+                "header": header.model_dump(mode="json"),
+                "transaction_id": disbursement_txn_id,
+                "bank_reference_id": "NPCI-UTR-G2P-666666",
+                "disbursement_status": "SUCCESS",
+                "cleared_at": now_iso,
+            }
+            ok_response = await client.post(
+                "/v1/webhooks/g2p-connect/on-disburse",
+                json=valid_payload,
+            )
+            assert ok_response.status_code == HTTPStatus.OK
+            assert ok_response.json()["reconciled"] is True
+            assert ok_response.json()["bank_reference_id"] == "NPCI-UTR-G2P-666666"
     finally:
         persistence_service.dispose()

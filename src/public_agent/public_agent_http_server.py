@@ -36,7 +36,10 @@ from src.data_models.common import (
     GovernanceAction,
     LanguageLocale,
 )
-from src.data_models.disbursement import DisbursementCallbackPayload
+from src.data_models.disbursement import (
+    DisbursementCallbackPayload,
+    G2pConnectOnDisbursePayload,
+)
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
     SmsIngressPayload,
@@ -47,6 +50,7 @@ from src.errors import validation_exception_handler
 from src.gateway import CarrierAuthValidator
 from src.orchestrator import CaseManagementService, ClaimOrchestrator
 from src.public_agent.public_agent_api import PublicAgentApi, PublicAgentIntakeResult
+from src.services.dpi import G2pConnectMapperService
 from src.services.persistence import LedgerPersistenceService
 
 __all__ = [
@@ -60,6 +64,7 @@ _IVR_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ivr"
 _USSD_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ussd"
 _SMS_WEBHOOK_PATH: Final[str] = "/v1/webhooks/sms"
 _PAYMENT_CALLBACK_WEBHOOK_PATH: Final[str] = "/v1/webhooks/payments/callback"
+_G2P_ON_DISBURSE_WEBHOOK_PATH: Final[str] = "/v1/webhooks/g2p-connect/on-disburse"
 _CASEWORKER_LIST_PATH: Final[str] = "/v1/caseworker/cases"
 _CASEWORKER_REVIEW_PATH: Final[str] = "/v1/caseworker/cases/{escalation_case_id}/review"
 _AUDIT_FUNNEL_PATH: Final[str] = "/v1/audit/funnel"
@@ -83,6 +88,7 @@ class PublicAgentHttpServer:
         ivr_connector: IvrConnector | None = None,
         ussd_connector: UssdConnector | None = None,
         sms_connector: SmsConnector | None = None,
+        g2p_connect_mapper: G2pConnectMapperService | None = None,
         whatsapp_app_secret: str | None = None,
         carrier_bearer_token: str | None = None,
     ) -> None:
@@ -104,6 +110,7 @@ class PublicAgentHttpServer:
         self._ivr_connector = ivr_connector or IvrConnector()
         self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_connector = sms_connector or SmsConnector()
+        self._g2p_connect_mapper = g2p_connect_mapper or G2pConnectMapperService.from_env()
         self._whatsapp_app_secret = whatsapp_app_secret
         self._carrier_bearer_token = carrier_bearer_token
         self._app = self._build_fastapi_app()
@@ -234,29 +241,18 @@ class PublicAgentHttpServer:
 
         payload_mapping = await self._parse_json_mapping(incoming_request)
         callback_payload = DisbursementCallbackPayload.model_validate(payload_mapping)
-        was_reconciled = self._ledger_persistence_service.reconcile_disbursement_callback(
-            callback_payload
-        )
-        if not was_reconciled:
-            return self._build_problem_response(
-                http_status=HTTPStatus.CONFLICT,
-                error_type="https://api.agristack.gov.in/errors/payment-reconciliation-failed",
-                title="Payment Callback Reconciliation Failed",
-                detail=(
-                    f"Disbursement transaction '{callback_payload.disbursement_txn_id}' was not "
-                    "found or violated monotonic state progression."
-                ),
-            )
+        return self._reconcile_and_build_callback_response(callback_payload)
 
-        return JSONResponse(
-            status_code=HTTPStatus.OK,
-            content={
-                "disbursement_txn_id": callback_payload.disbursement_txn_id,
-                "disbursement_status": callback_payload.disbursement_status,
-                "bank_reference_id": callback_payload.bank_reference_id,
-                "reconciled": True,
-            },
-        )
+    async def handle_g2p_on_disburse_webhook(self, incoming_request: Request) -> JSONResponse:
+        """Processes signed G2P Connect (DCI) v1.0.0 `on-disburse` payment clearing callbacks."""
+        payload_mapping = await self._parse_json_mapping(incoming_request)
+        g2p_envelope = G2pConnectOnDisbursePayload.model_validate(payload_mapping)
+        try:
+            callback_payload = self._g2p_connect_mapper.parse_on_disburse_callback(g2p_envelope)
+        except ValueError as signature_error:
+            return self._build_unauthorized_response(str(signature_error))
+
+        return self._reconcile_and_build_callback_response(callback_payload)
 
     async def handle_audit_funnel(self) -> JSONResponse:
         """Returns the window-deduplicated Citizen Journey Funnel analytical rows."""
@@ -304,6 +300,11 @@ class PublicAgentHttpServer:
             methods=["POST"],
         )
         fastapi_app.add_api_route(
+            _G2P_ON_DISBURSE_WEBHOOK_PATH,
+            self.handle_g2p_on_disburse_webhook,
+            methods=["POST"],
+        )
+        fastapi_app.add_api_route(
             _CASEWORKER_LIST_PATH, self.handle_list_staged_cases, methods=["GET"]
         )
         fastapi_app.add_api_route(
@@ -312,6 +313,34 @@ class PublicAgentHttpServer:
         fastapi_app.add_api_route(_AUDIT_FUNNEL_PATH, self.handle_audit_funnel, methods=["GET"])
         fastapi_app.add_api_route(_AUDIT_HISTORY_PATH, self.handle_audit_history, methods=["GET"])
         return fastapi_app
+
+    def _reconcile_and_build_callback_response(
+        self, callback_payload: DisbursementCallbackPayload
+    ) -> JSONResponse:
+        """Reconciles a validated DisbursementCallbackPayload in the ledger and formats response."""
+        was_reconciled = self._ledger_persistence_service.reconcile_disbursement_callback(
+            callback_payload
+        )
+        if not was_reconciled:
+            return self._build_problem_response(
+                http_status=HTTPStatus.CONFLICT,
+                error_type="https://api.agristack.gov.in/errors/payment-reconciliation-failed",
+                title="Payment Callback Reconciliation Failed",
+                detail=(
+                    f"Disbursement transaction '{callback_payload.disbursement_txn_id}' was not "
+                    "found or violated monotonic state progression."
+                ),
+            )
+
+        return JSONResponse(
+            status_code=HTTPStatus.OK,
+            content={
+                "disbursement_txn_id": callback_payload.disbursement_txn_id,
+                "disbursement_status": callback_payload.disbursement_status,
+                "bank_reference_id": callback_payload.bank_reference_id,
+                "reconciled": True,
+            },
+        )
 
     def _verify_bearer_token_if_configured(self, incoming_request: Request) -> JSONResponse | None:
         """Verifies Authorization Bearer token when carrier_bearer_token is configured."""

@@ -36,6 +36,7 @@ from src.data_models.raw_ingress import (
 from src.gateway import IngestionFirewall
 from src.orchestrator.claim_orchestrator import ClaimOrchestrator
 from src.public_agent import PublicAgentApi
+from src.services.dpi import G2pConnectMapperService
 from src.services.persistence import LedgerPersistenceService
 
 PILOT_PEPPER_SECRET: Final[str] = "sovereign_karnal_pilot_hmac_pepper_2026_secret_key"  # noqa: S105
@@ -66,13 +67,23 @@ async def _run_scenario_whatsapp_voice(public_agent: PublicAgentApi) -> None:
         language_locale=LanguageLocale.HINDI,
     )
     outcome = scenario_result.orchestration_result.governance_outcome
-    token_preview = scenario_result.intake_payload.tokenized_citizen_id[:24]
+    tokenized_id = scenario_result.intake_payload.tokenized_citizen_id
+    token_preview = tokenized_id[:24]
     entities = dict(scenario_result.orchestration_result.extracted_entities.domain_entities)
+    g2p_mapper = G2pConnectMapperService.from_env()
+    g2p_envelope = g2p_mapper.build_disbursement_envelope(
+        outcome=outcome,
+        tokenized_citizen_id=tokenized_id,
+    )
     print(f"  Session ID           : {scenario_result.session_id}")
     print(f"  RAM Tokenized ID     : {token_preview}... (64-hex SHA-256 HMAC)")
     print(f"  Extracted Entities   : {entities}")
     print(f"  Gate 3 Verdict       : {outcome.governance_action}")
     print(f"  PFMS Disbursement ID : {outcome.disbursement_txn_id}")
+    print(
+        f"  G2P Connect Envelope : action={g2p_envelope.header.action} "
+        f"sig={g2p_envelope.signature[:16]}..."
+    )
     print(f"  Outbound Receipt ACK : {scenario_result.transmission_ack.carrier_reference_id}")
 
 
