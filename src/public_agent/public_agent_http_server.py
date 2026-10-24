@@ -81,6 +81,7 @@ class PublicAgentHttpServer:
 
     def __init__(  # noqa: PLR0913
         self,
+        *,
         public_agent_api: PublicAgentApi | None = None,
         case_management_service: CaseManagementService | None = None,
         ledger_persistence_service: LedgerPersistenceService | None = None,

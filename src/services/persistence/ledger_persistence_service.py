@@ -287,6 +287,7 @@ class LedgerPersistenceService:
 
     def record_session_telemetry(  # noqa: PLR0913
         self,
+        *,
         session_id: str,
         tokenized_phone_hash: str,
         ingress_channel: str,
@@ -330,6 +331,7 @@ class LedgerPersistenceService:
 
     def record_extraction_attempt(  # noqa: PLR0913
         self,
+        *,
         payload_id: str,
         session_id: str,
         attempt_id: int,
@@ -382,6 +384,7 @@ class LedgerPersistenceService:
 
     def record_governance_decision(  # noqa: PLR0913
         self,
+        *,
         claim_id: str,
         session_id: str,
         payload_id: str,
