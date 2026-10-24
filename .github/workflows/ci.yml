@@ -13,10 +13,22 @@ permissions:
 jobs:
   quality-and-security-gate:
     name: Lint, Strict Typecheck, Test & Pilot Simulation (Python ${{ matrix.python-version }})
+    # Environment Rationale:
+    # 1. Production Parity: Deployments, Docker containers, and sovereign cloud infrastructure
+    #    (e.g., MeitY / NIC cloud in India) run on Linux (Ubuntu/Debian). Running CI on Ubuntu
+    #    mirrors production reality.
+    # 2. CI Performance & Cost: Ubuntu runners provision and boot in seconds on GitHub Actions
+    #    with optimal resource utilization.
+    # 3. Native Tooling: C-extensions, SQLite, OpenSSL, and Python packages install natively
+    #    without cross-platform path or shell formatting quirks.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        # Python Matrix Strategy:
+        # - 3.11: Minimum supported baseline declared in pyproject.toml (ensures compatibility with
+        #   LTS enterprise distributions like Debian 12 / Ubuntu 22.04 LTS).
+        # - 3.12: Modern stable target (guarantees forward compatibility without breaking baseline).
         python-version: ["3.11", "3.12"]
 
     steps:
