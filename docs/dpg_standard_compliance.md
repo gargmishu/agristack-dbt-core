@@ -1,7 +1,7 @@
 # Digital Public Goods (DPG) Standard Compliance & Evidence Matrix
 
 **Solution Name:** AgriStack Direct Benefits (`agristack-dbt-core`)  
-**DPGA Nomination ID:** `GID0094462` (*In Review — Assigned Technical Coordinator: Bolaji Ayodeji*)  
+**DPGA Nomination ID:** `GID0094462` (*In Review*)  
 **Category:** Open Software  
 **License:** MIT License ([LICENSE](../LICENSE))  
 **Owner:** Mishu Garg ([pyproject.toml](../pyproject.toml))  
