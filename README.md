@@ -94,11 +94,11 @@ This repository serves as an executable reference architecture for the three cor
 | **1. SDG Relevance** | **SDG 1.3** (Social Protection Systems), **SDG 2.3** (Smallholder Agricultural Productivity & Disaster Relief), **SDG 16.9** (Inclusive Digital Identity & Public Institutions). |
 | **2. Open Licensing** | Licensed under the OSI-approved **MIT License** ([LICENSE](LICENSE)). |
 | **3. Clear Ownership** | Open-source reference implementation with documented governance, ADRs ([`decisions/`](./decisions/)), and declarative system specs ([`design-specs/`](./design-specs/)). |
-| **4. Platform Independence** | Zero mandatory proprietary dependencies; supports deterministic offline simulation fixtures alongside live sovereign DPI/AI HTTP adapters. |
-| **5. Documentation** | End-to-end sequence blueprints ([`docs/end_to_end_code_flow.md`](./docs/end_to_end_code_flow.md)), government pilot proposal ([`docs/government_pilot_proposal.md`](./docs/government_pilot_proposal.md)), and 24 Architecture Decision Records. |
+| **4. Platform Independence** | Zero mandatory proprietary dependencies; containerized via rootless [`Dockerfile`](./Dockerfile) and [`docker-compose.yml`](./docker-compose.yml); supports deterministic offline simulation fixtures alongside live sovereign DPI/AI HTTP adapters. |
+| **5. Documentation** | End-to-end sequence blueprints ([`docs/end_to_end_code_flow.md`](./docs/end_to_end_code_flow.md)), OpenG2P/Glific integration recipes ([`docs/openg2p_glific_integration_guide.md`](./docs/openg2p_glific_integration_guide.md)), government pilot proposal ([`docs/government_pilot_proposal.md`](./docs/government_pilot_proposal.md)), and 24 Architecture Decision Records. |
 | **6. Non-PII Data Extraction** | Stores pseudonymized records in ANSI SQL tables (`session_telemetry_log`, `session_extraction_details`, `application_governance_ledger`, `application_governance_ledger_history`) and exports non-PII JSON via `GET /v1/audit/funnel`, `GET /v1/audit/history/{claim_id}`, and `GET /v1/caseworker/cases`. |
 | **7. Privacy & Applicable Laws** | Enforces India DPDP Act 2023 data minimization via **One-Way SHA-256 HMAC Pseudonymization** in volatile RAM and strict Zero-PII storage/logging guards. |
-| **8. Open Standards & Best Practices** | Implements **G2P Connect (DCI) v1.0.0** signed asynchronous envelopes (`search`, `on-search`, `disburse`, `on-disburse`) with timing-safe HMAC-SHA256 verification, AgriStack Federated Farmer Registry schemas, OpenSPP/OpenG2P social protection workflows, **RFC 7807** error contracts, and automated GitHub Actions CI ([`ci.yml`](./.github/workflows/ci.yml)). |
+| **8. Open Standards & Best Practices** | Implements **G2P Connect (DCI) v1.0.0** signed asynchronous envelopes (`search`, `on-search`, `disburse`, `on-disburse` via `POST /v1/webhooks/g2p-connect/on-disburse`) with timing-safe HMAC-SHA256 verification, AgriStack Federated Farmer Registry schemas, OpenSPP/OpenG2P social protection workflows, **RFC 7807** error contracts, and automated GitHub Actions CI ([`ci.yml`](./.github/workflows/ci.yml)). |
 | **9. Do No Harm by Design (9A / 9B / 9C)** | **9A Security:** In-memory PII Purge Sentinel and append-only SQL audit triggers blocking `UPDATE`/`DELETE` tampering on `application_governance_ledger_history`.<br/>**9B Content Safety:** Perimeter Adversarial Prompt Firewall neutralizing injection/override payloads.<br/>**9C Protection & Recourse:** Deterministic policy matrix (no LLM financial decisions), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [SECURITY.md](SECURITY.md), and mandatory Human-in-the-Loop caseworker escalation. |
 
 ---
@@ -150,7 +150,8 @@ agristack-dbt-core/
 ├── docs/                            # End-to-end architecture flows & pilot blueprints
 │   ├── dpg_standard_compliance.md
 │   ├── end_to_end_code_flow.md
-│   └── government_pilot_proposal.md
+│   ├── government_pilot_proposal.md
+│   └── openg2p_glific_integration_guide.md
 ├── src/                             # Core Python application modules
 │   ├── config/                      # Runtime and channel settings
 │   ├── connectors/                  # Layer 1 Channel Edge Connectors
@@ -173,6 +174,8 @@ agristack-dbt-core/
 │   └── errors/                      # RFC 7807 problem details exception handlers
 ├── tests/                           # Package tests plus integration and environment suites
 ├── CODE_OF_CONDUCT.md               # Contributor Covenant & DPG Indicator 9C safety policy
+├── Dockerfile                       # Hardened non-root container image definition
+├── docker-compose.yml               # One-command ASGI server & 60-day pilot simulation runner
 ├── LICENSE                          # MIT License
 ├── pyproject.toml                   # Build, dependencies, Ruff, Mypy, and Pytest configs
 ├── roadmap.md                       # Inside-Out Master Implementation Roadmap
@@ -183,11 +186,19 @@ agristack-dbt-core/
 
 ## 🚀 Quickstart & Development
 
-### Prerequisites
-- **Python**: `>=3.11` (Python 3.11 or 3.13 recommended)
+### Option A: One-Command Containerized Quickstart (Docker Compose)
+```bash
+# Launch the hardened rootless ASGI HTTP Server on http://localhost:8000
+docker compose up -d agristack-api
+
+# Run the self-contained 4-scenario 60-day Pilot Simulation & G2P Connect v1.0.0 trace
+docker compose --profile simulation run --rm pilot-simulation
+```
+
+### Option B: Local Python Virtual Environment
+- **Python**: `>=3.11` (Python 3.11 or 3.12+ recommended)
 - **Virtual Environment**: `.venv`
 
-### Environment Setup
 ```bash
 # Set up virtual environment and install all runtime & dev dependencies
 bash scripts/setup_environment.sh
