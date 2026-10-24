@@ -403,3 +403,38 @@ async def test_g2p_connect_on_disburse_webhook_signature_and_reconciliation() ->
             assert ok_response.json()["bank_reference_id"] == "NPCI-UTR-G2P-666666"
     finally:
         persistence_service.dispose()
+
+
+@pytest.mark.asyncio
+async def test_openapi_schema_and_swagger_ui_interactive_examples() -> None:
+    """Verifies GET /openapi.json and GET /docs expose interactive examples for all webhooks."""
+    fastapi_app = create_public_agent_http_app(database_url="sqlite:///:memory:")
+    async with AsyncClient(
+        transport=ASGITransport(app=fastapi_app), base_url=BASE_TEST_URL
+    ) as client:
+        openapi_response = await client.get("/openapi.json")
+        assert openapi_response.status_code == HTTPStatus.OK
+        openapi_spec = openapi_response.json()
+
+        assert openapi_spec["info"]["version"] == "0.1.0"
+        assert openapi_spec["info"]["license"]["name"] == "MIT License"
+        assert "GID0094462" in openapi_spec["info"]["description"]
+
+        expected_post_routes = (
+            "/v1/webhooks/whatsapp",
+            "/v1/webhooks/ivr",
+            "/v1/webhooks/ussd",
+            "/v1/webhooks/sms",
+            "/v1/webhooks/payments/callback",
+            "/v1/webhooks/g2p-connect/on-disburse",
+            "/v1/caseworker/cases/{escalation_case_id}/review",
+        )
+        for route_path in expected_post_routes:
+            post_spec = openapi_spec["paths"][route_path]["post"]
+            json_content = post_spec["requestBody"]["content"]["application/json"]
+            assert "schema" in json_content
+            assert "example" in json_content
+
+        docs_response = await client.get("/docs")
+        assert docs_response.status_code == HTTPStatus.OK
+        assert "Swagger UI" in docs_response.text
