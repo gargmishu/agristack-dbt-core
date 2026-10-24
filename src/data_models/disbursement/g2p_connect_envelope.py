@@ -123,7 +123,7 @@ class G2pConnectDisbursementInstruction(StrictBaseModel):
     session_id: SessionId
     payload_id: ExtractionPayloadId
     payee_fa_token: HmacCitizenToken
-    scheme_code: CropSeason = "KHARIF-2026"
+    scheme_code: CropSeason
     governance_action: GovernanceAction
     instructed_at: UtcTimestamp
 
@@ -229,7 +229,7 @@ class G2pConnectRegistrySearchEnvelope(StrictBaseModel):
         max_length=64,
         description="Cadastral survey or land parcel identifier",
     )
-    crop_season: CropSeason = "KHARIF-2026"
+    crop_season: CropSeason
     registry_type: str = Field(
         default="ns:org:RegistryType:Agriculture",
         min_length=3,
