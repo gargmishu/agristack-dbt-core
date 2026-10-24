@@ -1,0 +1,45 @@
+services:
+  agristack-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agristack-dbt-core:0.1.0
+    container_name: agristack-dbt-core-api
+    ports:
+      - "8000:8000"
+    environment:
+      AGRISTACK_PEPPER_SECRET: "${AGRISTACK_PEPPER_SECRET:-sovereign_karnal_pilot_hmac_pepper_2026_secret_key}"
+      RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-60}"
+      RATE_LIMIT_CAPACITY: "${RATE_LIMIT_CAPACITY:-20}"
+      SERVICE_RUNTIME_MODE: "${SERVICE_RUNTIME_MODE:-MOCK}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  pilot-simulation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agristack-dbt-core:0.1.0
+    container_name: agristack-dbt-core-simulation
+    profiles:
+      - simulation
+    environment:
+      AGRISTACK_PEPPER_SECRET: "${AGRISTACK_PEPPER_SECRET:-sovereign_karnal_pilot_hmac_pepper_2026_secret_key}"
+      RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-60}"
+      RATE_LIMIT_CAPACITY: "${RATE_LIMIT_CAPACITY:-20}"
+      SERVICE_RUNTIME_MODE: "MOCK"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    command: ["python", "scripts/run_pilot_simulation.py"]
