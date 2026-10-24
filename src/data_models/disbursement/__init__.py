@@ -9,6 +9,7 @@ from src.data_models.disbursement.g2p_connect_envelope import (
     G2pConnectDisbursementInstruction,
     G2pConnectHeader,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
     G2pConnectRegistrySearchEnvelope,
 )
 
@@ -19,5 +20,6 @@ __all__ = [
     "G2pConnectDisbursementInstruction",
     "G2pConnectHeader",
     "G2pConnectOnDisbursePayload",
+    "G2pConnectOnSearchPayload",
     "G2pConnectRegistrySearchEnvelope",
 ]

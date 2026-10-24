@@ -39,6 +39,7 @@ from src.data_models.common import (
 from src.data_models.disbursement import (
     DisbursementCallbackPayload,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
 )
 from src.data_models.raw_ingress import (
     IvrIngressPayload,
@@ -64,6 +65,7 @@ _IVR_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ivr"
 _USSD_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ussd"
 _SMS_WEBHOOK_PATH: Final[str] = "/v1/webhooks/sms"
 _PAYMENT_CALLBACK_WEBHOOK_PATH: Final[str] = "/v1/webhooks/payments/callback"
+_G2P_ON_SEARCH_WEBHOOK_PATH: Final[str] = "/v1/webhooks/g2p-connect/on-search"
 _G2P_ON_DISBURSE_WEBHOOK_PATH: Final[str] = "/v1/webhooks/g2p-connect/on-disburse"
 _CASEWORKER_LIST_PATH: Final[str] = "/v1/caseworker/cases"
 _CASEWORKER_REVIEW_PATH: Final[str] = "/v1/caseworker/cases/{escalation_case_id}/review"
@@ -95,8 +97,8 @@ _OPENAPI_TAGS_METADATA: Final[list[dict[str, Any]]] = [
     {
         "name": _TAG_DISBURSEMENT_CALLBACKS,
         "description": (
-            "Asynchronous payment settlement reconciliation for NPCI APBS / PFMS and "
-            "HMAC-SHA256 signed G2P Connect (DCI) v1.0.0 on-disburse envelopes."
+            "Asynchronous farmer registry and payment settlement callbacks for NPCI APBS / PFMS "
+            "and HMAC-SHA256 signed G2P Connect (DCI) v1.0.0 on-search & on-disburse envelopes."
         ),
     },
     {
@@ -146,6 +148,25 @@ _PAYMENT_CALLBACK_OPENAPI_EXAMPLE: Final[dict[str, object]] = {
     "bank_reference_id": "NPCI-UTR-555555",
     "disbursement_status": "SUCCESS",
     "cleared_at": "2026-10-24T07:10:00Z",
+}
+
+_G2P_ON_SEARCH_OPENAPI_EXAMPLE: Final[dict[str, object]] = {
+    "signature": "b" * 64,
+    "header": {
+        "version": "1.0.0",
+        "message_id": "g2p-onsearch-2026-001",
+        "message_timestamp": "2026-10-24T07:12:00Z",
+        "action": "on-search",
+        "sender_id": "farmer-registry.agristack.gov.in",
+        "receiver_id": "agristack-dbt-core.gov.in",
+        "total_count": 1,
+    },
+    "transaction_id": "sess-glific-wa-101",
+    "tokenized_citizen_id": "c" * 64,
+    "land_record_id": "124/2A",
+    "crop_season": "KHARIF-2026",
+    "eligibility_status": "ELIGIBLE",
+    "verified_at": "2026-10-24T07:12:00Z",
 }
 
 _G2P_ON_DISBURSE_OPENAPI_EXAMPLE: Final[dict[str, object]] = {
@@ -343,6 +364,27 @@ class PublicAgentHttpServer:
         callback_payload = DisbursementCallbackPayload.model_validate(payload_mapping)
         return self._reconcile_and_build_callback_response(callback_payload)
 
+    async def handle_g2p_on_search_webhook(self, incoming_request: Request) -> JSONResponse:
+        """Processes signed G2P Connect (DCI) v1.0.0 `on-search` farmer registry callbacks."""
+        payload_mapping = await self._parse_json_mapping(incoming_request)
+        g2p_envelope = G2pConnectOnSearchPayload.model_validate(payload_mapping)
+        try:
+            verified_envelope = self._g2p_connect_mapper.verify_on_search_callback(g2p_envelope)
+        except ValueError as signature_error:
+            return self._build_unauthorized_response(str(signature_error))
+
+        return JSONResponse(
+            status_code=HTTPStatus.OK,
+            content={
+                "transaction_id": verified_envelope.transaction_id,
+                "tokenized_citizen_id": verified_envelope.tokenized_citizen_id,
+                "land_record_id": verified_envelope.land_record_id,
+                "crop_season": verified_envelope.crop_season,
+                "eligibility_status": verified_envelope.eligibility_status,
+                "verified": True,
+            },
+        )
+
     async def handle_g2p_on_disburse_webhook(self, incoming_request: Request) -> JSONResponse:
         """Processes signed G2P Connect (DCI) v1.0.0 `on-disburse` payment clearing callbacks."""
         payload_mapping = await self._parse_json_mapping(incoming_request)
@@ -457,6 +499,17 @@ class PublicAgentHttpServer:
             openapi_extra=self._build_request_body_openapi_extra(
                 schema=DisbursementCallbackPayload.model_json_schema(),
                 example=_PAYMENT_CALLBACK_OPENAPI_EXAMPLE,
+            ),
+        )
+        fastapi_app.add_api_route(
+            _G2P_ON_SEARCH_WEBHOOK_PATH,
+            self.handle_g2p_on_search_webhook,
+            methods=["POST"],
+            tags=[_TAG_DISBURSEMENT_CALLBACKS],
+            summary="Verify signed G2P Connect (DCI) v1.0.0 on-search farmer registry callback",
+            openapi_extra=self._build_request_body_openapi_extra(
+                schema=G2pConnectOnSearchPayload.model_json_schema(),
+                example=_G2P_ON_SEARCH_OPENAPI_EXAMPLE,
             ),
         )
         fastapi_app.add_api_route(

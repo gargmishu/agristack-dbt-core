@@ -406,6 +406,74 @@ async def test_g2p_connect_on_disburse_webhook_signature_and_reconciliation() ->
 
 
 @pytest.mark.asyncio
+async def test_g2p_connect_on_search_webhook_signature_and_verification() -> None:
+    """Verifies POST /v1/webhooks/g2p-connect/on-search verifies signature and returns status."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        mapper = G2pConnectMapperService(signing_key=TEST_PEPPER_SECRET)
+        server = PublicAgentHttpServer(
+            ledger_persistence_service=persistence_service,
+            g2p_connect_mapper=mapper,
+        )
+        now_iso = datetime.now(UTC).isoformat()
+        header = G2pConnectHeader(
+            message_id="g2p-onsearch-http-007",
+            message_timestamp=datetime.fromisoformat(now_iso),
+            action=G2pConnectAction.ON_SEARCH,
+            sender_id="farmer-registry.agristack.gov.in",
+            receiver_id="agristack-dbt-core.gov.in",
+        )
+        tokenized_citizen_id = "c" * 64
+        valid_signature = mapper._compute_envelope_signature(
+            header=header,
+            transaction_id="sess-http-g2p-007",
+            subject_reference=f"{tokenized_citizen_id}:124/2A:KHARIF-2026:ELIGIBLE",
+        )
+
+        async with AsyncClient(
+            transport=ASGITransport(app=server.app), base_url=BASE_TEST_URL
+        ) as client:
+            # 1. Tampered signature -> 401 Unauthorized
+            tampered_payload = {
+                "signature": "0" * 64,
+                "header": header.model_dump(mode="json"),
+                "transaction_id": "sess-http-g2p-007",
+                "tokenized_citizen_id": tokenized_citizen_id,
+                "land_record_id": "124/2A",
+                "crop_season": "KHARIF-2026",
+                "eligibility_status": "ELIGIBLE",
+                "verified_at": now_iso,
+            }
+            unauth_response = await client.post(
+                "/v1/webhooks/g2p-connect/on-search",
+                json=tampered_payload,
+            )
+            assert unauth_response.status_code == HTTPStatus.UNAUTHORIZED
+
+            # 2. Valid signature -> 200 OK & verified
+            valid_payload = {
+                "signature": valid_signature,
+                "header": header.model_dump(mode="json"),
+                "transaction_id": "sess-http-g2p-007",
+                "tokenized_citizen_id": tokenized_citizen_id,
+                "land_record_id": "124/2A",
+                "crop_season": "KHARIF-2026",
+                "eligibility_status": "ELIGIBLE",
+                "verified_at": now_iso,
+            }
+            ok_response = await client.post(
+                "/v1/webhooks/g2p-connect/on-search",
+                json=valid_payload,
+            )
+            assert ok_response.status_code == HTTPStatus.OK
+            assert ok_response.json()["verified"] is True
+            assert ok_response.json()["eligibility_status"] == "ELIGIBLE"
+            assert ok_response.json()["land_record_id"] == "124/2A"
+    finally:
+        persistence_service.dispose()
+
+
+@pytest.mark.asyncio
 async def test_openapi_schema_and_swagger_ui_interactive_examples() -> None:
     """Verifies GET /openapi.json and GET /docs expose interactive examples for all webhooks."""
     fastapi_app = create_public_agent_http_app(database_url="sqlite:///:memory:")
@@ -426,6 +494,7 @@ async def test_openapi_schema_and_swagger_ui_interactive_examples() -> None:
             "/v1/webhooks/ussd",
             "/v1/webhooks/sms",
             "/v1/webhooks/payments/callback",
+            "/v1/webhooks/g2p-connect/on-search",
             "/v1/webhooks/g2p-connect/on-disburse",
             "/v1/caseworker/cases/{escalation_case_id}/review",
         )

@@ -28,6 +28,7 @@ from src.data_models.common import (
     DisbursementFailureCode,
     DisbursementStatus,
     DisbursementTxnId,
+    EligibilityStatus,
     ExtractionPayloadId,
     GovernanceAction,
     HmacCitizenToken,
@@ -42,6 +43,7 @@ __all__ = [
     "G2pConnectDisbursementInstruction",
     "G2pConnectHeader",
     "G2pConnectOnDisbursePayload",
+    "G2pConnectOnSearchPayload",
     "G2pConnectRegistrySearchEnvelope",
 ]
 
@@ -243,6 +245,42 @@ class G2pConnectRegistrySearchEnvelope(StrictBaseModel):
         if self.header.action != G2pConnectAction.SEARCH:
             raise ValueError(
                 "G2pConnectRegistrySearchEnvelope requires header.action='search'; "
+                f"received '{self.header.action}'"
+            )
+        return self
+
+
+class G2pConnectOnSearchPayload(StrictBaseModel):
+    """Signed G2P Connect v1.0.0 `on-search` asynchronous farmer registry callback envelope.
+
+    See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
+    """
+
+    signature: str = Field(
+        ...,
+        min_length=64,
+        max_length=256,
+        description="HMAC-SHA256 integrity signature from Federated Farmer Registry / OpenG2P node",
+    )
+    header: G2pConnectHeader
+    transaction_id: SessionId
+    tokenized_citizen_id: HmacCitizenToken
+    land_record_id: str = Field(
+        ...,
+        min_length=3,
+        max_length=64,
+        description="Cadastral survey or land parcel identifier",
+    )
+    crop_season: CropSeason = "KHARIF-2026"
+    eligibility_status: EligibilityStatus
+    verified_at: UtcTimestamp
+
+    @model_validator(mode="after")
+    def validate_on_search_header_action(self) -> "G2pConnectOnSearchPayload":
+        """Enforces that registry callback envelope carries `on-search` header action."""
+        if self.header.action != G2pConnectAction.ON_SEARCH:
+            raise ValueError(
+                "G2pConnectOnSearchPayload requires header.action='on-search'; "
                 f"received '{self.header.action}'"
             )
         return self

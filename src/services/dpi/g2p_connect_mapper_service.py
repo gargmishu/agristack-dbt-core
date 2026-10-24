@@ -31,6 +31,7 @@ from src.data_models.disbursement import (
     G2pConnectDisbursementInstruction,
     G2pConnectHeader,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
     G2pConnectRegistrySearchEnvelope,
 )
 from src.data_models.governance import GovernanceOutcomePayload
@@ -53,7 +54,7 @@ class G2pConnectMapperService:
     """Standards mapper for G2P Connect (DCI) v1.0.0 registry and disbursement envelopes.
 
     Constructs cryptographically signed `search` and `disburse` envelopes and validates
-    inbound `on-disburse` payment clearing callbacks.
+    inbound `on-search` and `on-disburse` callbacks.
     """
 
     def __init__(
@@ -116,6 +117,36 @@ class G2pConnectMapperService:
             land_record_id=land_record_id,
             crop_season=crop_season,
         )
+
+    def verify_on_search_callback(
+        self,
+        callback_envelope: G2pConnectOnSearchPayload,
+    ) -> G2pConnectOnSearchPayload:
+        """Verifies a G2P Connect `on-search` farmer registry callback envelope."""
+        if (
+            PiiPurgeGuard.redact_all(
+                callback_envelope.land_record_id,
+                callback_envelope.transaction_id,
+            )
+            != callback_envelope.land_record_id
+        ):
+            raise ValueError(
+                "Zero-PII violation: cleartext phone or Aadhaar detected in land_record_id"
+            )
+        subject_reference = (
+            f"{callback_envelope.tokenized_citizen_id}:{callback_envelope.land_record_id}:"
+            f"{callback_envelope.crop_season}:{callback_envelope.eligibility_status}"
+        )
+        is_valid = self.verify_envelope_signature(
+            header=callback_envelope.header,
+            transaction_id=callback_envelope.transaction_id,
+            subject_reference=subject_reference,
+            candidate_signature=callback_envelope.signature,
+        )
+        if not is_valid:
+            raise ValueError("Invalid G2P Connect on-search envelope signature")
+
+        return callback_envelope
 
     def build_disbursement_envelope(
         self,

@@ -44,6 +44,7 @@ from src.data_models.disbursement import (
     G2pConnectDisbursementInstruction,
     G2pConnectHeader,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
     G2pConnectRegistrySearchEnvelope,
 )
 from src.data_models.governance import (
@@ -92,6 +93,7 @@ __all__ = [
     "G2pConnectDisbursementInstruction",
     "G2pConnectHeader",
     "G2pConnectOnDisbursePayload",
+    "G2pConnectOnSearchPayload",
     "G2pConnectRegistrySearchEnvelope",
     "GovernanceAction",
     "GovernanceOutcomePayload",

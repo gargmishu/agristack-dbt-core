@@ -16,6 +16,7 @@ from src.data_models.disbursement import (
     G2pConnectAction,
     G2pConnectHeader,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
 )
 from src.data_models.governance import GovernanceOutcomePayload
 from src.services.dpi import G2pConnectMapperService
@@ -54,6 +55,63 @@ def test_build_registry_search_envelope_signs_and_enforces_zero_pii() -> None:
             tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
             land_record_id="+919876543210",
         )
+
+
+def test_verify_on_search_callback_verifies_signature_and_zero_pii() -> None:
+    """Verifies on-search callback signature verification and Zero-PII enforcement."""
+    mapper = G2pConnectMapperService(signing_key=_TEST_SIGNING_KEY)
+    now = datetime.now(UTC)
+    header = G2pConnectHeader(
+        message_id="g2p-onsearch-2026-0001",
+        message_timestamp=now,
+        action=G2pConnectAction.ON_SEARCH,
+        sender_id="farmer-registry.agristack.gov.in",
+        receiver_id="agristack-dbt-core.gov.in",
+    )
+    valid_signature = mapper._compute_envelope_signature(
+        header=header,
+        transaction_id="sess-pilot-g2p-001",
+        subject_reference=f"{_VALID_CITIZEN_TOKEN}:SURVEY-101-A:KHARIF-2026:{EligibilityStatus.ELIGIBLE}",
+    )
+    valid_callback = G2pConnectOnSearchPayload(
+        signature=valid_signature,
+        header=header,
+        transaction_id="sess-pilot-g2p-001",
+        tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
+        land_record_id="SURVEY-101-A",
+        crop_season="KHARIF-2026",
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        verified_at=now,
+    )
+    verified = mapper.verify_on_search_callback(valid_callback)
+    assert verified.transaction_id == "sess-pilot-g2p-001"
+    assert verified.eligibility_status == EligibilityStatus.ELIGIBLE
+
+    tampered_callback = G2pConnectOnSearchPayload(
+        signature="0" * 64,
+        header=header,
+        transaction_id="sess-pilot-g2p-001",
+        tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
+        land_record_id="SURVEY-101-A",
+        crop_season="KHARIF-2026",
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        verified_at=now,
+    )
+    with pytest.raises(ValueError, match="Invalid G2P Connect on-search envelope signature"):
+        mapper.verify_on_search_callback(tampered_callback)
+
+    pii_callback = G2pConnectOnSearchPayload(
+        signature=valid_signature,
+        header=header,
+        transaction_id="sess-pilot-g2p-001",
+        tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
+        land_record_id="+919876543210",
+        crop_season="KHARIF-2026",
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        verified_at=now,
+    )
+    with pytest.raises(ValueError, match="Zero-PII violation"):
+        mapper.verify_on_search_callback(pii_callback)
 
 
 def test_build_disbursement_envelope_maps_approved_outcome() -> None:

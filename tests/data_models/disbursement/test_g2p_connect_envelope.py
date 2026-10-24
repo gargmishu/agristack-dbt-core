@@ -12,6 +12,7 @@ from src.data_models.common import (
     REVIEW_GOVERNANCE_ACTIONS,
     DisbursementFailureCode,
     DisbursementStatus,
+    EligibilityStatus,
     GovernanceAction,
 )
 from src.data_models.disbursement import (
@@ -20,6 +21,7 @@ from src.data_models.disbursement import (
     G2pConnectDisbursementInstruction,
     G2pConnectHeader,
     G2pConnectOnDisbursePayload,
+    G2pConnectOnSearchPayload,
     G2pConnectRegistrySearchEnvelope,
 )
 
@@ -155,4 +157,46 @@ def test_on_disburse_payload_and_registry_search_envelope_enforce_actions() -> N
             disbursement_status=DisbursementStatus.FAILED,
             failure_reason_code=DisbursementFailureCode.INVALID_IFSC,
             cleared_at=now,
+        )
+
+
+def test_on_search_payload_enforces_action_and_zero_pii_token() -> None:
+    """Verifies G2pConnectOnSearchPayload accepts on-search and rejects mismatched actions."""
+    now = datetime.now(UTC)
+    on_search_header = G2pConnectHeader(
+        message_id="g2p-onsearch-2026-0001",
+        message_timestamp=now,
+        action=G2pConnectAction.ON_SEARCH,
+        sender_id="farmer-registry.agristack.gov.in",
+        receiver_id="agristack-dbt-core.gov.in",
+    )
+    on_search_payload = G2pConnectOnSearchPayload(
+        signature=_VALID_SIGNATURE,
+        header=on_search_header,
+        transaction_id="sess-2026-100001",
+        tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
+        land_record_id="SURVEY-101-A",
+        crop_season="KHARIF-2026",
+        eligibility_status=EligibilityStatus.ELIGIBLE,
+        verified_at=now,
+    )
+    assert on_search_payload.header.action == G2pConnectAction.ON_SEARCH
+    assert on_search_payload.eligibility_status == EligibilityStatus.ELIGIBLE
+
+    mismatched_header = G2pConnectHeader(
+        message_id="g2p-onsearch-2026-0002",
+        message_timestamp=now,
+        action=G2pConnectAction.SEARCH,
+        sender_id="farmer-registry.agristack.gov.in",
+        receiver_id="agristack-dbt-core.gov.in",
+    )
+    with pytest.raises(ValidationError, match="requires header.action='on-search'"):
+        G2pConnectOnSearchPayload(
+            signature=_VALID_SIGNATURE,
+            header=mismatched_header,
+            transaction_id="sess-2026-100001",
+            tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
+            land_record_id="SURVEY-101-A",
+            eligibility_status=EligibilityStatus.ELIGIBLE,
+            verified_at=now,
         )
