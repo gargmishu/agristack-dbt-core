@@ -86,7 +86,7 @@ class G2pConnectMapperService:
         session_id: str,
         tokenized_citizen_id: str,
         land_record_id: str,
-        crop_season: str = "KHARIF-2026",
+        crop_season: str,
     ) -> G2pConnectRegistrySearchEnvelope:
         """Builds a signed G2P Connect `search` envelope for Federated Farmer Registry lookup."""
         if PiiPurgeGuard.redact_all(land_record_id, session_id) != land_record_id:

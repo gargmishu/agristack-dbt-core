@@ -54,6 +54,7 @@ def test_build_registry_search_envelope_signs_and_enforces_zero_pii() -> None:
             session_id="sess-pilot-g2p-002",
             tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
             land_record_id="+919876543210",
+            crop_season="KHARIF-2026",
         )
 
 

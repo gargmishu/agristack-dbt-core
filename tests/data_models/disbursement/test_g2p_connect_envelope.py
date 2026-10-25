@@ -102,6 +102,7 @@ def test_disbursement_envelope_validates_action_and_transaction_alignment() -> N
         session_id="sess-2026-100001",
         payload_id="pay-2026-100001",
         payee_fa_token=_VALID_CITIZEN_TOKEN,
+        scheme_code="KHARIF-2026",
         governance_action=GovernanceAction.AUTOMATED_PAYOUT,
         instructed_at=now,
     )
@@ -145,6 +146,7 @@ def test_on_disburse_payload_and_registry_search_envelope_enforce_actions() -> N
         transaction_id="sess-2026-100001",
         tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
         land_record_id="SURVEY-101-A",
+        crop_season="KHARIF-2026",
     )
     assert search_envelope.header.action == G2pConnectAction.SEARCH
 
@@ -197,6 +199,7 @@ def test_on_search_payload_enforces_action_and_zero_pii_token() -> None:
             transaction_id="sess-2026-100001",
             tokenized_citizen_id=_VALID_CITIZEN_TOKEN,
             land_record_id="SURVEY-101-A",
+            crop_season="KHARIF-2026",
             eligibility_status=EligibilityStatus.ELIGIBLE,
             verified_at=now,
         )
