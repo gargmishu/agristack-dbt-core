@@ -1,38 +1,109 @@
+# ==============================================================================
+# CDPI 2026 DPI-AI Framework — Canonical Public Agent Specification (YAML)
+# Reference: https://digitalpublicinfrastructure.ai/public-agents.php
+# Vision Paper Template: Pages 23–25 ("Generic Public Agent Spec + DPI Workflow Integration Template (YAML)")
+# Implementation: https://github.com/gargmishu/agristack-dbt-core
+# ==============================================================================
+
 public_agent:
   id: "pa-farmer-subsidy-gateway-2026"
-  description: "Guides citizens through seasonal crop loss relief subsidy applications in regional languages"
-  channels: ["whatsapp", "ussd", "voice"]
-  languages: ["hi", "en"]  # Hindi (covering regional Haryanvi inputs via Bhashini), English
   version: "1.0.0"
+  description: >-
+    Constrained, multilingual citizen-facing Public Agent that guides smallholder
+    farmers through seasonal crop-loss subsidy and Direct Benefit Transfer (DBT)
+    applications across IVR Voice, WhatsApp, and USSD (*147#), activating the
+    governed DPI Workflow without autonomous decision-making authority.
+  channels: ["ivr_voice", "whatsapp", "ussd", "sms"]
+  languages: ["hi-IN", "en-IN"]
 
   ai_model:
-    # Plug-and-play: swap the adapter to change providers
-    adapter: "vllm"          # openai | anthropic | google | ollama | vllm | bedrock | custom
-    runtime: "on_prem"       # sovereign_cloud | on_prem | external_api
-    endpoint: "http://localhost:8000/v1"  # Default local loopback address for vLLM
+    # Plug-and-play adapter for sovereign or local inference ecosystems
+    adapter: "vllm"  # openai | anthropic | google | ollama | vllm | tgi | azure_openai | bedrock | custom
+    runtime: "on_prem"  # external_api | sovereign_cloud | on_prem
+    endpoint: "http://localhost:8000/v1"
     model: "on-prem-local-slm-v1"
-    auth_ref: "vault://ai-gateway/token"
+    auth_ref: "env://AI_GATEWAY_BEARER_TOKEN"
+    interface: "chat_completions"
     timeout_ms: 30000
+    parameters:
+      temperature: 0.0
+      max_tokens: 512
 
-  scope:
-    allowed_workflows: ["wf-crop-loss-subsidy-2026"]
-    allowed_ai_blocks: ["speech_to_text", "translate", "structured_extract"]
-    data_access: "consent_required"
-    escalation_target: "human_review"  # Router landing target for unmapped edge-traffic failures
+  capabilities:
+    - "intent_interpretation"
+    - "workflow_selection"
+    - "multilingual_entity_extraction"
+    - "plain_language_explanations"
 
   constraints:
-    can_modify_records: false
-    can_initiate_payments: false   # Only via explicit workflow payment_disburse steps
-    can_access_data_without_consent: false
-    human_escalation: always_available
-    session_timeout: "30m"
+    - "no_final_decisions_outside_workflows"
+    - "no_data_access_without_consent"
+    - "allow_only_listed_workflows"
+    - "zero_cleartext_pii_persistence"
+    - "cannot_modify_authoritative_registries"
+    - "cannot_initiate_payments_directly"
+
+  permissions:
+    can_invoke_workflows:
+      - "wf-crop-loss-subsidy-2026"
+    can_call_ai_blocks_directly: false
+
+  required_context:
+    identity:
+      required: true
+      fields: ["requester.identifier"]
+      tokenization_standard: "HMAC-SHA256 (Layer-2 Perimeter)"
+    consent:
+      required: true
+      fields: ["requester.consent_token"]
+      channels_supported: ["ivr_dtmf_1", "whatsapp_interactive_optin", "ussd_menu_1"]
+
+  workflow_invocation:
+    engine_endpoint: "http://localhost:8000/v1/intake"
+    mode: "invoke_by_id"
+    request_shape:
+      workflow_id: "wf-crop-loss-subsidy-2026"
+      inputs: "StandardizedIntakeContract"
+      context:
+        identity: "TokenizedCitizenIdentity"
+        consent: "ConsentVerificationReceipt"
+    response_shape:
+      status: "success | escalated | reprompt | failed"
+      decision: "GovernanceOutcomeContract"
+      explanation: "LocalizedPlainLanguageConfirmation"
+      audit_trail_ref: "LedgerHistoryEntryUUID"
+
+  runtime_behavior:
+    intent_to_workflow_mapping:
+      method: "rules_then_model"
+      allow_only_listed_workflows: true
+    escalation:
+      on:
+        - "safeguards_failure"
+        - "adversarial_prompt_injection_detected"
+        - "low_confidence_below_0_85"
+        - "registry_mismatch_or_not_found"
+        - "max_conversational_retries_exceeded"
+        - "appeal_requested"
+      to_human_agent: "district_agricultural_officer_hitl"
+      response_sla: "48h"
+    logging:
+      audit_logging: true
+      redact_fields:
+        - "requester.identifier"
+        - "requester.consent_token"
+        - "source_phone_number"
+        - "farmer_id_cleartext"
+        - "aadhaar_number"
 
   governance:
-    owner_agency: "State Department of Agriculture & Farmer Welfare"
-    legal_basis: "Sovereign Seasonal Relief & DBT Payment Authorization Order, 2023"
+    owner_agency: "Department of Agriculture & Farmers Welfare (Sovereign / State Nodal Agency)"
+    legal_basis: "Digital Personal Data Protection (DPDP) Act 2023 & Sovereign Direct Benefit Transfer (DBT) Authorization Mandate"
     audit_logging: true
-    pii_handling: "tokenise_in_logs"
+    pii_handling: "hmac_sha256_tokenize_at_perimeter_zero_disk_retention"
     human_recourse:
       enabled: true
       channel: "any"
+      caseworker_queue_endpoint: "GET /v1/caseworker/cases"
+      adjudication_endpoint: "POST /v1/caseworker/cases/{claim_id}/resolve"
       response_sla: "48h"

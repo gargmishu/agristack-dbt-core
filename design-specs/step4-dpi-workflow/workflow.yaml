@@ -1,402 +1,358 @@
-apiVersion: dpi-ai/v1
-kind: DPIWorkflow
-metadata:
+# ==============================================================================
+# CDPI 2026 DPI-AI Framework — Canonical DPI Workflow Specification (YAML)
+# Reference: https://digitalpublicinfrastructure.ai/dpi-workflows.php
+# Vision Paper Template: Pages 19–22 ("Generic DPI Workflow Template (YAML)")
+# Implementation: https://github.com/gargmishu/agristack-dbt-core
+# ==============================================================================
+
+workflow:
   id: "wf-crop-loss-subsidy-2026"
   name: "autonomous_multi_channel_farmer_subsidy_system"
   version: "1.0.0"
-  sector: "Agriculture"
-  governing_body: "State Department of Agriculture & Farmer Welfare"
-  legal_mandate: "Sovereign Seasonal Relief & DBT Payment Authorization Order, 2023"
+  description: >-
+    Governed multi-channel (IVR Voice, WhatsApp, USSD) farmer crop-loss relief
+    and Direct Benefit Transfer (DBT) workflow enforcing Layer-2 Zero-Trust
+    HMAC-SHA256 PII tokenization, three-gate deterministic eligibility
+    governance, human-in-the-loop (HITL) caseworker escalation, and G2P Connect
+    (DCI) v1.0.0 signed asynchronous registry search and treasury disbursement.
+  domain: "agriculture_and_social_protection_dbt"
 
-# 🌟 Structural Layer: System Roles and Handshakes
+governance:
+  owner_agency: "Department of Agriculture & Farmers Welfare (Sovereign / State Nodal Agency)"
+  legal_basis: "Digital Personal Data Protection (DPDP) Act 2023 & Sovereign Direct Benefit Transfer (DBT) Authorization Mandate"
+  audit_logging: true
+  human_oversight:
+    required: true
+    confidence_threshold: 0.85
+    max_conversational_attempts: 3
+    escalation_to: "district_agricultural_officer_hitl"
+    retention_policy: "5y"
+  accountability_note: >-
+    Public Agents orchestrate steps; institutional authority remains with
+    government. No AI Block or Public Agent can directly mutate authoritative
+    registries or authorize treasury disbursements outside deterministic
+    workflow gates.
+
 actors:
   public_agent:
     id: "pa-farmer-subsidy-gateway-2026"
-    channels: ["whatsapp", "ussd", "voice"]
-    languages: ["hi", "en"]
+    channels: ["ivr_voice", "whatsapp", "ussd", "sms"]
+    languages: ["hi-IN", "en-IN"]
   human_agent:
-    id: "caseworker"
-    role: "District Agricultural Officer"
+    id: "district_agricultural_officer_hitl"
+    role: "District Agricultural Officer / Caseworker Adjudicator"
 
-# 🌟 Structural Layer: The Governance Block from the Spec
-governance:
-    owner_agency: "<Ministry of Social Welfare>"
-    legal_basis: "<Social Protection Act § 12.3>"
-    audit_logging: true
-    human_oversight:
+inputs:
+  requester:
+    identifier:
+      type: string
+      format: "hmac_sha256_token | national_id | phone"
       required: true
-      escalation_to: "caseworker_supervisor"
-      retention_policy: "5y"
-    accountability_note: "Public Agents orchestrate steps; institutional authority remains with government."
+      example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      validation: "^[a-f0-9]{64}$"
+    consent_token:
+      type: string
+      format: "channel_native_opt_in | jwt"
+      required: true
+      validation: "must_be_explicit_affirmative_opt_in"
+  request:
+    payload:
+      type: object
+      schema_ref: "src/data_models/public_agent/intake_contracts.py#StandardizedIntakeContract"
+      required: true
+      additional_properties: false
+    attachments:
+      type: array
+      required: false
 
-environmental_rails:
-  identity_infrastructure: "MOSIP Decentralized Core Identity Provider Platform"
-  data_exchange_infrastructure: "Federated AgriStack Unified Registry System"
-  social_protection_infrastructure: "OpenSPP Social Protection Platform Core Registry Engine"
-  payment_clearing_infrastructure: "NPCI Aadhaar Payment Bridge System (APBS) / Mojaloop Hub"
+# ==============================================================================
+# Modular Callable AI Blocks & DPG Building Blocks (MCP & OpenAPI Ready)
+# Reference: Vision Paper Pages 16, 21, and 29 ("DPGs as AI Blocks")
+# ==============================================================================
+ai_blocks:
+  - name: "speech_to_text"
+    kind: "foundational"
+    interface: "speech_to_text(audio_stream_uri, source_language)"
+    provider: "Digital India BHASHINI ASR Cluster"
+    io:
+      in: ["request.payload.ivr_audio_stream_uri", "request.payload.source_language"]
+      out: ["unstructured_vernacular_string", "asr_confidence"]
+    governance:
+      purpose: "Transcribe rural telephony 16kHz PCM voice streams into vernacular text"
+      data_minimization: true
+      logging: true
+      fallback: "escalate_to_human_agent"
 
-ingress_triggers:
-  channels:
-    - type: "IVR_VOICE"
-      interface_id: "SIP_TRUNK_BSNL_HAR_08"
-      audio_profile: "mono_16khz_16bit_pcm"
-    - type: "WHATSAPP"
-      interface_id: "META_WHATSAPP_BUSINESS_API"
-    - type: "USSD"
-      interface_id: "SS7_SIGTRAN_CARRIER_GATEWAY"
+  - name: "translate"
+    kind: "foundational"
+    interface: "translate_local_language(unstructured_text, source_language, target_language)"
+    provider: "Digital India BHASHINI NMT Hub"
+    io:
+      in: ["unstructured_vernacular_string", "source_language", "target_language"]
+      out: ["standardized_english_string"]
+    governance:
+      purpose: "Normalize regional agricultural dialects (e.g., Haryanvi/Hindi) into canonical administrative text"
+      data_minimization: true
+      logging: true
+      fallback: "escalate_to_human_agent"
 
-workflow_orchestration:
-  steps:
-    - step_id: "step_01"
-      step_name: "step_01_initiation_and_channel_entry"
-      block: "consent_verify"
-      type: "governance_gate"
-      description: "Capture explicit channel-native citizen opt-in prior to initializing processing"
-      inputs:
-        session_id: "$.payload.session_id"
-        source_identifier: "$.payload.source_phone_number"
-        channel_type: "$.payload.ingress_channel"
-        ussd_collected_payload: "$.payload.ussd_collected_payload"
-      outputs:
-        session_id: "string"
-        channel_type: "string"
-        consent_granted: "boolean"
-        ussd_collected_payload: "object"
-      parameters:
-        blocking_gate: true
-        ivr_dtmf_accept_digit: "1"
-        whatsapp_optin_payload: "I Accept and Authorize Check"
-        ussd_optin_digit: "1"
-      on_success: "step_02"
-      on_failure: "abort_session"
+  - name: "structured_extract"
+    kind: "sector_specific"
+    interface: "extract_claim_entities(standardized_english_string)"
+    provider: "Sovereign On-Premises Small Language Model (vLLM / Ollama)"
+    io:
+      in: ["standardized_english_string"]
+      out: ["extracted_entities", "extraction_confidence"]
+    governance:
+      purpose: "Extract bounded agricultural claim parameters (district, crop_type, damage_cause) under strict schema validation"
+      data_minimization: true
+      logging: true
+      fallback: "reprompt_or_escalate_to_human_agent"
 
-    - step_id: "step_02"
-      step_name: "step_02_speech_to_text_transcription"
-      block: "speech_to_text"
-      type: "ai_block"
-      description: "Convert incoming raw vernacular acoustic streams into written script strings"
-      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE'"
-      inputs:
-        audio_stream_uri: "$.payload.ivr_audio_stream_uri"
-      outputs:
-        unstructured_vernacular_string: "string"
-      parameters:
-        model_adapter: "BHASHINI_ASR_INFERENCE_CLUSTER"
-        native_language: "hi-IN"
-        filtering_profile: "agricultural_background_noise_attenuation"
-        fallback_path: "human_escalate"
-        security_interceptors:
-          - guardrail_type: "adversarial_ingestion_safeguard"
-            action_on_acoustic_anomaly: "FORCE_CONFIDENCE_TO_ZERO"
-      on_success: "step_03"
-      on_failure: "step_08"
+  - name: "identity_verify"
+    kind: "sector_specific"
+    interface: "verify_identity(raw_national_id_or_phone)"
+    provider: "Layer-2 Zero-Trust Security Gateway (HMAC-SHA256 + MOSIP / National ID Pattern)"
+    io:
+      in: ["requester.identifier"]
+      out: ["tokenized_identity_hash", "identity_verified"]
+    governance:
+      purpose: "Convert cleartext citizen identifiers in volatile RAM into irreversible 64-char HMAC-SHA256 tokens before any downstream call"
+      data_minimization: true
+      logging: true
+      fallback: "abort_session_with_rfc7807_error"
 
-    - step_id: "step_03"
-      step_name: "step_03_text_translation_and_normalization"
-      block: "translate"
-      type: "ai_block"
-      description: "Normalize local idioms, terminology, and dialects into standard administrative text"
-      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
-      inputs:
-        unstructured_text:
-          selector:
-            ivr_source: "$.step_02.output.unstructured_vernacular_string"
-            whatsapp_source: "$.payload.whatsapp_cleartext_string"
-      outputs:
-        standardized_english_string: "string"
-      parameters:
-        model_adapter: "BHASHINI_NMT_TRANSLATION_HUB"
-        source_dialect: "regional_haryanvi_hindi"
-        target_language: "en-IN"
-        security_interceptors:
-          - guardrail_type: "adversarial_ingestion_safeguard"
-            action_on_text_injection: "FORCE_CONFIDENCE_TO_ZERO"
-      on_success: "step_04"
-      on_failure: "step_08"
+  - name: "registry_search"
+    kind: "sector_specific"
+    interface: "fetch_verified_record(tokenized_identity_hash, benefit_program_code)"
+    provider: "Federated AgriStack Registry (Farmer, Farmland Plot, & Crop Sown Registries via G2P Connect v1.0.0 search/on-search)"
+    io:
+      in: ["tokenized_identity_hash", "extracted_entities.district_name", "extracted_entities.crop_type"]
+      out: ["registry_match_flag", "cadastral_plot_id", "sown_crop_verified"]
+    governance:
+      purpose: "Verify land parcel ownership and seasonal crop sown provenance using pseudonymized identity tokens"
+      data_minimization: true
+      logging: true
+      fallback: "escalate_to_human_agent"
 
-    - step_id: "step_04"
-      step_name: "step_04_structured_field_entity_extraction"
-      block: "structured_extract"
-      type: "ai_block"
-      description: "Parse standardized dialogue strings into structured system configurations via localized SLM execution"
-      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
-      inputs:
-        target_text: "$.step_03.output.standardized_english_string"
-      outputs:
-        extracted_entities: "object"
-        extraction_confidence: "float"
-      parameters:
-        model_runtime: "ON_PREM_LOCAL_SLM_INFERENCE_INSTANCE"
-        security_interceptors:
-          - guardrail_type: "adversarial_ingestion_safeguard"
-            action_on_override_attempt: "FORCE_CONFIDENCE_TO_ZERO"
-        response_schema:
-          type: "object"
-          required: ["farmer_id_cleartext", "district_name", "crop_type", "reported_anomaly"]
-          properties:
-            farmer_id_cleartext: "string"
-            district_name: "string"
-            crop_type: "string"
-            reported_anomaly: "string"
-      on_success: "step_05"
-      on_failure: "step_08"
+  - name: "check_benefit_eligibility"
+    kind: "sector_specific"
+    interface: "check_benefit_eligibility(extraction_confidence, registry_match_flag, attempt_number)"
+    provider: "Deterministic Three-Gate Governance Engine & OpenSPP / OpenG2P Case Registry"
+    io:
+      in: ["extraction_confidence", "registry_match_flag", "attempt_number"]
+      out: ["evaluation_passed", "routing_decision", "openspp_case_id"]
+    governance:
+      purpose: "Enforce deterministic >=0.85 confidence threshold, registry provenance match, and 3-strike conversational retry ceiling"
+      data_minimization: true
+      logging: true
+      fallback: "escalate_to_human_agent"
 
-    - step_id: "step_05"
-      step_name: "step_05_identity_perimeter_tokenization"
-      block: "identity_verify"
-      type: "dpi_rail"
-      description: "Enforce zero-disk RAM masking by tokenizing identifiers against national database engines"
-      inputs:
-        raw_national_id:
-          selector:
-            ussd_source: "$.step_01.output.ussd_collected_payload.farmer_id_cleartext"
-            conversational_source: "$.step_04.output.extracted_entities.farmer_id_cleartext"
-      outputs:
-        tokenized_identity_hash: "string"
-      parameters:
-        hashing_algorithm: "SHA-256"
-        salt_pepper_injection: "ENV_INJECTED_SYSTEM_PEPPER_KEY"
-        mosip_interconnect_profile: "volatile_ram_match_only"
-      on_success: "step_05_b"
-      on_failure: "abort_with_rejection_log"
+  - name: "payment_disburse"
+    kind: "sector_specific"
+    interface: "transfer_funds(openspp_case_id, tokenized_identity_hash, benefit_program_code)"
+    provider: "G2P Connect (DCI) v1.0.0 Disbursement Envelope Mapper & NPCI APBS / PFMS / Mojaloop Treasury Rail"
+    io:
+      in: ["openspp_case_id", "tokenized_identity_hash", "benefit_program_code"]
+      out: ["payment_transaction_id", "payout_clearance_status"]
+    governance:
+      purpose: "Emit cryptographically signed, idempotent G2P Connect v1.0.0 disbursement instructions and reconcile asynchronous on-disburse callbacks"
+      data_minimization: true
+      logging: true
+      fallback: "stage_for_manual_treasury_reconciliation"
 
-    - step_id: "step_05_b"
-      step_name: "step_05_b_analytical_dbt_transformation_compaction"
-      block: "dbt_run_operator"
-      type: "dpi_rail"
-      description: "Trigger downstream dbt-core compilation layer to deduplicate multi-attempt conversational loop mutations before registry matching"
-      execution_condition: "$.step_01.output.channel_type == 'IVR_VOICE' || $.step_01.output.channel_type == 'WHATSAPP'"
-      inputs:
-        parent_session_id: "$.step_01.output.session_id"
-        tokenization_state: "$.step_05.output.tokenized_identity_hash"
-      outputs:
-        analytical_materialization_cleared: "boolean"
-      parameters:
-        target_dbt_project: "agristack_dbt_core"
-        execution_model_select: "stg_session_extraction_details"
-        orchestration_profile: "blocking_warehouse_compile"
-      on_success: "step_06"
-      on_failure: "step_11"
+  - name: "text_to_speech"
+    kind: "foundational"
+    interface: "text_to_speech(confirmation_message, target_language)"
+    provider: "Digital India BHASHINI TTS Hub & CDAC Mobile Seva SMS Gateway"
+    io:
+      in: ["confirmation_message", "target_language", "ingress_channel"]
+      out: ["channel_delivery_receipt"]
+    governance:
+      purpose: "Deliver accessible voice, WhatsApp, USSD, and transactional SMS confirmation receipts or caseworker escalation IDs"
+      data_minimization: true
+      logging: true
+      fallback: "send_transactional_sms_receipt"
 
-    - step_id: "step_06"
-      step_name: "step_06_agricultural_registry_crossmatch"
-      block: "registry_search"
-      type: "dpi_rail"
-      description: "Cross-examine parcel boundaries, property ownership, and seasonal crop records"
-      inputs:
-        tokenized_identity_hash: "$.step_05.output.tokenized_identity_hash"
-        assertions:
-          district_name:
-            selector:
-              ussd_path: "$.step_01.output.ussd_collected_payload.district_name"
-              ai_path: "$.step_04.output.extracted_entities.district_name"
-          crop_type:
-            selector:
-              ussd_path: "$.step_01.output.ussd_collected_payload.crop_type"
-              ai_path: "$.step_04.output.extracted_entities.crop_type"
-      outputs:
-        registry_match_flag: "boolean"
-        cadastral_plot_id: "string"
-      parameters:
-        target_registry: "FEDERATED_AGRISTACK_CORE_GATEWAY"
-        matching_logic: "strict_geographic_boundary_intersection"
-      on_success: "step_07"
-      on_failure: "step_08"
+# ==============================================================================
+# Callable UN Universal DPI Safeguards Block
+# Reference: Vision Paper Page 18 & Page 21 ("Safeguards as Callable AI Blocks")
+# ==============================================================================
+safeguards:
+  enabled: true
+  callable_ai_block: "verify_zero_trust_safeguards()"
+  checks:
+    - "consent_present"
+    - "purpose_limitation"
+    - "data_minimization"
+    - "zero_cleartext_pii_retention"
+    - "adversarial_prompt_injection_firewall"
+    - "non_discrimination"
+    - "explainability_ready"
+  on_failure:
+    action: "escalate"
+    to: "district_agricultural_officer_hitl"
+    citizen_message: >-
+      Your subsidy claim has been safely queued for assisted review by a
+      District Agricultural Officer. Your reference Case ID has been sent via SMS.
 
-    - step_id: "step_07"
-      step_name: "step_07_social_benefits_registry_submission"
-      block: "submit_application"
-      type: "dpi_rail"
-      description: "Stage the verified application parameters inside the central social benefits framework"
-      execution_condition: "$.step_06.output.registry_match_flag == true"
-      inputs:
-        verification_provenance_flag: "$.step_06.output.registry_match_flag"
-        cadastral_plot_reference: "$.step_06.output.cadastral_plot_id"
-      outputs:
-        openspp_case_id: "string"
-        registration_status: "string"
-      parameters:
-        target_api_endpoint: "OPENSPP_SOCIAL_PROTECTION_PLATFORM_APIS"
-        submission_mode: "staged_pending_clearance"
-      on_success: "step_08"
-      on_failure: "step_11"
+# ==============================================================================
+# Auditable 12-Step DPI Workflow Sequence
+# ==============================================================================
+steps:
+  - id: "step_01_consent_and_channel_entry"
+    call: "verify_zero_trust_safeguards()"
+    description: "Capture explicit channel-native citizen opt-in (IVR DTMF '1', WhatsApp opt-in button, or USSD menu '1') prior to any processing."
+    on_success: "step_02_speech_to_text_transcription"
+    on_failure:
+      action: "stop"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Explicit consent is required to verify your farmer registry records. Session closed without storing any data."
 
-    - step_id: "step_08"
-      step_name: "step_08_governance_threshold_evaluation"
-      block: "business_rules_gate"
-      type: "governance_gate"
-      description: "Deterministic evaluation gate verifying extracted AI metrics and registry match assertions against state policies"
-      inputs:
-        llm_confidence_score:
-          selector:
-            ussd_static: 1.00
-            conversational_probabilistic: "$.step_04.output.extraction_confidence"
-            default_fallback: 0.00
-        registry_match_flag:
-          selector:
-            registry_path: "$.step_06.output.registry_match_flag"
-            default_fallback: false
-        current_attempt:
-          selector:
-            payload_path: "$.payload.loop_attempt_id"
-            default_fallback: 1
-      outputs:
-        evaluation_passed: "boolean"
-        active_attempt_id: "integer"
-      parameters:
-        minimum_confidence_threshold: 0.85
-        maximum_retry_limit: 3
-        engine_evaluation_rules:
-          evaluation_passed: "$.inputs.llm_confidence_score >= $.parameters.minimum_confidence_threshold && $.inputs.registry_match_flag == true"
-          active_attempt_id: "$.inputs.current_attempt"
-      on_success: "step_09"
-      on_failure: "step_09"
+  - id: "step_02_speech_to_text_transcription"
+    call: "speech_to_text"
+    condition: "request.payload.ingress_channel == 'IVR_VOICE'"
+    description: "Transcribe incoming 16kHz mono PCM rural voice stream via BHASHINI ASR; bypass for WhatsApp and USSD."
+    on_success: "step_03_text_translation_and_normalization"
+    on_failure:
+      action: "escalate"
+      retry: { max_attempts: 2, backoff: "exponential" }
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Audio quality was unclear. Routing your call to an assisted caseworker."
 
-    - step_id: "step_09"
-      step_name: "step_09_governance_routing_engine"
-      block: "orchestration_router"
-      type: "governance_gate"
-      description: "Structural router parsing evaluation flags to trigger direct DBT payouts, edge-channel conversational re-prompts for fresh user inputs, or caseworker staging"
-      inputs:
-        evaluation_passed: "$.step_08.output.evaluation_passed"
-        active_attempt_id: "$.step_08.output.active_attempt_id"
-        channel_type: "$.step_01.output.channel_type"
-      outputs:
-        routing_decision: "string"
-      routing_branches:
-        passing_track:
-          condition: "$.inputs.evaluation_passed == true"
-          target_action: "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT"
-          next_step: "step_10"
-        reprompt_loop_track:
-          condition: "$.inputs.evaluation_passed == false && $.inputs.active_attempt_id < 3 && $.inputs.channel_type != 'USSD'"
-          target_action: "TRIGGER_CHANNEL_REPROMPT_INGRESS"
-          next_step: "step_12"
-        fallback_track:
-          condition: "$.inputs.evaluation_passed == false && ($.inputs.active_attempt_id >= 3 || $.inputs.channel_type == 'USSD')"
-          target_action: "FORWARD_TO_INCIDENT_TICKET_STAGING"
-          next_step: "step_11"
+  - id: "step_03_text_translation_and_normalization"
+    call: "translate"
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP']"
+    description: "Translate vernacular script into standardized administrative text via BHASHINI NMT while enforcing adversarial prompt-injection firewall checks."
+    on_success: "step_04_structured_field_entity_extraction"
+    on_failure:
+      action: "escalate"
+      retry: { max_attempts: 2, backoff: "exponential" }
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "We could not translate your message automatically. A District Officer will review your request."
 
-    - step_id: "step_10"
-      step_name: "step_10_automated_payout_disbursement"
-      block: "payment_disburse"
-      type: "dpi_rail"
-      description: "Trigger direct treasury direct benefit transfer (DBT) transfer sequences over national payment clearing networks"
-      inputs:
-        routing_decision:
-          selector:
-            router_path: "$.step_09.output.routing_decision"
-            default_fallback: "FORWARD_TO_AUTOMATED_PAYOUT_DISBURSEMENT"
-        openspp_case_id:
-          selector:
-            registry_path: "$.step_07.output.openspp_case_id"
-            default_fallback: "CASE_ID_NOT_FOUND"
-      outputs:
-        payment_transaction_id: "string"
-        payout_clearance_status: "string"
-      parameters:
-        treasury_rail: "NPCI_Aadhaar_Payment_Bridge_System"
-      on_success: "step_12"
-      on_failure: "step_11"
+  - id: "step_04_structured_field_entity_extraction"
+    call: "structured_extract"
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP']"
+    description: "Extract structured claim entities (district, crop_type, damage_cause) via sovereign SLM; zero confidence score immediately if prompt injection is detected."
+    on_success: "step_05_identity_perimeter_tokenization"
+    on_failure:
+      action: "fallback"
+      to: "step_08_governance_threshold_evaluation"
+      citizen_message: "Please clarify your district and damaged crop so we can verify your land record."
 
-    - step_id: "step_11"
-      step_name: "step_11_caseworker_incident_staging"
-      block: "human_review"
-      type: "governance_gate"
-      description: "Generate a unique state incident tracking token and stage context parameters inside manual review officer ledgers"
-      inputs:
-        routing_decision:
-          selector:
-            router_path: "$.step_09.output.routing_decision"
-            default_fallback: "INFRASTRUCTURE_FAULT_ESCALATION"
-        loop_counter:
-          selector:
-            evaluation_path: "$.step_08.output.active_attempt_id"
-            default_fallback: 1
-      outputs:
-        escalation_case_id: "string"
-        caseworker_assignment_status: "string"
-      parameters:
-        caseworker_queue: "District Agricultural Officer Review Ledger Dashboard"
-        incident_token_config:
-          prefix: "SPP-CASE-"
-          generation_mechanism: "prefix_plus_year_plus_random_index"
-      on_success: "step_12"
-      on_failure: "step_12"
+  - id: "step_05_identity_perimeter_tokenization"
+    call: "identity_verify"
+    description: "Tokenize raw citizen/farmer identifier in volatile RAM using HMAC-SHA256 with a managed secret pepper (`tkn_<64-hex>`) and purge cleartext from memory."
+    on_success: "step_05b_analytical_session_deduplication"
+    on_failure:
+      action: "stop"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Unable to validate your identity token format. Please retry or visit an assisted service counter."
 
-    - step_id: "step_12"
-      step_name: "step_12_adaptive_multichannel_confirmation_delivery"
-      block: "notification_emit"
-      type: "dpi_rail"
-      description: "Finalize pipeline actions, translating status flags into user confirmations or channel-native re-prompt loops"
-      inputs:
-        routing_decision:
-          selector:
-            router_path: "$.step_09.output.routing_decision"
-            default_fallback: "FORWARD_TO_INCIDENT_TICKET_STAGING"
-        active_attempt_id:
-          selector:
-            evaluation_path: "$.step_08.output.active_attempt_id"
-            default_fallback: 1
-        payment_context:
-          selector:
-            success_path: "$.step_10.output.payment_transaction_id"
-            default_fallback: "null"
-        fallback_context:
-          selector:
-            review_path: "$.step_11.output.escalation_case_id"
-            default_fallback: "null"
-      parameters:
-        notification_engine: "CDAC_Mobile_Seva_Gateway"
-        voice_synthesis_engine: "BHASHINI_TTS_EXECUTION_HUB"
-        runtime_template_bindings:
-          payment_transaction_id: "$.inputs.payment_context"
-          escalation_case_id: "$.inputs.fallback_context"
-          current_retry_iteration: "$.inputs.active_attempt_id"
-      channel_payloads:
-        ivr_voice_output:
-          action: "SYNTHESIZE_AND_PLAY_AUDIO"
-          format: "audio/wav"
-          templates:
-            success_template: "AUDIO_DISBURSEMENT_SUCCESS_V1"
-            reprompt_template: "AUDIO_CLARIFICATION_PROMPT_V3"
-            escalation_template: "AUDIO_CASEWORKER_TRANSFER_NOTICE_PHONETIC"
-        whatsapp_output:
-          action: "TRANSMIT_RICH_MEDIA_CARD"
-          format: "application/json"
-          templates:
-            success_template: "TEXT_DISBURSEMENT_SUCCESS_CARD"
-            reprompt_template: "TEXT_CLARIFICATION_MESSAGE_CARD"
-            escalation_template: "TEXT_CASEWORKER_ESCALATION_MARKDOWN_CARD"
-        ussd_output:
-          action: "PUSH_SIGNALING_STRING"
-          format: "text/plain"
-          templates:
-            success_template: "USSD_SUCCESS_STRING"
-            reprompt_template: "null"
-            escalation_template: "USSD_SHORT_160CHAR_FAIL_STRING"
-        sms_output:
-          action: "BROADCAST_TRANSACTIONAL_SMS"
-          format: "text/plain"
-          templates:
-            success_template: "SMS_PAYMENT_TXN_RECEIPT"
-            reprompt_template: "SMS_REPROMPT_ALERT"
-            escalation_template: "SMS_CASEWORKER_ASSIGNED_TICKET"
-      on_termination: "commit_session_audit_and_close"
+  - id: "step_05b_analytical_session_deduplication"
+    call: "staging_committed_extractions_view"
+    description: "Compact multi-attempt conversational turns via ANSI SQL window functions (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_number DESC)`) so only the latest verified turn enters registry matching."
+    on_success: "step_06_agricultural_registry_crossmatch"
+    on_failure:
+      action: "escalate"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Session state error detected. Escalating to a human caseworker."
 
-audit:
-  log_all_steps: true
-  pii_redaction: true
-  immutable: true
-  audit_logger_block: "audit_log"
-  parameters:
-    target_storage: "local_postgres_telemetry_log_table"
-    enforce_anti_tampering: true
-    row_signature_checksum: "SHA-256"
-    required_metadata_tokens:
-      - "log_entry_id"
-      - "session_id"
-      - "actor_id"
-      - "timestamp_utc"
-      - "action_executed"
-      - "state_delta_checksum"
+  - id: "step_06_agricultural_registry_crossmatch"
+    call: "registry_search"
+    description: "Query Federated AgriStack Farmer, Farmland Plot, and Crop Sown Registries via signed G2P Connect v1.0.0 `search` / `on-search` envelopes using only the tokenized identity hash."
+    on_success: "step_07_social_benefits_registry_submission"
+    on_failure:
+      action: "fallback"
+      to: "step_08_governance_threshold_evaluation"
+      citizen_message: "Your land or seasonal crop record could not be automatically matched."
+
+  - id: "step_07_social_benefits_registry_submission"
+    call: "check_benefit_eligibility"
+    condition: "registry_match_flag == true"
+    description: "Stage the verified claim record in the OpenSPP / OpenG2P social protection ledger pending governance gate clearance."
+    on_success: "step_08_governance_threshold_evaluation"
+    on_failure:
+      action: "escalate"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Your claim has been queued for manual registration by a District Officer."
+
+  - id: "step_08_governance_threshold_evaluation"
+    call: "check_benefit_eligibility"
+    description: "Evaluate Three-Gate Governance Matrix: Gate 1 (extraction_confidence >= 0.85, or 1.00 for deterministic USSD), Gate 2 (AgriStack registry_match_flag == true), and Gate 3 (attempt_number <= 3)."
+    on_success: "step_09_governance_routing_engine"
+    on_failure:
+      action: "fallback"
+      to: "step_09_governance_routing_engine"
+      citizen_message: "Evaluating routing path based on governance thresholds."
+
+  - id: "step_09_governance_routing_engine"
+    call: "check_benefit_eligibility"
+    description: "Route deterministically to: (a) step_10 automated payout if all gates pass, (b) conversational re-prompt if attempt_number < 3 on Voice/WhatsApp, or (c) step_11 human caseworker queue if attempt_number >= 3 or USSD mismatch."
+    on_success: "step_10_automated_payout_disbursement"
+    on_failure:
+      action: "escalate"
+      to: "step_11_caseworker_incident_staging"
+      citizen_message: "Routing your application to a District Agricultural Officer for manual review."
+
+  - id: "step_10_automated_payout_disbursement"
+    call: "payment_disburse"
+    condition: "evaluation_passed == true"
+    description: "Emit signed G2P Connect (DCI) v1.0.0 `disburse` envelope with idempotency key bound to `openspp_case_id` and reconcile asynchronous `on-disburse` settlement webhooks."
+    on_success: "step_12_adaptive_multichannel_confirmation_delivery"
+    on_failure:
+      action: "escalate"
+      to: "step_11_caseworker_incident_staging"
+      citizen_message: "Treasury settlement requires officer verification. Your Case ID has been generated."
+
+  - id: "step_11_caseworker_incident_staging"
+    call: "human_review"
+    condition: "evaluation_passed == false"
+    description: "Generate cryptographically tracked `SPP-CASE-` ticket in the District Agricultural Officer HITL adjudication queue with full redacted audit context."
+    on_success: "step_12_adaptive_multichannel_confirmation_delivery"
+    on_failure:
+      action: "stop"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Your claim is queued for priority officer review."
+
+  - id: "step_12_adaptive_multichannel_confirmation_delivery"
+    call: "text_to_speech"
+    description: "Dispatch final DBT payment transaction receipt or HITL escalation Case ID across the citizen's native channel (BHASHINI TTS audio for IVR, rich card for WhatsApp, USSD string, plus transactional SMS)."
+    on_success: "workflow_completed"
+    on_failure:
+      action: "fallback"
+      to: "district_agricultural_officer_hitl"
+      citizen_message: "Confirmation SMS queued via backup telecom gateway."
+
+outputs:
+  status: "success | escalated | reprompt | failed"
+  decision:
+    claim_id: "string"
+    governance_status: "APPROVED_FOR_DISBURSEMENT | ESCALATED_TO_CASEWORKER | REPROMPT_REQUESTED"
+    payment_transaction_id: "string | null"
+    escalation_case_id: "string | null"
+  audit_trail_ref: "application_governance_ledger_history.history_entry_id"
+
+logging:
+  level: "INFO"
+  destination: "stdout | postgresql_append_only_ledger"
+  format: "json"
+  events:
+    - "workflow_started"
+    - "consent_verified"
+    - "ai_block_called"
+    - "pii_tokenized_at_perimeter"
+    - "safeguards_checked"
+    - "registry_crossmatched"
+    - "decision_made"
+    - "g2p_connect_envelope_dispatched"
+    - "escalation_triggered"
+    - "workflow_completed"
+  redaction:
+    pii_fields:
+      - "requester.identifier"
+      - "requester.consent_token"
+      - "request.payload.source_phone_number"
+      - "request.payload.farmer_id_cleartext"
+      - "request.payload.aadhaar_number"
