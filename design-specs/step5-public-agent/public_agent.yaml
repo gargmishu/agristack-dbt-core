@@ -11,7 +11,7 @@ public_agent:
   description: >-
     Constrained, multilingual citizen-facing Public Agent that guides smallholder
     farmers through seasonal crop-loss subsidy and Direct Benefit Transfer (DBT)
-    applications across IVR Voice, WhatsApp, and USSD (*147#), activating the
+    applications across IVR Voice, WhatsApp, USSD (*147#), and SMS, activating the
     governed DPI Workflow without autonomous decision-making authority.
   channels: ["ivr_voice", "whatsapp", "ussd", "sms"]
   languages: ["hi-IN", "en-IN"]
@@ -56,7 +56,7 @@ public_agent:
     consent:
       required: true
       fields: ["requester.consent_token"]
-      channels_supported: ["ivr_dtmf_1", "whatsapp_interactive_optin", "ussd_menu_1"]
+      channels_supported: ["ivr_dtmf_1", "whatsapp_interactive_optin", "ussd_menu_1", "sms_optin_keyword"]
 
   workflow_invocation:
     engine_endpoint: "http://localhost:8000/v1/intake"

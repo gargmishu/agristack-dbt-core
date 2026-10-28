@@ -10,7 +10,7 @@ workflow:
   name: "autonomous_multi_channel_farmer_subsidy_system"
   version: "1.0.0"
   description: >-
-    Governed multi-channel (IVR Voice, WhatsApp, USSD) farmer crop-loss relief
+    Governed multi-channel (IVR Voice, WhatsApp, USSD, SMS) farmer crop-loss relief
     and Direct Benefit Transfer (DBT) workflow enforcing Layer-2 Zero-Trust
     HMAC-SHA256 PII tokenization, three-gate deterministic eligibility
     governance, human-in-the-loop (HITL) caseworker escalation, and G2P Connect
@@ -202,7 +202,8 @@ safeguards:
 steps:
   - id: "step_01_consent_and_channel_entry"
     call: "verify_zero_trust_safeguards()"
-    description: "Capture explicit channel-native citizen opt-in (IVR DTMF '1', WhatsApp opt-in button, or USSD menu '1') prior to any processing."
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
+    description: "Capture explicit channel-native citizen opt-in (IVR DTMF '1', WhatsApp opt-in button, USSD menu '1', or SMS opt-in keyword) prior to any processing."
     on_success: "step_02_speech_to_text_transcription"
     on_failure:
       action: "stop"
@@ -211,8 +212,8 @@ steps:
 
   - id: "step_02_speech_to_text_transcription"
     call: "speech_to_text"
-    condition: "request.payload.ingress_channel == 'IVR_VOICE'"
-    description: "Transcribe incoming 16kHz mono PCM rural voice stream via BHASHINI ASR; bypass for WhatsApp and USSD."
+    condition: "request.payload.ingress_channel == 'IVR_VOICE' or (request.payload.ingress_channel == 'WHATSAPP' and request.payload.payload_type == 'AUDIO')"
+    description: "Transcribe incoming 16kHz mono PCM rural voice stream or WhatsApp audio note via BHASHINI ASR; bypass for text WhatsApp, SMS, and USSD."
     on_success: "step_03_text_translation_and_normalization"
     on_failure:
       action: "escalate"
@@ -222,8 +223,8 @@ steps:
 
   - id: "step_03_text_translation_and_normalization"
     call: "translate"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP']"
-    description: "Translate vernacular script into standardized administrative text via BHASHINI NMT while enforcing adversarial prompt-injection firewall checks."
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
+    description: "Translate vernacular script (from IVR ASR, WhatsApp, or SMS) into standardized administrative text via BHASHINI NMT while enforcing adversarial prompt-injection firewall checks."
     on_success: "step_04_structured_field_entity_extraction"
     on_failure:
       action: "escalate"
@@ -233,8 +234,8 @@ steps:
 
   - id: "step_04_structured_field_entity_extraction"
     call: "structured_extract"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP']"
-    description: "Extract structured claim entities (district, crop_type, damage_cause) via sovereign SLM; zero confidence score immediately if prompt injection is detected."
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
+    description: "Extract structured claim entities (district, crop_type, damage_cause) from IVR Voice, WhatsApp, or SMS text via sovereign SLM; zero confidence score immediately if prompt injection is detected."
     on_success: "step_05_identity_perimeter_tokenization"
     on_failure:
       action: "fallback"
@@ -252,7 +253,8 @@ steps:
 
   - id: "step_05b_analytical_session_deduplication"
     call: "staging_committed_extractions_view"
-    description: "Compact multi-attempt conversational turns via ANSI SQL window functions (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_number DESC)`) so only the latest verified turn enters registry matching."
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
+    description: "Compact multi-attempt conversational turns (IVR Voice, WhatsApp, SMS) via ANSI SQL window functions (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_number DESC)`) so only the latest verified turn enters registry matching."
     on_success: "step_06_agricultural_registry_crossmatch"
     on_failure:
       action: "escalate"
@@ -289,7 +291,7 @@ steps:
 
   - id: "step_09_governance_routing_engine"
     call: "check_benefit_eligibility"
-    description: "Route deterministically to: (a) step_10 automated payout if all gates pass, (b) conversational re-prompt if attempt_number < 3 on Voice/WhatsApp, or (c) step_11 human caseworker queue if attempt_number >= 3 or USSD mismatch."
+    description: "Route deterministically to: (a) step_10 automated payout if all gates pass, (b) conversational re-prompt if attempt_number < 3 on IVR Voice, WhatsApp, or SMS, or (c) step_11 human caseworker queue if attempt_number >= 3 or USSD mismatch."
     on_success: "step_10_automated_payout_disbursement"
     on_failure:
       action: "escalate"
@@ -318,7 +320,8 @@ steps:
 
   - id: "step_12_adaptive_multichannel_confirmation_delivery"
     call: "text_to_speech"
-    description: "Dispatch final DBT payment transaction receipt or HITL escalation Case ID across the citizen's native channel (BHASHINI TTS audio for IVR, rich card for WhatsApp, USSD string, plus transactional SMS)."
+    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
+    description: "Dispatch final DBT payment transaction receipt or HITL escalation Case ID across the citizen's native channel (BHASHINI TTS audio for IVR Voice, rich card for WhatsApp, compact <=160-char plain text for USSD and SMS)."
     on_success: "workflow_completed"
     on_failure:
       action: "fallback"
