@@ -14,17 +14,37 @@ public_agent:
     applications across IVR Voice, WhatsApp, USSD (*147#), and SMS, activating the
     governed DPI Workflow without autonomous decision-making authority.
   channels: ["ivr_voice", "whatsapp", "ussd", "sms"]
-  languages: ["hi-IN", "en-IN"]
+  languages:
+    - "hi-IN"
+    - "en-IN"
+    - "mr-IN"
+    - "te-IN"
+    - "ta-IN"
+    - "gu-IN"
+    - "kn-IN"
+    - "bn-IN"
+    - "pa-IN"
+    - "or-IN"
+    - "ml-IN"
 
   ai_model:
     # Plug-and-play adapter for sovereign or local inference ecosystems
     adapter: "vllm"  # openai | anthropic | google | ollama | vllm | tgi | azure_openai | bedrock | custom
     runtime: "on_prem"  # external_api | sovereign_cloud | on_prem
-    endpoint: "http://localhost:8000/v1"
-    model: "on-prem-local-slm-v1"
-    auth_ref: "env://AI_GATEWAY_BEARER_TOKEN"
-    interface: "chat_completions"
-    timeout_ms: 30000
+    endpoint: "http://localhost:8000/v1/extract"
+    endpoint_env: "SLM_API_ENDPOINT"
+    model: "sovereign-slm-v1"
+    auth_ref: "env://SLM_API_KEY"
+    speech_and_translation_gateway:
+      provider: "Digital India BHASHINI (ASR / NMT / TTS)"
+      endpoint_env: "BHASHINI_API_ENDPOINT"
+      auth_ref: "env://BHASHINI_API_KEY"
+      routes:
+        asr: "POST /v1/asr/transcribe"
+        nmt: "POST /v1/nmt/translate"
+        tts: "POST /v1/tts/synthesize"
+    interface: "structured_entity_extraction"
+    timeout_ms: 2000
     parameters:
       temperature: 0.0
       max_tokens: 512
@@ -52,30 +72,43 @@ public_agent:
     identity:
       required: true
       fields: ["requester.identifier"]
-      tokenization_standard: "HMAC-SHA256 (Layer-2 Perimeter)"
+      tokenization_standard: "HMAC-SHA256 (Layer-2 Perimeter -> 64-char hex HmacCitizenToken)"
+      pepper_secret_env: "PII_TOKENIZATION_PEPPER"
     consent:
       required: true
       fields: ["requester.consent_token"]
       channels_supported: ["ivr_dtmf_1", "whatsapp_interactive_optin", "ussd_menu_1", "sms_optin_keyword"]
 
   workflow_invocation:
-    engine_endpoint: "http://localhost:8000/v1/intake"
+    entrypoint_class: "src/public_agent/public_agent_api.py#PublicAgentApi.process_raw_ingress"
+    orchestrator_class: "src/orchestrator/claim_orchestrator.py#ClaimOrchestrator.execute_orchestration_cycle"
+    ingress_webhooks:
+      whatsapp: "POST /v1/webhooks/whatsapp"
+      ivr_voice: "POST /v1/webhooks/ivr"
+      ussd: "POST /v1/webhooks/ussd"
+      sms: "POST /v1/webhooks/sms"
+    dpi_callbacks:
+      g2p_connect_on_search: "POST /v1/webhooks/g2p-connect/on-search"
+      g2p_connect_on_disburse: "POST /v1/webhooks/g2p-connect/on-disburse"
+      payment_settlement_callback: "POST /v1/webhooks/payments/callback"
     mode: "invoke_by_id"
     request_shape:
       workflow_id: "wf-crop-loss-subsidy-2026"
-      inputs: "StandardizedIntakeContract"
+      inputs: "src/data_models/public_agent/standardized_intake_payload.py#PublicAgentStandardizedIntakePayload"
       context:
-        identity: "TokenizedCitizenIdentity"
-        consent: "ConsentVerificationReceipt"
+        identity: "src/data_models/common/field_types.py#HmacCitizenToken"
+        consent: "consent_registry.consent_id"
     response_shape:
-      status: "success | escalated | reprompt | failed"
-      decision: "GovernanceOutcomeContract"
-      explanation: "LocalizedPlainLanguageConfirmation"
-      audit_trail_ref: "LedgerHistoryEntryUUID"
+      status: "success | escalated | reprompt | rejected | failed"
+      decision: "src/data_models/governance/governance_outcome_payload.py#GovernanceOutcomePayload"
+      explanation: "src/data_models/notification/outbound_notification_payload.py#OutboundNotificationPayload"
+      transmission_ack: "src/data_models/notification/transmission_ack.py#TransmissionAck"
+      audit_trail_ref: "application_governance_ledger_history.history_id"
 
   runtime_behavior:
     intent_to_workflow_mapping:
       method: "rules_then_model"
+      structured_menu_fast_path_bypass: true
       allow_only_listed_workflows: true
     escalation:
       on:
@@ -92,9 +125,11 @@ public_agent:
       redact_fields:
         - "requester.identifier"
         - "requester.consent_token"
-        - "source_phone_number"
-        - "farmer_id_cleartext"
+        - "phone_number"
+        - "caller_phone_number"
+        - "sender_phone_number"
         - "aadhaar_number"
+        - "farmer_id_cleartext"
 
   governance:
     owner_agency: "Department of Agriculture & Farmers Welfare (Sovereign / State Nodal Agency)"
@@ -105,5 +140,7 @@ public_agent:
       enabled: true
       channel: "any"
       caseworker_queue_endpoint: "GET /v1/caseworker/cases"
-      adjudication_endpoint: "POST /v1/caseworker/cases/{claim_id}/resolve"
+      adjudication_endpoint: "POST /v1/caseworker/cases/{escalation_case_id}/review"
+      audit_funnel_endpoint: "GET /v1/audit/funnel"
+      audit_history_endpoint: "GET /v1/audit/history/{claim_id}"
       response_sla: "48h"

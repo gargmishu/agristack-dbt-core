@@ -37,7 +37,18 @@ actors:
   public_agent:
     id: "pa-farmer-subsidy-gateway-2026"
     channels: ["ivr_voice", "whatsapp", "ussd", "sms"]
-    languages: ["hi-IN", "en-IN"]
+    languages:
+      - "hi-IN"
+      - "en-IN"
+      - "mr-IN"
+      - "te-IN"
+      - "ta-IN"
+      - "gu-IN"
+      - "kn-IN"
+      - "bn-IN"
+      - "pa-IN"
+      - "or-IN"
+      - "ml-IN"
   human_agent:
     id: "district_agricultural_officer_hitl"
     role: "District Agricultural Officer / Caseworker Adjudicator"
@@ -49,7 +60,7 @@ inputs:
       format: "hmac_sha256_token | national_id | phone"
       required: true
       example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-      validation: "^[a-f0-9]{64}$"
+      validation: "^[a-fA-F0-9]{64}$"
     consent_token:
       type: string
       format: "channel_native_opt_in | jwt"
@@ -58,7 +69,7 @@ inputs:
   request:
     payload:
       type: object
-      schema_ref: "src/data_models/public_agent/intake_contracts.py#StandardizedIntakeContract"
+      schema_ref: "src/data_models/public_agent/standardized_intake_payload.py#PublicAgentStandardizedIntakePayload"
       required: true
       additional_properties: false
     attachments:
@@ -72,63 +83,72 @@ inputs:
 ai_blocks:
   - name: "speech_to_text"
     kind: "foundational"
-    interface: "speech_to_text(audio_stream_uri, source_language)"
-    provider: "Digital India BHASHINI ASR Cluster"
+    interface: "BhashiniService.transcribe_audio(audio_url, language_locale)"
+    provider: "Digital India BHASHINI ASR Cluster (POST /v1/asr/transcribe)"
     io:
-      in: ["request.payload.ivr_audio_stream_uri", "request.payload.source_language"]
-      out: ["unstructured_vernacular_string", "asr_confidence"]
+      in: ["request.payload.unprocessed_input_content", "request.payload.language_locale"]
+      out: ["transcribed_vernacular_text"]
     governance:
-      purpose: "Transcribe rural telephony 16kHz PCM voice streams into vernacular text"
+      purpose: "Transcribe rural telephony 16kHz PCM voice streams and WhatsApp audio notes into vernacular text"
       data_minimization: true
       logging: true
       fallback: "escalate_to_human_agent"
 
   - name: "translate"
     kind: "foundational"
-    interface: "translate_local_language(unstructured_text, source_language, target_language)"
-    provider: "Digital India BHASHINI NMT Hub"
+    interface: "BhashiniService.translate_text(text, source_locale, target_locale='en-IN')"
+    provider: "Digital India BHASHINI NMT Hub (POST /v1/nmt/translate)"
     io:
-      in: ["unstructured_vernacular_string", "source_language", "target_language"]
-      out: ["standardized_english_string"]
+      in: ["transcribed_or_raw_text", "request.payload.language_locale", "target_locale"]
+      out: ["standardized_english_text"]
     governance:
-      purpose: "Normalize regional agricultural dialects (e.g., Haryanvi/Hindi) into canonical administrative text"
+      purpose: "Normalize regional agricultural dialects across 11 scheduled Indian languages into canonical administrative text"
       data_minimization: true
       logging: true
       fallback: "escalate_to_human_agent"
 
   - name: "structured_extract"
     kind: "sector_specific"
-    interface: "extract_claim_entities(standardized_english_string)"
-    provider: "Sovereign On-Premises Small Language Model (vLLM / Ollama)"
+    interface: "SlmExtractor.extract_entities(session_id, unprocessed_content, language_locale)"
+    provider: "Sovereign On-Premises Small Language Model (vLLM / Ollama POST /v1/extract)"
     io:
-      in: ["standardized_english_string"]
-      out: ["extracted_entities", "extraction_confidence"]
+      in: ["request.payload.session_id", "standardized_english_text", "request.payload.language_locale"]
+      out:
+        - "extracted_entity_payload.application_intent"
+        - "extracted_entity_payload.ai_confidence_score"
+        - "extracted_entity_payload.domain_entities"
+        - "extracted_entity_payload.is_adversarial_attempt"
+        - "extracted_entity_payload.is_structured_menu_bypass"
     governance:
-      purpose: "Extract bounded agricultural claim parameters (district, crop_type, damage_cause) under strict schema validation"
+      purpose: "Extract bounded agricultural claim entities (district, crop_name, survey_number, land_size_acres, subsidy_scheme_id) under strict Pydantic schema validation (`ExtractedEntityPayload`)"
       data_minimization: true
       logging: true
       fallback: "reprompt_or_escalate_to_human_agent"
 
   - name: "identity_verify"
     kind: "sector_specific"
-    interface: "verify_identity(raw_national_id_or_phone)"
-    provider: "Layer-2 Zero-Trust Security Gateway (HMAC-SHA256 + MOSIP / National ID Pattern)"
+    interface: "ZeroTrustIdentityTokenizer.tokenize_id(raw_identifier) + IdentityVerificationService.verify_citizen_identity(tokenized_citizen_id)"
+    provider: "Layer-2 Zero-Trust Security Gateway (HMAC-SHA256) & MOSIP / UIDAI Token Verification"
     io:
       in: ["requester.identifier"]
-      out: ["tokenized_identity_hash", "identity_verified"]
+      out: ["request.payload.tokenized_citizen_id", "is_identity_verified"]
     governance:
-      purpose: "Convert cleartext citizen identifiers in volatile RAM into irreversible 64-char HMAC-SHA256 tokens before any downstream call"
+      purpose: "Convert cleartext citizen identifiers (MSISDN / Aadhaar / Farmer ID) in volatile RAM into irreversible 64-char hex HMAC-SHA256 tokens (`HmacCitizenToken`) and verify active identity status"
       data_minimization: true
       logging: true
       fallback: "abort_session_with_rfc7807_error"
 
   - name: "registry_search"
     kind: "sector_specific"
-    interface: "fetch_verified_record(tokenized_identity_hash, benefit_program_code)"
+    interface: "AgriRegistryService.verify_land_and_crop_records(tokenized_citizen_id, district, crop_name, survey_number)"
     provider: "Federated AgriStack Registry (Farmer, Farmland Plot, & Crop Sown Registries via G2P Connect v1.0.0 search/on-search)"
     io:
-      in: ["tokenized_identity_hash", "extracted_entities.district_name", "extracted_entities.crop_type"]
-      out: ["registry_match_flag", "cadastral_plot_id", "sown_crop_verified"]
+      in:
+        - "request.payload.tokenized_citizen_id"
+        - "extracted_entity_payload.domain_entities.district"
+        - "extracted_entity_payload.domain_entities.crop_name"
+        - "extracted_entity_payload.domain_entities.survey_number"
+      out: ["is_land_record_verified", "matched_survey_number", "eligible_subsidy_amount_inr"]
     governance:
       purpose: "Verify land parcel ownership and seasonal crop sown provenance using pseudonymized identity tokens"
       data_minimization: true
@@ -137,39 +157,54 @@ ai_blocks:
 
   - name: "check_benefit_eligibility"
     kind: "sector_specific"
-    interface: "check_benefit_eligibility(extraction_confidence, registry_match_flag, attempt_number)"
-    provider: "Deterministic Three-Gate Governance Engine & OpenSPP / OpenG2P Case Registry"
+    interface: "ClaimAdjudicator.evaluate_claim(claim_evaluation_payload)"
+    provider: "Deterministic Three-Gate Governance Engine (`ClaimAdjudicator`) & OpenSPP / OpenG2P Social Registry (`SocialRegistryService`)"
     io:
-      in: ["extraction_confidence", "registry_match_flag", "attempt_number"]
-      out: ["evaluation_passed", "routing_decision", "openspp_case_id"]
+      in:
+        - "extracted_entity_payload.ai_confidence_score"
+        - "extracted_entity_payload.is_adversarial_attempt"
+        - "is_identity_verified"
+        - "is_land_record_verified"
+        - "has_duplicate_active_claim"
+        - "attempt_count"
+      out:
+        - "governance_outcome.eligibility_status"
+        - "governance_outcome.governance_action"
+        - "governance_outcome.escalation_case_id"
+        - "governance_outcome.rejection_reason"
     governance:
-      purpose: "Enforce deterministic >=0.85 confidence threshold, registry provenance match, and 3-strike conversational retry ceiling"
+      purpose: "Enforce deterministic >=0.85 confidence threshold, anti-double-dipping seasonal check, registry provenance match, and 3-strike conversational retry ceiling"
       data_minimization: true
       logging: true
       fallback: "escalate_to_human_agent"
 
   - name: "payment_disburse"
     kind: "sector_specific"
-    interface: "transfer_funds(openspp_case_id, tokenized_identity_hash, benefit_program_code)"
-    provider: "G2P Connect (DCI) v1.0.0 Disbursement Envelope Mapper & NPCI APBS / PFMS / Mojaloop Treasury Rail"
+    interface: "PaymentRailService.initiate_subsidy_payout(tokenized_citizen_id, amount_inr, disbursement_txn_id)"
+    provider: "G2P Connect (DCI) v1.0.0 Disbursement Envelope Mapper & NPCI APBS / PFMS Treasury Rail"
     io:
-      in: ["openspp_case_id", "tokenized_identity_hash", "benefit_program_code"]
-      out: ["payment_transaction_id", "payout_clearance_status"]
+      in: ["request.payload.tokenized_citizen_id", "eligible_subsidy_amount_inr", "governance_outcome.disbursement_txn_id"]
+      out: ["governance_outcome.disbursement_txn_id", "governance_outcome.disbursement_status"]
     governance:
-      purpose: "Emit cryptographically signed, idempotent G2P Connect v1.0.0 disbursement instructions and reconcile asynchronous on-disburse callbacks"
+      purpose: "Emit cryptographically signed, idempotent G2P Connect v1.0.0 disbursement instructions and reconcile asynchronous on-disburse / payment settlement callbacks"
       data_minimization: true
       logging: true
       fallback: "stage_for_manual_treasury_reconciliation"
 
   - name: "text_to_speech"
     kind: "foundational"
-    interface: "text_to_speech(confirmation_message, target_language)"
-    provider: "Digital India BHASHINI TTS Hub & CDAC Mobile Seva SMS Gateway"
+    interface: "MultichannelNotificationService.dispatch_notification(notification_request) + BhashiniService.synthesize_speech(text, language_locale)"
+    provider: "Digital India BHASHINI TTS Hub (POST /v1/tts/synthesize) & Multi-Channel Outbound Notification Gateway"
     io:
-      in: ["confirmation_message", "target_language", "ingress_channel"]
-      out: ["channel_delivery_receipt"]
+      in:
+        - "request.payload.channel_type"
+        - "request.payload.language_locale"
+        - "governance_outcome.governance_action"
+        - "governance_outcome.disbursement_txn_id"
+        - "governance_outcome.escalation_case_id"
+      out: ["transmission_ack"]
     governance:
-      purpose: "Deliver accessible voice, WhatsApp, USSD, and transactional SMS confirmation receipts or caseworker escalation IDs"
+      purpose: "Deliver accessible IVR voice (TTS audio), WhatsApp interactive message, USSD session response, and transactional SMS confirmation receipts or caseworker escalation IDs"
       data_minimization: true
       logging: true
       fallback: "send_transactional_sms_receipt"
@@ -202,8 +237,8 @@ safeguards:
 steps:
   - id: "step_01_consent_and_channel_entry"
     call: "verify_zero_trust_safeguards()"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
-    description: "Capture explicit channel-native citizen opt-in (IVR DTMF '1', WhatsApp opt-in button, USSD menu '1', or SMS opt-in keyword) prior to any processing."
+    condition: "request.payload.channel_type in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
+    description: "Verify carrier webhook signature, enforce rate limits, and capture explicit channel-native citizen opt-in (IVR DTMF '1', WhatsApp opt-in button, USSD menu '1', or SMS opt-in keyword) in `consent_registry` prior to any processing."
     on_success: "step_02_speech_to_text_transcription"
     on_failure:
       action: "stop"
@@ -212,8 +247,8 @@ steps:
 
   - id: "step_02_speech_to_text_transcription"
     call: "speech_to_text"
-    condition: "request.payload.ingress_channel == 'IVR_VOICE' or (request.payload.ingress_channel == 'WHATSAPP' and request.payload.payload_type == 'AUDIO')"
-    description: "Transcribe incoming 16kHz mono PCM rural voice stream or WhatsApp audio note via BHASHINI ASR; bypass for text WhatsApp, SMS, and USSD."
+    condition: "request.payload.channel_type == 'IVR_VOICE' or (request.payload.channel_type == 'WHATSAPP' and request.payload.payload_type == 'AUDIO')"
+    description: "Transcribe incoming 16kHz mono PCM rural voice stream or WhatsApp audio note via BHASHINI ASR (`transcribe_audio`); bypass for text WhatsApp, SMS, and USSD."
     on_success: "step_03_text_translation_and_normalization"
     on_failure:
       action: "escalate"
@@ -223,8 +258,8 @@ steps:
 
   - id: "step_03_text_translation_and_normalization"
     call: "translate"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
-    description: "Translate vernacular script (from IVR ASR, WhatsApp, or SMS) into standardized administrative text via BHASHINI NMT while enforcing adversarial prompt-injection firewall checks."
+    condition: "request.payload.channel_type in ['IVR_VOICE', 'WHATSAPP', 'SMS'] and request.payload.structure_level == 'FREE_TEXT'"
+    description: "Translate free-text vernacular script (from IVR ASR, WhatsApp, or SMS) into standardized administrative text via BHASHINI NMT (`translate_text`) while enforcing adversarial prompt-injection firewall checks; bypass for deterministic `DTMF_SELECTION` (USSD) and `MENU_SELECTION` (WhatsApp interactive menus)."
     on_success: "step_04_structured_field_entity_extraction"
     on_failure:
       action: "escalate"
@@ -234,8 +269,8 @@ steps:
 
   - id: "step_04_structured_field_entity_extraction"
     call: "structured_extract"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
-    description: "Extract structured claim entities (district, crop_type, damage_cause) from IVR Voice, WhatsApp, or SMS text via sovereign SLM; zero confidence score immediately if prompt injection is detected."
+    condition: "request.payload.channel_type in ['IVR_VOICE', 'WHATSAPP', 'SMS'] and request.payload.structure_level == 'FREE_TEXT'"
+    description: "Extract canonical claim entities (`district`, `crop_name`, `survey_number`) from free-text IVR Voice, WhatsApp, or SMS via sovereign SLM (`extract_entities`); force `ai_confidence_score = 0.0` immediately if `is_adversarial_attempt == true`. Structured USSD (`DTMF_SELECTION`) and WhatsApp (`MENU_SELECTION`) inputs bypass SLM with `is_structured_menu_bypass = true` and `ai_confidence_score = 1.0`."
     on_success: "step_05_identity_perimeter_tokenization"
     on_failure:
       action: "fallback"
@@ -244,7 +279,7 @@ steps:
 
   - id: "step_05_identity_perimeter_tokenization"
     call: "identity_verify"
-    description: "Tokenize raw citizen/farmer identifier in volatile RAM using HMAC-SHA256 with a managed secret pepper (`tkn_<64-hex>`) and purge cleartext from memory."
+    description: "Tokenize raw citizen/farmer identifier in volatile RAM using HMAC-SHA256 with a managed secret pepper into an exact 64-character lowercase hex digest (`HmacCitizenToken`, `^[a-fA-F0-9]{64}$`), purge cleartext from memory via `PiiPurgeGuard`, and verify active identity status via MOSIP / UIDAI token gateway."
     on_success: "step_05b_analytical_session_deduplication"
     on_failure:
       action: "stop"
@@ -252,9 +287,9 @@ steps:
       citizen_message: "Unable to validate your identity token format. Please retry or visit an assisted service counter."
 
   - id: "step_05b_analytical_session_deduplication"
-    call: "staging_committed_extractions_view"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
-    description: "Compact multi-attempt conversational turns (IVR Voice, WhatsApp, SMS) via ANSI SQL window functions (`ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY attempt_number DESC)`) so only the latest verified turn enters registry matching."
+    call: "staging_committed_extractions"
+    condition: "request.payload.channel_type in ['IVR_VOICE', 'WHATSAPP', 'SMS']"
+    description: "Mark prior conversational turns in `session_extraction_details` as `SUPERSEDED` and promote only the latest verified turn (`attempt_id`) to `COMMITTED` via the `staging_committed_extractions` view so abandoned retries never trigger duplicate registry searches."
     on_success: "step_06_agricultural_registry_crossmatch"
     on_failure:
       action: "escalate"
@@ -263,7 +298,7 @@ steps:
 
   - id: "step_06_agricultural_registry_crossmatch"
     call: "registry_search"
-    description: "Query Federated AgriStack Farmer, Farmland Plot, and Crop Sown Registries via signed G2P Connect v1.0.0 `search` / `on-search` envelopes using only the tokenized identity hash."
+    description: "Query Federated AgriStack Farmer, Farmland Plot, and Crop Sown Registries via signed G2P Connect v1.0.0 `search` / `on-search` envelopes using only `tokenized_citizen_id`, `district`, `crop_name`, and `survey_number`."
     on_success: "step_07_social_benefits_registry_submission"
     on_failure:
       action: "fallback"
@@ -272,8 +307,8 @@ steps:
 
   - id: "step_07_social_benefits_registry_submission"
     call: "check_benefit_eligibility"
-    condition: "registry_match_flag == true"
-    description: "Stage the verified claim record in the OpenSPP / OpenG2P social protection ledger pending governance gate clearance."
+    condition: "is_identity_verified == true and is_land_record_verified == true"
+    description: "Cross-check the OpenSPP / OpenG2P social protection ledger (`SocialRegistryService`) and `application_governance_ledger` for seasonal anti-double-dipping (`(tokenized_citizen_id, active_season)`)."
     on_success: "step_08_governance_threshold_evaluation"
     on_failure:
       action: "escalate"
@@ -282,7 +317,7 @@ steps:
 
   - id: "step_08_governance_threshold_evaluation"
     call: "check_benefit_eligibility"
-    description: "Evaluate Three-Gate Governance Matrix: Gate 1 (extraction_confidence >= 0.85, or 1.00 for deterministic USSD), Gate 2 (AgriStack registry_match_flag == true), and Gate 3 (attempt_number <= 3)."
+    description: "Evaluate Three-Gate Governance Matrix in `ClaimOrchestrator` and `ClaimAdjudicator`: Gate 1 (mandatory `district` and `crop_name` completeness), Gate 2 (3-strike conversational retry ceiling `attempt_count <= 3` returning `REQUEST_MORE_INFO` before escalating), and Gate 3 (`ai_confidence_score >= 0.85`, `is_adversarial_attempt == false`, `is_identity_verified == true`, `is_land_record_verified == true`, and `has_duplicate_active_claim == false`)."
     on_success: "step_09_governance_routing_engine"
     on_failure:
       action: "fallback"
@@ -291,7 +326,7 @@ steps:
 
   - id: "step_09_governance_routing_engine"
     call: "check_benefit_eligibility"
-    description: "Route deterministically to: (a) step_10 automated payout if all gates pass, (b) conversational re-prompt if attempt_number < 3 on IVR Voice, WhatsApp, or SMS, or (c) step_11 human caseworker queue if attempt_number >= 3 or USSD mismatch."
+    description: "Render deterministic `GovernanceOutcomePayload`: (a) `AUTO_APPROVE` (`ELIGIBLE`) -> route to `step_10` automated payout, (b) `REQUEST_MORE_INFO` (`PENDING_VERIFICATION`) -> conversational re-prompt if missing mandatory entities and `attempt_count < 3` on IVR Voice, WhatsApp, or SMS, (c) `ROUTE_FOR_MANUAL_REVIEW` (`REQUIRES_REVIEW`) -> route to `step_11` human caseworker queue (`SPP-CASE-YYYY-XXXXXX`) if `ai_confidence_score < 0.85`, `is_adversarial_attempt == true`, or `attempt_count >= 3`, or (d) `AUTO_REJECT` (`INELIGIBLE`) -> route to `step_12` with deterministic `RejectionReasonCode` (`DUPLICATE_CLAIM_ACTIVE_SEASON`, `IDENTITY_NOT_VERIFIED`, or `LAND_RECORD_NOT_FOUND`)."
     on_success: "step_10_automated_payout_disbursement"
     on_failure:
       action: "escalate"
@@ -300,8 +335,8 @@ steps:
 
   - id: "step_10_automated_payout_disbursement"
     call: "payment_disburse"
-    condition: "evaluation_passed == true"
-    description: "Emit signed G2P Connect (DCI) v1.0.0 `disburse` envelope with idempotency key bound to `openspp_case_id` and reconcile asynchronous `on-disburse` settlement webhooks."
+    condition: "governance_outcome.governance_action in ['AUTO_APPROVE', 'AUTOMATED_PAYOUT', 'MANUAL_APPROVE']"
+    description: "Emit signed G2P Connect (DCI) v1.0.0 `disburse` envelope via `G2PConnectMapperService` and `PaymentRailService` with idempotency key `disbursement_txn_id` initialized to `PENDING`, transition to `INITIATED` upon wire dispatch, and reconcile asynchronous `on-disburse` / `/v1/webhooks/payments/callback` settlement (`SUCCESS | FAILED | RETURNED`)."
     on_success: "step_12_adaptive_multichannel_confirmation_delivery"
     on_failure:
       action: "escalate"
@@ -310,8 +345,8 @@ steps:
 
   - id: "step_11_caseworker_incident_staging"
     call: "human_review"
-    condition: "evaluation_passed == false"
-    description: "Generate cryptographically tracked `SPP-CASE-` ticket in the District Agricultural Officer HITL adjudication queue with full redacted audit context."
+    condition: "governance_outcome.governance_action in ['ROUTE_FOR_MANUAL_REVIEW', 'HUMAN_REVIEW']"
+    description: "Stage cryptographically tracked `SPP-CASE-YYYY-XXXXXX` ticket in `CaseManagementService` (`GET /v1/caseworker/cases` and `POST /v1/caseworker/cases/{escalation_case_id}/review`) for District Agricultural Officer HITL adjudication with full redacted audit context."
     on_success: "step_12_adaptive_multichannel_confirmation_delivery"
     on_failure:
       action: "stop"
@@ -320,8 +355,8 @@ steps:
 
   - id: "step_12_adaptive_multichannel_confirmation_delivery"
     call: "text_to_speech"
-    condition: "request.payload.ingress_channel in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
-    description: "Dispatch final DBT payment transaction receipt or HITL escalation Case ID across the citizen's native channel (BHASHINI TTS audio for IVR Voice, rich card for WhatsApp, compact <=160-char plain text for USSD and SMS)."
+    condition: "request.payload.channel_type in ['IVR_VOICE', 'WHATSAPP', 'USSD', 'SMS']"
+    description: "Dispatch localized notification via `MultichannelNotificationService` across the citizen's native channel (BHASHINI TTS audio URL for `IVR_VOICE`, localized message for `WHATSAPP`, compact `<=160`-char plain text for `USSD` and `SMS`) carrying `disbursement_txn_id`, `escalation_case_id`, or `rejection_reason`."
     on_success: "workflow_completed"
     on_failure:
       action: "fallback"
@@ -329,13 +364,18 @@ steps:
       citizen_message: "Confirmation SMS queued via backup telecom gateway."
 
 outputs:
-  status: "success | escalated | reprompt | failed"
+  status: "success | escalated | reprompt | rejected | failed"
   decision:
-    claim_id: "string"
-    governance_status: "APPROVED_FOR_DISBURSEMENT | ESCALATED_TO_CASEWORKER | REPROMPT_REQUESTED"
-    payment_transaction_id: "string | null"
+    schema_ref: "src/data_models/governance/governance_outcome_payload.py#GovernanceOutcomePayload"
+    session_id: "string"
+    payload_id: "string"
+    eligibility_status: "ELIGIBLE | INELIGIBLE | REQUIRES_REVIEW | PENDING_VERIFICATION"
+    governance_action: "AUTO_APPROVE | AUTOMATED_PAYOUT | AUTO_REJECT | ROUTE_FOR_MANUAL_REVIEW | HUMAN_REVIEW | REQUEST_MORE_INFO | MANUAL_APPROVE | MANUAL_REJECT"
+    disbursement_txn_id: "string | null"
+    disbursement_status: "PENDING | INITIATED | SUCCESS | FAILED | RETURNED | null"
     escalation_case_id: "string | null"
-  audit_trail_ref: "application_governance_ledger_history.history_entry_id"
+    rejection_reason: "IDENTITY_NOT_VERIFIED | LAND_RECORD_NOT_FOUND | CROP_MISMATCH | DUPLICATE_CLAIM_ACTIVE_SEASON | INCOMPLETE_APPLICATION | ADVERSARIAL_OR_INELIGIBLE_INPUT | null"
+  audit_trail_ref: "application_governance_ledger_history.history_id"
 
 logging:
   level: "INFO"
@@ -356,6 +396,8 @@ logging:
     pii_fields:
       - "requester.identifier"
       - "requester.consent_token"
-      - "request.payload.source_phone_number"
-      - "request.payload.farmer_id_cleartext"
-      - "request.payload.aadhaar_number"
+      - "phone_number"
+      - "caller_phone_number"
+      - "sender_phone_number"
+      - "aadhaar_number"
+      - "farmer_id_cleartext"
