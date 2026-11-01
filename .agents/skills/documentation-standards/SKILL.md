@@ -1,11 +1,11 @@
 ---
 name: documentation-standards
-description: Guidelines for authoring and maintaining Markdown (.md) documents, architecture decision records (ADRs), system specifications, and sequence diagrams. Enforces conceptual domain modeling, architectural role terminology, and strict elimination of code-level class names, file paths, and method signatures from documentation.
+description: Guidelines for authoring and maintaining Markdown (.md) documents, architecture decision records (ADRs), system specifications, sequence diagrams, and external form/outreach responses. Enforces brief 1-2 sentence form/outreach answers, conceptual domain modeling, architectural role terminology, and strict elimination of code-level class names, file paths, and method signatures from documentation.
 ---
 
 # Architectural Documentation Standards & Markdown Guidelines
 
-This skill defines the principles, formatting rules, and style standards for writing and maintaining Markdown (`.md`) documentation, Architecture Decision Records (ADRs), system specifications, and workflow diagrams across the repository.
+This skill defines the principles, formatting rules, and style standards for writing and maintaining Markdown (`.md`) documentation, Architecture Decision Records (ADRs), system specifications, workflow diagrams, and external partner/form responses across the repository.
 
 ---
 
@@ -131,3 +131,12 @@ Before finalizing any `.md` file, verify:
 - [ ] **Model-agnostic terminology**: No hardcoded commercial AI vendor or model names (uses *SLM Entity Extractor*, *ASR Worker*, *NMT Translation Service*).
 - [ ] **Conceptual Mermaid diagrams**: All diagram nodes and sequence arrows use business and architectural roles.
 - [ ] **Zero-Trust Security alignment**: Correctly articulates zero-PII guarantees, in-memory HMAC tokenization, and fail-fast invariants.
+
+---
+
+## 6. Brief Form Responses, Outreach & User Answers
+
+Whenever answering external form questions, questionnaires, or outreach prompts for the user:
+* **Default to Ultra-Brief Copy-Paste Answers (1–2 short sentences max, ~30–45 words):** Never provide multi-paragraph or wordy blocks unless explicitly requested.
+* **Single Best Answer First:** Provide one tight, ready-to-paste answer rather than multiple long options.
+* **Partner-Agnostic & Reviewed Claims Only:** Keep collaboration descriptions generic enough to fit any ecosystem partner unless a specific partner is named, and never claim unreviewed code modules.
