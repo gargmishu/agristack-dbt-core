@@ -137,6 +137,7 @@ Before finalizing any `.md` file, verify:
 ## 6. Brief Form Responses, Outreach & User Answers
 
 Whenever answering external form questions, questionnaires, or outreach prompts for the user:
-* **Default to Ultra-Brief Copy-Paste Answers (1–2 short sentences max, ~30–45 words):** Never provide multi-paragraph or wordy blocks unless explicitly requested.
-* **Single Best Answer First:** Provide one tight, ready-to-paste answer rather than multiple long options.
-* **Partner-Agnostic & Reviewed Claims Only:** Keep collaboration descriptions generic enough to fit any ecosystem partner unless a specific partner is named, and never claim unreviewed code modules.
+* **Ultra-Brief & Explicit (1–2 short sentences, max 35 words):** Keep every answer punchy, concrete, and immediately understandable on first read.
+* **Plain English Over Jargon:** Name concrete people, roles, and actions (e.g., *"open-source developers, state government departments, DPI teams, and field NGOs"*) instead of abstract buzzwords.
+* **Single Best Answer First:** Provide one tight, ready-to-paste answer rather than multiple options.
+* **Partner-Agnostic & Reviewed Claims Only:** Keep collaboration answers generic enough to fit any partner unless specified, and never claim unreviewed code modules.
