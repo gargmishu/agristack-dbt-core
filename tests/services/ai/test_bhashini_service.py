@@ -99,26 +99,70 @@ async def test_mock_bhashini_service_synthesize_empty_text_raises() -> None:
 async def test_live_bhashini_service_endpoints_success() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         url_str = str(request.url)
-        assert request.headers.get("Authorization") == "Bearer test_secret_key"
-        assert url_str.startswith("https://api.bhashini.gov.in/v1/")
-        if "/v1/asr/transcribe" in url_str:
-            return httpx.Response(
-                HTTPStatus.OK, json={"transcript": "Live transcribed Hindi speech"}
-            )
-        if "/v1/nmt/translate" in url_str:
-            return httpx.Response(
-                HTTPStatus.OK, json={"translated_text": "Live translated English text"}
-            )
-        if "/v1/tts/synthesize" in url_str:
+        assert request.headers.get("Authorization") == "test_secret_key"
+        assert url_str == "https://dhruva-api.bhashini.gov.in/services/inference/pipeline"
+        payload = httpx.Response(HTTPStatus.OK, content=request.content).json()
+        task_type = payload["pipelineTasks"][0]["taskType"]
+
+        if task_type == "asr":
+            audio_entry = payload["inputData"]["audio"][0]
+            if "audioContent" in audio_entry:
+                return httpx.Response(
+                    HTTPStatus.OK,
+                    json={
+                        "pipelineResponse": [
+                            {
+                                "taskType": "asr",
+                                "output": [{"source": "Transcribed from base64 audio"}],
+                            }
+                        ]
+                    },
+                )
             return httpx.Response(
                 HTTPStatus.OK,
-                json={"audio_url": "https://cdn.bhashini.gov.in/live_audio.wav"},
+                json={
+                    "pipelineResponse": [
+                        {
+                            "taskType": "asr",
+                            "output": [{"source": "Live transcribed Hindi speech"}],
+                        }
+                    ]
+                },
+            )
+        if task_type == "translation":
+            return httpx.Response(
+                HTTPStatus.OK,
+                json={
+                    "pipelineResponse": [
+                        {
+                            "taskType": "translation",
+                            "output": [
+                                {
+                                    "source": "Namaste",
+                                    "target": "Live translated English text",
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        if task_type == "tts":
+            return httpx.Response(
+                HTTPStatus.OK,
+                json={
+                    "pipelineResponse": [
+                        {
+                            "taskType": "tts",
+                            "audio": [{"audioContent": "UklGRiQAAABXQVZFZm10IBAAAAABAAEA"}],
+                        }
+                    ]
+                },
             )
         return httpx.Response(HTTPStatus.NOT_FOUND)
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
     service = LiveBhashiniService(
-        endpoint_url="https://api.bhashini.gov.in",
+        endpoint_url="https://dhruva-api.bhashini.gov.in/services/inference/pipeline",
         api_key="test_secret_key",
         http_client=client,
     )
@@ -126,9 +170,38 @@ async def test_live_bhashini_service_endpoints_success() -> None:
     transcript = await service.transcribe_audio("https://carrier.in/audio.wav", "hi-IN")
     assert transcript == "Live transcribed Hindi speech"
 
+    tts_data_uri = await service.synthesize_speech("Disbursement approved", "hi-IN")
+    assert tts_data_uri == "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEA"
+
+    base64_transcript = await service.transcribe_audio(tts_data_uri, "hi-IN")
+    assert base64_transcript == "Transcribed from base64 audio"
+
     translation = await service.translate_text("Namaste", "hi-IN", "en-IN")
     assert translation == "Live translated English text"
 
+
+@pytest.mark.asyncio
+async def test_live_bhashini_service_tts_audio_uri_and_same_locale() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            HTTPStatus.OK,
+            json={
+                "pipelineResponse": [
+                    {
+                        "taskType": "tts",
+                        "audio": [{"audioUri": "https://cdn.bhashini.gov.in/live_audio.wav"}],
+                    }
+                ]
+            },
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    service = LiveBhashiniService(
+        endpoint_url="https://dhruva-api.bhashini.gov.in",
+        api_key="test_secret_key",
+        http_client=client,
+    )
+    assert await service.translate_text("Already English", "en-IN", "en-US") == "Already English"
     tts_url = await service.synthesize_speech("Disbursement approved", "hi-IN")
     assert tts_url == "https://cdn.bhashini.gov.in/live_audio.wav"
 
@@ -218,9 +291,22 @@ async def test_live_bhashini_service_malformed_payload_error() -> None:
 
 
 @pytest.mark.asyncio
-async def test_live_bhashini_service_response_payload_contract_violation() -> None:
+@pytest.mark.parametrize(
+    "malformed_payload",
+    [
+        {"unexpected_status": "ok"},
+        {"pipelineResponse": []},
+        {"pipelineResponse": ["not-a-dict"]},
+        {"pipelineResponse": [{"output": [], "audio": []}]},
+        {"pipelineResponse": [{"output": ["not-a-dict"], "audio": ["not-a-dict"]}]},
+        {"pipelineResponse": [{"output": [{"source": 123}], "audio": [{"audioUri": ""}]}]},
+    ],
+)
+async def test_live_bhashini_service_response_payload_contract_violation(
+    malformed_payload: dict[str, object],
+) -> None:
     def missing_field_handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(HTTPStatus.OK, json={"unexpected_status": "ok"})
+        return httpx.Response(HTTPStatus.OK, json=malformed_payload)
 
     client = httpx.AsyncClient(transport=httpx.MockTransport(missing_field_handler))
     service = LiveBhashiniService(
@@ -230,6 +316,10 @@ async def test_live_bhashini_service_response_payload_contract_violation() -> No
     )
     with pytest.raises(ServiceResponsePayloadError, match="missing 'transcript' field"):
         await service.transcribe_audio("https://carrier.in/valid.wav", "hi-IN")
+    with pytest.raises(ServiceResponsePayloadError, match="missing 'translated_text' field"):
+        await service.translate_text("Mera khet", "hi-IN", "en-IN")
+    with pytest.raises(ServiceResponsePayloadError, match="missing 'audio_url' field"):
+        await service.synthesize_speech("Mera khet", "hi-IN")
 
 
 @pytest.mark.asyncio

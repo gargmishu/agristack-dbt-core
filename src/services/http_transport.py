@@ -145,11 +145,14 @@ class ServiceTransportConfig:
         service_name: Internal identifier for RFC 7807 problem details (e.g. 'agristack').
         service_title: Human-readable service name for error logs and diagnostics.
         timeout_seconds: Network read/connect timeout in seconds.
+        auth_scheme: Authorization header prefix scheme (default 'Bearer'; empty string sends
+            raw API key in Authorization header for gateways such as ULCA/Dhruva).
     """
 
     service_name: str
     service_title: str
     timeout_seconds: float
+    auth_scheme: str = "Bearer"
 
     def __post_init__(self) -> None:
         if not self.service_name or not self.service_name.strip():
@@ -248,9 +251,11 @@ class ServiceHttpTransport:
             ServiceConfigurationError: If path or transport configuration is invalid.
         """
         url = self.resolve_url(path)
+        scheme = self._config.auth_scheme.strip()
+        authorization_value = f"{scheme} {self._api_key}" if scheme else self._api_key
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self._api_key}",
+            "Authorization": authorization_value,
         }
 
         try:

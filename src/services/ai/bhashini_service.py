@@ -26,7 +26,7 @@ See: decisions/step3.6_speech_and_translation_evaluation.md
 
 import hashlib
 import logging
-from typing import Final, Protocol, Self
+from typing import Any, Final, Protocol, Self
 
 from httpx import AsyncClient
 
@@ -62,10 +62,16 @@ __all__ = [
     "create_bhashini_service",
 ]
 
-_DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 2.0
-_ASR_TRANSCRIBE_PATH: Final[str] = "/v1/asr/transcribe"
-_NMT_TRANSLATE_PATH: Final[str] = "/v1/nmt/translate"
-_TTS_SYNTHESIZE_PATH: Final[str] = "/v1/tts/synthesize"
+_DEFAULT_AI_TIMEOUT_SECONDS: Final[float] = 10.0
+_ULCA_PIPELINE_PATH: Final[str] = "/services/inference/pipeline"
+_DEFAULT_ASR_SERVICE_ID: Final[str] = "bhashini/bharatgen/asr"
+_DEFAULT_NMT_SERVICE_ID: Final[str] = "bhashini/cdac-noida/nmt"
+_DEFAULT_TTS_SERVICE_ID: Final[str] = "bhashini/bodhan/indic-tts"
+_DEFAULT_AUDIO_FORMAT: Final[str] = "wav"
+_DEFAULT_SAMPLING_RATE_HZ: Final[int] = 8000
+_DEFAULT_TTS_GENDER: Final[str] = "female"
+_DATA_URI_PREFIX: Final[str] = "data:"
+_DATA_URI_WAV_PREFIX: Final[str] = "data:audio/wav;base64,"
 
 
 class BhashiniService(Protocol):
@@ -90,12 +96,14 @@ class BhashiniService(Protocol):
 
 
 class LiveBhashiniService:
-    """Production live client executing HTTPS calls to sovereign Bhashini gateways.
+    """Production live client executing HTTPS calls to sovereign Bhashini ULCA gateways.
 
-    Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
-    ServiceUnavailableError on network errors, timeouts, or remote 5xx outages, raises
-    ServiceRequestPayloadError on malformed audio streams or unprocessable payloads (400/415/422),
-    and raises ServiceResponsePayloadError on schema contract violations (502).
+    Dispatches standard ULCA inference pipeline tasks (`asr`, `translation`, `tts`) to
+    `/services/inference/pipeline`. Strictly requires endpoint URL, inference API key,
+    and pooled HTTP client. Fails closed with ServiceUnavailableError on network errors,
+    timeouts, or remote 5xx outages, raises ServiceRequestPayloadError on malformed audio
+    streams or unprocessable payloads (400/415/422), and raises ServiceResponsePayloadError
+    on schema contract violations (502).
     """
 
     def __init__(
@@ -106,6 +114,7 @@ class LiveBhashiniService:
         timeout_seconds: float = _DEFAULT_AI_TIMEOUT_SECONDS,
     ) -> None:
         """Initializes live Bhashini client with mandatory credentials and transport."""
+        normalized_base_url = self._normalize_base_endpoint(endpoint_url)
         self._transport = ServiceHttpTransport(
             http_client=http_client,
             api_key=api_key,
@@ -113,8 +122,9 @@ class LiveBhashiniService:
                 service_name="bhashini",
                 service_title="Bhashini",
                 timeout_seconds=timeout_seconds,
+                auth_scheme="",
             ),
-            base_url=endpoint_url,
+            base_url=normalized_base_url,
         )
 
     @classmethod
@@ -138,10 +148,10 @@ class LiveBhashiniService:
     # -------------------------------------------------------------------------
 
     async def transcribe_audio(self, audio_url: str, language_locale: str) -> str:
-        """Transcribes raw voice stream into text via live Bhashini ASR endpoint.
+        """Transcribes raw voice stream into text via live Bhashini ASR pipeline endpoint.
 
         Args:
-            audio_url: Valid HTTP/HTTPS audio recording URL pointer from IVR/WhatsApp edge.
+            audio_url: Valid HTTP/HTTPS audio recording URL or base64 data URI from edge.
             language_locale: BCP 47 language locale identifier (e.g., 'hi-IN', 'ta-IN').
 
         Returns:
@@ -154,18 +164,32 @@ class LiveBhashiniService:
             ServiceAuthenticationError: If live Bhashini service returns 401/403.
         """
         url_hash = hashlib.sha256(audio_url.encode("utf-8")).hexdigest()[:16]
+        source_language = self._extract_language_code(language_locale)
         logger.info("Live transcribing audio for url_hash=%s locale=%s", url_hash, language_locale)
 
-        payload = {"audio_url": audio_url, "language_locale": language_locale}
+        payload: dict[str, Any] = {
+            "pipelineTasks": [
+                {
+                    "taskType": "asr",
+                    "config": {
+                        "language": {"sourceLanguage": source_language},
+                        "serviceId": _DEFAULT_ASR_SERVICE_ID,
+                        "audioFormat": _DEFAULT_AUDIO_FORMAT,
+                        "samplingRate": _DEFAULT_SAMPLING_RATE_HZ,
+                    },
+                }
+            ],
+            "inputData": {"audio": [self._build_audio_input(audio_url)]},
+        }
         response_data = await self._transport.post_json(
-            _ASR_TRANSCRIBE_PATH,
+            _ULCA_PIPELINE_PATH,
             payload=payload,
             context_label=f"audio_hash={url_hash}",
         )
-        transcript = response_data.get("transcript")
-        if isinstance(transcript, str):
+        transcript = self._extract_pipeline_text_field(response_data, field_name="source")
+        if transcript is not None:
             return transcript
-        target_url = self._transport.resolve_url(_ASR_TRANSCRIBE_PATH)
+        target_url = self._transport.resolve_url(_ULCA_PIPELINE_PATH)
         raise ServiceResponsePayloadError(
             f"Live Bhashini ASR response from {target_url} missing 'transcript' field.",
             service_name="bhashini",
@@ -174,7 +198,7 @@ class LiveBhashiniService:
     async def translate_text(
         self, text: str, source_locale: str, target_locale: str = "en-IN"
     ) -> str:
-        """Translates text content via live Bhashini NMT endpoint.
+        """Translates text content via live Bhashini NMT pipeline endpoint.
 
         Args:
             text: Source text string to translate.
@@ -194,34 +218,49 @@ class LiveBhashiniService:
         if not text.strip():
             return ""
 
-        payload = {
-            "text": text,
-            "source_locale": source_locale,
-            "target_locale": target_locale,
+        source_language = self._extract_language_code(source_locale)
+        target_language = self._extract_language_code(target_locale)
+        if source_language == target_language:
+            return text
+
+        payload: dict[str, Any] = {
+            "pipelineTasks": [
+                {
+                    "taskType": "translation",
+                    "config": {
+                        "language": {
+                            "sourceLanguage": source_language,
+                            "targetLanguage": target_language,
+                        },
+                        "serviceId": _DEFAULT_NMT_SERVICE_ID,
+                    },
+                }
+            ],
+            "inputData": {"input": [{"source": text}]},
         }
         response_data = await self._transport.post_json(
-            _NMT_TRANSLATE_PATH,
+            _ULCA_PIPELINE_PATH,
             payload=payload,
             context_label=f"{source_locale}->{target_locale}",
         )
-        translated_text = response_data.get("translated_text")
-        if isinstance(translated_text, str):
+        translated_text = self._extract_pipeline_text_field(response_data, field_name="target")
+        if translated_text is not None:
             return translated_text
-        target_url = self._transport.resolve_url(_NMT_TRANSLATE_PATH)
+        target_url = self._transport.resolve_url(_ULCA_PIPELINE_PATH)
         raise ServiceResponsePayloadError(
             f"Live Bhashini NMT response from {target_url} missing 'translated_text' field.",
             service_name="bhashini",
         )
 
     async def synthesize_speech(self, text: str, language_locale: str) -> str:
-        """Synthesizes response text into spoken audio stream URL via live Bhashini TTS endpoint.
+        """Synthesizes response text into spoken audio URI via live Bhashini TTS pipeline endpoint.
 
         Args:
             text: Text content to synthesize into speech.
             language_locale: Target speech language locale identifier.
 
         Returns:
-            URL pointer to generated audio recording.
+            Audio URI or `data:audio/wav;base64,...` payload of generated speech recording.
 
         Raises:
             ValueError: If response text is empty.
@@ -236,20 +275,106 @@ class LiveBhashiniService:
         if not text.strip():
             raise ValueError("Cannot synthesize empty response text into speech.")
 
-        payload = {"text": text, "language_locale": language_locale}
+        source_language = self._extract_language_code(language_locale)
+        payload: dict[str, Any] = {
+            "pipelineTasks": [
+                {
+                    "taskType": "tts",
+                    "config": {
+                        "language": {"sourceLanguage": source_language},
+                        "serviceId": _DEFAULT_TTS_SERVICE_ID,
+                        "gender": _DEFAULT_TTS_GENDER,
+                        "samplingRate": _DEFAULT_SAMPLING_RATE_HZ,
+                    },
+                }
+            ],
+            "inputData": {"input": [{"source": text}]},
+        }
         response_data = await self._transport.post_json(
-            _TTS_SYNTHESIZE_PATH,
+            _ULCA_PIPELINE_PATH,
             payload=payload,
             context_label=f"locale={language_locale}",
         )
-        audio_url = response_data.get("audio_url")
-        if isinstance(audio_url, str):
-            return audio_url
-        target_url = self._transport.resolve_url(_TTS_SYNTHESIZE_PATH)
+        audio_uri = self._extract_pipeline_audio_uri(response_data)
+        if audio_uri is not None:
+            return audio_uri
+        target_url = self._transport.resolve_url(_ULCA_PIPELINE_PATH)
         raise ServiceResponsePayloadError(
             f"Live Bhashini TTS response from {target_url} missing 'audio_url' field.",
             service_name="bhashini",
         )
+
+    # -------------------------------------------------------------------------
+    # Private Helpers (Strictly at Bottom)
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_base_endpoint(endpoint_url: str) -> str:
+        """Strips trailing ULCA pipeline path if caller supplied full callback URL."""
+        cleaned = endpoint_url.strip().rstrip("/")
+        if cleaned.endswith(_ULCA_PIPELINE_PATH):
+            return cleaned[: -len(_ULCA_PIPELINE_PATH)]
+        return cleaned
+
+    @staticmethod
+    def _extract_language_code(language_locale: str) -> str:
+        """Normalizes BCP 47 locale (e.g. 'hi-IN') into ULCA ISO-639-1 language code ('hi')."""
+        return language_locale.strip().split("-", maxsplit=1)[0].split("_", maxsplit=1)[0].lower()
+
+    @staticmethod
+    def _build_audio_input(audio_url: str) -> dict[str, str]:
+        """Constructs ULCA audio input object from a data URI or remote HTTP/HTTPS URL."""
+        stripped_url = audio_url.strip()
+        if stripped_url.startswith(_DATA_URI_PREFIX) and "," in stripped_url:
+            base64_content = stripped_url.split(",", maxsplit=1)[1]
+            return {"audioContent": base64_content}
+        return {"audioUri": stripped_url}
+
+    @staticmethod
+    def _extract_first_task_response(response_data: dict[str, Any]) -> dict[str, Any] | None:
+        """Extracts the first task dictionary from ULCA pipelineResponse list."""
+        pipeline_response = response_data.get("pipelineResponse")
+        if not isinstance(pipeline_response, list) or not pipeline_response:
+            return None
+        first_task = pipeline_response[0]
+        return first_task if isinstance(first_task, dict) else None
+
+    @classmethod
+    def _extract_pipeline_text_field(
+        cls, response_data: dict[str, Any], field_name: str
+    ) -> str | None:
+        """Extracts string field ('source' for ASR or 'target' for NMT) from pipeline output."""
+        first_task = cls._extract_first_task_response(response_data)
+        if first_task is None:
+            return None
+        output_items = first_task.get("output")
+        if not isinstance(output_items, list) or not output_items:
+            return None
+        first_output = output_items[0]
+        if not isinstance(first_output, dict):
+            return None
+        field_value = first_output.get(field_name)
+        return field_value if isinstance(field_value, str) else None
+
+    @classmethod
+    def _extract_pipeline_audio_uri(cls, response_data: dict[str, Any]) -> str | None:
+        """Extracts audio URI or formats base64 audioContent from TTS pipeline output."""
+        first_task = cls._extract_first_task_response(response_data)
+        if first_task is None:
+            return None
+        audio_items = first_task.get("audio")
+        if not isinstance(audio_items, list) or not audio_items:
+            return None
+        first_audio = audio_items[0]
+        if not isinstance(first_audio, dict):
+            return None
+        audio_uri = first_audio.get("audioUri")
+        if isinstance(audio_uri, str) and audio_uri.strip():
+            return audio_uri.strip()
+        audio_content = first_audio.get("audioContent")
+        if isinstance(audio_content, str) and audio_content.strip():
+            return f"{_DATA_URI_WAV_PREFIX}{audio_content.strip()}"
+        return None
 
 
 class MockBhashiniService:
