@@ -66,7 +66,9 @@ public_agent:
     orchestrator_class: "src/orchestrator/claim_orchestrator.py#ClaimOrchestrator.execute_orchestration_cycle"
     ingress_webhooks:
       whatsapp: "POST /v1/webhooks/whatsapp"
-      ivr_voice: "POST /v1/webhooks/ivr"
+      # 3-Tier Voice Stack: (1) VoicEra (COSS/EkStep Layer 1 SIP/PSTN + Pipecat VAD/barge-in runtime at <₹1/min)
+      # -> (2) BHASHINI (MeitY Layer 3 stateless ASR/NMT/TTS model APIs) -> (3) agristack-dbt-core (Layers 1-4 Zero-Trust & 3-Gate Governance)
+      ivr_voice: "POST /v1/webhooks/ivr  # Accepts 8kHz PSTN/GSM (VoicEra <₹1/min runtime) & 16kHz wideband SIP streams"
       ussd: "POST /v1/webhooks/ussd"
       sms: "POST /v1/webhooks/sms"
     dpi_callbacks:

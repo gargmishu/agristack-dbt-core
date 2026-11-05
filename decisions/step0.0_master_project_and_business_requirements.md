@@ -30,7 +30,7 @@ The platform provides a unified, inclusive interface catering to farmers of all 
 
 | Channel Type | Interface / Protocol | Input Format | Audio / Processing Profile |
 | :--- | :--- | :--- | :--- |
-| **`IVR_VOICE`** | SIP Trunk / SS7 Gateways (`SIP_TRUNK_BSNL_HAR_08`) | Vernacular Speech Streams | Mono 16kHz 16-bit PCM; Agricultural Background Noise Attenuation |
+| **`IVR_VOICE`** | SIP Trunk / SS7 & Self-Hosted Real-Time Voice Gateways (`SIP_TRUNK_BSNL_HAR_08`) | Vernacular Speech Streams | Mono 8kHz Narrowband PSTN/GSM (`<₹1/min` telephony benchmark) & 16kHz Wideband PCM; Agricultural Background Noise Attenuation |
 | **`WHATSAPP`** | Meta WhatsApp Business API | Text & Voice Notes | Natural Language Text / Signed Audio URLs |
 | **`USSD`** | SS7 / SIGTRAN Carrier Gateway | DTMF / Structured Menu Strings | Compact Key-Value Payloads (`ussd_collected_payload`) |
 | **`SMS`** | Transactional SMS webhook | Plaintext message and carrier metadata | Text-based status and application interactions |

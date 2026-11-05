@@ -8,7 +8,11 @@ from src.config import DEFAULT_IVR_INTERFACE
 from src.connectors import IvrConnector
 from src.data_models.common import ChannelType, GovernanceAction, NotificationDeliveryStatus
 from src.data_models.notification import OutboundNotificationPayload, TransmissionAck
-from src.data_models.raw_ingress import IvrIngressPayload
+from src.data_models.raw_ingress import (
+    DEFAULT_TELEPHONY_SAMPLE_RATE_HZ,
+    WIDEBAND_TELEPHONY_SAMPLE_RATE_HZ,
+    IvrIngressPayload,
+)
 
 EXPECTED_DURATION: Final[int] = 45
 
@@ -26,7 +30,23 @@ async def test_ivr_connector_valid_session() -> None:
     result = await connector.process_call_session(payload_data)
     assert isinstance(result, IvrIngressPayload)
     assert result.audio_duration_seconds == EXPECTED_DURATION
+    assert result.sample_rate_hz == DEFAULT_TELEPHONY_SAMPLE_RATE_HZ
     assert str(result.audio_recording_url) == "https://sip-gateway.telecom.in/audio/call_987.wav"
+
+
+@pytest.mark.asyncio
+async def test_ivr_connector_valid_wideband_16khz_session() -> None:
+    connector = IvrConnector()
+    payload_data = {
+        "session_id": "sess_12345678",
+        "originating_phone_number": "+919876543210",
+        "audio_recording_url": "https://sip-gateway.telecom.in/audio/call_987_16k.wav",
+        "audio_duration_seconds": EXPECTED_DURATION,
+        "sample_rate_hz": WIDEBAND_TELEPHONY_SAMPLE_RATE_HZ,
+        "received_at": datetime.now(UTC).isoformat(),
+    }
+    result = await connector.process_call_session(payload_data)
+    assert result.sample_rate_hz == WIDEBAND_TELEPHONY_SAMPLE_RATE_HZ
 
 
 @pytest.mark.asyncio

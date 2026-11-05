@@ -51,10 +51,10 @@ Edge connectors interface with carrier networks and external telecommunication p
 * **Egress Dispatch:** Transmits formatted markdown notification cards and returns a carrier transmission acknowledgment receipt.
 
 ### 2.2 IVR Telephony Connector
-* **Transport Protocol:** SIP Trunk / SS7 Telephony Gateway webhooks.
-* **Ingress Contract:** IVR Voice Ingress Contract.
-* **Audio Constraint:** Enforces valid signed audio URLs and duration boundaries between 1 and 600 seconds.
-* **Egress Dispatch:** Dispatches pre-signed Bhashini TTS voice stream playback URLs.
+* **Transport Protocol:** SIP Trunk / SS7 Telephony Gateway webhooks and open-source real-time voice telephony runtimes (such as the `VoicEra` Digital Public Good stack handling `8kHz` PSTN call termination, Voice Activity Detection [`VAD`], turn-taking, and barge-in interruption at `<₹1/min`).
+* **Ingress Contract:** IVR Voice Ingress Contract (enforcing `8000 Hz` narrowband PSTN/GSM default or `16000 Hz` wideband PCM sampling rates and `PCM_16BIT` / `OPUS` / `AMR_WB` codecs).
+* **Audio Constraint:** Enforces valid signed sovereign audio URLs and duration boundaries between 1 and 600 seconds.
+* **Egress Dispatch:** Dispatches pre-signed Bhashini TTS voice stream playback URLs back to the Layer 1 telephony runtime for low-latency caller playback.
 
 ### 2.3 USSD Menu Signaling Connector
 * **Transport Protocol:** Cellular SS7 / SIGTRAN signaling frames.

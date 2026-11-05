@@ -73,12 +73,12 @@ ai_blocks:
   - name: "speech_to_text"
     kind: "foundational"
     interface: "BhashiniService.transcribe_audio(audio_url, language_locale)"
-    provider: "Digital India BHASHINI ASR Cluster (POST /v1/asr/transcribe)"
+    provider: "Digital India BHASHINI Stateless ASR Model API (POST /v1/asr/transcribe; invoked on 8kHz/16kHz audio captured by Layer 1 VoicEra / SIP Telephony Edge)"
     io:
       in: ["request.payload.unprocessed_input_content", "request.payload.language_locale"]
       out: ["transcribed_vernacular_text"]
     governance:
-      purpose: "Transcribe rural telephony 8kHz GSM/PSTN and 16kHz PCM voice streams or WhatsApp audio notes into vernacular text"
+      purpose: "Stateless Layer 3 ASR model inference converting rural 8kHz GSM/PSTN audio (captured via COSS/EkStep's self-hosted VoicEra <₹1/min telephony & Pipecat VAD/barge-in runtime) and 16kHz PCM voice streams into Indic text"
       data_minimization: true
       logging: true
       fallback: "low_confidence_fallback_0_40_to_human_agent"

@@ -1,10 +1,13 @@
 """Layer 1 IVR Telephony Edge Connector (Layer 1 -> Layer 2).
 
 See: decisions/step2.0_canonical_domain_schemas.md#ivr-telephony-ingress-payload
+See: decisions/step3.6_speech_and_translation_evaluation.md
 
-Processes incoming Session Initiation Protocol (SIP) trunk telephony gateway streams,
-validating 16kHz Pulse-Code Modulation (PCM) uncompressed audio recording URLs and caller
-Automatic Number Identification (ANI) phone numbers.
+Bridges upstream Session Initiation Protocol (SIP) trunks and self-hosted real-time voice
+telephony runtimes (such as the open-source COSS/EkStep VoicEra platform handling 8kHz
+PSTN/GSM call termination, Pipecat audio streaming, Voice Activity Detection [VAD],
+barge-in interruption, and MinIO .wav recording custody at <₹1/min) into the Layer 2
+Zero-Trust perimeter and Layer 3 Bhashini ASR/NMT/TTS speech perception models.
 """
 
 import logging
@@ -22,15 +25,17 @@ __all__ = ["IvrConnector"]
 
 
 class IvrConnector:
-    """Telephony edge connector interfacing with SIP and Private Branch Exchange (PBX) gateways.
+    """Telephony edge connector interfacing with SIP trunks and real-time voice runtimes.
 
-    Provides validation for incoming SIP voice call payloads and dispatch for outbound audio
-    playback.
+    Separates Layer 1 real-time telephony call orchestration (answering 8kHz PSTN/SIP calls,
+    VAD, barge-in, and media capture via self-hosted runtimes like VoicEra) from Layer 3
+    stateless speech perception (Bhashini ASR/NMT/TTS model APIs) and Layer 4 deterministic
+    3-Gate subsidy governance.
 
     Core Capabilities:
     - Ingress Validation (`process_call_session`): Validates incoming telephony session
       mappings into `IvrIngressPayload` instances, enforcing phone number format, signed
-      audio URL, and duration bounds.
+      audio URL, acoustic sample rate (8000 Hz or 16000 Hz), and duration bounds.
     - Egress Dispatch (`send_outbound_notification`): Dispatches audio playback instructions
       (`OutboundNotificationPayload`) to the configured telephony interface and returns an
       authoritative `TransmissionAck` receipt with a generated SIP call reference ID.
@@ -68,9 +73,10 @@ class IvrConnector:
         validated_payload = IvrIngressPayload.model_validate(payload)
 
         logger.info(
-            "Validated IVR call session for session=%s, duration=%ss",
+            "Validated IVR call session for session=%s, duration=%ss, sample_rate_hz=%d",
             validated_payload.session_id,
             validated_payload.audio_duration_seconds,
+            validated_payload.sample_rate_hz,
         )
         return validated_payload
 

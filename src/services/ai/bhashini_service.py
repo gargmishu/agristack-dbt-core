@@ -1,12 +1,18 @@
 """Layer 3 AI Perception: Sovereign Bhashini Speech & Translation Service.
 
-Provides automated Automatic Speech Recognition (ASR), Neural Machine Translation (NMT),
-and Text-to-Speech (TTS) synthesis across 22 scheduled Indian languages.
+Provides stateless Automatic Speech Recognition (ASR), Neural Machine Translation (NMT),
+and Text-to-Speech (TTS) model inference across 22 scheduled Indian languages.
 
-Why integrate Bhashini for agricultural citizen intake?
-Agrarian communities across India communicate across dozens of languages and hundreds of
-local dialects. Layer 3 perception uses Bhashini to normalize spoken/textual vernacular input
-into structured domain contracts while maintaining Zero-PII boundaries.
+Architectural Boundary (Layer 3 Bhashini Models vs. Layer 1 Telephony Edge):
+- Bhashini (`BhashiniService` at Layer 3) provides the stateless foundational speech and
+  translation model APIs (`ASR` audio-to-text, `NMT` text-to-text, `TTS` text-to-audio).
+  It does not terminate SIP/PSTN telecom calls, manage Voice Activity Detection (VAD), or
+  handle mid-call barge-in interruptions.
+- Upstream telephony edge runtimes (such as COSS/EkStep's open-source VoicEra platform on
+  8kHz PSTN/SIP paired with Layer 1 `IvrConnector`) answer feature-phone calls, manage
+  real-time bidirectional audio streaming and VAD/barge-in at <₹1/min, and deliver signed
+  8kHz/16kHz audio streams into `agristack-dbt-core`, which tokenizes PII in RAM (Layer 2),
+  invokes `BhashiniService` (Layer 3), and enforces 3-Gate eligibility governance (Layer 4).
 
 In production environments, LiveBhashiniService enforces live HTTPS communication with
 strict fail-fast configuration and fail-closed error handling (no mock fallback).

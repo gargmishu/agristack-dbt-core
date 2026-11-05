@@ -8,10 +8,10 @@
 
 ## 1. Purpose & Architectural Scope
 
-This integration guide provides ecosystem maintainers (**OpenG2P**, **OpenSPP**, **Glific / Project Tech4Dev**, **Digital Green**, and **Bhashini**) and **Digital Public Goods Alliance (DPGA)** technical reviewers with a self-contained blueprint and copy-pasteable HTTP recipes to evaluate **AgriStack DBT Core** as a **Zero-Trust Sovereign AI Intake & 3-Gate Governance Layer**.
+This integration guide provides ecosystem maintainers (**OpenG2P**, **OpenSPP**, **Glific / Project Tech4Dev**, **Digital Green**, **COSS / EkStep Foundation [`VoicEra`]**, and **Bhashini**) and **Digital Public Goods Alliance (DPGA)** technical reviewers with a self-contained blueprint and copy-pasteable HTTP recipes to evaluate **AgriStack DBT Core** as a **Zero-Trust Sovereign AI Intake & 3-Gate Governance Layer**.
 
 **AgriStack DBT Core** bridges two critical layers of the Digital Public Infrastructure (DPI) stack:
-1. **Upstream Citizen Engagement Channels (Glific / WhatsApp Cloud API, SIP Telephony IVR, USSD `*99#`, and Transactional SMS):** Ingests vernacular citizen voice and text claims while enforcing volatile RAM-only SHA-256 HMAC identity tokenization and synchronous adversarial prompt-injection filtering (< 5 ms).
+1. **Upstream Citizen Engagement & Real-Time Telephony Channels (Glific / WhatsApp Cloud API, Self-Hosted `8kHz` SIP/PSTN Voice Runtimes such as `VoicEra`, USSD `*99#` / `*147#`, and Transactional SMS):** Ingests vernacular citizen voice (`8000 Hz` narrowband PSTN/GSM and `16000 Hz` wideband PCM) and text claims from Layer 1 carrier/telephony runtimes, enforces volatile RAM-only SHA-256 HMAC identity tokenization and synchronous adversarial prompt-injection filtering (< 5 ms) in Layer 2, and invokes stateless Layer 3 **Bhashini** speech/translation models (`ASR`, `NMT`, `TTS`) and constrained Small Language Model entity extraction in Gate 1.
 2. **Downstream Social Protection & Payment Rails (OpenG2P, OpenSPP, Federated Farmer Registries, and G2P Connect v1.0.0 Payment Bridges):** Enforces a deterministic 3-Gate Governance Pipeline (0% generative AI involvement in financial eligibility) and exchanges cryptographically signed **G2P Connect (DCI) v1.0.0** envelopes (`search`, `on-search`, `disburse`, `on-disburse`).
 
 ---

@@ -3,33 +3,44 @@
   "framework_step": "Design · Step 2 of 9: Establish the Unified Data Asset Inventory & Entity-Relationship Model",
   "document_type": "Component Inventory & Systemic Dependencies Map",
   "component_catalog": {
+    "telephony_edge_runtimes": {
+      "ivr_telephony_edge_runtime": {
+        "functional_name": "ivr_telephony_gateway()",
+        "classification": "Layer 1 Telephony Edge & Real-Time Voice Agent Runtime",
+        "underlying_engine": "Open-Source VoicEra Real-Time Voice Platform (COSS-India/voicera_mono_repository — SIP/PSTN + Pipecat Runtime + MinIO/PostgreSQL)",
+        "hosting_provenance": "Self-Hosted Sovereign State Telecom Edge (<₹1/min full-stack benchmark)",
+        "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
+        "mcp_interface_enabled": false,
+        "##_rationale": "Answers inbound/outbound 8kHz PSTN/SIP feature-phone calls, manages bidirectional audio streaming, Voice Activity Detection (VAD), turn-taking, and barge-in interruption, stores sovereign .wav call recordings in MinIO, and forwards validated 8kHz/16kHz sessions to Layer 1 IvrConnector while delegating stateless ASR/TTS inference to Layer 3 BHASHINI."
+      }
+    },
     "foundational_ai_blocks": {
       "speech_to_text_block": {
         "functional_name": "speech_to_text()",
-        "classification": "Foundational Multimodal Primitive",
-        "underlying_engine": "Digital India BHASHINI ASR Model Cluster",
+        "classification": "Layer 3 Foundational Multimodal AI Model API (Stateless ASR)",
+        "underlying_engine": "Digital India BHASHINI ASR Model Cluster (ULCA / DIBD / AI4Bharat REST & WebSocket APIs)",
         "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
         "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
         "mcp_interface_enabled": true,
-        "##_rationale": "Processes regional acoustic phone waves into raw vernacular scripts directly at the state telecom perimeter."
+        "##_rationale": "Stateless Speech-to-Text model API that transcribes 8kHz narrowband PSTN/GSM (captured by the upstream Layer 1 VoicEra telephony runtime) and 16kHz wideband PCM audio streams into Indic vernacular text across 22 Scheduled languages."
       },
       "text_translation_block": {
         "functional_name": "translate()",
-        "classification": "Foundational Multimodal Primitive",
+        "classification": "Layer 3 Foundational Multimodal AI Model API (Stateless NMT)",
         "underlying_engine": "Digital India BHASHINI NMT Model Cluster",
         "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
         "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
         "mcp_interface_enabled": true,
-        "##_rationale": "Translates unstructured regional agricultural dialects into standardized administrative English strings."
+        "##_rationale": "Stateless Neural Machine Translation model API that translates unstructured regional agricultural dialects into standardized administrative English strings."
       },
       "text_to_speech_block": {
         "functional_name": "text_to_speech()",
-        "classification": "Foundational Multimodal Primitive",
+        "classification": "Layer 3 Foundational Multimodal AI Model API (Stateless TTS)",
         "underlying_engine": "Digital India BHASHINI TTS Model Cluster",
         "hosting_provenance": "Sovereign National Cloud Ingestion Hub",
         "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
         "mcp_interface_enabled": true,
-        "##_rationale": "Converts outbound confirmation strings back into vernacular human speech for the IVR voice response gateway."
+        "##_rationale": "Stateless Text-to-Speech model API that synthesizes outbound confirmation strings into vernacular speech for playback over the Layer 1 SIP / VoicEra telephony runtime."
       }
     },
     "sector_specific_blocks": {

@@ -124,6 +124,7 @@ _IVR_OPENAPI_EXAMPLE: Final[dict[str, object]] = {
     "originating_phone_number": "+919812022222",
     "audio_recording_url": "https://sip.telecom.in/recordings/call_102.wav",
     "audio_duration_seconds": 25,
+    "sample_rate_hz": 8000,
     "received_at": "2026-10-24T07:02:00Z",
 }
 

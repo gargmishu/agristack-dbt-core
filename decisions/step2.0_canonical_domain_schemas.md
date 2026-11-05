@@ -278,6 +278,7 @@ class IvrIngressPayload(StrictBaseModel):
     originating_phone_number: str = Field(..., pattern=r"^\+[1-9]\d{1,14}$", description="Originating ANI phone number (E.164 standard)")
     audio_recording_url: HttpUrl = Field(..., description="Signed URL for .wav recording")
     audio_duration_seconds: int = Field(..., min=1, max=600, description="Total call audio duration in seconds (1 to 600s)")
+    sample_rate_hz: Literal[8000, 16000] = Field(8000, description="Telephony audio sample rate in Hz: 8000 (8kHz narrowband PSTN/GSM default) or 16000 (16kHz wideband PCM)")
     received_at: datetime = Field(..., description="UTC timestamp when call arrived at SIP trunk")
 ```
 
@@ -288,7 +289,8 @@ class IvrIngressPayload(StrictBaseModel):
      1. **Flow design ceiling:** The longest AgriStack IVR flow (subsidy application) was derived bottom-up from its component steps: opening greeting + language selection (~15 s) + 5 navigation menu levels at ~15 s each (~75 s) + 5 data-entry inputs at ~30 s each (system prompt → DTMF digits → readback → confirm = ~150 s) + summary readback (~20 s) + closing + reference number announcement (~15 s) = **~275 s ≈ 4.6 min**. 600s gives 2× headroom above that ceiling without being unbounded.
      2. **Audio file size:**  The file size formula is `sample_rate × bytes_per_sample × channels × duration`. At standard IVR encoding (8 kHz, 8-bit, mono) & 10min audio, it becomes `8,000 × 1 × 1 × 600 = 4.8 MB`. We are currently assuming that SLMs should be able to handle audio files up to this size without chunking.
      3. **Anti-resource-exhaustion:** A hard ceiling prevents stuck or adversarial calls from filling the audio storage bucket with arbitrarily large files.
-2. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `audio_duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
+2. **Acoustic Sample Rate Bounds (`sample_rate_hz`):** Strictly constrained to `8000` Hz (default 8 kHz narrowband PSTN/GSM rural telephony profile, matching the `<₹1/min` self-hosted open-source voice telephony runtime benchmark) or `16000` Hz (16 kHz wideband SIP/WebRTC PCM). Rejects uncalibrated sample rates (e.g., `44100` Hz or `0` Hz) at the Layer 1/2 perimeter before allocating speech perception compute.
+3. **Shared Audio Boundary & Decoding Validation:** Governed by Section 4.0.1 rules (co-presence of binary URL pointer with fail-fast `audio_duration_seconds` metadata gatekeeper, physical sample duration decoding check, and DLQ quarantine on discrepancy).
 
 ---
 

@@ -19,6 +19,40 @@ Citizen voice interactions require an end-to-end tri-modal conversational pipeli
 2. **Neural Machine Translation (NMT):** Translate vernacular dialectal text into standardized administrative language for domain entity extraction.
 3. **Text-to-Speech Synthesis (TTS):** Convert adjudicated decisions and clarification prompts back into natural-sounding vernacular speech for citizen playback.
 
+### 1.3 Architectural Separation: Layer 1 Real-Time Telephony Runtime vs. Layer 3 Speech & Translation Model APIs
+In national Digital Public Infrastructure (DPI) voice architectures, a frequent design misconception is conflating the **Layer 3 Speech & Translation Model Catalog (`Bhashini`)** with the **Layer 1 Telephony Edge & Real-Time Voice Agent Platform** (such as the open-source **`VoicEra`** Digital Public Good stack incubated by EkStep Foundation and stewarded by the Centre for Open Societal Systems — COSS). They operate at two distinct architectural tiers and are designed to compose together:
+
+| Architectural Dimension | Layer 3 Foundational Speech & Translation Model Catalog (`Bhashini`) | Layer 1 Telephony Edge & Real-Time Voice Agent Platform (Self-Hosted `8kHz` Voice Runtime / `VoicEra`) |
+| :--- | :--- | :--- |
+| **Architectural Role** | **Stateless AI Speech & Language Model Catalog (`ULCA` / `DIBD`)** | **Full-Stack Telephony Edge, Real-Time Streaming Orchestrator & Session Store** |
+| **Primary Responsibilities** | Exposes raw REST/WebSocket inference endpoints for **ASR** (`Audio -> Text`), **NMT** (`Text -> Text`), **TTS** (`Text -> Audio`), and **OCR** across 22 Scheduled Indian languages. | Terminates **SIP / PSTN (`8kHz` GSM)** phone calls and WebSockets, executes real-time bidirectional audio streaming, **Voice Activity Detection (`VAD`)**, turn-taking, and **barge-in** interruption handling, and persists `.wav` recordings and transcripts on sovereign storage at **`<₹1/minute`**. |
+| **What It Does *Not* Do Alone** | Does **not** answer phone calls, manage SIP trunks, detect when a farmer pauses or interrupts mid-sentence, or store session recordings. | Does **not** train its own foundational Indic speech/translation models; instead, it invokes **Bhashini** (or pluggable local ASR/TTS models) as its speech perception backend. |
+| **Mapping to Zero-Trust 4-Layer Architecture** | **Layer 3 Perception Adapter** (*Speech & Translation Service*). | **Layer 1 Carrier Edge Ingress** (*IVR Telephony Edge Connector* & *IVR Voice Ingress Contract* supporting `8000 Hz` narrowband and `16000 Hz` wideband audio). |
+
+```text
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ 1. LAYER 1: REAL-TIME TELEPHONY EDGE & VOICE RUNTIME (VoicEra / SIP Edge)  │
+  │    - Answers 8kHz PSTN / feature-phone call (<₹1/min operating benchmark)  │
+  │    - Manages real-time audio frames, VAD, turn-taking & barge-in           │
+  │    - Emits validated IVR Voice Ingress Contract (8000 Hz / 16000 Hz PCM)   │
+  └─────────────────────────────────────┬──────────────────────────────────────┘
+                                        │
+                                        ▼
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ 2. LAYER 3: SPEECH & LANGUAGE MODEL APIs (Bhashini ASR / NMT / TTS)        │
+  │    - Stateless vernacular speech transcription (ASR)                       │
+  │    - Dialect-to-canonical translation (NMT) & regional voice synthesis     │
+  └─────────────────────────────────────┬──────────────────────────────────────┘
+                                        │
+                                        ▼
+  ┌────────────────────────────────────────────────────────────────────────────┐
+  │ 3. LAYERS 2–4: ZERO-TRUST SECURITY, 3-GATE GOVERNANCE & G2P ENGINE         │
+  │    - Layer 2: RAM-only SHA-256 HMAC PII tokenization & prompt firewall     │
+  │    - Layer 3 (Gate 1): Constrained SLM agricultural entity extraction      │
+  │    - Layer 4 (Gates 2 & 3): Deterministic registry check & G2P payout      │
+  └────────────────────────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## 2. Evaluation Criteria
@@ -105,3 +139,6 @@ The combination of strict DPDP Act compliance, purpose-trained telephony acousti
    If the Bhashini service experiences transient network unavailability or cluster outages, the system must fail closed—emitting structured service unavailable errors and routing affected claims to manual caseworker review rather than silently dropping queries or producing corrupted intake contracts.
 3. **Offline Mock Simulation Invariant (Development & Automated Testing):**
    To facilitate rapid, zero-dependency local development and automated CI/CD testing without network latency or external service coupling, the perception adapter provides deterministic local mock fixtures that simulate vernacular transcription, translation, and TTS generation.
+4. **Composable 8kHz Self-Hosted Telephony Edge & Acoustic Profile Invariant:**
+   At the Layer 1 telephony perimeter, the IVR voice ingress contract natively validates both **8kHz narrowband PSTN/GSM telephony (`8000 Hz` default)** and **16kHz wideband PCM (`16000 Hz`)** audio streams. This allows state deployments to pair sovereign Bhashini speech perception at Layer 3 with self-hosted, open-source real-time voice telephony gateways (Apache 2.0 Digital Public Good voice runtimes) at Layer 1, achieving `<₹1/min` full-stack telephony operating economics and sovereign call-media custody without coupling core Layer 4 eligibility governance to any single carrier or media runtime.
+

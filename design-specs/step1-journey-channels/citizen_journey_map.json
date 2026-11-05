@@ -37,7 +37,7 @@
     "step_01_initiation_and_channel_entry": {
       "action": "Citizen initiates contact based on device and connectivity access.",
       "infrastructure_dependencies": {
-        "telephony_trunk_rail": "State NIC/BSNL Cloud SIP Gateway Exchange Core (Interconnected with All National Operators: Jio, Airtel, Vi)",
+        "telephony_trunk_rail": "State NIC/BSNL Cloud SIP Gateway Exchange Core & Open-Source VoicEra Real-Time Voice Telephony Runtime (8kHz PSTN/GSM <₹1/min benchmark; Interconnected with Jio, Airtel, Vi, Vobiz, Plivo)",
         "messaging_broker_rail": "Meta Business API Cloud Ingestion Framework",
         "signaling_network_rail": "Cellular Carrier USSD Core Network Infrastructure Nodes (Cross-Operator SS7/SIGTRAN Routing Gates)"
       },
@@ -164,8 +164,8 @@
             "properties": {
               "sample_rate_hz": {
                 "type": "integer",
-                "enum": [16000],
-                "##_rationale": "16kHz wideband matches BHASHINI ASR native deep-learning training vectors, preserving regional phonetic variations without doubling transit size."
+                "enum": [8000, 16000],
+                "##_rationale": "Supports 8kHz narrowband PSTN/GSM rural telephony (default <₹1/min VoicEra benchmark, halving payload bandwidth) and 16kHz wideband SIP/WebRTC PCM matching BHASHINI ASR acoustic vectors."
               },
               "channels": {
                 "type": "integer",
@@ -202,7 +202,7 @@
       "example_input": {
         "mime_type": "audio/wav",
         "audio_profile": {
-          "sample_rate_hz": 16000,
+          "sample_rate_hz": 8000,
           "channels": 1,
           "bit_depth": 16,
           "codec": "pcm"
