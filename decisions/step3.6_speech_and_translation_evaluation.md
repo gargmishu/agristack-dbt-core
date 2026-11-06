@@ -53,6 +53,14 @@ In national Digital Public Infrastructure (DPI) voice architectures, a frequent 
   └────────────────────────────────────────────────────────────────────────────┘
 ```
 
+### 1.4 Architectural Decision: Loosely Coupled Webhook Boundary vs. Direct Embedding of `VoicEra`
+* **Context:** We evaluated whether the core orchestration repository should directly import or bundle the open-source **`VoicEra`** real-time telephony stack inside its application runtime, or integrate with `VoicEra` across a clean Layer 1 $\rightarrow$ Layer 2 HTTP webhook boundary (`POST /v1/webhooks/ivr`).
+* **Decision:** **Maintain a loosely coupled HTTP webhook contract (`POST /v1/webhooks/ivr` accepting `8000 Hz` narrowband and `16000 Hz` wideband audio payloads) rather than embedding `VoicEra` inside the core repository.**
+* **Rationale:**
+  1. **Separation of Stateful Telecom Infrastructure from Stateless Governance:** `VoicEra` is a multi-container real-time media and telephony runtime (incorporating SIP/PSTN call termination, WebSocket audio frame streaming, Voice Activity Detection, barge-in handling, and object storage for `.wav` recordings). Bundling stateful telecom infrastructure inside the Zero-Trust governance engine would bloat container dependencies and violate the 4-layer separation of concerns.
+  2. **Multi-Channel & Multi-Partner Portability:** Keeping the integration boundary at the *IVR Voice Ingress Contract* (`POST /v1/webhooks/ivr`) allows state departments and ecosystem integrators to plug in `VoicEra`, state NIC IVR SIP gateways, or existing field voice stacks without modifying Layers 2–4.
+  3. **Independent Scaling & Fault Isolation:** Real-time `8kHz` audio streaming and VAD require persistent long-lived connections, whereas Layer 2–4 claim tokenization and 3-Gate eligibility adjudication are stateless transactional operations. Decoupling them via signed webhooks allows telephony edge nodes and governance workers to scale and recover independently.
+
 ---
 
 ## 2. Evaluation Criteria

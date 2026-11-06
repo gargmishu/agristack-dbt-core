@@ -96,7 +96,29 @@ curl -s -X POST http://localhost:8000/v1/webhooks/whatsapp \
 
 ---
 
-### 4.2 Adversarial Prompt Injection & OpenG2P / OpenSPP Caseworker Escalation
+### 4.2 `VoicEra` / `8kHz` SIP Telephony Webhook (`POST /v1/webhooks/ivr`)
+
+Self-hosted real-time voice runtimes (such as COSS / EkStep's **`VoicEra`** stack terminating `8000 Hz` narrowband feature-phone calls, handling Voice Activity Detection and barge-in at `<₹1/min`) forward captured citizen utterance recordings to `/v1/webhooks/ivr` without requiring `VoicEra` to be embedded inside the core governance container:
+
+```bash
+curl -s -X POST http://localhost:8000/v1/webhooks/ivr \
+  -H "Content-Type: application/json" \
+  -H "X-Language-Locale: hi-IN" \
+  -H "X-Attempt-Count: 1" \
+  -d '{
+    "session_id": "sess-voicera-ivr-102",
+    "caller_phone_number": "+919812011111",
+    "call_sid": "CA11223344556677889900aabbccddeeff",
+    "audio_recording_url": "https://media.state-ivr.gov.in/recordings/claim_pune_wheat.wav",
+    "audio_duration_seconds": 12,
+    "sample_rate_hz": 8000,
+    "received_at": "2026-10-24T07:02:00Z"
+  }'
+```
+
+---
+
+### 4.3 Adversarial Prompt Injection & OpenG2P / OpenSPP Caseworker Escalation
 
 When an inbound message contains an adversarial prompt-injection attempt or exhibits low entity extraction confidence (`< 0.85`), the Three-Gate Governance Pipeline prevents automated financial execution and stages a structured ticket for human review.
 
@@ -141,7 +163,7 @@ curl -s -X POST http://localhost:8000/v1/caseworker/cases/<ESCALATION_CASE_ID>/r
 
 ---
 
-### 4.3 G2P Connect (DCI) v1.0.0 Payment Settlement Webhook (`POST /v1/webhooks/g2p-connect/on-disburse`)
+### 4.4 G2P Connect (DCI) v1.0.0 Payment Settlement Webhook (`POST /v1/webhooks/g2p-connect/on-disburse`)
 
 Downstream OpenG2P / PBMS payment bridges and NPCI APBS clearing rails notify **AgriStack DBT Core** of asynchronous settlement completion by posting a signed **G2P Connect (DCI) v1.0.0** `on-disburse` envelope.
 
@@ -171,7 +193,7 @@ Any envelope with a forged or mismatched signature is deterministically rejected
 
 ---
 
-### 4.4 Non-PII Analytical Funnel & CAG Audit History Export
+### 4.5 Non-PII Analytical Funnel & CAG Audit History Export
 
 In compliance with **DPGA Standard Indicator 6 (Mechanism for Extracting Data)** and **Indicator 7 (Privacy & Zero-PII Storage)**, external observability dashboards can extract deduplicated citizen journey metrics and immutable SQL trigger audit trails in standard JSON:
 
