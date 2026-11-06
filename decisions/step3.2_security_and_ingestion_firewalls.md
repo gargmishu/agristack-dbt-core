@@ -40,6 +40,14 @@ This document defines the security architecture, threat mitigation protocols, an
 * The Identity Tokenizer applies SHA-256 HMAC tokenization keyed by an injected cryptographic pepper (`AGRISTACK_PEPPER_SECRET`).
 * The PII Purge Sentinel asserts that the output contract (*Standardized Intake Payload*) carries only pseudonymous citizen tokens and that no cleartext identifier strings or raw phone numbers remain in input content or metadata fields.
 
+### 2.2 Architectural Decision: Deterministic In-Memory Redaction vs. External Named Entity Recognition (NER) Models at Layer 2
+* **Context:** National language model catalogs (such as Bhashini ULCA) expose generic Named Entity Recognition (`NER`) endpoints capable of tagging `PERSON`, `LOCATION`, and `ORGANIZATION` spans in Indic text. We evaluated whether the Layer 2 *PII Purge Sentinel* should invoke an external `NER` model to scrub spoken citizen names from free-text transcripts alongside deterministic regular-expression redaction of phone and Aadhaar numbers.
+* **Decision:** **Rejected external `NER` model invocation at the Layer 2 perimeter.** The *PII Purge Sentinel* remains strictly deterministic, synchronous, and in-memory.
+* **Rationale:**
+  1. **Sub-5ms Perimeter Latency & Availability Invariant:** The Layer 2 *Perimeter Security Gateway* executes in volatile RAM in `< 5 ms` with zero external network dependencies. Introducing a remote HTTP inference call to an external `NER` endpoint at Layer 2 would add `300–800 ms` of latency to every citizen turn and force the entire security perimeter to fail closed during upstream `NER` model outages—even for structured USSD (`*147#`) interactions that bypass AI models entirely.
+  2. **False-Positive Over-Redaction of Agrarian Locations & Crops:** Generic Indic `NER` models frequently misclassify rural Indian village names, tehsils, districts, and localized crop varieties as `PERSON` entities (and vice versa). Redacting a spoken district or village name into `[REDACTED]` at Layer 2 before *Gate 1: Ingress Modality & SLM Entity Extraction* would corrupt the *Standardized Intake Payload*, causing *Gate 2: Intake Completeness Validation* to miss the citizen's district and trigger unnecessary clarification loops.
+  3. **Structural Schema Drop at Gate 1 Already Eliminates Unstructured Names:** Even if a citizen states their personal name in a voice note or text message, the Layer 3 *SLM Entity Extractor* projects the utterance strictly into the bounded *Extracted Domain Entity Contract* (`district`, `crop_name`, `survey_number`, and `claim_intent`). Unstructured conversational text and spoken personal names are discarded in volatile memory and never persisted to the relational governance ledger.
+
 ---
 
 ## 3. Adversarial Prompt Injection & Jailbreak Firewall
