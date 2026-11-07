@@ -209,3 +209,28 @@ async def test_claim_adjudicator_evaluate_claim_scheme_policy_exclusion() -> Non
     outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert outcome.rejection_reason == RejectionReasonCode.POLICY_EXCLUSION
+
+
+@pytest.mark.asyncio
+async def test_claim_adjudicator_evaluate_claim_beneficiary_registry_exclusion() -> None:
+    adjudicator = ClaimAdjudicator()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.94,
+        domain_entities={
+            DomainEntityKey.DISTRICT: "Karnal",
+            DomainEntityKey.CROP_NAME: "Wheat",
+            DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
+            DomainEntityKey.SUBSIDY_SCHEME_ID: f"{EXCLUDED_POLICY_PREFIX}_SCHEME_2026",
+        },
+    )
+    context = ClaimEvaluationPayload(
+        session_id="sess_eval_beneficiary_excl",
+        payload_id="ext_eval_beneficiary_excl",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await adjudicator.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_REJECT
+    assert outcome.rejection_reason == RejectionReasonCode.POLICY_EXCLUSION

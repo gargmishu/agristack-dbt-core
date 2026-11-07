@@ -67,6 +67,9 @@ We adopt **Ruff** as the single unified engine for Python linting and formatting
 - `I`: Isort (automatic import sorting).
 - `SIM`: Code simplification rules.
 - `PL`: Pylint rule subset.
+- `RET`: Flake8-return (clean return statement conventions).
+- `N`: PEP 8 naming conventions.
+- `RUF022`: Unsorted `__all__` export lists.
 
 ```toml
 # pyproject.toml snippet
@@ -76,7 +79,7 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "B", "UP", "S", "I", "SIM", "PL"]
+select = ["E", "W", "F", "B", "UP", "S", "I", "SIM", "PL", "RET", "N", "RUF022"]
 ignore = ["S101"] # Allow assert in tests
 
 [tool.ruff.lint.isort]

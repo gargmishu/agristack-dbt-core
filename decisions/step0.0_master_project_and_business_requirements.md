@@ -88,13 +88,16 @@ Localized Small Language Model extracts structured domain parameters:
 * `reported_anomaly` / `crop_loss_percentage`
 * `claimed_amount`
 
-### 5.2 Federated AgriStack Registry Matching
-Cross-examines citizen assertions against federated sovereign registries:
-* **Strict Geographic Boundary Intersection:** Verifies parcel boundaries, land ownership deed, and seasonal crop survey data.
-* **Output:** `registry_match_flag = true/false` and `cadastral_plot_id`.
+### 5.2 Separated Sovereign Registry Cross-Verification
+Cross-examines citizen assertions across four separated sovereign DPI boundaries:
+* **Identity Registry Verification:** Confirms tokenized farmer identity and active registry standing.
+* **Cadastral Land Registry Verification (AgriStack UFSI):** Verifies parcel ownership deed (`survey_number`) and district boundary intersection.
+* **Crop & Satellite Verification Registry (Digital Crop Survey & ALU/AMED):** Confirms seasonal crop cultivation (`crop_name`, `season`) and multi-spectral satellite stress verification.
+* **Scheme Policy & Calamity Metadata Registry (Data DHARA `/mcp`):** Queries the National Metadata Dataset Service (NMDS 2.0 / Data DHARA) over JSON-RPC 2.0 Streamable HTTP (`POST /mcp` tools: `search_datasets`, `get_metadata`, `get_table`) to verify active district-and-crop calamity notifications.
+* **Output:** `registry_match_flag = true/false` and verified plot/policy provenance.
 
-### 5.3 OpenSPP Social Benefits Staging
-When `registry_match_flag == true`, verified parameters are staged into the OpenSPP Social Protection Platform core registry, generating a unique `openspp_case_id`.
+### 5.3 OpenSPP Beneficiary Eligibility & Case Staging
+Verifies beneficiary scheme enrollment via the OpenSPP / OpenG2P Beneficiary Registry (`/v1/social/eligibility`). When automated eligibility or confidence checks require officer intervention, parameters are staged into the OpenSPP Case Management queue (`/v1/social/cases`), generating a unique `SPP-CASE-YYYY-XXXXXX` ticket ID.
 
 ---
 
@@ -242,11 +245,6 @@ Received from PFMS / NPCI rails when bank settlement completes or fails:
 | `disbursement_status` | Enum (`SUCCESS`, `FAILED`, `RETURNED`) | Terminal financial clearing state |
 | `cleared_at` | UTC Timestamp | Gateway settlement timestamp |
 | `failure_reason_code` | String (max 256 chars, Optional) | Banking failure reason code (required on `FAILED` or `RETURNED`) |
-
-#### Callback Validation Rules:
-1. `disbursement_status` **must** be a terminal state (`SUCCESS`, `FAILED`, `RETURNED`).
-2. **If `FAILED` or `RETURNED`:** `failure_reason_code` **is strictly required** (non-whitespace, e.g., `ACCOUNT_BLOCKED`, `INVALID_IFSC`, `NAME_MISMATCH`).
-3. **If `SUCCESS`:** `bank_reference_id` (UTR) **is strictly required** and `failure_reason_code` **must be `None`**.
 
 #### Callback Validation Rules:
 1. `disbursement_status` **must** be a terminal state (`SUCCESS`, `FAILED`, `RETURNED`).

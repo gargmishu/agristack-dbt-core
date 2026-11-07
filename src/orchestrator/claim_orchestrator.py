@@ -351,15 +351,32 @@ class ClaimOrchestrator:
             application_intent=extracted_entities.application_intent,
             extracted_entities=extracted_entities.domain_entities,
             unprocessed_input_content=intake.unprocessed_input_content,
-            escalation_reason=(
-                EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
-                if extracted_entities.is_adversarial_attempt
-                else EscalationReasonCode.MISSING_MANDATORY_ENTITIES
-            ),
+            escalation_reason=self._resolve_escalation_reason(extracted_entities),
             staged_at=datetime.now(UTC),
         )
         await self._case_service.stage_incident_ticket(case_payload)
         return escalation_case_id
+
+    @staticmethod
+    def _resolve_escalation_reason(
+        extracted_entities: ExtractedEntityPayload,
+    ) -> EscalationReasonCode:
+        """Determines the structured escalation reason for a caseworker review ticket."""
+        if extracted_entities.is_adversarial_attempt:
+            return EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
+
+        has_missing_mandatory_entities = (
+            extracted_entities.application_intent == ApplicationIntent.APPLY_SUBSIDY
+            and any(
+                key not in extracted_entities.domain_entities
+                or not str(extracted_entities.domain_entities[key]).strip()
+                for key in _MANDATORY_SUBSIDY_ENTITIES
+            )
+        )
+        if has_missing_mandatory_entities:
+            return EscalationReasonCode.MISSING_MANDATORY_ENTITIES
+
+        return EscalationReasonCode.LOW_AI_CONFIDENCE
 
     def _persist_orchestration_turn(
         self,

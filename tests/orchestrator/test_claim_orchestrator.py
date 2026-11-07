@@ -8,6 +8,7 @@ from src.data_models.common import (
     ChannelType,
     DisbursementStatus,
     DomainEntityKey,
+    EscalationReasonCode,
     GovernanceAction,
     LanguageLocale,
     PayloadType,
@@ -16,6 +17,7 @@ from src.data_models.common import (
 )
 from src.data_models.governance import ExtractedEntityPayload
 from src.data_models.public_agent import PublicAgentStandardizedIntakePayload
+from src.orchestrator.case_management_service import CaseManagementService
 from src.orchestrator.claim_orchestrator import ClaimOrchestrator
 
 MOCK_CITIZEN_TOKEN: Final[str] = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
@@ -151,7 +153,8 @@ async def test_claim_orchestrator_full_cycle_anti_double_dipping() -> None:
 
 @pytest.mark.asyncio
 async def test_claim_orchestrator_full_cycle_adversarial_escalates_to_caseworker() -> None:
-    orchestrator = ClaimOrchestrator()
+    case_service = CaseManagementService()
+    orchestrator = ClaimOrchestrator(case_management_service=case_service)
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_adversarial_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -176,11 +179,15 @@ async def test_claim_orchestrator_full_cycle_adversarial_escalates_to_caseworker
     assert result.governance_outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
     assert result.caseworker_ticket_id is not None
     assert result.caseworker_ticket_id.startswith("SPP-CASE-2026-")
+    staged_ticket = case_service.get_staged_case(result.caseworker_ticket_id)
+    assert staged_ticket is not None
+    assert staged_ticket.escalation_reason == EscalationReasonCode.ADVERSARIAL_ATTEMPT_FLAGGED
 
 
 @pytest.mark.asyncio
 async def test_claim_orchestrator_low_confidence_fallback_routing() -> None:
-    orchestrator = ClaimOrchestrator()
+    case_service = CaseManagementService()
+    orchestrator = ClaimOrchestrator(case_management_service=case_service)
     intake = PublicAgentStandardizedIntakePayload(
         session_id="sess_fallback_1",
         tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
@@ -204,3 +211,40 @@ async def test_claim_orchestrator_low_confidence_fallback_routing() -> None:
     assert result.extracted_entities.ai_confidence_score == 0.40  # noqa: PLR2004
     assert result.extracted_entities.application_intent == ApplicationIntent.UNKNOWN
     assert result.governance_outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
+    assert result.caseworker_ticket_id is not None
+    staged_ticket = case_service.get_staged_case(result.caseworker_ticket_id)
+    assert staged_ticket is not None
+    assert staged_ticket.escalation_reason == EscalationReasonCode.LOW_AI_CONFIDENCE
+
+
+@pytest.mark.asyncio
+async def test_claim_orchestrator_exhausted_attempts_escalates_with_missing_entities() -> None:
+    case_service = CaseManagementService()
+    orchestrator = ClaimOrchestrator(case_management_service=case_service)
+    intake = PublicAgentStandardizedIntakePayload(
+        session_id="sess_exhausted_1",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        channel_type=ChannelType.WHATSAPP,
+        payload_type=PayloadType.TEXT,
+        structure_level=StructureLevel.FREE_TEXT,
+        language_locale=LanguageLocale.HINDI,
+        unprocessed_input_content="Sirf Karnal zila bataya",
+        received_at=datetime.now(UTC),
+    )
+    partial_extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.70,
+        domain_entities={DomainEntityKey.DISTRICT: "Karnal"},  # Missing crop_name on attempt 3
+    )
+
+    result = await orchestrator.execute_orchestration_cycle(
+        intake=intake,
+        extracted_entities=partial_extracted,
+        attempt_count=3,
+    )
+    assert result.requires_reprompt is False
+    assert result.governance_outcome.governance_action == GovernanceAction.ROUTE_FOR_MANUAL_REVIEW
+    assert result.caseworker_ticket_id is not None
+    staged_ticket = case_service.get_staged_case(result.caseworker_ticket_id)
+    assert staged_ticket is not None
+    assert staged_ticket.escalation_reason == EscalationReasonCode.MISSING_MANDATORY_ENTITIES

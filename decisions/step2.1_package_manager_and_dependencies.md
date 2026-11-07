@@ -17,18 +17,17 @@ The project utilizes `pyproject.toml` adhering to PEP 517 / PEP 518 standards wi
 | Package | Minimum Version | Category | Purpose |
 | :--- | :--- | :--- | :--- |
 | `fastapi` | `>=0.110.0` | Web Framework | High-performance asynchronous REST API framework and dependency injection container. |
+| `httpx` | `>=0.27.0` | HTTP Client | Asynchronous connection-pooled HTTP client for sovereign DPI registries, Bhashini, and Data DHARA `/mcp` calls. |
 | `pydantic` | `>=2.6.0` | Data Validation | Core Zero-Trust data validation engine enforcing `extra="forbid"`, immutability, and runtime typing. |
 | `pydantic-settings` | `>=2.2.0` | Configuration | Environment variable parsing and type-safe settings management. |
 | `uvicorn` | `>=0.28.0` | ASGI Server | Asynchronous ASGI web server runner for high-throughput HTTP handling. |
 
-### 2.2 Database Client Drivers & ORM Libraries (`[project.dependencies]`)
+### 2.2 Database Client Drivers & SQL Toolkit (`[project.dependencies]`)
 
 | Package | Minimum Version | Category | Purpose |
 | :--- | :--- | :--- | :--- |
-| `asyncpg` | `>=0.29.0` | Database Driver | High-performance async PostgreSQL client driver for Layer 4 state persistence. |
-| `psycopg[binary]` | `>=3.1.18` | Database Driver | Sync/async PostgreSQL driver with C extensions and binary protocol support. |
-| `sqlalchemy` | `>=2.0.28` | ORM / Core | SQL toolkit and Object Relational Mapper for relational query execution. |
-| `alembic` | `>=1.13.1` | DB Migrations | Database schema migration tool managing incremental DDL evolution. |
+| `psycopg[binary]` | `>=3.1.18` | Database Driver | PostgreSQL v3 driver with C extensions and binary protocol support for Layer 4 state persistence. |
+| `sqlalchemy` | `>=2.0.28` | SQL Core | SQLAlchemy 2.0 Core toolkit for parameterized relational query execution across PostgreSQL and SQLite. |
 
 ### 2.3 Development & Testing Dependencies (`[project.optional-dependencies.dev]`)
 
@@ -45,10 +44,10 @@ The project utilizes `pyproject.toml` adhering to PEP 517 / PEP 518 standards wi
 
 ## 3. Local Database Server & Container Environment
 
-To support Phase 0 ground-truth relational storage (`schema.sql`), local development environments are configured to connect to PostgreSQL (or Supabase local CLI / Docker container):
+To support Phase 0 ground-truth relational storage (`schema.sql`), local development and production environments are configured to connect to PostgreSQL 15+ (with SQLite supported for zero-dependency local/CI test execution):
 
-- **Engine:** PostgreSQL 15+
-- **Protocol:** `postgresql+asyncpg://`
+- **Engine:** PostgreSQL 15+ (Production / Docker Compose) or SQLite 3 (Local / CI Testing)
+- **Protocol:** `postgresql+psycopg://` (or `sqlite:///`)
 - **Capabilities:** Native JSONB index support, ACID transaction isolation, foreign key cascading, and SQL window functions such as `ROW_NUMBER() OVER (...)`, filtered in a CTE or subquery.
 
 ---
@@ -58,7 +57,7 @@ To support Phase 0 ground-truth relational storage (`schema.sql`), local develop
 ### 4.1 Code Format & Linter (`[tool.ruff]`)
 - **Python Version:** Python 3.11 (`py311`).
 - **Line Length:** 100 characters.
-- **Rule Sets Enabled:** `E`, `W` (pycodestyle), `F` (Pyflakes), `B` (flake8-bugbear), `UP` (pyupgrade), `S` (flake8-bandit security), `I` (isort import sorting), `SIM` (flake8-simplify), `PL` (Pylint).
+- **Rule Sets Enabled:** `E`, `W` (pycodestyle), `F` (Pyflakes), `B` (flake8-bugbear), `UP` (pyupgrade), `S` (flake8-bandit security), `I` (isort import sorting), `SIM` (flake8-simplify), `PL` (Pylint), `RET` (flake8-return), `N` (pep8-naming), `RUF022` (unsorted `__all__`).
 - **Exceptions:** `S101` ignored to permit `assert` statements in test suites.
 
 ### 4.2 Type Checker (`[tool.mypy]`)

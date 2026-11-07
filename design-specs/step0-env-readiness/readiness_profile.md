@@ -1,22 +1,22 @@
 # Step 0 · AI Readiness & Environment Profile
 
-## 💻 1. Compute & Sovereign Hardware Allocation
+## 💻 1. Compute & Local Hardware Allocation
 
-### Compute Profile: Sovereign Unified Memory Node / State Cloud Instance
-* **Configuration:** Unified Memory Compute Architecture (UMA) or Sovereign On-Premise GPU/NPU Node.
-* **Rationale:** Leverages unified or localized memory architectures for low-latency Small Language Model (SLM) execution, minimizing memory-transfer overhead and keeping inference within sovereign compute boundaries.
+### Machine Profile: Apple Silicon development workstation
+* **Configuration:** Unified Memory Compute Architecture (UMA).
+* **Rationale:** Leverages the Apple Silicon unified memory architecture, where the CPU, GPU, and Neural Engine share a single memory pool. This supports low-latency local execution of Small Language Models (SLMs) by reducing memory-transfer overhead between system RAM and GPU memory.
 
-### Local Intelligence Model Engine: Sovereign On-Premise SLM Inference Runtime
-* **Configuration:** Isolated local or state-cloud inference service.
-* **Rationale:** Ensures data privacy and compliance with India's DPDP Act 2023 by processing sanitized text within sovereign compute boundaries without transmitting citizen inputs over the public internet to commercial third-party AI APIs.
+### Local Intelligence Model Engine: Ollama Local Runtime Instance
+* **Configuration:** Isolated local daemon service.
+* **Rationale:** Ensures data privacy and compliance with sovereign data regulations (like the DPDP Act) by processing data locally on the machine rather than sending citizen inputs to external cloud APIs.
 
-### Selected Model Baseline: Sovereign 8B-Class SLM (Quantized to 4-bit)
-* **Configuration:** An 8-billion-parameter class model using 4-bit quantization; model weights occupy roughly 4–5 GB, with additional memory reserved for runtime state and inference context.
-* **Rationale:** Lower-precision quantization reduces memory footprint compared with 16-bit weights while preserving deterministic structured JSON entity extraction. Task accuracy, latency, and peak memory are benchmarked prior to production rollout.
+### Selected Model Baseline: Local 8B-Class SLM (Quantized to 4-bit)
+* **Configuration:** An 8-billion-parameter class model using 4-bit quantization; model weights occupy roughly 4–5 GB, with additional memory required for runtime state and KV cache depending on context length.
+* **Rationale:** Lower-precision quantization reduces memory use compared with 16-bit weights so the model can run on local unified-memory hardware, with potential quality degradation depending on task and quantizer. Task accuracy, latency, and peak memory must be benchmarked before adoption.
 
-### Memory Overhead Buffer: Reserve 3.5 GB for Host OS & Gateway Processes
+### Unified Memory Overhead Buffer: Reserve 3.5 GB for OS Background Processes
 * **Configuration:** Memory ceiling protection allocation.
-* **Rationale:** Restricting the SLM inference runtime's memory footprint guarantees that the host operating system, ASGI gateway workers, and perimeter security firewalls maintain deterministic headroom under peak concurrency.
+* **Rationale:** Prevents system freezes, kernel panics, or heavy disk swapping (which degrades performance). Restricting the AI model's memory footprint guarantees that the macOS operating system and other essential background tasks have sufficient headroom to operate smoothly.
 
 
 ## 🇮🇳 2. Sovereign India DPI Dependencies

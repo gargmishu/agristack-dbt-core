@@ -27,10 +27,12 @@ from src.data_models.governance import (
     GovernanceOutcomePayload,
 )
 from src.services.dpi import (
+    BeneficiaryRegistryService,
     CropVerificationService,
     IdentityVerificationService,
     LandRegistryService,
     SchemePolicyService,
+    create_beneficiary_registry_service,
     create_crop_verification_service,
     create_identity_verification_service,
     create_land_registry_service,
@@ -48,18 +50,18 @@ class ClaimAdjudicator:
     """Evaluates governance decision matrix based on confidence and registry eligibility.
 
     Coordinates eligibility verification across sovereign identity, cadastral land,
-    remote-sensing crop cultivation, and scheme policy registry clients, generating
-    authoritative `GovernanceOutcomePayload` determinations.
+    remote-sensing crop cultivation, scheme policy, and beneficiary registry clients,
+    generating authoritative `GovernanceOutcomePayload` determinations.
 
     Decision Rules:
     - Auto-Approval (`AUTO_APPROVE`): High confidence (>= 0.85), verified identity, eligible
       cadastral land parcel, verified seasonal crop cultivation, active scheme policy coverage,
-      and no prior claim in the active season.
+      verified beneficiary registry enrollment, and no prior claim in the active season.
     - Escalation (`ROUTE_FOR_MANUAL_REVIEW`): Low/moderate confidence (< 0.85) or
       adversarial prompt injection attempts.
     - Rejection (`AUTO_REJECT`): Duplicate active-season claim, unverified identity token,
-      cadastral land record mismatch, ineligible seasonal crop cultivation, or scheme policy
-      exclusion.
+      cadastral land record mismatch, ineligible seasonal crop cultivation, or scheme/beneficiary
+      policy exclusion.
 
     See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
@@ -70,6 +72,7 @@ class ClaimAdjudicator:
         land_service: LandRegistryService | None = None,
         crop_service: CropVerificationService | None = None,
         scheme_policy_service: SchemePolicyService | None = None,
+        beneficiary_service: BeneficiaryRegistryService | None = None,
     ) -> None:
         """Initializes the claim adjudicator with required sovereign registry services.
 
@@ -78,11 +81,13 @@ class ClaimAdjudicator:
             land_service: Cadastral land ownership registry client (defaults to standard factory).
             crop_service: Seasonal crop & remote-sensing client (defaults to standard factory).
             scheme_policy_service: Scheme policy metadata client (defaults to standard factory).
+            beneficiary_service: Beneficiary enrollment client (defaults to standard factory).
         """
         self._identity_service = identity_service or create_identity_verification_service()
         self._land_service = land_service or create_land_registry_service()
         self._crop_service = crop_service or create_crop_verification_service()
         self._scheme_policy_service = scheme_policy_service or create_scheme_policy_service()
+        self._beneficiary_service = beneficiary_service or create_beneficiary_registry_service()
 
     # -------------------------------------------------------------------------
     # Primary Public Workflow Entrypoints
@@ -139,7 +144,7 @@ class ClaimAdjudicator:
                 evaluated_at=evaluated_at,
             )
 
-        # 3-6. Sovereign Identity, Cadastral Plot, Crop Cultivation & Scheme Policy Verification
+        # 3-7. Identity, Cadastral Plot, Crop, Scheme Policy & Beneficiary Registry Verification
         rejection_reason = await self._verify_registry_and_policy_entitlement(payload)
         if rejection_reason is not None:
             return GovernanceOutcomePayload(
@@ -152,7 +157,7 @@ class ClaimAdjudicator:
                 evaluated_at=evaluated_at,
             )
 
-        # 7. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
+        # 8. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
         if extracted_payload.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
             logger.info(
                 "Straight-through automated payout approved for session=%s score=%.2f",
@@ -193,7 +198,7 @@ class ClaimAdjudicator:
         self,
         payload: ClaimEvaluationPayload,
     ) -> RejectionReasonCode | None:
-        """Executes sequential identity, cadastral plot, crop, and scheme policy checks."""
+        """Executes sequential identity, land, crop, scheme policy, and beneficiary checks."""
         extracted_payload = payload.extracted_payload
 
         # 3. Sovereign Identity Registry Verification
@@ -252,6 +257,24 @@ class ClaimAdjudicator:
                 district,
                 crop_name,
                 payload.active_season,
+            )
+            return RejectionReasonCode.POLICY_EXCLUSION
+
+        # 7. Social Protection Beneficiary Enrollment Verification
+        scheme_id = str(
+            extracted_payload.domain_entities.get(
+                DomainEntityKey.SUBSIDY_SCHEME_ID, payload.active_season
+            )
+        )
+        is_beneficiary_eligible = await self._beneficiary_service.query_beneficiary_eligibility(
+            payload.tokenized_citizen_id,
+            scheme_id,
+        )
+        if not is_beneficiary_eligible:
+            logger.warning(
+                "Beneficiary registry exclusion for citizen=%s scheme=%s; rejecting",
+                payload.tokenized_citizen_id[:16],
+                scheme_id,
             )
             return RejectionReasonCode.POLICY_EXCLUSION
 

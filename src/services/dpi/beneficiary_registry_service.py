@@ -29,6 +29,7 @@ from src.config.service_settings import (
 from src.data_models.caseworker import CaseworkerCaseReviewPayload
 from src.errors.service_errors import ServiceResponsePayloadError
 from src.services.dpi.dpi_mock_fixtures import (
+    EXCLUDED_POLICY_PREFIX,
     UNVERIFIED_IDENTITY_PREFIX,
     UNVERIFIED_IDENTITY_TOKEN_ZERO,
 )
@@ -193,10 +194,12 @@ class MockBeneficiaryRegistryService:
         self, tokenized_citizen_id: str, scheme_id: str
     ) -> bool:
         """Simulates beneficiary entitlement check with deterministic token rules."""
+        normalized_scheme_id = scheme_id.strip()
         return bool(
             tokenized_citizen_id != UNVERIFIED_IDENTITY_TOKEN_ZERO
             and not tokenized_citizen_id.startswith(UNVERIFIED_IDENTITY_PREFIX)
-            and scheme_id.strip()
+            and normalized_scheme_id
+            and not normalized_scheme_id.upper().startswith(EXCLUDED_POLICY_PREFIX)
         )
 
 
