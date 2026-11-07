@@ -56,8 +56,10 @@ The platform is structured into four strictly decoupled architectural layers:
 ┌────────────────────────┐      ┌────────────────────────┐
 │ External AI Blocks     │      │ Authoritative DPI Rails│
 │ - Bhashini ASR/NMT/TTS │      │ - Identity Verification│
-│ - Sovereign SLM Engine │      │ - AgriStack Land/Crops │
-│                        │      │ - OpenSPP Caseworker   │
+│ - Sovereign SLM Engine │      │ - Cadastral Land Reg   │
+│                        │      │ - Crop/Satellite Check │
+│                        │      │ - Scheme Policy MCP    │
+│                        │      │ - Beneficiary Registry │
 │                        │      │ - NPCI/PFMS Payout Rail│
 └────────────────────────┘      └────────────────────────┘
 ```

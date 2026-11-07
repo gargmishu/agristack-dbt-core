@@ -59,9 +59,11 @@
 ┌──────────────────────────┐ ┌──────────────────────────┐ ┌──────────────────────────┐
 │ Sovereign AI Blocks      │ │ Multichannel Delivery    │ │ Authoritative Registries │
 │ • Bhashini Services      │ │ • Adaptive Multi-Channel │ │ • Identity Verification  │
-│   (ASR / NMT / TTS)      │ │   Notification Engine    │ │ • AgriRegistry Service   │
-│ • Sovereign SLM Extractor│ │   (Adaptive 4-Channel    │ │ • SocialRegistry Service │
-│ • Simulation Fixtures    │ │    Dispatch Engine)      │ │ • PaymentRail Service    │
+│   (ASR / NMT / TTS)      │ │   Notification Engine    │ │ • Cadastral Land Registry│
+│ • Sovereign SLM Extractor│ │   (Adaptive 4-Channel    │ │ • Crop & Satellite Check │
+│ • Simulation Fixtures    │ │    Dispatch Engine)      │ │ • Scheme Policy MCP      │
+│                          │ │                          │ │ • Beneficiary Registry   │
+│                          │ │                          │ │ • Payment Disbursal Rail │
 └──────────────────────────┘ └──────────────────────────┘ └──────────────────────────┘
 ```
 
@@ -162,7 +164,7 @@ agristack-dbt-core/
 │   │   ├── ai/                      # Bhashini ASR/NMT/TTS & SLM Entity Extractor
 │   │   ├── notification/            # Adaptive 4-Channel Notification Dispatch Service
 │   │   ├── persistence/             # Relational Ledger & Audit Persistence Service
-│   │   └── dpi/                     # Identity, Cadastral, OpenSPP & Payment Rails
+│   │   └── dpi/                     # Identity, Land, Crop/Satellite, Scheme MCP, Beneficiary & Payment Rails
 │   ├── data_models/                 # Canonical domain contracts
 │   │   ├── common/                  # Base models, Enums, Constrained Types
 │   │   ├── raw_ingress/             # WhatsApp, IVR, USSD raw carrier contracts
@@ -239,7 +241,7 @@ PYTHONPATH=. .venv/bin/uvicorn src.public_agent.public_agent_http_server:create_
 | [`step0.1`](decisions/step0.1_database_evaluation.md) | Database Evaluation | Relational DB evaluation against free-tier, JSONB, and DBT requirements. |
 | [`step0.2`](decisions/step0.2_data_model_design.md) | Data Model Design | Entity normalization, cardinality, and physical table naming standards. |
 | [`step0.3`](decisions/step0.3_hashing_algorithm_evaluation.md) | Hashing Evaluation | Cryptographic evaluation of SHA-256 HMAC vs. Argon2/Bcrypt for citizen tokens. |
-| [`step0.3`](decisions/step0.3_token_service_README.md) | Tokenization Operations | Layer 2 execution boundary, key management, rotation, and verification requirements. |
+| [`step0.3`](decisions/step0.3_token_service_readme.md) | Tokenization Operations | Layer 2 execution boundary, key management, rotation, and verification requirements. |
 | [`step0.3`](decisions/step0.3_zero_trust_tokenization.md) | Zero-Trust Tokenization | RAM-only cryptographic tokenization and zero-retention logging. |
 | [`step0.4`](decisions/step0.4_database_schema_design.md) | Database Schema | Normalization, indexing strategies, audit triggers, and DBT analytical views. |
 | [`step1.1`](decisions/step1.1_tech_stack_evaluation.md) | Tech Stack Selection | Application framework, SLM engine, and runtime evaluation. |

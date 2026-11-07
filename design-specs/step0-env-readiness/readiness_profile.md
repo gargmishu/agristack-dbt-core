@@ -1,47 +1,53 @@
 # Step 0 · AI Readiness & Environment Profile
 
-## 💻 1. Compute & Local Hardware Allocation
+## 💻 1. Compute & Sovereign Hardware Allocation
 
-### Machine Profile: Apple Silicon development workstation
-* **Configuration:** Apple Silicon Architecture (Unified Memory).
-* **Rationale:** Leverages the Apple Silicon (M-series) architecture with Unified Memory Architecture (UMA) for efficient local Large Language Model execution, as both CPU and GPU cores access the same memory pool, minimizing data transfer latency.
+### Compute Profile: Sovereign Unified Memory Node / State Cloud Instance
+* **Configuration:** Unified Memory Compute Architecture (UMA) or Sovereign On-Premise GPU/NPU Node.
+* **Rationale:** Leverages unified or localized memory architectures for low-latency Small Language Model (SLM) execution, minimizing memory-transfer overhead and keeping inference within sovereign compute boundaries.
 
-### Local Intelligence Model Engine: Ollama Local Runtime Instance
-* **Configuration:** Lightweight local background service.
-* **Rationale:** Ensures total data privacy and compliance with data protection regulations (like India's DPDP Act) by processing data locally on the machine. Ollama acts as a local API server, preventing sensitive information from being transmitted over the public internet to third-party AI services.
+### Local Intelligence Model Engine: Sovereign On-Premise SLM Inference Runtime
+* **Configuration:** Isolated local or state-cloud inference service.
+* **Rationale:** Ensures data privacy and compliance with India's DPDP Act 2023 by processing sanitized text within sovereign compute boundaries without transmitting citizen inputs over the public internet to commercial third-party AI APIs.
 
-### Selected Model Baseline: Local 8B-Class SLM (Quantized to 4-bit)
-* **Configuration:** An 8-billion-parameter class model using 4-bit quantization; model weights may occupy roughly 4–5 GB, with additional memory required for runtime state and inference context.
-* **Rationale:** Lower-precision quantization reduces memory use compared with 16-bit weights, but may affect output quality. Measure task accuracy, latency, and peak memory on the target workstation before selecting a production model.
+### Selected Model Baseline: Sovereign 8B-Class SLM (Quantized to 4-bit)
+* **Configuration:** An 8-billion-parameter class model using 4-bit quantization; model weights occupy roughly 4–5 GB, with additional memory reserved for runtime state and inference context.
+* **Rationale:** Lower-precision quantization reduces memory footprint compared with 16-bit weights while preserving deterministic structured JSON entity extraction. Task accuracy, latency, and peak memory are benchmarked prior to production rollout.
 
-### Unified Memory Overhead Buffer: Reserve 3.5 GB for OS Background Processes
+### Memory Overhead Buffer: Reserve 3.5 GB for Host OS & Gateway Processes
 * **Configuration:** Memory ceiling protection allocation.
-* **Rationale:** Since unified memory is shared with the host OS, failing to protect overhead causes system freezes etc. Restricting the AI runner's footprint ensures macOS, display engines, and local IDEs have enough headroom to operate smoothly without dropping processes.
+* **Rationale:** Restricting the SLM inference runtime's memory footprint guarantees that the host operating system, ASGI gateway workers, and perimeter security firewalls maintain deterministic headroom under peak concurrency.
 
 
 ## 🇮🇳 2. Sovereign India DPI Dependencies
 
 ### Language Block: Digital India BHASHINI API Framework (ASR/NMT/TTS)
 
-*   **Configuration:** Suite of government-hosted APIs providing Automatic Speech Recognition (ASR), Neural Machine Translation (NMT), and Text-to-Speech (TTS) capabilities across various Indian languages.
-*   **Rationale:** Enables voice-first and multilingual interfaces across India's linguistic landscape. Confirm the selected service endpoint's data-residency, retention, and processing terms before sending citizen content. Recognition quality in dialects and agricultural noise, translation quality, and speech intelligibility must be evaluated for the pilot.
+*   **Configuration:** Suite of government-hosted APIs providing Automatic Speech Recognition (ASR), Neural Machine Translation (NMT), and Text-to-Speech (TTS) capabilities across 22 Scheduled Indian languages.
+*   **Rationale:** Enables voice-first and multilingual interfaces across India's linguistic landscape (`8000 Hz` narrowband PSTN/GSM and `16000 Hz` wideband PCM). Confirm the selected service endpoint's data-residency, retention, and processing terms before sending citizen content.
 
-### Core Registry: Federated AgriStack Architecture (FarmerID Verification)
+### Core Land & Crop Registries: Federated AgriStack & Digital Crop Survey (DCS)
 
-*   **Configuration:** A federated system encompassing multiple registries for verifiable farmer and agricultural data:
-    1.  **The Farmer Registry:** Provides a registry identifier and verification status through its authorized interface.
-    2.  **The Farmland Plot Registry:** Contains geo-referenced land maps and ownership/cultivation details.
-    3.  **The Crop Sown Registry:** A seasonal digital ledger recording crops planted on specific plots.
-*   **Rationale:** Establishes a multi-layered foundation of trust and identity for farmers and their activities.
-    1.  **Farmer Registry Verification:** The pipeline queries the authorized registry to verify the caller's registered status; a registry match alone must not be treated as proof of legal land ownership.
-    2.  **Land Verification:** The Farmland Plot Registry prevents fraud by allowing the pipeline to confirm the caller owns or cultivates the specific land parcels under discussion.
-    3.  **Crop Verification:** The Crop Sown Registry enables cross-referencing farmer claims. For example, if a farmer reports a "cotton pest," the pipeline checks this registry to confirm cotton was indeed sown on their registered land for the current season, ensuring relevancy and accuracy.
-    The federated nature allows states to manage their data while contributing to a national, verifiable system essential for targeted service delivery.
+*   **Configuration:** A federated system encompassing separated registries for verifiable farmer, cadastral land, and physical crop data:
+    1.  **The Farmer & Identity Registry:** Provides a registry identifier and verification status through its authorized interface.
+    2.  **The Farmland Plot Registry (Cadastral Land Registry):** Contains geo-referenced cadastral land maps and survey/Khasra ownership details.
+    3.  **The Crop Sown & Satellite Verification Registry:** Combines Digital Crop Survey (DCS) seasonal declarations with multi-spectral satellite stress indices (ALU/AMED plot polygons).
+*   **Rationale:** Establishes separated, independently auditable verification boundaries for identity, legal land ownership, and physical crop cultivation across state registries.
 
-### Benefit Transfer Rail: Authorized Scheme Payment Interface
+### Policy Metadata Block: Data DHARA (NMDS 2.0) Model Context Protocol (`/mcp`) Server
 
-*   **Configuration:** An authorized scheme-specific payment interface, selected with the participating department and treasury.
-*   **Rationale:** Payment eligibility, authorization, settlement status, and reconciliation must be confirmed through the actual scheme and payment-rail contracts. Do not assume a single central ledger is available or authoritative for every program.
+*   **Configuration:** National Metadata Dataset Service (Data DHARA) exposing MDDS/LGD-harmonized scheme notifications and calamity tables via JSON-RPC 2.0 Streamable HTTP (`POST /mcp` tools: `search_datasets`, `get_metadata`, `get_table`).
+*   **Rationale:** Enables deterministic Gate 3 verification that the claimant's district, crop, and season are covered by an active government calamity notification or subsidy rule without hardcoding scheme tables in application code.
+
+### Beneficiary & Case Management Block: OpenSPP / OpenG2P Social Protection Registry
+
+*   **Configuration:** Digital Public Good (DPG) beneficiary registry and caseworker escalation queue (`/v1/social/eligibility` and `/v1/social/cases`).
+*   **Rationale:** Verifies beneficiary enrollment across social protection schemes and stages human-in-the-loop review tickets (`ROUTE_FOR_MANUAL_REVIEW`) when extraction confidence is below `0.85` or registry discrepancies require officer adjudication.
+
+### Benefit Transfer Rail: Authorized Scheme Payment Interface (NPCI APBS / PFMS & G2P Connect v1.0.0)
+
+*   **Configuration:** An authorized scheme-specific payment interface supporting asynchronous treasury clearing and signed G2P Connect v1.0.0 settlement envelopes (`disburse`, `on-disburse`).
+*   **Rationale:** Payment eligibility, authorization, settlement status, and reconciliation are confirmed through deterministic state transitions (`PENDING` $\rightarrow$ `INITIATED` $\rightarrow$ `SUCCESS`/`FAILED`) and cryptographic callback verification.
 
 
 ## 🔒 3. Data Compliance Gates

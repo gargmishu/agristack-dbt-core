@@ -253,8 +253,8 @@
       "action": "Parse the standardized input text into clean system variables via local LLM parsing.",
       "execution_scope": "Applies to IVR Voice and WhatsApp tracks. Bypassed completely for USSD channel. Integrates runtime adversarial ingestion firewall analysis.",
       "infrastructure_dependencies": {
-        "local_inference_runtime": "LLM Local Background Execution Engine Instance",
-        "hardware_allocation_profile": "MacBook Pro Unified Memory Architecture Unified Silicon Pool"
+        "local_inference_runtime": "Sovereign Small Language Model (SLM) Execution Engine Instance",
+        "hardware_allocation_profile": "Sovereign On-Premise / State Cloud Unified Compute Pool"
       },
       "input_contract": {
         "type": "object",
@@ -345,10 +345,12 @@
       }
     },
     "step_06_agricultural_registry_crossmatch": {
-      "action": "Cross-examine land parcel records, ownership parameters, and seasonal crop sown claims using masked tokens.",
+      "action": "Cross-examine land parcel records, ownership parameters, physical crop/satellite stress indices, and scheme policy calamity notifications using masked tokens.",
       "execution_scope": "All channels. Completely insulated from cleartext PII identity strings.",
       "infrastructure_dependencies": {
-        "core_agricultural_registry": "Federated AgriStack Ecosystem (Farmer Registry, Farmland Plot Registry, Crop Sown Registry)"
+        "core_agricultural_registry": "Federated AgriStack Cadastral Land Registry (Farmer Registry & Farmland Plot Registry)",
+        "crop_satellite_verification_rail": "Digital Crop Survey (DCS) & Multi-Spectral ALU/AMED Satellite Stress Verification Gateway",
+        "scheme_policy_mcp_rail": "National Metadata Dataset Service (Data DHARA NMDS 2.0 Model Context Protocol Server — /mcp tools: search_datasets, get_metadata, get_table)"
       },
       "input_contract": {
         "type": "object",

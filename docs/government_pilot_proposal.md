@@ -66,10 +66,10 @@ To prevent unsustainable GPU compute costs:
 Government funds are never allocated by non-deterministic artificial intelligence:
 - **Gate 1 (Ingress & Modality)**: Standardizes multi-channel carrier events into canonical intake contracts.
 - **Gate 2 (Completeness & Conversational Loops)**: Checks for mandatory domain parameters (District and Crop Name) and initiates bounded clarification before escalating. Survey/Khasra Number is optional at intake and may be resolved during Gate 3 registry matching.
-- **Gate 3 (Deterministic Policy Matrix)**: Evaluates extracted parameters against AgriStack cadastral land records and seasonal double-dipping ledgers:
-  - **Automated Payout (`AUTO_APPROVE`)**: Extraction confidence $\ge 85\%$, land ownership confirmed in registry, no prior claim in active season.
+- **Gate 3 (Deterministic Policy Matrix)**: Evaluates extracted parameters against AgriStack cadastral land records, Digital Crop Survey & satellite stress indices, Data DHARA scheme policy calamity notifications, and seasonal double-dipping ledgers:
+  - **Automated Payout (`AUTO_APPROVE`)**: Extraction confidence $\ge 85\%$, land ownership, crop cultivation, and active calamity policy verified across registries, with no prior claim in the active season.
   - **Caseworker Review (`ROUTE_FOR_MANUAL_REVIEW`)**: Extraction confidence $< 85\%$, boundary discrepancies, or flagged overrides staged into district caseworker queues.
-  - **Automated Rejection (`AUTO_REJECT`)**: Ineligible land record, mismatched crop season, or duplicate claim.
+  - **Automated Rejection (`AUTO_REJECT`)**: Ineligible land record, unverified crop/calamity season, or duplicate claim.
 
 ---
 

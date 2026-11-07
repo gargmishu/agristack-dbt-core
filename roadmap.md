@@ -28,7 +28,7 @@
   * **Layer 2: API Access & Transport** (Auth, rate-limiting, schema validation, and canonicalization) — e.g., API gateway enforcing mTLS/JWT, ingress proxy with quotas, message-broker shim that validates and forwards canonical payloads to Layer 3.
   * **Layer 3: Public Agent Intake Gateway** — the API surface and intake layer that normalizes incoming events, performs intent validation, and forwards structured payloads to the brain.
   * **Layer 4: Orchestrator Brain** (State machine and governance decision routing engines).
-  * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, agricultural land registries, social protection case staging, and payment rails).
+  * **Service Abstractions:** Explicitly separate Foundational AI Blocks (speech-to-text, translation, text-to-speech, SLMs) from Authoritative DPI Registries (identity verification, cadastral land registries, physical crop & satellite verification, scheme policy MCP metadata, beneficiary social protection case staging, and payment rails).
 
   *Conceptual Subsystem Architecture:*
 
@@ -40,7 +40,7 @@
   | **Layer 4** | *Orchestration Brain* | 3-gate claim orchestration engine, tri-state policy adjudicator, and caseworker management. |
   | **Services** | *Sovereign AI Abstractions* | Bhashini Speech-to-Text (ASR), Machine Translation (NMT), Speech Synthesis (TTS), and Sovereign SLM Entity Extractor. |
   | **Services** | *Outbound Notification Engine* | Adaptive multi-channel template rendering, text-to-speech audio formatting, and egress dispatch. |
-  | **Services** | *Authoritative DPI Registries* | MOSIP identity verification, AgriStack land record cross-matching, OpenSPP social case staging, and NPCI/PFMS payment rails. |
+  | **Services** | *Authoritative DPI Registries* | MOSIP identity verification, AgriStack cadastral land cross-matching, Digital Crop Survey & satellite verification, Data DHARA scheme policy MCP, OpenSPP/OpenG2P beneficiary case staging, and NPCI/PFMS payment rails. |
   | **Contracts**| *Domain Data Contracts* | Immutable, validated Pydantic schemas enforcing Zero-Trust invariants across all layers. |
 
   *Rationale: This exact split maps directly to the layers in the flowchart and dependency taxonomy, guaranteeing Separation of Concerns so that a bug in a WhatsApp connector won't break core governance routing or identity tokenization.*
@@ -52,7 +52,7 @@
 
 * **Step 3.1: Foundational Mock Boundaries:** Build deterministic, locally testable functions returning fixed JSON responses for all external dependencies:
   * **AI Blocks:** ASR transcription, NMT translation, TTS synthesis, and SLM structured entity extraction.
-  * **DPI Blocks:** Identity verification/tokenization, agricultural cadastral cross-matching, social benefit case staging, and automated payment clearing.
+  * **DPI Blocks:** Identity verification/tokenization, agricultural cadastral land cross-matching, physical crop & satellite verification, scheme policy calamity metadata (MCP), beneficiary social benefit case staging, and automated payment clearing.
 * **Step 3.2: Security & Ingestion Firewalls:** Implement adversarial prompt injection filters and in-memory PII cleartext purge middlewares. Enforce rules that immediately set AI extraction confidence scores to `0.0` upon detecting adversarial override attempts.
 * **Step 3.3: Layer 4 Orchestrator Brain:** Implement the deterministic governance workflow over the extracted domain entity contract: intent and completeness validation with bounded clarification loops, followed by policy adjudication and approve/review/reject routing. The canonical confidence threshold and state transitions are owned by the governance decisions.
 * **Step 3.4: Layer 3 Intake Gateway & Channel Connectors:** Build the public intake API and implement channel-specific (WhatsApp, IVR voice, USSD, and SMS) ingress adapters that produce the standardized intake contract and extracted domain entity contract consumed by Layer 4.

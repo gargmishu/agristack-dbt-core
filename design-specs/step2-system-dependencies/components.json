@@ -11,7 +11,7 @@
         "hosting_provenance": "Self-Hosted Sovereign State Telecom Edge (<₹1/min full-stack benchmark)",
         "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
         "mcp_interface_enabled": false,
-        "##_rationale": "Answers inbound/outbound 8kHz PSTN/SIP feature-phone calls, manages bidirectional audio streaming, Voice Activity Detection (VAD), turn-taking, and barge-in interruption, stores sovereign .wav call recordings in MinIO, and forwards validated 8kHz/16kHz sessions to Layer 1 IvrConnector while delegating stateless ASR/TTS inference to Layer 3 BHASHINI."
+        "##_rationale": "Answers inbound/outbound 8kHz PSTN/SIP feature-phone calls, manages bidirectional audio streaming, Voice Activity Detection (VAD), turn-taking, and barge-in interruption, stores sovereign .wav call recordings in MinIO, and forwards validated 8kHz/16kHz sessions to the Layer 1 IVR Channel Connector while delegating stateless ASR/TTS inference to Layer 3 BHASHINI."
       }
     },
     "foundational_ai_blocks": {
@@ -47,8 +47,8 @@
       "entity_extraction_block": {
         "functional_name": "structured_extract()",
         "classification": "Task-Focused Small Language Model (SLM)",
-        "underlying_engine": "Local Fine-Tuned SLM via Ollama Framework Core",
-        "hosting_provenance": "Sovereign Local Hardware Instance (MacBook Pro Silicon Pool)",
+        "underlying_engine": "Sovereign Fine-Tuned Small Language Model Runtime",
+        "hosting_provenance": "Sovereign On-Premise / State Cloud Compute Pool",
         "deployment_status": "PROVISIONED_AND_ACCESSIBLE",
         "mcp_interface_enabled": false,
         "##_governance_rationale": "Running a localized SLM keeps citizen text processing completely within sovereign physical compute boundaries, preventing cloud PII leakage vectors."
@@ -63,22 +63,35 @@
         "##_security_note": "Enforces the cryptographic boundary where cleartext identifiers convert into irreversible tokenized hashes."
       },
       "agricultural_data_rail": {
-        "system_name": "Federated AgriStack Core Registry Platform",
+        "system_name": "Federated AgriStack Cadastral Land Registry Platform",
         "classification": "Authoritative Source Registry",
-        "source_of_truth_for": "Cadastral land boundaries, geofenced plots, and seasonal crop sown records",
+        "source_of_truth_for": "Cadastral land boundaries, survey/Khasra ownership, and geofenced plot records",
         "deployment_status": "LIVE_AND_OPERATIONAL",
-        "##_architecture_note": "AI outputs only inform eligibility decisions; this registry remains the sole authoritative source of truth for updating benefit balances."
+        "##_architecture_note": "AI outputs only inform eligibility decisions; this registry remains the sole authoritative source of truth for parcel ownership."
+      },
+      "crop_verification_satellite_rail": {
+        "system_name": "Digital Crop Survey (DCS) & Multi-Spectral Satellite Stress Verification Gateway",
+        "classification": "Authoritative Source Registry",
+        "source_of_truth_for": "Seasonal crop sowing declarations and geospatial ALU/AMED plot-level crop stress verification",
+        "deployment_status": "LIVE_AND_OPERATIONAL"
+      },
+      "scheme_policy_mcp_rail": {
+        "system_name": "National Metadata Dataset Service (Data DHARA NMDS 2.0 MCP Server)",
+        "classification": "Authoritative Policy Metadata Registry (Model Context Protocol)",
+        "source_of_truth_for": "District- and season-level calamity notifications and scheme policy coverage via JSON-RPC 2.0 /mcp tools (search_datasets, get_metadata, get_table)",
+        "deployment_status": "LIVE_AND_OPERATIONAL",
+        "mcp_interface_enabled": true
       },
       "social_protection_registry_dpg": {
-        "system_name": "OpenSPP Core Engine APIs",
+        "system_name": "OpenSPP / OpenG2P Beneficiary Social Protection Engine APIs",
         "classification": "Digital Public Good (DPG) Workflow Core",
-        "source_of_truth_for": "Subsidy claim case lifecycle management, status states, and human-in-the-loop fallback routing logs",
+        "source_of_truth_for": "Beneficiary scheme enrollment, subsidy claim case lifecycle management, and human-in-the-loop caseworker review queues",
         "deployment_status": "LIVE_AND_OPERATIONAL"
       },
       "payment_disbursement_rail": {
-        "system_name": "NPCI Aadhaar Payment Bridge System (APBS) / Mojaloop Ledger Rail",
+        "system_name": "NPCI Aadhaar Payment Bridge System (APBS) / PFMS & G2P Connect v1.0.0 Ledger Rail",
         "classification": "Disbursement Payments Rail",
-        "source_of_truth_for": "Direct Benefit Transfer (DBT) execution clearing numbers",
+        "source_of_truth_for": "Direct Benefit Transfer (DBT) execution clearing numbers and signed asynchronous settlement callbacks",
         "deployment_status": "LIVE_AND_OPERATIONAL"
       }
     }

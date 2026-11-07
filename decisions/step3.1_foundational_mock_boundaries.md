@@ -44,20 +44,28 @@ The DPI Services simulate cross-matching and clearing operations against nationa
   * Validates 64-character SHA-256 HMAC tokens against simulated verification status tables.
   * Enforces the **Identity Invariant**: no cleartext phone numbers, Aadhaar IDs, or names enter registry mock lookups.
 
-### 3.2 AgriStack Cadastral & Crop Land Registry (Agri Registry Service)
+### 3.2 AgriStack Cadastral Land Registry (Land Registry Service)
 * **Capabilities:**
   * Evaluates citizen identity tokens against simulated cadastral land records (`LAND-REC-1002`, `LAND-REC-2004`, `LAND-REC-3006`).
-  * Verifies parcel ownership matching (district, taluka, village, survey number) and seasonal crop entitlements.
+  * Verifies parcel ownership matching (district, taluka, village, survey/Khasra number).
 
-### 3.3 OpenSPP Social Welfare Registry & Internal Case Management
-* **External DPI Connector:**
-  * Simulates external OpenSPP registry synchronization for incident review tickets and social protection scheme eligibility queries.
+### 3.3 Physical Crop & Satellite Stress Verification (Crop Verification Service)
+* **Capabilities:**
+  * Evaluates seasonal crop sown declarations (`Wheat`, `Rice`, `Cotton`) and multi-spectral satellite stress indices against Digital Crop Survey (DCS) and geospatial ALU/AMED plot records.
+
+### 3.4 Scheme Policy & Calamity Notification Metadata (Scheme Policy Service)
+* **Capabilities:**
+  * Evaluates district- and season-level calamity notification coverage and scheme policy eligibility against National Metadata Dataset Service (Data DHARA NMDS 2.0 `/mcp`) records.
+
+### 3.5 Beneficiary Social Welfare Registry & Internal Case Management
+* **External DPI Connector (Beneficiary Registry Service):**
+  * Simulates external OpenSPP / OpenG2P beneficiary registry synchronization for incident review tickets and social protection scheme eligibility queries.
   * Provides deterministic failure routing on simulated rejection prefixes to verify error handling pathways in Layer 4 orchestrators.
 * **Internal Layer 4 Caseworker Service:**
   * Coordinates internal caseworker queue staging, officer adjudication review processing, and citizen clarification resolution loops (`INFO_REQUESTED` $\rightarrow$ `UNDER_REVIEW`).
-  * Injects `Social Registry Service` for external OpenSPP synchronization.
+  * Injects the Beneficiary Registry Service for external OpenSPP / OpenG2P synchronization.
 
-### 3.4 Sovereign Payment Rails (Payment Rail Service)
+### 3.6 Sovereign Payment Rails (Payment Rail Service)
 * **Capabilities:**
   * Simulates asynchronous wire dispatch over NPCI APBS / PFMS Treasury clearing rails.
   * Emits final status callbacks adhering strictly to monotonic forward financial state transitions (`PENDING` $\rightarrow$ `INITIATED` $\rightarrow$ `SUCCESS`/`FAILED`).

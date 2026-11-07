@@ -11,6 +11,7 @@ services:
       AGRISTACK_PEPPER_SECRET: "${AGRISTACK_PEPPER_SECRET:-sovereign_karnal_pilot_hmac_pepper_2026_secret_key}"
       RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-60}"
       RATE_LIMIT_CAPACITY: "${RATE_LIMIT_CAPACITY:-20}"
+      ENVIRONMENT: "${ENVIRONMENT:-development}"
       SERVICE_RUNTIME_MODE: "${SERVICE_RUNTIME_MODE:-MOCK}"
     read_only: true
     tmpfs:
@@ -36,6 +37,7 @@ services:
       AGRISTACK_PEPPER_SECRET: "${AGRISTACK_PEPPER_SECRET:-sovereign_karnal_pilot_hmac_pepper_2026_secret_key}"
       RATE_LIMIT_PER_MINUTE: "${RATE_LIMIT_PER_MINUTE:-60}"
       RATE_LIMIT_CAPACITY: "${RATE_LIMIT_CAPACITY:-20}"
+      ENVIRONMENT: "${ENVIRONMENT:-development}"
       SERVICE_RUNTIME_MODE: "MOCK"
     read_only: true
     tmpfs:

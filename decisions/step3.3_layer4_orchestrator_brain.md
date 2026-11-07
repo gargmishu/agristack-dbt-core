@@ -77,10 +77,12 @@ The Three-Gate Governance Architecture begins at **Gate 1**, encapsulated in Lay
 ## 4. Gate 3: Deterministic Governance Routing Matrix
 
 ### 4.1 DPI Cross-Matching & Anti-Double-Dipping Checks
-Gate 3 evaluates three independent verification criteria:
+Gate 3 evaluates five independent verification criteria across separated domain boundaries:
 1. **Sovereign Identity Verification:** Confirms that the pseudonymous identity token exists and is valid in the sovereign identity registry (MOSIP / Aadhaar).
-2. **Cadastral & Crop Landholding Match:** Cross-checks the citizen token, district, survey number, and declared crop against authoritative land records (AgriStack Registry).
-3. **Anti-Double-Dipping Ledger Invariant:** Confirms that no approved claim exists for the tuple of `(tokenized_citizen_id, active_scheme_season)`.
+2. **Cadastral Land Parcel Ownership:** Cross-checks the citizen token, district, and survey/Khasra number against authoritative cadastral land records (AgriStack Land Registry).
+3. **Physical Crop & Satellite Stress Verification:** Verifies declared seasonal crop cultivation and multi-spectral satellite stress indices against Digital Crop Survey (DCS) and geospatial ALU/AMED plot records.
+4. **Scheme Policy & Calamity Notification Eligibility:** Verifies that the district, crop, and season are covered by an active calamity notification or scheme policy rule via the National Metadata Dataset Service (Data DHARA NMDS 2.0 `/mcp`).
+5. **Anti-Double-Dipping Ledger Invariant:** Confirms that no approved claim exists for the tuple of `(tokenized_citizen_id, active_scheme_season)`.
 
 ### 4.2 Tri-State Governance Adjudication
 

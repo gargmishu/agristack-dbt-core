@@ -6,7 +6,7 @@
 
 This document defines the live service integration architecture, HTTP transport adapters, resiliency patterns, and zero-PII security rules for **Phase 3, Step 3.7: Live Service Integration** within the AgriStack Zero-Trust DPI Orchestrator.
 
-Step 3.7 provides production-ready HTTP client adapters that connect internal service abstractions to live sovereign AI models (Bhashini Speech & Translation, Sovereign SLM) and authoritative national DPI registries (MOSIP Identity, AgriStack Land Records, OpenSPP Social Protection, NPCI/PFMS Payment Rails).
+Step 3.7 provides production-ready HTTP client adapters that connect internal service abstractions to live sovereign AI models (Bhashini Speech & Translation, Sovereign SLM) and authoritative national DPI registries (MOSIP Identity, AgriStack Cadastral Land Records, Digital Crop Survey & Satellite Verification, Data DHARA Scheme Policy MCP, OpenSPP/OpenG2P Beneficiary Protection, and NPCI/PFMS Payment Rails).
 
 ```
                [ Layer 3 / Layer 4 Domain Engines ]
@@ -18,8 +18,10 @@ Step 3.7 provides production-ready HTTP client adapters that connect internal se
  │                      │              │ Registry Clients     │
  │ - Bhashini ASR/NMT   │              │ - MOSIP Token Auth   │
  │ - Sovereign SLM NLU  │              │ - AgriStack Cadastre │
- │ - Vernacular TTS     │              │ - OpenSPP Caseworker │
- │ - Connection Pool    │              │ - NPCI/PFMS Clearing │
+ │ - Vernacular TTS     │              │ - Crop & Satellite   │
+ │ - Connection Pool    │              │ - Scheme Policy MCP  │
+ │                      │              │ - Beneficiary Reg    │
+ │                      │              │ - NPCI/PFMS Clearing │
  └──────────┬───────────┘              └──────────┬───────────┘
             │ (Async HTTP / mTLS)                 │ (Async HTTP / mTLS)
             ▼                                     ▼
@@ -36,7 +38,7 @@ Step 3.7 provides production-ready HTTP client adapters that connect internal se
 ### 2.1 Production Invariants
 
 1. **Fail-Closed & Zero Mock Leakage in Production:**
-   In production runtime environments, service clients must strictly communicate with live authoritative sovereign endpoints. If an authoritative registry (MOSIP, AgriStack, OpenSPP) or financial rail (NPCI/PFMS) is unreachable, times out, or returns a 5xx server error, the system must **fail closed**—raising service unavailable exceptions and routing claims to manual caseworker review. Falling back to local mock fixtures in production is strictly prohibited to prevent fraudulent payouts or invalid benefit determinations on simulated data.
+   In production runtime environments, service clients must strictly communicate with live authoritative sovereign endpoints. If an authoritative registry (MOSIP, AgriStack, Crop/Satellite, Data DHARA MCP, OpenSPP) or financial rail (NPCI/PFMS) is unreachable, times out, or returns a 5xx server error, the system must **fail closed**—raising service unavailable exceptions and routing claims to manual caseworker review. Falling back to local mock fixtures in production is strictly prohibited to prevent fraudulent payouts or invalid benefit determinations on simulated data.
 2. **Fail-Fast Startup Configuration:**
    In production mode, all external endpoint URLs and authentication credentials are mandatory. If any required service endpoint or API key is unconfigured or blank, container startup fails immediately with an explicit configuration error, enforcing the Zero-Trust principle of never running with missing secrets or unconfigured endpoints.
 3. **Persistent Singleton HTTP Connection Pooling:**
@@ -45,7 +47,7 @@ Step 3.7 provides production-ready HTTP client adapters that connect internal se
    Downstream DPI requests for claim processing must use the approved 64-character HMAC-SHA-256 identity token and PII-redacted domain data. Raw Aadhaar must not be directly hashed or sent to downstream claim services. Any legally authorized identity-verification exchange is a separate, explicitly scoped perimeter flow and must use the approved provider protocol and controls.
 5. **Strict Timeout Ceilings:**
    - AI Perception Services (ASR, NMT, SLM): 2.0-second connection & read timeout.
-   - Authoritative DPI Registries (MOSIP, AgriStack, OpenSPP): 3.0-second timeout.
+   - Authoritative DPI Registries (MOSIP, AgriStack, Crop/Satellite, Data DHARA MCP, OpenSPP): 3.0-second timeout.
    - Financial Clearing Rails (NPCI, PFMS): 5.0-second timeout with idempotent transaction key tracking.
 6. **Header Sanitization & Redaction:**
    All outbound API keys and Bearer tokens are injected via secure client configuration and strictly masked in all telemetry logs.
@@ -102,16 +104,26 @@ External service integration differentiates between infrastructure outages and i
 * **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on outage.
 
 ### 4.2 AgriStack Cadastral Land Registry Client
-* Queries `/v1/land/cadastral/verify` with HMAC citizen tokens and land record identifiers.
-* Validates parcel ownership, crop sowing declaration, and seasonal entitlements.
+* Queries `/v1/land/cadastral/verify` with HMAC citizen tokens, district, and survey/Khasra plot identifiers.
+* Validates parcel ownership and registered cadastral boundaries.
 * **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on outage.
 
-### 4.3 OpenSPP Social Welfare Registry Client
-* Dispatches eligibility verification requests to `/v1/social/eligibility`.
-* Synchronizes entitlement statuses across social protection schemes.
+### 4.3 Digital Crop Survey & Satellite Stress Verification Client
+* Queries `/v1/crop-satellite/verify` with HMAC citizen tokens, district, survey/Khasra number, and declared crop name.
+* Validates seasonal crop sowing declarations and multi-spectral satellite stress indices (ALU/AMED plot polygons).
 * **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on outage.
 
-### 4.4 NPCI / PFMS Payment Rail Client
+### 4.4 Data DHARA (NMDS 2.0) Scheme Policy MCP Client
+* Dispatches JSON-RPC 2.0 `tools/call` envelopes (`get_table`, `search_datasets`, `get_metadata`) to `/mcp` on the National Metadata Dataset Service (Data DHARA) MCP server.
+* Unwraps `result.content[0].text` JSON payloads and evaluates district-, crop-, and season-level calamity notification coverage.
+* **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on MCP error or network outage.
+
+### 4.5 Beneficiary Social Welfare Registry Client (OpenSPP / OpenG2P)
+* Dispatches beneficiary eligibility verification requests to `/v1/social/eligibility` and stages human-in-the-loop escalation tickets via `/v1/social/cases`.
+* Synchronizes entitlement statuses and caseworker adjudications across social protection schemes.
+* **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on outage.
+
+### 4.6 NPCI / PFMS Payment Rail Client
 * Dispatches asynchronous disbursement requests to `/v1/payments/disburse` with idempotent `disbursement_txn_id`.
 * Returns payment initiation confirmation receipts (`DisbursementStatus = PENDING` / `SUCCESS`).
 * **Production Boundary:** Mandatory endpoint URL and API key; persistent HTTP connection pool; fails closed on clearing outage.

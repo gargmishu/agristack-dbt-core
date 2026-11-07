@@ -36,9 +36,9 @@ Rural callers interacting over voice or messaging frequently omit required detai
 
 | Adjudication Outcome | Trigger Conditions | Downstream Execution & Side Effects | Eligibility Status |
 | :--- | :--- | :--- | :--- |
-| **`AUTO_APPROVE`** (Automated Payout) | AI confidence $\ge 0.85$, unique active-season claim, verified identity token, and verified cadastral land parcel | Generates transaction ID (`TXN-2026-*`), initiates disbursement on payment clearance rails (`DisbursementStatus.PENDING`), and dispatches approval receipt | `ELIGIBLE` |
+| **`AUTO_APPROVE`** (Automated Payout) | AI confidence $\ge 0.85$, unique active-season claim, verified identity token, verified cadastral land parcel, verified physical crop cultivation, and active scheme policy calamity coverage | Generates transaction ID (`TXN-2026-*`), initiates disbursement on payment clearance rails (`DisbursementStatus.PENDING`), and dispatches approval receipt | `ELIGIBLE` |
 | **`ROUTE_FOR_MANUAL_REVIEW`** (Caseworker Escalation) | AI confidence $< 0.85$, incomplete entities after 3 attempts, or adversarial threat flag | Generates escalation ticket (`SPP-CASE-2026-*`), stages incident in social protection case queue, and dispatches review notification | `REQUIRES_REVIEW` |
-| **`AUTO_REJECT`** (Automated Rejection) | Duplicate active-season claim (`DUPLICATE_CLAIM_ACTIVE_SEASON`), unverified identity (`IDENTITY_NOT_VERIFIED`), or land mismatch (`LAND_RECORD_NOT_FOUND`) | Terminates claim processing, records explicit rejection reason code, and dispatches transparent rejection explanation | `INELIGIBLE` |
+| **`AUTO_REJECT`** (Automated Rejection) | Duplicate active-season claim (`DUPLICATE_CLAIM_ACTIVE_SEASON`), unverified identity (`IDENTITY_NOT_VERIFIED`), land mismatch (`LAND_RECORD_NOT_FOUND`), unverified crop (`CROP_CULTIVATION_NOT_VERIFIED`), or uncovered calamity policy (`SCHEME_POLICY_NOT_COVERED`) | Terminates claim processing, records explicit rejection reason code, and dispatches transparent rejection explanation | `INELIGIBLE` |
 
 
 ## 5. End-to-End Verification Matrix
@@ -53,7 +53,7 @@ The automated simulation test suite verifies all three governance gates and bran
 3. **Gate 3 Tri-State Policy Adjudication Matrix:**
    * Verifies straight-through automated payout approval (`AUTO_APPROVE`) and payment rail callback generation.
    * Verifies low-confidence manual review escalation (`ROUTE_FOR_MANUAL_REVIEW`) and caseworker ticket staging.
-   * Verifies deterministic auto-rejection across all three statutory rejection codes (`DUPLICATE_CLAIM_ACTIVE_SEASON`, `IDENTITY_NOT_VERIFIED`, `LAND_RECORD_NOT_FOUND`).
+   * Verifies deterministic auto-rejection across statutory rejection codes (`DUPLICATE_CLAIM_ACTIVE_SEASON`, `IDENTITY_NOT_VERIFIED`, `LAND_RECORD_NOT_FOUND`, `CROP_CULTIVATION_NOT_VERIFIED`, `SCHEME_POLICY_NOT_COVERED`).
 
 ---
 
@@ -61,5 +61,5 @@ The automated simulation test suite verifies all three governance gates and bran
 
 ### Positive Consequences
 * **Guaranteed Termination:** The hard cap of 3 conversational attempts mathematically guarantees that no citizen interaction can enter an infinite clarification loop.
-* **Deterministic Auditability:** Every automated approval or rejection is backed by verifiable registry lookups (identity, land records, season ledger) and explicit statutory reason codes.
+* **Deterministic Auditability:** Every automated approval or rejection is backed by verifiable registry lookups (identity, cadastral land records, physical crop/satellite checks, scheme policy calamity notifications, and season ledger) and explicit statutory reason codes.
 * **Zero Hallucinated Disbursements:** Low-confidence AI extractions ($< 0.85$) are structurally barred from triggering treasury payouts and are deterministically routed to human caseworkers.
