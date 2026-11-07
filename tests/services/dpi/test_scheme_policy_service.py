@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 
 import httpx
@@ -38,22 +39,132 @@ async def test_mock_scheme_policy_service() -> None:
 
 
 @pytest.mark.asyncio
-async def test_live_scheme_policy_endpoint_success_and_invalid_schema() -> None:
-    def valid_policy_handler(request: httpx.Request) -> httpx.Response:
+async def test_live_scheme_policy_mcp_tools_and_coverage() -> None:
+    def mcp_handler(request: httpx.Request) -> httpx.Response:
         assert request.headers.get("Authorization") == "Bearer dhara_key"
-        assert str(request.url) == "https://datadhara.ekstep.org/v1/scheme-policy/verify"
-        return httpx.Response(
-            HTTPStatus.OK,
-            json={"is_policy_covered": True, "district": "Nashik", "crop_name": "Onion"},
-        )
+        assert str(request.url) == "https://datadhara.ekstep.org/mcp"
+        body = json.loads(request.content.decode("utf-8"))
+        assert body["jsonrpc"] == "2.0"
+        assert body["method"] == "tools/call"
+        tool_name = body["params"]["name"]
+        args = body["params"]["arguments"]
 
-    client = httpx.AsyncClient(transport=httpx.MockTransport(valid_policy_handler))
+        if tool_name == "get_table":
+            assert args["dataset_id"] == "KHARIF-2026"
+            assert args["column"] == "district"
+            if args["equals"] == "Nashik":
+                table_data = {
+                    "dataset_id": "KHARIF-2026",
+                    "title": "Maharashtra Hailstorm & Unseasonal Rain Notification",
+                    "total": 1,
+                    "rows": [
+                        {
+                            "sl_no": 1,
+                            "row_index": 0,
+                            "data": {
+                                "district": "Nashik",
+                                "crop_name": "Onion",
+                                "active_season": "KHARIF-2026",
+                            },
+                        }
+                    ],
+                }
+            else:
+                table_data = {"dataset_id": "KHARIF-2026", "total": 0, "rows": []}
+            return httpx.Response(
+                HTTPStatus.OK,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": body["id"],
+                    "result": {
+                        "content": [{"type": "text", "text": json.dumps(table_data)}],
+                        "isError": False,
+                    },
+                },
+            )
+
+        if tool_name == "search_datasets":
+            return httpx.Response(
+                HTTPStatus.OK,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": body["id"],
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(
+                                    {"total": 1, "datasets": [{"id": "KHARIF-2026"}]}
+                                ),
+                            }
+                        ],
+                        "isError": False,
+                    },
+                },
+            )
+
+        if tool_name == "get_metadata":
+            return httpx.Response(
+                HTTPStatus.OK,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": body["id"],
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(
+                                    {
+                                        "dataset": {
+                                            "id": args["dataset_id"],
+                                            "metadata_standard": "NMDS 2.0",
+                                        }
+                                    }
+                                ),
+                            }
+                        ],
+                        "isError": False,
+                    },
+                },
+            )
+
+        return httpx.Response(HTTPStatus.BAD_REQUEST)
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(mcp_handler))
     service = LiveSchemePolicyService(
         endpoint_url="https://datadhara.ekstep.org",
         api_key="dhara_key",
         http_client=client,
     )
     assert await service.verify_scheme_policy_coverage("Nashik", "Onion", "KHARIF-2026") is True
+    assert (
+        await service.verify_scheme_policy_coverage("Nashik", "Dragonfruit", "KHARIF-2026") is False
+    )
+    assert await service.verify_scheme_policy_coverage("Pune", "Onion", "KHARIF-2026") is False
+
+    datasets_res = await service.search_datasets(q="KHARIF-2026")
+    assert datasets_res["total"] == 1
+    meta_res = await service.get_metadata("KHARIF-2026")
+    assert meta_res["dataset"]["metadata_standard"] == "NMDS 2.0"
+
+
+@pytest.mark.asyncio
+async def test_live_scheme_policy_direct_boolean_and_invalid_schemas() -> None:
+    def direct_boolean_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            HTTPStatus.OK,
+            json={"result": {"is_policy_covered": True}},
+        )
+
+    direct_client = httpx.AsyncClient(transport=httpx.MockTransport(direct_boolean_handler))
+    direct_service = LiveSchemePolicyService(
+        endpoint_url="https://datadhara.ekstep.org",
+        api_key="dhara_key",
+        http_client=direct_client,
+    )
+    assert (
+        await direct_service.verify_scheme_policy_coverage("Nashik", "Onion", "KHARIF-2026") is True
+    )
 
     def invalid_policy_schema_handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(HTTPStatus.OK, json={"status": "ok"})
@@ -66,6 +177,21 @@ async def test_live_scheme_policy_endpoint_success_and_invalid_schema() -> None:
     )
     with pytest.raises(ServiceResponsePayloadError, match="invalid schema"):
         await bad_service.verify_scheme_policy_coverage("Nashik", "Onion", "KHARIF-2026")
+
+    def mcp_error_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            HTTPStatus.OK,
+            json={"jsonrpc": "2.0", "result": {"isError": True, "content": []}},
+        )
+
+    mcp_error_client = httpx.AsyncClient(transport=httpx.MockTransport(mcp_error_handler))
+    mcp_error_service = LiveSchemePolicyService(
+        endpoint_url="https://datadhara.ekstep.org",
+        api_key="dhara_key",
+        http_client=mcp_error_client,
+    )
+    with pytest.raises(ServiceResponsePayloadError, match="MCP tool execution failed"):
+        await mcp_error_service.verify_scheme_policy_coverage("Nashik", "Onion", "KHARIF-2026")
 
 
 @pytest.mark.asyncio

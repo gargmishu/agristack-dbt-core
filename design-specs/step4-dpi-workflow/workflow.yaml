@@ -161,7 +161,7 @@ ai_blocks:
   - name: "social_registry_check"
     kind: "sector_specific"
     interface: "SchemePolicyService.verify_scheme_policy_coverage(district, crop_name, active_season) + BeneficiaryRegistryService.query_beneficiary_eligibility(tokenized_citizen_id, scheme_id) + LedgerPersistenceService.fetch_approved_payouts_ledger()"
-    provider: "EkStep Data DHARA NMDS 2.0 / MCP Scheme Policy Gateway (POST /v1/scheme-policy/verify & /mcp), OpenSPP / OpenG2P Beneficiary Registry (POST /v1/social/eligibility) & Governance Ledger"
+    provider: "EkStep Data DHARA NMDS 2.0 / MCP Scheme Policy Gateway (POST /mcp tools/call: search_datasets, get_metadata, get_table), OpenSPP / OpenG2P Beneficiary Registry (POST /v1/social/eligibility) & Governance Ledger"
     io:
       in:
         - "request.payload.tokenized_citizen_id"
