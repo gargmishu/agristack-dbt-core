@@ -142,30 +142,35 @@ ai_blocks:
 
   - name: "registry_search"
     kind: "sector_specific"
-    interface: "AgriRegistryService.verify_land_record(tokenized_citizen_id, land_record_id) + G2pConnectMapperService.build_registry_search_envelope(...)"
-    provider: "Federated AgriStack Cadastral Land Registry (POST /v1/land/cadastral/verify & G2P Connect v1.0.0 search/on-search)"
+    interface: "LandRegistryService.verify_land_record(tokenized_citizen_id, land_record_id) + CropVerificationService.verify_crop_cultivation(tokenized_citizen_id, land_record_id, crop_name, active_season) + G2pConnectMapperService.build_registry_search_envelope(...)"
+    provider: "Federated AgriStack Cadastral Land Registry (POST /v1/land/cadastral/verify), Digital Crop Survey & Google DeepMind AnthroKrishi ALU/AMED Satellite Gateway on OpenAgriNet (POST /v1/crop-satellite/verify) & G2P Connect v1.0.0 search/on-search"
     io:
       in:
         - "request.payload.tokenized_citizen_id"
         - "extracted_entity_payload.domain_entities.survey_number"
         - "extracted_entity_payload.domain_entities.district"
         - "extracted_entity_payload.domain_entities.crop_name"
-      out: ["is_land_verified", "land_record_id"]
+        - "active_season"
+      out: ["is_land_verified", "is_crop_verified", "land_record_id"]
     governance:
-      purpose: "Verify cadastral land parcel ownership and seasonal crop entitlement using pseudonymized identity tokens"
+      purpose: "Verify legal cadastral land parcel ownership (`LandRegistryService.verify_land_record`) and physical seasonal crop cultivation & stress via Digital Crop Survey / AnthroKrishi ALU & AMED satellite APIs (`CropVerificationService.verify_crop_cultivation`) using pseudonymized identity tokens"
       data_minimization: true
       logging: true
-      fallback: "auto_reject_land_record_not_found"
+      fallback: "auto_reject_land_or_crop_mismatch"
 
   - name: "social_registry_check"
     kind: "sector_specific"
-    interface: "SocialRegistryService.query_beneficiary_eligibility(tokenized_citizen_id, scheme_id) + LedgerPersistenceService.fetch_approved_payouts_ledger()"
-    provider: "OpenSPP / OpenG2P Social Protection Registry (POST /v1/social/eligibility) & Governance Ledger"
+    interface: "SchemePolicyService.verify_scheme_policy_coverage(district, crop_name, active_season) + BeneficiaryRegistryService.query_beneficiary_eligibility(tokenized_citizen_id, scheme_id) + LedgerPersistenceService.fetch_approved_payouts_ledger()"
+    provider: "EkStep Data DHARA NMDS 2.0 / MCP Scheme Policy Gateway (POST /v1/scheme-policy/verify & /mcp), OpenSPP / OpenG2P Beneficiary Registry (POST /v1/social/eligibility) & Governance Ledger"
     io:
-      in: ["request.payload.tokenized_citizen_id", "active_season"]
-      out: ["is_scheme_eligible", "has_duplicate_active_claim"]
+      in:
+        - "request.payload.tokenized_citizen_id"
+        - "extracted_entity_payload.domain_entities.district"
+        - "extracted_entity_payload.domain_entities.crop_name"
+        - "active_season"
+      out: ["is_scheme_eligible", "is_policy_covered", "has_duplicate_active_claim"]
     governance:
-      purpose: "Verify social protection scheme entitlement and enforce seasonal anti-double-dipping (`(tokenized_citizen_id, active_season)`)"
+      purpose: "Verify live MDDS/LGD-harmonized calamity notification coverage via Data DHARA NMDS 2.0 / MCP (`SchemePolicyService.verify_scheme_policy_coverage`), verify social protection beneficiary enrollment (`BeneficiaryRegistryService.query_beneficiary_eligibility`), and enforce seasonal anti-double-dipping (`(tokenized_citizen_id, active_season)`)"
       data_minimization: true
       logging: true
       fallback: "escalate_to_human_agent"
@@ -180,6 +185,8 @@ ai_blocks:
         - "extracted_entity_payload.is_adversarial_attempt"
         - "is_identity_verified"
         - "is_land_verified"
+        - "is_crop_verified"
+        - "is_policy_covered"
         - "has_duplicate_active_claim"
         - "attempt_count"
       out:
@@ -189,7 +196,7 @@ ai_blocks:
         - "governance_outcome.escalation_case_id"
         - "governance_outcome.rejection_reason"
     governance:
-      purpose: "Enforce Gate 2 mandatory entity completeness (3-strike reprompt ceiling) and Gate 3 deterministic >=0.85 confidence and registry verification matrix"
+      purpose: "Enforce Gate 2 mandatory entity completeness (3-strike reprompt ceiling) and Gate 3 deterministic >=0.85 confidence and registry/satellite/policy verification matrix"
       data_minimization: true
       logging: true
       fallback: "escalate_to_human_agent"
@@ -328,7 +335,7 @@ steps:
 
   - id: "step_06_agricultural_registry_crossmatch"
     call: "registry_search"
-    description: "Verify cadastral land parcel ownership and seasonal crop entitlement (`AgriRegistryService.verify_land_record`) and emit signed G2P Connect v1.0.0 `search` / `on-search` envelopes (`G2pConnectMapperService.build_registry_search_envelope`) using only `tokenized_citizen_id` and `survey_number` (`land_record_id`)."
+    description: "Verify legal cadastral land parcel ownership (`LandRegistryService.verify_land_record`), verify physical seasonal crop sowing and stress via Digital Crop Survey & Google DeepMind AnthroKrishi ALU/AMED satellite APIs (`CropVerificationService.verify_crop_cultivation`), and emit signed G2P Connect v1.0.0 `search` / `on-search` envelopes (`G2pConnectMapperService.build_registry_search_envelope`) using only `tokenized_citizen_id`, `survey_number` (`land_record_id`), `crop_name`, and `active_season`."
     on_success: "step_07_social_benefits_registry_submission"
     on_failure:
       action: "fallback"
@@ -337,8 +344,8 @@ steps:
 
   - id: "step_07_social_benefits_registry_submission"
     call: "social_registry_check"
-    condition: "is_identity_verified == true and is_land_verified == true"
-    description: "Verify beneficiary scheme entitlement in the OpenSPP / OpenG2P social protection registry (`SocialRegistryService.query_beneficiary_eligibility`) and check `application_governance_ledger` for seasonal anti-double-dipping (`(tokenized_citizen_id, active_season)`)."
+    condition: "is_identity_verified == true and is_land_verified == true and is_crop_verified == true"
+    description: "Verify district and crop calamity notification coverage via EkStep Data DHARA NMDS 2.0 / MCP endpoints (`SchemePolicyService.verify_scheme_policy_coverage`), verify beneficiary scheme enrollment in the OpenSPP / OpenG2P beneficiary registry (`BeneficiaryRegistryService.query_beneficiary_eligibility`), and check `application_governance_ledger` for seasonal anti-double-dipping (`(tokenized_citizen_id, active_season)`)."
     on_success: "step_08_governance_threshold_evaluation"
     on_failure:
       action: "fallback"
@@ -347,7 +354,7 @@ steps:
 
   - id: "step_08_governance_threshold_evaluation"
     call: "check_benefit_eligibility"
-    description: "Evaluate Three-Gate Governance Matrix in `ClaimOrchestrator` and `ClaimAdjudicator.evaluate_claim`: Gate 1 (modality & adversarial zeroing check `is_adversarial_attempt == false`), Gate 2 (mandatory `district` and `crop_name` completeness with 3-strike conversational retry ceiling `attempt_count < 3`), and Gate 3 (`ai_confidence_score >= 0.85`, `is_identity_verified == true`, `is_land_verified == true`, and `has_duplicate_active_claim == false`)."
+    description: "Evaluate Three-Gate Governance Matrix in `ClaimOrchestrator` and `ClaimAdjudicator.evaluate_claim`: Gate 1 (modality & adversarial zeroing check `is_adversarial_attempt == false`), Gate 2 (mandatory `district` and `crop_name` completeness with 3-strike conversational retry ceiling `attempt_count < 3`), and Gate 3 (`ai_confidence_score >= 0.85`, `is_identity_verified == true`, `is_land_verified == true`, `is_crop_verified == true`, `is_policy_covered == true`, and `has_duplicate_active_claim == false`)."
     on_success: "step_09_governance_routing_engine"
     on_failure:
       action: "fallback"
@@ -356,7 +363,7 @@ steps:
 
   - id: "step_09_governance_routing_engine"
     call: "check_benefit_eligibility"
-    description: "Render deterministic `GovernanceOutcomePayload`: (a) `AUTO_APPROVE` (`ELIGIBLE`) -> route to `step_10` automated payout, (b) `REQUEST_MORE_INFO` (`REQUIRES_REVIEW`) -> conversational re-prompt via `step_12` if missing mandatory entities and `attempt_count < 3` on IVR Voice, WhatsApp, or SMS, (c) `ROUTE_FOR_MANUAL_REVIEW` (`REQUIRES_REVIEW`) -> route to `step_11` human caseworker queue (`SPP-CASE-YYYY-XXXXXX`) if `ai_confidence_score < 0.85`, `is_adversarial_attempt == true`, or `attempt_count >= 3`, or (d) `AUTO_REJECT` (`INELIGIBLE`) -> route to `step_12` with deterministic `RejectionReasonCode` (`DUPLICATE_CLAIM_ACTIVE_SEASON`, `IDENTITY_NOT_VERIFIED`, or `LAND_RECORD_NOT_FOUND`)."
+    description: "Render deterministic `GovernanceOutcomePayload`: (a) `AUTO_APPROVE` (`ELIGIBLE`) -> route to `step_10` automated payout, (b) `REQUEST_MORE_INFO` (`REQUIRES_REVIEW`) -> conversational re-prompt via `step_12` if missing mandatory entities and `attempt_count < 3` on IVR Voice, WhatsApp, or SMS, (c) `ROUTE_FOR_MANUAL_REVIEW` (`REQUIRES_REVIEW`) -> route to `step_11` human caseworker queue (`SPP-CASE-YYYY-XXXXXX`) if `ai_confidence_score < 0.85`, `is_adversarial_attempt == true`, or `attempt_count >= 3`, or (d) `AUTO_REJECT` (`INELIGIBLE`) -> route to `step_12` with deterministic `RejectionReasonCode` (`DUPLICATE_CLAIM_ACTIVE_SEASON`, `IDENTITY_NOT_VERIFIED`, `LAND_RECORD_NOT_FOUND`, `INELIGIBLE_CROP_TYPE`, or `POLICY_EXCLUSION`)."
     on_success: "step_10_automated_payout_disbursement"
     on_failure:
       action: "escalate"
@@ -404,7 +411,7 @@ outputs:
     disbursement_txn_id: "string | null"
     disbursement_status: "PENDING | INITIATED | SUCCESS | FAILED | RETURNED | null"
     escalation_case_id: "string | null"
-    rejection_reason: "IDENTITY_NOT_VERIFIED | LAND_RECORD_NOT_FOUND | CROP_MISMATCH | DUPLICATE_CLAIM_ACTIVE_SEASON | INCOMPLETE_APPLICATION | ADVERSARIAL_OR_INELIGIBLE_INPUT | null"
+    rejection_reason: "IDENTITY_NOT_VERIFIED | LAND_RECORD_NOT_FOUND | INELIGIBLE_CROP_TYPE | POLICY_EXCLUSION | DUPLICATE_CLAIM_ACTIVE_SEASON | null"
   audit_trail_ref: "application_governance_ledger_history.history_id"
 
 logging:

@@ -1,14 +1,14 @@
-"""Authoritative DPI Registry: OpenSPP Social Registry Service.
+"""Authoritative DPI Registry: Beneficiary Enrollment & Social Protection Service.
 
 Provides the external Digital Public Infrastructure (DPI) boundary connector for
-OpenSPP (Open Social Protection Platform) and sovereign social welfare registries.
+OpenSPP (Open Social Protection Platform) and sovereign beneficiary enrollment registries.
 
-This service is dedicated to checking citizen social protection eligibility against
-the external registry boundary. It does not own case review lifecycle state.
+This service is dedicated to checking citizen beneficiary enrollment and scheme eligibility
+against the external registry boundary. It does not own case review lifecycle state.
 
-In production environments, enforces live HTTPS communication via LiveSocialRegistryService with
-strict fail-fast configuration and fail-closed error handling (no mock fallback).
-In non-production, MockSocialRegistryService provides deterministic simulation for offline testing.
+In production environments, enforces live HTTPS communication via LiveBeneficiaryRegistryService
+with strict fail-fast configuration and fail-closed error handling (no mock fallback).
+In non-production, MockBeneficiaryRegistryService provides deterministic offline simulation.
 
 See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
 See: decisions/step3.1_foundational_mock_boundaries.md (Section 3.3)
@@ -41,20 +41,21 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "LiveSocialRegistryService",
-    "MockSocialRegistryService",
-    "SocialRegistryService",
-    "create_social_registry_service",
+    "BeneficiaryRegistryService",
+    "LiveBeneficiaryRegistryService",
+    "MockBeneficiaryRegistryService",
+    "create_beneficiary_registry_service",
 ]
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _SOCIAL_ELIGIBILITY_PATH: Final[str] = "/v1/social/eligibility"
 
 
-class SocialRegistryService(Protocol):
-    """Protocol contract for social protection platform entitlement verification.
+class BeneficiaryRegistryService(Protocol):
+    """Protocol contract for beneficiary enrollment and social protection platform checks.
 
-    Queries external social registries for citizen welfare scheme eligibility.
+    Queries external beneficiary registries for citizen welfare scheme enrollment and
+    staged incident ticket eligibility.
     """
 
     async def verify_incident_ticket_eligibility(
@@ -66,12 +67,12 @@ class SocialRegistryService(Protocol):
     async def query_beneficiary_eligibility(
         self, tokenized_citizen_id: str, scheme_id: str
     ) -> bool:
-        """Queries external social registry for beneficiary entitlement under a specific scheme."""
+        """Queries external beneficiary registry for citizen enrollment under a specific scheme."""
         ...
 
 
-class LiveSocialRegistryService:
-    """Production live client executing HTTPS calls to sovereign OpenSPP registry gateways.
+class LiveBeneficiaryRegistryService:
+    """Production live client executing HTTPS calls to sovereign OpenSPP beneficiary gateways.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
     ServiceUnavailableError on network errors, timeouts, or remote outages, raises
@@ -86,7 +87,7 @@ class LiveSocialRegistryService:
         http_client: AsyncClient,
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
-        """Initializes live OpenSPP registry client with mandatory credentials and transport."""
+        """Initializes live OpenSPP beneficiary registry client with mandatory credentials."""
         self._transport = ServiceHttpTransport(
             http_client=http_client,
             api_key=api_key,
@@ -135,7 +136,7 @@ class LiveSocialRegistryService:
     async def query_beneficiary_eligibility(
         self, tokenized_citizen_id: str, scheme_id: str
     ) -> bool:
-        """Queries live OpenSPP registry for beneficiary entitlement under a specific scheme.
+        """Queries live OpenSPP registry for beneficiary enrollment under a specific scheme.
 
         Args:
             tokenized_citizen_id: 64-character SHA-256 HMAC citizen token.
@@ -176,8 +177,8 @@ class LiveSocialRegistryService:
         )
 
 
-class MockSocialRegistryService:
-    """Deterministic local social registry simulation for offline testing."""
+class MockBeneficiaryRegistryService:
+    """Deterministic local beneficiary registry simulation for offline testing."""
 
     async def verify_incident_ticket_eligibility(
         self, case_review: CaseworkerCaseReviewPayload
@@ -199,29 +200,27 @@ class MockSocialRegistryService:
         )
 
 
-def create_social_registry_service(
+def create_beneficiary_registry_service(
     endpoint_url: str | None = None,
     api_key: str | None = None,
     http_client: AsyncClient | None = None,
     timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     require_live: bool | None = None,
-) -> SocialRegistryService:
-    """Factory creating appropriate social registry service implementation based on environment.
+) -> BeneficiaryRegistryService:
+    """Factory creating appropriate beneficiary registry service implementation.
 
     Resolution follows a 3-tier precedence model:
     1. Mandatory Production: If require_live=True (or ENVIRONMENT='production' is set),
-       constructs LiveSocialRegistryService via environment settings, failing fast if credentials
-       are missing.
+       constructs LiveBeneficiaryRegistryService via environment settings, failing fast if
+       credentials are missing.
     2. Explicit Parameters: If endpoint_url and api_key are provided directly as arguments,
-       constructs LiveSocialRegistryService targeting those coordinates (useful for local WireMock,
-       stub proxies, or partial sandbox integration without enforcing production invariants).
-    3. Offline Simulation: If require_live is False and explicit credentials are not passed
-       (even if present in environment variables), returns MockSocialRegistryService to guarantee
-       offline test isolation for local development and CI pipelines.
+       constructs LiveBeneficiaryRegistryService targeting those coordinates.
+    3. Offline Simulation: If require_live is False and explicit credentials are not passed,
+       returns MockBeneficiaryRegistryService to guarantee offline test isolation.
     """
     must_be_live = is_production() if require_live is None else require_live
     if must_be_live:
-        return LiveSocialRegistryService.from_env(
+        return LiveBeneficiaryRegistryService.from_env(
             endpoint_url=endpoint_url,
             api_key=api_key,
             http_client=http_client,
@@ -229,11 +228,11 @@ def create_social_registry_service(
         )
 
     if endpoint_url and api_key:
-        return LiveSocialRegistryService(
+        return LiveBeneficiaryRegistryService(
             endpoint_url=endpoint_url,
             api_key=api_key,
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )
 
-    return MockSocialRegistryService()
+    return MockBeneficiaryRegistryService()

@@ -99,10 +99,12 @@ src/
 │   │   └── ledger_persistence_service.py
 │   └── dpi/                         # Authoritative sovereign DPI clients
 │       ├── dpi_mock_fixtures.py
-│       ├── agri_registry_service.py
+│       ├── beneficiary_registry_service.py # External OpenSPP beneficiary registry client
+│       ├── crop_verification_service.py
 │       ├── identity_verification_service.py
+│       ├── land_registry_service.py
 │       ├── payment_rail_service.py
-│       └── social_registry_service.py # External OpenSPP registry boundary client
+│       └── scheme_policy_service.py
 ├── errors/                          # RFC 7807 problem details exception handlers
 │   └── validation_exception_handler.py
 └── data_models/                     # Domain data contracts & Pydantic validation schemas

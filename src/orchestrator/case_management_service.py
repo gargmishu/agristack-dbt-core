@@ -23,7 +23,10 @@ from src.data_models.caseworker import (
     CitizenClarificationPayload,
 )
 from src.data_models.common import ApplicationStatus, GovernanceAction
-from src.services.dpi import SocialRegistryService, create_social_registry_service
+from src.services.dpi import (
+    BeneficiaryRegistryService,
+    create_beneficiary_registry_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,13 +56,13 @@ class CaseManagementService:
     See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.2)
     """
 
-    def __init__(self, social_service: SocialRegistryService | None = None) -> None:
-        """Initializes case management service with external social registry DPI connector.
+    def __init__(self, beneficiary_service: BeneficiaryRegistryService | None = None) -> None:
+        """Initializes case management service with external beneficiary registry connector.
 
         Args:
-            social_service: Social protection platform service connector.
+            beneficiary_service: Beneficiary enrollment platform service connector.
         """
-        self._social_service = social_service or create_social_registry_service()
+        self._beneficiary_service = beneficiary_service or create_beneficiary_registry_service()
         self._staged_cases: dict[str, CaseworkerCaseReviewPayload] = {}
         self._case_records: dict[str, CaseworkerCaseReviewPayload] = {}
         self._case_statuses: dict[str, ApplicationStatus] = {}

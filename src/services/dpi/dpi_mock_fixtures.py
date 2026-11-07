@@ -19,6 +19,8 @@ from typing import Final, NamedTuple
 from src.data_models.common import DisbursementFailureCode
 
 __all__ = [
+    "EXCLUDED_POLICY_PREFIX",
+    "INELIGIBLE_CROP_PREFIX",
     "INVALID_LAND_RECORD_PREFIX",
     "INVALID_SURVEY_NUMBER",
     "MOCK_CADASTRAL_REGISTRY",
@@ -36,6 +38,8 @@ UNVERIFIED_IDENTITY_PREFIX: Final[str] = "ffff0000"
 
 INVALID_LAND_RECORD_PREFIX: Final[str] = "INVALID"
 INVALID_SURVEY_NUMBER: Final[str] = "000/0"
+INELIGIBLE_CROP_PREFIX: Final[str] = "INELIGIBLE_CROP"
+EXCLUDED_POLICY_PREFIX: Final[str] = "EXCLUDED_POLICY"
 
 MOCK_CASE_REJECT_PREFIX: Final[str] = "REJECT"
 MOCK_FAIL_STAGE_NOTE: Final[str] = "fail_stage"

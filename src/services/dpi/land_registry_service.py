@@ -1,12 +1,11 @@
-"""Authoritative DPI Registry: AgriStack Cadastral Land Records Service.
+"""Authoritative DPI Registry: Cadastral Land Records Service.
 
-Connects to the sovereign AgriStack Digital Public Infrastructure to cross-match
-farmer identity tokens against cadastral land parcels, survey numbers, and seasonal
-crop sowing declarations.
+Connects to the sovereign land registry Digital Public Infrastructure to cross-match
+farmer identity tokens against cadastral land parcels and survey numbers.
 
-In production environments, LiveAgriRegistryService enforces live HTTPS communication with
+In production environments, LiveLandRegistryService enforces live HTTPS communication with
 strict fail-fast configuration and fail-closed error handling (no mock fallback).
-In non-production, MockAgriRegistryService provides deterministic simulation for offline testing.
+In non-production, MockLandRegistryService provides deterministic simulation for offline testing.
 
 See: decisions/step2.0_canonical_domain_schemas.md (Section 4.3)
 See: decisions/step2.3_governance_flows_and_state_transitions.md
@@ -41,26 +40,26 @@ from src.services.http_transport import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "AgriRegistryService",
-    "LiveAgriRegistryService",
-    "MockAgriRegistryService",
-    "create_agri_registry_service",
+    "LandRegistryService",
+    "LiveLandRegistryService",
+    "MockLandRegistryService",
+    "create_land_registry_service",
 ]
 
 _DEFAULT_DPI_TIMEOUT_SECONDS: Final[float] = 3.0
 _LAND_VERIFY_PATH: Final[str] = "/v1/land/cadastral/verify"
 
 
-class AgriRegistryService(Protocol):
-    """Protocol contract for AgriStack cadastral land records registry operations."""
+class LandRegistryService(Protocol):
+    """Protocol contract for cadastral land ownership registry operations."""
 
     async def verify_land_record(self, tokenized_citizen_id: str, land_record_id: str) -> bool:
         """Cross-matches citizen identity token against cadastral land record ID."""
         ...
 
 
-class LiveAgriRegistryService:
-    """Production live client executing HTTPS calls to sovereign AgriStack land gateways.
+class LiveLandRegistryService:
+    """Production live client executing HTTPS calls to sovereign cadastral land gateways.
 
     Strictly requires endpoint URL, API key, and pooled HTTP client. Fails closed with
     ServiceUnavailableError on network errors, timeouts, or remote outages, raises
@@ -75,7 +74,7 @@ class LiveAgriRegistryService:
         http_client: AsyncClient,
         timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     ) -> None:
-        """Initializes live AgriStack registry client with mandatory credentials and transport."""
+        """Initializes live cadastral land registry client with mandatory credentials."""
         self._transport = ServiceHttpTransport(
             http_client=http_client,
             api_key=api_key,
@@ -115,13 +114,13 @@ class LiveAgriRegistryService:
             land_record_id: Land record survey/plot identifier.
 
         Returns:
-            True if land ownership and crop entitlement match, False otherwise.
+            True if cadastral plot ownership matches, False otherwise.
 
         Raises:
             ServiceRequestPayloadError: If land record query payload is rejected (400/422).
-            ServiceResponsePayloadError: If AgriStack returns invalid response schema.
-            ServiceUnavailableError: If live AgriStack service fails, times out, or returns 5xx.
-            ServiceAuthenticationError: If live AgriStack service returns 401/403.
+            ServiceResponsePayloadError: If land registry returns invalid response schema.
+            ServiceUnavailableError: If live land registry fails, times out, or returns 5xx.
+            ServiceAuthenticationError: If live land registry returns 401/403.
         """
         logger.info(
             "Live verifying land record=%s for token=%s...",
@@ -149,8 +148,8 @@ class LiveAgriRegistryService:
         )
 
 
-class MockAgriRegistryService:
-    """Deterministic local simulation of AgriStack land records for offline testing."""
+class MockLandRegistryService:
+    """Deterministic local simulation of cadastral land records for offline testing."""
 
     async def verify_land_record(self, tokenized_citizen_id: str, land_record_id: str) -> bool:
         """Simulates cadastral verification with deterministic token rules."""
@@ -173,29 +172,29 @@ class MockAgriRegistryService:
         return True
 
 
-def create_agri_registry_service(
+def create_land_registry_service(
     endpoint_url: str | None = None,
     api_key: str | None = None,
     http_client: AsyncClient | None = None,
     timeout_seconds: float = _DEFAULT_DPI_TIMEOUT_SECONDS,
     require_live: bool | None = None,
-) -> AgriRegistryService:
-    """Factory creating appropriate AgriStack service implementation based on environment.
+) -> LandRegistryService:
+    """Factory creating appropriate land registry service implementation based on environment.
 
     Resolution follows a 3-tier precedence model:
     1. Mandatory Production: If require_live=True (or ENVIRONMENT='production' is set),
-       constructs LiveAgriRegistryService via environment settings, failing fast if credentials
+       constructs LiveLandRegistryService via environment settings, failing fast if credentials
        are missing.
     2. Explicit Parameters: If endpoint_url and api_key are provided directly as arguments,
-       constructs LiveAgriRegistryService targeting those coordinates (useful for local WireMock,
+       constructs LiveLandRegistryService targeting those coordinates (useful for local WireMock,
        stub proxies, or partial sandbox integration without enforcing production invariants).
     3. Offline Simulation: If require_live is False and explicit credentials are not passed
-       (even if present in environment variables), returns MockAgriRegistryService to
+       (even if present in environment variables), returns MockLandRegistryService to
        guarantee offline test isolation for local development and CI pipelines.
     """
     must_be_live = is_production() if require_live is None else require_live
     if must_be_live:
-        return LiveAgriRegistryService.from_env(
+        return LiveLandRegistryService.from_env(
             endpoint_url=endpoint_url,
             api_key=api_key,
             http_client=http_client,
@@ -203,11 +202,11 @@ def create_agri_registry_service(
         )
 
     if endpoint_url and api_key:
-        return LiveAgriRegistryService(
+        return LiveLandRegistryService(
             endpoint_url=endpoint_url,
             api_key=api_key,
             http_client=http_client or get_shared_http_client(),
             timeout_seconds=timeout_seconds,
         )
 
-    return MockAgriRegistryService()
+    return MockLandRegistryService()

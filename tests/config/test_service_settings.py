@@ -7,10 +7,14 @@ from src.config.service_settings import (
     get_agristack_endpoint,
     get_bhashini_api_key,
     get_bhashini_endpoint,
+    get_crop_satellite_api_key,
+    get_crop_satellite_endpoint,
     get_environment,
     get_identity_endpoint,
     get_openspp_endpoint,
     get_payment_endpoint,
+    get_scheme_policy_api_key,
+    get_scheme_policy_endpoint,
     get_slm_endpoint,
     is_production,
 )
@@ -35,11 +39,19 @@ def test_service_settings_non_production_returns_none_when_unset(
     monkeypatch.delenv("BHASHINI_API_KEY", raising=False)
     monkeypatch.delenv("AGRISTACK_REGISTRY_API_ENDPOINT", raising=False)
     monkeypatch.delenv("AGRISTACK_REGISTRY_API_KEY", raising=False)
+    monkeypatch.delenv("CROP_SATELLITE_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("CROP_SATELLITE_API_KEY", raising=False)
+    monkeypatch.delenv("SCHEME_POLICY_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("SCHEME_POLICY_API_KEY", raising=False)
 
     assert get_bhashini_endpoint() is None
     assert get_bhashini_api_key() is None
     assert get_agristack_endpoint() is None
     assert get_agristack_api_key() is None
+    assert get_crop_satellite_endpoint() is None
+    assert get_crop_satellite_api_key() is None
+    assert get_scheme_policy_endpoint() is None
+    assert get_scheme_policy_api_key() is None
 
 
 def test_service_settings_returns_configured_values(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,8 +79,10 @@ def test_service_settings_production_fail_fast_all_services(
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("SLM_API_ENDPOINT", raising=False)
     monkeypatch.delenv("AGRISTACK_REGISTRY_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("CROP_SATELLITE_API_ENDPOINT", raising=False)
     monkeypatch.delenv("MOSIP_API_ENDPOINT", raising=False)
     monkeypatch.delenv("OPENSPP_API_ENDPOINT", raising=False)
+    monkeypatch.delenv("SCHEME_POLICY_API_ENDPOINT", raising=False)
     monkeypatch.delenv("NPCI_APBS_API_ENDPOINT", raising=False)
 
     with pytest.raises(ServiceConfigurationError, match="SLM_API_ENDPOINT"):
@@ -77,11 +91,17 @@ def test_service_settings_production_fail_fast_all_services(
     with pytest.raises(ServiceConfigurationError, match="AGRISTACK_REGISTRY_API_ENDPOINT"):
         get_agristack_endpoint()
 
+    with pytest.raises(ServiceConfigurationError, match="CROP_SATELLITE_API_ENDPOINT"):
+        get_crop_satellite_endpoint()
+
     with pytest.raises(ServiceConfigurationError, match="MOSIP_API_ENDPOINT"):
         get_identity_endpoint()
 
     with pytest.raises(ServiceConfigurationError, match="OPENSPP_API_ENDPOINT"):
         get_openspp_endpoint()
+
+    with pytest.raises(ServiceConfigurationError, match="SCHEME_POLICY_API_ENDPOINT"):
+        get_scheme_policy_endpoint()
 
     with pytest.raises(ServiceConfigurationError, match="NPCI_APBS_API_ENDPOINT"):
         get_payment_endpoint()

@@ -67,7 +67,7 @@ Maintain clean top-down readability and strict encapsulation within every class:
 ### 2.1 Principle of Least Visibility & Strict Encapsulation
 * **Default to Private**: Every method, helper function, validator, and formatter must default to private (prefixed with a leading underscore `_`) unless it is an explicitly designed public API contract.
 * **No Leaky Internal Helpers**: Internal formatting routines, state builders, parsing algorithms, and connector dispatches must never be exposed publicly.
-* **Encapsulate Collaborators**: Do not expose internal dependency instances (e.g., `self._firewall`, `self._orchestrator`, `self._evaluator`, `self._social_service`) as public properties or getters unless consumers specifically require documented read-only introspection.
+* **Encapsulate Collaborators**: Do not expose internal dependency instances (e.g., `self._firewall`, `self._orchestrator`, `self._evaluator`, `self._beneficiary_service`) as public properties or getters unless consumers specifically require documented read-only introspection.
 
 ### 2.2 Public-First / Private-at-Bottom Ordering Rule
 Classes must strictly follow a 4-tier top-down ordering:

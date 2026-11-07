@@ -21,6 +21,8 @@ __all__ = [
     "get_agristack_endpoint",
     "get_bhashini_api_key",
     "get_bhashini_endpoint",
+    "get_crop_satellite_api_key",
+    "get_crop_satellite_endpoint",
     "get_database_url",
     "get_environment",
     "get_identity_api_key",
@@ -29,6 +31,8 @@ __all__ = [
     "get_openspp_endpoint",
     "get_payment_api_key",
     "get_payment_endpoint",
+    "get_scheme_policy_api_key",
+    "get_scheme_policy_endpoint",
     "get_slm_api_key",
     "get_slm_endpoint",
     "is_production",
@@ -109,6 +113,26 @@ def get_agristack_api_key() -> str | None:
     return _get_service_setting("AGRISTACK_REGISTRY_API_KEY", "AgriStack Registry API Key")
 
 
+def get_crop_satellite_endpoint() -> str | None:
+    """Returns Digital Crop Survey & Remote-Sensing Satellite API endpoint URL.
+
+    Raises:
+        ServiceConfigurationError: In production if 'CROP_SATELLITE_API_ENDPOINT' is missing.
+    """
+    return _get_service_setting(
+        "CROP_SATELLITE_API_ENDPOINT", "Crop Satellite Verification API Endpoint"
+    )
+
+
+def get_crop_satellite_api_key() -> str | None:
+    """Returns Digital Crop Survey & Remote-Sensing Satellite API key.
+
+    Raises:
+        ServiceConfigurationError: In production if 'CROP_SATELLITE_API_KEY' is missing.
+    """
+    return _get_service_setting("CROP_SATELLITE_API_KEY", "Crop Satellite Verification API Key")
+
+
 def get_identity_endpoint() -> str | None:
     """Returns MOSIP / Sovereign Identity Verification API endpoint URL.
 
@@ -143,6 +167,24 @@ def get_openspp_api_key() -> str | None:
         ServiceConfigurationError: In production if 'OPENSPP_API_KEY' is missing or empty.
     """
     return _get_service_setting("OPENSPP_API_KEY", "OpenSPP API Key")
+
+
+def get_scheme_policy_endpoint() -> str | None:
+    """Returns Scheme Policy & Calamity Notification Metadata API endpoint URL.
+
+    Raises:
+        ServiceConfigurationError: In production if 'SCHEME_POLICY_API_ENDPOINT' is missing.
+    """
+    return _get_service_setting("SCHEME_POLICY_API_ENDPOINT", "Scheme Policy Metadata API Endpoint")
+
+
+def get_scheme_policy_api_key() -> str | None:
+    """Returns Scheme Policy & Calamity Notification Metadata API key.
+
+    Raises:
+        ServiceConfigurationError: In production if 'SCHEME_POLICY_API_KEY' is missing.
+    """
+    return _get_service_setting("SCHEME_POLICY_API_KEY", "Scheme Policy Metadata API Key")
 
 
 def get_payment_endpoint() -> str | None:

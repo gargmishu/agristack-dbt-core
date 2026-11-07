@@ -14,7 +14,11 @@ from src.data_models.governance import (
     ExtractedEntityPayload,
 )
 from src.orchestrator.claim_adjudicator import ClaimAdjudicator
-from src.services.dpi.dpi_mock_fixtures import UNVERIFIED_IDENTITY_PREFIX
+from src.services.dpi.dpi_mock_fixtures import (
+    EXCLUDED_POLICY_PREFIX,
+    INELIGIBLE_CROP_PREFIX,
+    UNVERIFIED_IDENTITY_PREFIX,
+)
 
 MOCK_CITIZEN_TOKEN: Final[str] = "a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e"  # noqa: S105
 
@@ -157,3 +161,51 @@ async def test_claim_adjudicator_evaluate_claim_cadastral_mismatch() -> None:
     outcome = await adjudicator.evaluate_claim(context)
     assert outcome.governance_action == GovernanceAction.AUTO_REJECT
     assert outcome.rejection_reason == RejectionReasonCode.LAND_RECORD_NOT_FOUND
+
+
+@pytest.mark.asyncio
+async def test_claim_adjudicator_evaluate_claim_ineligible_crop_type() -> None:
+    adjudicator = ClaimAdjudicator()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.94,
+        domain_entities={
+            DomainEntityKey.DISTRICT: "Nashik",
+            DomainEntityKey.CROP_NAME: f"{INELIGIBLE_CROP_PREFIX}_TOBACCO",
+            DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
+        },
+    )
+    context = ClaimEvaluationPayload(
+        session_id="sess_eval_crop",
+        payload_id="ext_eval_crop",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await adjudicator.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_REJECT
+    assert outcome.rejection_reason == RejectionReasonCode.INELIGIBLE_CROP_TYPE
+
+
+@pytest.mark.asyncio
+async def test_claim_adjudicator_evaluate_claim_scheme_policy_exclusion() -> None:
+    adjudicator = ClaimAdjudicator()
+    extracted = ExtractedEntityPayload(
+        application_intent=ApplicationIntent.APPLY_SUBSIDY,
+        ai_confidence_score=0.94,
+        domain_entities={
+            DomainEntityKey.DISTRICT: f"{EXCLUDED_POLICY_PREFIX}_NASHIK",
+            DomainEntityKey.CROP_NAME: "Onion",
+            DomainEntityKey.SURVEY_NUMBER: "LAND-REC-1002",
+        },
+    )
+    context = ClaimEvaluationPayload(
+        session_id="sess_eval_policy",
+        payload_id="ext_eval_policy",
+        tokenized_citizen_id=MOCK_CITIZEN_TOKEN,
+        extracted_payload=extracted,
+    )
+
+    outcome = await adjudicator.evaluate_claim(context)
+    assert outcome.governance_action == GovernanceAction.AUTO_REJECT
+    assert outcome.rejection_reason == RejectionReasonCode.POLICY_EXCLUSION

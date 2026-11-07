@@ -27,10 +27,14 @@ from src.data_models.governance import (
     GovernanceOutcomePayload,
 )
 from src.services.dpi import (
-    AgriRegistryService,
+    CropVerificationService,
     IdentityVerificationService,
-    create_agri_registry_service,
+    LandRegistryService,
+    SchemePolicyService,
+    create_crop_verification_service,
     create_identity_verification_service,
+    create_land_registry_service,
+    create_scheme_policy_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,16 +47,19 @@ _AUTO_APPROVE_CONFIDENCE_THRESHOLD: Final[float] = 0.85
 class ClaimAdjudicator:
     """Evaluates governance decision matrix based on confidence and registry eligibility.
 
-    Coordinates eligibility verification across sovereign identity and land registry clients,
-    generating authoritative `GovernanceOutcomePayload` determinations.
+    Coordinates eligibility verification across sovereign identity, cadastral land,
+    remote-sensing crop cultivation, and scheme policy registry clients, generating
+    authoritative `GovernanceOutcomePayload` determinations.
 
     Decision Rules:
     - Auto-Approval (`AUTO_APPROVE`): High confidence (>= 0.85), verified identity, eligible
-      land parcel, and no prior claim in the active season.
+      cadastral land parcel, verified seasonal crop cultivation, active scheme policy coverage,
+      and no prior claim in the active season.
     - Escalation (`ROUTE_FOR_MANUAL_REVIEW`): Low/moderate confidence (< 0.85) or
       adversarial prompt injection attempts.
     - Rejection (`AUTO_REJECT`): Duplicate active-season claim, unverified identity token,
-      or cadastral land record mismatch.
+      cadastral land record mismatch, ineligible seasonal crop cultivation, or scheme policy
+      exclusion.
 
     See: decisions/step2.3_governance_flows_and_state_transitions.md (Section 3.1 & 4.1)
     """
@@ -60,16 +67,26 @@ class ClaimAdjudicator:
     def __init__(
         self,
         identity_service: IdentityVerificationService | None = None,
-        agri_service: AgriRegistryService | None = None,
+        land_service: LandRegistryService | None = None,
+        crop_service: CropVerificationService | None = None,
+        scheme_policy_service: SchemePolicyService | None = None,
     ) -> None:
         """Initializes the claim adjudicator with required sovereign registry services.
 
         Args:
             identity_service: Identity verification client (defaults to standard factory).
-            agri_service: Cadastral land registry client (defaults to standard factory).
+            land_service: Cadastral land ownership registry client (defaults to standard factory).
+            crop_service: Seasonal crop & remote-sensing client (defaults to standard factory).
+            scheme_policy_service: Scheme policy metadata client (defaults to standard factory).
         """
         self._identity_service = identity_service or create_identity_verification_service()
-        self._agri_service = agri_service or create_agri_registry_service()
+        self._land_service = land_service or create_land_registry_service()
+        self._crop_service = crop_service or create_crop_verification_service()
+        self._scheme_policy_service = scheme_policy_service or create_scheme_policy_service()
+
+    # -------------------------------------------------------------------------
+    # Primary Public Workflow Entrypoints
+    # -------------------------------------------------------------------------
 
     async def evaluate_claim(
         self,
@@ -122,49 +139,20 @@ class ClaimAdjudicator:
                 evaluated_at=evaluated_at,
             )
 
-        # 3. Sovereign Identity Registry Verification
-        is_identity_verified = await self._identity_service.verify_identity_token(
-            payload.tokenized_citizen_id
-        )
-        if not is_identity_verified:
-            logger.warning(
-                "Unverified identity token for session=%s; rejecting",
-                payload.session_id,
-            )
+        # 3-6. Sovereign Identity, Cadastral Plot, Crop Cultivation & Scheme Policy Verification
+        rejection_reason = await self._verify_registry_and_policy_entitlement(payload)
+        if rejection_reason is not None:
             return GovernanceOutcomePayload(
                 session_id=payload.session_id,
                 payload_id=payload.payload_id,
                 ai_confidence_score=extracted_payload.ai_confidence_score,
                 eligibility_status=EligibilityStatus.INELIGIBLE,
                 governance_action=GovernanceAction.AUTO_REJECT,
-                rejection_reason=RejectionReasonCode.IDENTITY_NOT_VERIFIED,
+                rejection_reason=rejection_reason,
                 evaluated_at=evaluated_at,
             )
 
-        # 4. Cadastral Land & Crop Record Cross-Matching
-        survey_number = str(
-            extracted_payload.domain_entities.get(DomainEntityKey.SURVEY_NUMBER, "LAND-REC-1002")
-        )
-        is_land_verified = await self._agri_service.verify_land_record(
-            payload.tokenized_citizen_id, survey_number
-        )
-        if not is_land_verified:
-            logger.warning(
-                "Cadastral land record mismatch for survey=%s citizen=%s; rejecting",
-                survey_number,
-                payload.tokenized_citizen_id[:16],
-            )
-            return GovernanceOutcomePayload(
-                session_id=payload.session_id,
-                payload_id=payload.payload_id,
-                ai_confidence_score=extracted_payload.ai_confidence_score,
-                eligibility_status=EligibilityStatus.INELIGIBLE,
-                governance_action=GovernanceAction.AUTO_REJECT,
-                rejection_reason=RejectionReasonCode.LAND_RECORD_NOT_FOUND,
-                evaluated_at=evaluated_at,
-            )
-
-        # 5. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
+        # 7. Threshold Gate: Confidence Score Evaluation (>= _AUTO_APPROVE_CONFIDENCE_THRESHOLD)
         if extracted_payload.ai_confidence_score >= _AUTO_APPROVE_CONFIDENCE_THRESHOLD:
             logger.info(
                 "Straight-through automated payout approved for session=%s score=%.2f",
@@ -196,3 +184,75 @@ class ClaimAdjudicator:
             escalation_case_id=f"SPP-CASE-2026-{case_ticket_suffix}",
             evaluated_at=evaluated_at,
         )
+
+    # -------------------------------------------------------------------------
+    # Private Helper Methods
+    # -------------------------------------------------------------------------
+
+    async def _verify_registry_and_policy_entitlement(
+        self,
+        payload: ClaimEvaluationPayload,
+    ) -> RejectionReasonCode | None:
+        """Executes sequential identity, cadastral plot, crop, and scheme policy checks."""
+        extracted_payload = payload.extracted_payload
+
+        # 3. Sovereign Identity Registry Verification
+        is_identity_verified = await self._identity_service.verify_identity_token(
+            payload.tokenized_citizen_id
+        )
+        if not is_identity_verified:
+            logger.warning(
+                "Unverified identity token for session=%s; rejecting",
+                payload.session_id,
+            )
+            return RejectionReasonCode.IDENTITY_NOT_VERIFIED
+
+        # 4. Cadastral Plot Ownership Verification
+        survey_number = str(
+            extracted_payload.domain_entities.get(DomainEntityKey.SURVEY_NUMBER, "LAND-REC-1002")
+        )
+        is_land_verified = await self._land_service.verify_land_record(
+            payload.tokenized_citizen_id, survey_number
+        )
+        if not is_land_verified:
+            logger.warning(
+                "Cadastral land record mismatch for survey=%s citizen=%s; rejecting",
+                survey_number,
+                payload.tokenized_citizen_id[:16],
+            )
+            return RejectionReasonCode.LAND_RECORD_NOT_FOUND
+
+        # 5. Seasonal Crop & Remote-Sensing Cultivation Verification
+        crop_name = str(extracted_payload.domain_entities.get(DomainEntityKey.CROP_NAME, "Wheat"))
+        is_crop_verified = await self._crop_service.verify_crop_cultivation(
+            payload.tokenized_citizen_id,
+            survey_number,
+            crop_name,
+            payload.active_season,
+        )
+        if not is_crop_verified:
+            logger.warning(
+                "Seasonal crop cultivation mismatch for crop=%s survey=%s season=%s; rejecting",
+                crop_name,
+                survey_number,
+                payload.active_season,
+            )
+            return RejectionReasonCode.INELIGIBLE_CROP_TYPE
+
+        # 6. Scheme Policy & Calamity Notification Coverage Verification
+        district = str(extracted_payload.domain_entities.get(DomainEntityKey.DISTRICT, "Karnal"))
+        is_policy_covered = await self._scheme_policy_service.verify_scheme_policy_coverage(
+            district,
+            crop_name,
+            payload.active_season,
+        )
+        if not is_policy_covered:
+            logger.warning(
+                "Scheme policy exclusion for district=%s crop=%s season=%s; rejecting",
+                district,
+                crop_name,
+                payload.active_season,
+            )
+            return RejectionReasonCode.POLICY_EXCLUSION
+
+        return None
