@@ -58,7 +58,7 @@ jobs:
       - name: Run Full Unit, Integration & Zero-Trust Security Test Suite
         run: pytest
 
-      - name: Run End-to-End 60-Day Pilot Simulation & Audit Smoke Test
+      - name: Run End-to-End Single-District Pilot Simulation & Audit Smoke Test
         env:
           PYTHONPATH: "."
         run: python scripts/run_pilot_simulation.py

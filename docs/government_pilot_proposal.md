@@ -73,53 +73,58 @@ Government funds are never allocated by non-deterministic artificial intelligenc
 
 ---
 
-## 3. The 60-Day Single-District Pilot Blueprint
+## 3. Phased Single-District Pilot Blueprint (Milestone-Gated)
 
-We propose a **60-Day Single-District Pilot** covering one selected agricultural district (e.g., Karnal in Haryana, Nashik in Maharashtra, or Gorakhpur in Uttar Pradesh) focused on **Crop Damage Compensation** or **Seasonal Input Subsidies**. The 60-day window maps onto the active intake window of an agricultural season while accommodating real-world government cloud provisioning, telecom onboarding, inter-departmental integration, and treasury settlement cycles.
+We propose a **Milestone-Gated Single-District Pilot** covering one selected agricultural district (e.g., Karnal in Haryana, Nashik in Maharashtra, or Gorakhpur in Uttar Pradesh) focused on **Crop Damage Compensation** or **Seasonal Input Subsidies**. Rather than tying deployment to rigid calendar day counts—which are subject to external carrier provisioning, state cloud firewall clearances, and inter-departmental approvals—progression across the four pilot phases is governed by **objective readiness and fiduciary exit gates** aligned to an active agricultural crop cycle.
 
 ```mermaid
-gantt
-    title 60-Day Single-District Pilot Schedule
-    dateFormat  YYYY-MM-DD
-    section Phase 1: Setup
-    Perimeter Setup & Carrier Webhook Binding :2026-10-01, 14d
-    State Registry Schema Alignment & Mocks    :2026-10-07, 10d
-    section Phase 2: Sandbox
-    Caseworker Dashboard & Queue Deployment   :2026-10-15, 14d
-    Internal End-to-End Simulation Testing   :2026-10-22, 10d
-    section Phase 3: Rollout
-    Controlled Farmer Beta (500 Farmers)      :2026-11-01, 14d
-    District-Wide Live Operations (10k+ Claims):2026-11-15, 14d
-    section Phase 4: Audit
-    CAG Audit Trail Export & Impact Report    :2026-11-25, 6d
+flowchart LR
+    P1["Phase 1: Containerized Sandbox<br/>(Historical Replay & Baseline Survey)"] --> G1{"Exit Gate 1:<br/>100% Policy Parity"}
+    G1 --> P2["Phase 2: State Cloud & Peering<br/>(Registry mTLS & Channel Binding)"]
+    P2 --> G2{"Exit Gate 2:<br/>Live Peering & BAO Training"}
+    G2 --> P3A["Phase 3A: Shadow-Mode Trial<br/>(5 Blocks / 500 Farmers — BAO Verified)"]
+    P3A --> G3{"Exit Gate 3:<br/>0% False-Positive Payouts"}
+    G3 --> P3B["Phase 3B: District-Wide Rollout<br/>(Straight-Through + Caseworker Queue)"]
+    P3B --> P4["Phase 4: Treasury & CAG Audit<br/>(PFMS Clearing & Immutable SQL Export)"]
+    classDef ingress fill:#e8f0fe,stroke:#4c78a8,color:#172b4d,stroke-width:1.5px
+    classDef security fill:#fff4dd,stroke:#c28a1a,color:#49330b,stroke-width:1.5px
+    classDef intake fill:#e5f5f2,stroke:#3b8f83,color:#123c37,stroke-width:1.5px
+    classDef governance fill:#eef2ff,stroke:#5968a8,color:#252b55,stroke-width:1.5px
+    classDef approved fill:#e6f4ea,stroke:#4a8f5b,color:#173b20,stroke-width:1.5px
+    classDef persistence fill:#f1eafe,stroke:#7955a1,color:#33214e,stroke-width:1.5px
+    class P1 ingress
+    class G1,G2,G3 governance
+    class P2 intake
+    class P3A security
+    class P3B approved
+    class P4 persistence
 ```
 
-### Phase 1: Environment Readiness & Channel Binding (Days 1–14)
-- Deploy the orchestrator in state-approved infrastructure: the State Data Centre (SDC), MeghRaj (NIC's Government of India Cloud), or a dedicated MeitY-empanelled cloud tenancy (an isolated Virtual Private Cloud within Indian data center regions).
-- Provision WhatsApp Business API number, state IVR SIP trunk, and dedicated shortcode/USSD endpoint.
-- Connect the perimeter security gateway to state secret managers for tokenization key management.
-- Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows to establish local completion rates, application turnaround time, drop-off rates, and facilitation costs.
-- **Duration & SLA Rationale (14 Days)**: Accommodates external telecom and messaging carrier lead times (telecom shortcode allocation, Meta WhatsApp Business verification, and SIP trunk binding standardly require 7–10 business days), state cloud firewall and security approvals (3–7 days), and concurrent baseline survey sampling.
+### Phase 1: Containerized Sandbox, Historical Replay & Baseline Calibration
+- Launch the self-contained containerized orchestrator sandbox on Day 1 with zero external network dependencies to replay anonymized historical district claims and validate deterministic scheme rules against sovereign policy catalogs (Data DHARA).
+- Initiate external telecom and cloud lead-time workflows in parallel: TRAI DLT principal entity and template registration, telecom shortcode/USSD (`*147#`) carrier routing, WhatsApp Business API verification, state IVR SIP trunk allocation, and State Data Centre (SDC) / MeghRaj firewall clearances.
+- Establish empirical pre-pilot district baseline: Sample existing portal and assisted workflows across representative blocks to measure local completion rates, application turnaround time, drop-off rates, and citizen facilitation costs.
+- **Readiness Exit Gate**: 100% deterministic adjudication parity and zero-PII tokenization verified on historical claim replays; district baseline metrics documented; carrier and state cloud onboarding requests submitted.
 
-### Phase 2: Cadastral Registry Integration & Sandbox Verification (Days 15–28)
-- **Secure Revenue & Farmer Registry Peering**: Establish secure API connectivity (via mutual TLS [mTLS] or state intranet peering) with state land revenue portals (such as AgriStack, Bhulekh, or e-Bhoomi) and farmer registries.
-- **Cadastral & Entitlement Verification**: Query connected registries in real time to validate applicant land ownership, survey/Khasra plot boundaries, and registered seasonal crop acreage against claimed entitlements.
-- **Schema Alignment & Resilience Testing**: Map state revenue schemas to canonical intake contracts, and validate sandbox fallbacks and retry queues to gracefully handle high latency or intermittent registry downtime.
-- **Caseworker Review Deployment**: Deploy the web-based district caseworker review queue for manual escalation routing when cadastral discrepancies or unverified plot boundaries occur.
-- **End-to-End Sandbox Simulation**: Execute automated end-to-end verification suites verifying 100% compliance across deterministic policy rules, fraud deduplication, and simulated payment rails.
-- **Duration & SLA Rationale (14 Days)**: Accounts for cross-departmental coordination between the Department of Agriculture and the Revenue Department (mTLS certificates, VPN peering, and IP whitelisting across separate administrative networks), resolving localized cadastral schema edge cases (joint holdings, fragmented plot notations), and conducting caseworker dashboard training.
+### Phase 2: State Cloud Deployment, Cadastral Registry Peering & Channel Binding
+- **Sovereign Infrastructure & Secret Binding**: Deploy the orchestrator in state-approved infrastructure—the State Data Centre (SDC), MeghRaj (NIC's Government of India Cloud), or a dedicated MeitY-empanelled cloud tenancy—and connect the perimeter security gateway to state secret managers for tokenization key management.
+- **Secure Revenue & Farmer Registry Peering**: Establish mutual TLS (mTLS) and state intranet peering across the Department of Agriculture and the Revenue Department to query state land revenue portals (such as AgriStack, Bhulekh, or e-Bhoomi), Digital Crop Survey and satellite indices, and social protection registries.
+- **Schema Alignment, Channel Binding & Resilience Testing**: Map localized cadastral revenue schemas (including joint holdings and fragmented survey/Khasra plot notations) to canonical intake contracts, bind live WhatsApp/IVR/USSD/SMS carrier webhooks, and verify sandbox fallbacks and retry queues against intermittent registry downtime.
+- **Caseworker Review Deployment & Training**: Deploy the web-based district caseworker review queue and train Block Agriculture Officers (BAOs) and district reviewers on manual escalation workflows.
+- **Readiness Exit Gate**: Production mTLS peering active across Agriculture and Revenue registries; end-to-end carrier webhooks verified in staging; BAO caseworkers trained and signed off on the review dashboard.
 
-### Phase 3: Controlled Field Rollout (Days 29–50)
-- **Cohort A: Targeted Sub-District Trial (Days 29–42 / 14 Days)**: Supervised trial with 500 progressive farmers across 5 selected administrative development blocks (sub-district revenue units), chosen to represent diverse conditions (e.g., varying cellular connectivity, irrigation profiles, and dialect variations) in coordination with Block Agriculture Officers (BAOs).
-- **Cohort B: District-Wide Expansion (Days 43–50 / 8 Days)**: Open district-wide access across all remaining administrative blocks in the pilot district.
-- **Operational Performance Tracking**: Continuously monitor straight-through processing rates, conversational reprompt completions, dialect recognition accuracy, and caseworker queue turnaround times.
-- **Duration & SLA Rationale (22 Days)**: Cohort A (14 days) spans two full weekly rural market (*haat*) cycles to observe natural farmer interaction patterns and allows multi-day treasury settlement loops (24–72 hours via PFMS/NPCI) to verify end-to-end payouts while fine-tuning speech models for local dialects. Cohort B (8 days) subsequently stress-tests system concurrency and straight-through processing under high-volume open district load.
+### Phase 3: Shadow-Mode Trial & Controlled District Rollout
+- **Cohort A: Shadow-Mode & Officer-Verified Sub-District Trial (5 Blocks / 500 Farmers)**: Supervised trial with 500 farmers across 5 selected administrative development blocks (sub-district revenue units) chosen to represent diverse cellular connectivity, irrigation profiles, and dialect variations. During Cohort A, 100% of automated approval recommendations (`AUTO_APPROVE`) operate in shadow/officer-verified mode—counter-checked by Block Agriculture Officers alongside the existing departmental workflow before treasury submission—to validate zero false-positive payouts and calibrate regional dialect recognition.
+- **Fiduciary Exit Gate (Cohort A $\rightarrow$ Cohort B)**: Joint Department of Agriculture and State Finance Department sign-off confirming decision parity with human officer review across at least two weekly rural market (*haat*) cycles and zero unauthorized or erroneous payout recommendations.
+- **Cohort B: Controlled District-Wide Expansion**: Enable straight-through processing across all administrative blocks in the pilot district for the active seasonal intake window, while routing low-confidence extractions ($< 85\%$) and boundary discrepancies to the district caseworker queue.
+- **Operational Performance Tracking**: Continuously monitor straight-through decision rates, conversational reprompt completions, dialect recognition accuracy, and caseworker queue turnaround times.
 
-### Phase 4: Comprehensive Audit & Transition (Days 51–60)
-- Generate automated analytical reporting using window-function deduplication (`ROW_NUMBER() OVER`) to prove zero cartesian fan-out.
-- Export immutable SQL audit history trails demonstrating end-to-end accountability for CAG review.
-- Deliver comprehensive technical documentation, architecture decision records, and operational runbooks.
-- **Duration & SLA Rationale (10 Days)**: Provides necessary trailing buffer for final banking settlement callbacks to reconcile, compiling tamper-evident state transition trails for statutory audit (CAG) compliance, conducting comparative evaluation against Phase 1 district baselines, and presenting the scale-up transition brief to state executive leadership.
+### Phase 4: Treasury Reconciliation, Statutory CAG Audit & Scale-Up Handover
+- Reconcile trailing asynchronous banking and treasury settlement callbacks (PFMS/NPCI clearing receipts, account validation exceptions, and payment re-initiations).
+- Generate automated analytical reporting using window-function deduplication (`ROW_NUMBER() OVER`) to prove zero cartesian fan-out across multi-turn citizen sessions.
+- Export immutable SQL audit history trails demonstrating end-to-end accountability for Comptroller and Auditor General (CAG) review.
+- Deliver comprehensive technical documentation, architecture decision records, operational runbooks, and a comparative evaluation against the Phase 1 district baseline.
+- **Completion Exit Gate**: 100% of seasonal treasury settlement callbacks reconciled; tamper-evident SQL state transition trails archived for statutory audit (CAG) compliance; state-wide scale-up transition brief delivered to executive leadership.
 
 ---
 

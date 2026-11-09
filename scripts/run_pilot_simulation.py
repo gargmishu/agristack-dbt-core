@@ -1,4 +1,4 @@
-"""End-to-End 60-Day Single-District Pilot Simulation & Audit Runner.
+"""End-to-End Single-District Pilot Simulation & Audit Runner.
 
 Demonstrates the complete 4-Layer Zero-Trust DPI Orchestrator described in
 `docs/government_pilot_proposal.md`:
@@ -229,9 +229,7 @@ async def run_pilot_simulation() -> None:
         firewall = IngestionFirewall.from_env()
         public_agent = PublicAgentApi(orchestrator=orchestrator, firewall=firewall)
 
-        _print_section(
-            "AGRISTACK DBT CORE — 60-DAY SINGLE-DISTRICT PILOT SIMULATION (KARNAL DISTRICT)"
-        )
+        _print_section("AGRISTACK DBT CORE — SINGLE-DISTRICT PILOT SIMULATION (KARNAL DISTRICT)")
         await _run_scenario_whatsapp_voice(public_agent)
         await _run_scenario_ussd_fastpath(public_agent)
         await _run_scenario_multiturn_loop(firewall, orchestrator)

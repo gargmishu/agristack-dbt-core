@@ -53,7 +53,7 @@ flowchart TD
 
 ## 3. One-Command Containerized Quickstart
 
-Evaluators can launch the HTTP server and execute the 60-day multi-scenario pilot simulation using Docker Compose without configuring a local Python toolchain:
+Evaluators can launch the HTTP server and execute the multi-scenario single-district pilot simulation using Docker Compose without configuring a local Python toolchain:
 
 ```bash
 # 1. Start the Zero-Trust ASGI HTTP Server on http://localhost:8000
@@ -63,7 +63,7 @@ docker compose up -d agristack-api
 curl -s http://localhost:8000/healthz
 # Expected Response: {"status":"healthy","service":"agristack-dbt-core"}
 
-# 3. (Optional) Run the self-contained 4-scenario 60-day Pilot Simulation & G2P Connect trace
+# 3. (Optional) Run the self-contained 4-scenario Single-District Pilot Simulation & G2P Connect trace
 docker compose --profile simulation run --rm pilot-simulation
 ```
 

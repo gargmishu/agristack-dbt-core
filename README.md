@@ -177,7 +177,7 @@ agristack-dbt-core/
 ├── tests/                           # Package tests plus integration and environment suites
 ├── CODE_OF_CONDUCT.md               # Contributor Covenant & DPG Indicator 9C safety policy
 ├── Dockerfile                       # Hardened non-root container image definition
-├── docker-compose.yml               # One-command ASGI server & 60-day pilot simulation runner
+├── docker-compose.yml               # One-command ASGI server & single-district pilot simulation runner
 ├── LICENSE                          # MIT License
 ├── pyproject.toml                   # Build, dependencies, Ruff, Mypy, and Pytest configs
 ├── roadmap.md                       # Inside-Out Master Implementation Roadmap
@@ -193,7 +193,7 @@ agristack-dbt-core/
 # Launch the hardened rootless ASGI HTTP Server on http://localhost:8000
 docker compose up -d agristack-api
 
-# Run the self-contained 4-scenario 60-day Pilot Simulation & G2P Connect v1.0.0 trace
+# Run the self-contained 4-scenario Single-District Pilot Simulation & G2P Connect v1.0.0 trace
 docker compose --profile simulation run --rm pilot-simulation
 ```
 
