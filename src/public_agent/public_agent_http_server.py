@@ -17,9 +17,10 @@ from http import HTTPStatus
 from typing import Any, Final
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import ValidationError
 
+from src.config import is_production
 from src.connectors import (
     IvrConnector,
     SmsConnector,
@@ -51,6 +52,7 @@ from src.errors import validation_exception_handler
 from src.gateway import CarrierAuthValidator
 from src.orchestrator import CaseManagementService, ClaimOrchestrator
 from src.public_agent.public_agent_api import PublicAgentApi, PublicAgentIntakeResult
+from src.public_agent.public_agent_sandbox_renderer import PublicAgentSandboxRenderer
 from src.services.dpi import G2pConnectMapperService
 from src.services.persistence import LedgerPersistenceService
 
@@ -60,6 +62,7 @@ __all__ = [
 ]
 
 _HEALTH_PATH: Final[str] = "/healthz"
+_SANDBOX_UI_PATH: Final[str] = "/sandbox"
 _WHATSAPP_WEBHOOK_PATH: Final[str] = "/v1/webhooks/whatsapp"
 _IVR_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ivr"
 _USSD_WEBHOOK_PATH: Final[str] = "/v1/webhooks/ussd"
@@ -114,7 +117,7 @@ _WHATSAPP_OPENAPI_EXAMPLE: Final[dict[str, object]] = {
     "session_id": "sess-glific-wa-101",
     "originating_phone_number": "+919812011111",
     "channel_message_id": "wamid.HBgLMzkxOTgxMjAxMTExMRUCABEYEjE=",
-    "payload_type": "TEXT",
+    "payload_type": "text",
     "text_body": "Mujhe PM KISAN ki kist nahi mili hai, zila Pune, survey 124/2A",
     "received_at": "2026-10-24T07:00:00Z",
 }
@@ -211,8 +214,10 @@ class PublicAgentHttpServer:
         ussd_connector: UssdConnector | None = None,
         sms_connector: SmsConnector | None = None,
         g2p_connect_mapper: G2pConnectMapperService | None = None,
+        sandbox_renderer: PublicAgentSandboxRenderer | None = None,
         whatsapp_app_secret: str | None = None,
         carrier_bearer_token: str | None = None,
+        enable_sandbox_ui: bool | None = None,
     ) -> None:
         """Initializes the Public Agent HTTP server and wires all Layer 1-4 collaborators."""
         self._case_management_service = case_management_service or CaseManagementService()
@@ -233,8 +238,12 @@ class PublicAgentHttpServer:
         self._ussd_connector = ussd_connector or UssdConnector()
         self._sms_connector = sms_connector or SmsConnector()
         self._g2p_connect_mapper = g2p_connect_mapper or G2pConnectMapperService.from_env()
+        self._sandbox_renderer = sandbox_renderer or PublicAgentSandboxRenderer()
         self._whatsapp_app_secret = whatsapp_app_secret
         self._carrier_bearer_token = carrier_bearer_token
+        self._enable_sandbox_ui = (
+            (not is_production()) if enable_sandbox_ui is None else enable_sandbox_ui
+        )
         self._app = self._build_fastapi_app()
 
     # -------------------------------------------------------------------------
@@ -252,6 +261,14 @@ class PublicAgentHttpServer:
             status_code=HTTPStatus.OK,
             content={"status": "healthy", "service": "agristack-dbt-core"},
         )
+
+    async def handle_sandbox_dashboard(self) -> HTMLResponse:
+        """Renders the self-contained 3-pane End-to-End Zero-Trust test dashboard."""
+        rendered_html = self._sandbox_renderer.render_sandbox_html(
+            whatsapp_auth_enabled=self._whatsapp_app_secret is not None,
+            bearer_auth_enabled=self._carrier_bearer_token is not None,
+        )
+        return HTMLResponse(status_code=HTTPStatus.OK, content=rendered_html)
 
     async def handle_whatsapp_webhook(self, incoming_request: Request) -> JSONResponse:
         """Processes inbound Meta WhatsApp Business API webhook events."""
@@ -447,6 +464,15 @@ class PublicAgentHttpServer:
             tags=[_TAG_SYSTEM_READINESS],
             summary="Verify State Data Centre & container liveness",
         )
+        if self._enable_sandbox_ui:
+            fastapi_app.add_api_route(
+                _SANDBOX_UI_PATH,
+                self.handle_sandbox_dashboard,
+                methods=["GET"],
+                tags=[_TAG_SYSTEM_READINESS],
+                response_class=HTMLResponse,
+                summary="Interactive 3-pane End-to-End Zero-Trust Sandbox UI (non-production)",
+            )
         fastapi_app.add_api_route(
             _WHATSAPP_WEBHOOK_PATH,
             self.handle_whatsapp_webhook,
@@ -717,6 +743,7 @@ class PublicAgentHttpServer:
             "tokenized_citizen_id": intake_result.intake_payload.tokenized_citizen_id,
             "requires_reprompt": orchestration_outcome.requires_reprompt,
             "reprompt_message": orchestration_outcome.reprompt_message,
+            "extracted_entities": orchestration_outcome.extracted_entities.model_dump(mode="json"),
             "governance_outcome": orchestration_outcome.governance_outcome.model_dump(mode="json"),
             "transmission_ack": intake_result.transmission_ack.model_dump(mode="json"),
         }
@@ -772,6 +799,7 @@ def create_public_agent_http_app(
     whatsapp_app_secret: str | None = None,
     carrier_bearer_token: str | None = None,
     database_url: str | None = None,
+    enable_sandbox_ui: bool | None = None,
 ) -> FastAPI:
     """Factory function constructing the FastAPI application for Uvicorn ASGI workers."""
     persistence_service = LedgerPersistenceService(database_url=database_url)
@@ -779,5 +807,6 @@ def create_public_agent_http_app(
         ledger_persistence_service=persistence_service,
         whatsapp_app_secret=whatsapp_app_secret,
         carrier_bearer_token=carrier_bearer_token,
+        enable_sandbox_ui=enable_sandbox_ui,
     )
     return server.app

@@ -214,7 +214,10 @@ source .venv/bin/activate
 # Run the self-contained 4-scenario pilot simulation (Happy Path, Prompt Injection, Multi-Turn, HITL Escalation)
 PYTHONPATH=. .venv/bin/python scripts/run_pilot_simulation.py
 
-# Launch the ASGI HTTP Server locally on port 8000 (exposing /healthz, /v1/webhooks/*, /v1/caseworker/*, /v1/audit/*)
+# Launch the interactive 3-pane End-to-End Sandbox Webapp on http://127.0.0.1:8000/sandbox
+PYTHONPATH=. .venv/bin/python scripts/run_e2e_webapp.py
+
+# Launch the ASGI HTTP Server locally on port 8000 (exposing /healthz, /sandbox, /v1/webhooks/*, /v1/caseworker/*, /v1/audit/*)
 PYTHONPATH=. .venv/bin/uvicorn src.public_agent.public_agent_http_server:create_public_agent_http_app --factory --host 127.0.0.1 --port 8000
 ```
 

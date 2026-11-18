@@ -19,7 +19,8 @@ from src.data_models.common import (
     RejectionReasonCode,
 )
 from src.data_models.disbursement import G2pConnectAction, G2pConnectHeader
-from src.public_agent import PublicAgentHttpServer, create_public_agent_http_app
+from src.orchestrator import CaseManagementService, ClaimOrchestrator
+from src.public_agent import PublicAgentApi, PublicAgentHttpServer, create_public_agent_http_app
 from src.services.dpi import G2pConnectMapperService
 from src.services.persistence import LedgerPersistenceService
 
@@ -28,6 +29,8 @@ TEST_WHATSAPP_SECRET: Final[str] = "whatsapp_webhook_hmac_signing_secret_2026"  
 TEST_BEARER_TOKEN: Final[str] = "telecom_carrier_bearer_secret_token_2026"  # noqa: S105
 BASE_TEST_URL: Final[str] = "http://testserver"
 EXPECTED_AUDIT_ENTRIES_AFTER_REVIEW: Final[int] = 2
+EXPECTED_MULTITURN_CONVERSATIONAL_TURNS: Final[int] = 2
+EXPECTED_SLM_SUBSIDY_CONFIDENCE: Final[float] = 0.96
 
 
 @pytest.fixture(autouse=True)
@@ -507,3 +510,126 @@ async def test_openapi_schema_and_swagger_ui_interactive_examples() -> None:
         docs_response = await client.get("/docs")
         assert docs_response.status_code == HTTPStatus.OK
         assert "Swagger UI" in docs_response.text
+
+
+@pytest.mark.asyncio
+async def test_sandbox_ui_route_renders_without_leaking_secrets() -> None:
+    """Verifies GET /sandbox serves the 3-pane HTML dashboard and never exposes secret tokens."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        server = PublicAgentHttpServer(
+            ledger_persistence_service=persistence_service,
+            whatsapp_app_secret=TEST_WHATSAPP_SECRET,
+            carrier_bearer_token=TEST_BEARER_TOKEN,
+            enable_sandbox_ui=True,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=server.app), base_url=BASE_TEST_URL
+        ) as client:
+            sandbox_response = await client.get("/sandbox")
+            assert sandbox_response.status_code == HTTPStatus.OK
+            assert "text/html" in sandbox_response.headers["content-type"]
+            assert "AgriStack DBT Core" in sandbox_response.text
+            assert '{"whatsappAuthEnabled": true, "bearerAuthEnabled": true}' in (
+                sandbox_response.text
+            )
+            assert TEST_WHATSAPP_SECRET not in sandbox_response.text
+            assert TEST_BEARER_TOKEN not in sandbox_response.text
+    finally:
+        persistence_service.dispose()
+
+
+@pytest.mark.asyncio
+async def test_sandbox_ui_route_disabled_in_production_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verifies GET /sandbox returns 404 Not Found when ENVIRONMENT=production."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        case_management_service = CaseManagementService()
+        orchestrator = ClaimOrchestrator(
+            case_management_service=case_management_service,
+            ledger_persistence_service=persistence_service,
+        )
+        public_agent_api = PublicAgentApi(orchestrator=orchestrator)
+
+        monkeypatch.setenv("ENVIRONMENT", "production")
+        production_server = PublicAgentHttpServer(
+            public_agent_api=public_agent_api,
+            case_management_service=case_management_service,
+            ledger_persistence_service=persistence_service,
+        )
+        async with AsyncClient(
+            transport=ASGITransport(app=production_server.app), base_url=BASE_TEST_URL
+        ) as client:
+            health_response = await client.get("/healthz")
+            assert health_response.status_code == HTTPStatus.OK
+
+            production_sandbox_response = await client.get("/sandbox")
+            assert production_sandbox_response.status_code == HTTPStatus.NOT_FOUND
+    finally:
+        persistence_service.dispose()
+
+
+@pytest.mark.asyncio
+async def test_e2e_multiturn_reprompt_completion_and_xray_extracted_entities() -> None:
+    """Verifies Turn 1 missing-entity reprompt -> Turn 2 completion and 1-row funnel dedup."""
+    persistence_service = LedgerPersistenceService(database_url="sqlite:///:memory:")
+    try:
+        server = PublicAgentHttpServer(ledger_persistence_service=persistence_service)
+        shared_session_id = "sess-http-multiturn-008"
+        originating_phone = "+919812088888"
+
+        async with AsyncClient(
+            transport=ASGITransport(app=server.app), base_url=BASE_TEST_URL
+        ) as client:
+            # Turn 1: Missing crop entity -> Gate 2 REQUEST_MORE_INFO reprompt
+            turn_one_payload = {
+                "session_id": shared_session_id,
+                "originating_phone_number": originating_phone,
+                "channel_message_id": "SM1111222233334444",
+                "text_body": "My application has missing crop details in Pune district",
+                "received_at": datetime.now(UTC).isoformat(),
+            }
+            turn_one_response = await client.post("/v1/webhooks/sms", json=turn_one_payload)
+            assert turn_one_response.status_code == HTTPStatus.OK
+            turn_one_body = turn_one_response.json()
+            assert turn_one_body["requires_reprompt"] is True
+            assert turn_one_body["reprompt_message"] is not None
+            assert turn_one_body["extracted_entities"]["domain_entities"] == {"district": "Pune"}
+            assert turn_one_body["governance_outcome"]["governance_action"] == (
+                GovernanceAction.REQUEST_MORE_INFO
+            )
+            assert originating_phone not in turn_one_response.text
+
+            # Turn 2: Same session_id supplies complete subsidy claim -> AUTO_APPROVE
+            turn_two_payload = {
+                "session_id": shared_session_id,
+                "originating_phone_number": originating_phone,
+                "channel_message_id": "SM5555666677778888",
+                "text_body": "Mujhe PM KISAN ki kist chahiye, zila Pune, Wheat, survey 124/2A",
+                "received_at": datetime.now(UTC).isoformat(),
+            }
+            turn_two_response = await client.post("/v1/webhooks/sms", json=turn_two_payload)
+            assert turn_two_response.status_code == HTTPStatus.OK
+            turn_two_body = turn_two_response.json()
+            assert turn_two_body["requires_reprompt"] is False
+            assert turn_two_body["extracted_entities"]["ai_confidence_score"] == (
+                EXPECTED_SLM_SUBSIDY_CONFIDENCE
+            )
+            assert turn_two_body["governance_outcome"]["governance_action"] == (
+                GovernanceAction.AUTO_APPROVE
+            )
+
+            # Analytical Citizen Journey Funnel collapses both turns into 1 deduplicated row
+            funnel_response = await client.get("/v1/audit/funnel")
+            assert funnel_response.status_code == HTTPStatus.OK
+            funnel_rows = funnel_response.json()["funnel_rows"]
+            assert len(funnel_rows) == 1
+            assert funnel_rows[0]["session_id"] == shared_session_id
+            assert funnel_rows[0]["total_conversational_turns"] == (
+                EXPECTED_MULTITURN_CONVERSATIONAL_TURNS
+            )
+            assert funnel_rows[0]["application_status"] == "APPROVED"
+    finally:
+        persistence_service.dispose()
